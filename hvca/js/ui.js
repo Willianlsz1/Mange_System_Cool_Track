@@ -439,20 +439,15 @@ function reportRecord(r) {
       <div class="info-list">
         <div class="info-row">
           <span class="info-row__label">Equipamento</span>
-          <span class="info-row__value">${Utils.escapeHtml(eq?.nome ?? '—')}</span>
+          <span class="info-row__value">${Utils.escapeHtml(eq?.nome ?? "—")}</span>
         </div>
         <div class="info-row">
           <span class="info-row__label">TAG</span>
-          <span class="info-row__value">${Utils.escapeHtml(eq?.tag ?? '—')}</span>
+          <span class="info-row__value">${Utils.escapeHtml(eq?.tag ?? "—")}</span>
         </div>
-      </div>
-      <div class="info-row">
-        <span class="info-row__label">TAG</span>
-        <span class="info-row__value">${Utils.escapeHtml(eq?.tag ??  '—')}</span>
-      </div>
-      <div class="info-row">
-        <span class="info-row__label">Técnico</span>
-        <span class="info-row__value">${Utils.escapeHtml(r.tecnico ?? '—')}</span>
+        <div class="info-row">
+          <span class="info-row__label">Técnico</span>
+          <span class="info-row__value">${Utils.escapeHtml(r.tecnico ?? "—")}</span>
         </div>
       </div>
       <div class="report-record__obs">${Utils.escapeHtml(r.obs)}</div>
@@ -501,9 +496,11 @@ export const Equipamentos = {
     const eq = findEquip(id);
     if (!eq) return;
     const regs = regsForEquip(id).sort((a, b) => b.data.localeCompare(a.data));
+    const lastReg = lastRegForEquip(id);
+    const hasPending = Boolean(lastReg?.proxima && Utils.daysDiff(lastReg.proxima) >= 0);
     Utils.getEl("eq-det-corpo").innerHTML =
       `<div class="modal__title">${Utils.escapeHtml(eq.nome)}</div>
-      <div class="btn-group"><button class="btn btn--outline" data-action="go-register-equip" data-id="${id}">+ Registrar</button>
+      <div class="btn-group"><button class="btn btn--outline ${hasPending ? "btn--disabled" : ""}" data-action="go-register-equip" data-id="${id}" ${hasPending ? "disabled" : ""}>+ Registrar</button>
       <button class="btn btn--danger" data-action="delete-equip" data-id="${id}">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg> Excluir
   </button></div>
