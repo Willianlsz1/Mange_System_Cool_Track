@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoolTrack Pro</title>
+
+  <!-- ── Fonte: Inter (substituiu Outfit) + JetBrains Mono ── -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- ── CSS separado em 3 arquivos por responsabilidade (Fase 1) ── -->
+  <link rel="stylesheet" href="./src/assets/styles/base.css">
+  <link rel="stylesheet" href="./src/assets/styles/components.css">
+  <link rel="stylesheet" href="./src/assets/styles/layout.css">
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ══════════════ HEADER ══════════════ -->
+  <header class="app-header">
+    <div class="app-header__top">
+      <div class="app-logo">CoolTrack <span class="app-logo__sub">Pro</span></div>
+      <div class="app-header__date" id="hdr-date"></div>
+    </div>
+    <div class="header-stats">
+      <div class="stat-pill">
+        <div class="stat-pill__value" id="hst-total">0</div>
+        <div class="stat-pill__label">Equipamentos</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill__value" id="hst-mes">0</div>
+        <div class="stat-pill__label">Este mês</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill__value" id="hst-alert">0</div>
+        <div class="stat-pill__label">Alertas</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════════ LAYOUT ══════════════ -->
+  <div class="app-content">
+
+    <!-- ── Navegação ── -->
+    <nav class="app-nav" aria-label="Navegação principal">
+      <div class="app-nav__title">Painel Operacional</div>
+      <button class="nav-btn is-active" id="nav-inicio"      onclick="goView('inicio')">
+        <span class="nav-btn__icon">🏠</span>Início
+      </button>
+      <button class="nav-btn" id="nav-equipamentos"          onclick="goView('equipamentos')">
+        <span class="nav-btn__icon">❄️</span>Equip.
+      </button>
+      <button class="nav-btn" id="nav-registro"              onclick="goView('registro')">
+        <span class="nav-btn__icon">➕</span>Registrar
+      </button>
+      <button class="nav-btn" id="nav-historico"             onclick="goView('historico')">
+        <span class="nav-btn__icon">📋</span>Histórico
+      </button>
+      <button class="nav-btn" id="nav-alertas"               onclick="goView('alertas')">
+        <span class="nav-btn__icon">🔔</span>Alertas
+        <span class="nav-btn__badge" id="alerta-badge">0</span>
+      </button>
+    </nav>
+
+    <!-- ══════════════ VIEWS ══════════════ -->
+    <main>
+
+      <!-- ── INÍCIO ── -->
+      <div class="view active" id="view-inicio">
+        <div class="section-title">👋 Bom dia!</div>
+        <div id="dash-alertas-mini"></div>
+        <div class="section-title section-title--sm">Últimas manutenções</div>
+        <div id="dash-recentes"></div>
+        <div class="section-title section-title--sm">Equipamentos críticos</div>
+        <div id="dash-criticos"></div>
+      </div>
+
+      <!-- ── EQUIPAMENTOS ── -->
+      <div class="view" id="view-equipamentos">
+        <div class="page-toolbar">
+          <div class="section-title section-title--toolbar">❄️ Equipamentos</div>
+          <button class="btn btn--primary btn--sm" onclick="openModal('modal-add-eq')">+ Adicionar</button>
+        </div>
+        <div class="search-bar">
+          <span class="search-bar__icon">🔍</span>
+          <input class="form-control search-bar__input" type="text" placeholder="Buscar equipamento..." oninput="renderEquip(this.value)">
+        </div>
+        <div id="lista-equip"></div>
+      </div>
+
+      <!-- ── NOVO REGISTRO ── -->
+      <div class="view" id="view-registro">
+        <div class="section-title">✏️ Novo Registro</div>
+        <div class="card">
+          <div class="form-group">
+            <label class="form-label">Equipamento *</label>
+            <select id="r-equip" class="form-control">
+              <option value="">Selecione...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Data e Hora *</label>
+            <input id="r-data" class="form-control" type="datetime-local">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo de Serviço *</label>
+            <select id="r-tipo" class="form-control">
+              <option value="">Selecione...</option>
+              <option>Manutenção Preventiva</option>
+              <option>Manutenção Corretiva</option>
+              <option>Limpeza de Filtros</option>
+              <option>Carga de Gás Refrigerante</option>
+              <option>Troca de Compressor</option>
+              <option>Troca de Capacitor</option>
+              <option>Limpeza de Condensador</option>
+              <option>Limpeza de Evaporador</option>
+              <option>Verificação Elétrica</option>
+              <option>Ajuste de Dreno</option>
+              <option>Inspeção Geral</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Peças / Materiais utilizados</label>
+            <input id="r-pecas" class="form-control" type="text" placeholder="Ex: Filtro G4, R-410A 1kg, Capacitor 30µF">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observações / Serviço Realizado *</label>
+            <textarea id="r-obs" class="form-control" placeholder="Descreva o que foi feito, valores medidos, condições encontradas..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fotos do Serviço</label>
+            <div class="photo-drop">
+              <input type="file" accept="image/*" multiple onchange="Photos.add(this)">
+              <div class="photo-drop__icon">📷</div>
+              <div class="photo-drop__text">Toque para adicionar fotos</div>
+            </div>
+            <div class="photo-grid" id="photo-preview"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Próxima Manutenção Prevista</label>
+              <input id="r-proxima" class="form-control" type="date">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status do Equipamento</label>
+              <select id="r-status" class="form-control">
+                <option value="ok">✅ Operando Normal</option>
+                <option value="warn">⚠️ Requer Atenção</option>
+                <option value="danger">🔴 Fora de Operação</option>
+              </select>
+            </div>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn--outline" onclick="Registro.clear()">Limpar</button>
+            <button class="btn btn--primary" onclick="Registro.save()">💾 Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HISTÓRICO ── -->
+      <div class="view" id="view-historico">
+        <div class="page-toolbar">
+          <div class="section-title section-title--toolbar">📋 Histórico</div>
+          <button class="btn btn--outline btn--sm" onclick="goView('relatorio')">📄 Relatório</button>
+        </div>
+        <div class="search-bar">
+          <span class="search-bar__icon">🔍</span>
+          <input class="form-control search-bar__input" id="hist-busca" type="text" placeholder="Buscar no histórico..." oninput="renderHist()">
+        </div>
+        <div class="form-group">
+          <select id="hist-equip" class="form-control" onchange="renderHist()">
+            <option value="">Todos os equipamentos</option>
+          </select>
+        </div>
+        <div id="timeline"></div>
+      </div>
+
+      <!-- ── ALERTAS ── -->
+      <div class="view" id="view-alertas">
+        <div class="section-title">🔔 Alertas</div>
+        <div id="lista-alertas"></div>
+      </div>
+
+      <!-- ── RELATÓRIO ── -->
+      <div class="view" id="view-relatorio">
+        <div class="page-toolbar">
+          <div class="section-title section-title--toolbar">📄 Relatório</div>
+          <div class="page-toolbar__actions">
+            <button class="btn btn--outline btn--sm" onclick="goView('historico')">← Voltar</button>
+            <button class="btn btn--primary btn--sm" id="print-btn" onclick="window.print()">🖨️ Imprimir</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Equipamento</label>
+          <select id="rel-equip" class="form-control" onchange="renderRelatorio()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">De</label>
+            <input id="rel-de" class="form-control" type="date" onchange="renderRelatorio()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Até</label>
+            <input id="rel-ate" class="form-control" type="date" onchange="renderRelatorio()">
+          </div>
+        </div>
+        <div id="relatorio-corpo"></div>
+      </div>
+
+    </main>
+  </div>
+</div><!-- /#app -->
+
+<!-- ══════════════ MODAIS ══════════════ -->
+
+<!-- Modal: Adicionar Equipamento -->
+<div class="modal-overlay" id="modal-add-eq">
+  <div class="modal">
+    <div class="modal__handle"></div>
+    <div class="modal__title">Novo Equipamento</div>
+    <div class="form-group">
+      <label class="form-label">Nome *</label>
+      <input id="eq-nome" class="form-control" type="text" placeholder="Ex: Split UTI Adulto">
+    </div>
+    <div class="form-group">
+      <label class="form-label">TAG / Identificação</label>
+      <input id="eq-tag" class="form-control" type="text" placeholder="Ex: AC-UTI-01">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Localização *</label>
+      <input id="eq-local" class="form-control" type="text" placeholder="Ex: UTI Adulto – 2º Andar">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select id="eq-tipo" class="form-control">
+          <option>Split Hi-Wall</option>
+          <option>Split Cassete</option>
+          <option>Split Piso Teto</option>
+          <option>VRF / VRV</option>
+          <option>Chiller</option>
+          <option>Fan Coil</option>
+          <option>Self Contained</option>
+          <option>Roof Top</option>
+          <option>Câmara Fria</option>
+          <option>Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fluido Refrigerante</label>
+        <select id="eq-fluido" class="form-control">
+          <option>R-410A</option>
+          <option>R-22</option>
+          <option>R-32</option>
+          <option>R-407C</option>
+          <option>R-134A</option>
+          <option>Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Marca / Modelo</label>
+      <input id="eq-modelo" class="form-control" type="text" placeholder="Ex: Carrier 18000 BTU">
+    </div>
+    <div class="btn-group">
+      <button class="btn btn--outline" onclick="Modal.close('modal-add-eq')">Cancelar</button>
+      <button class="btn btn--primary" onclick="Equipamentos.save()">✅ Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Detalhe Equipamento -->
+<div class="modal-overlay" id="modal-eq-det">
+  <div class="modal">
+    <div class="modal__handle"></div>
+    <div id="eq-det-corpo"></div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="Photos.closeLightbox()">
+  <button class="lightbox__close" onclick="Photos.closeLightbox()">✕</button>
+  <img class="lightbox__img" id="lightbox-img" src="" alt="Foto do serviço">
+</div>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
+<script>
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has('p')) return;
+    history.replaceState(null, '', `${window.location.pathname}${window.location.hash || ''}`);
+  })();
+</script>
+<script type="module" src="./hvca/js/app.js"></script>
+</body>
+</html>
