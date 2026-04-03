@@ -44,26 +44,26 @@
   <!-- ══════════════ LAYOUT ══════════════ -->
   <div class="app-content">
 
-    <!-- ── Navegação ── -->
-    <nav class="app-nav" aria-label="Navegação principal">
-      <div class="app-nav__title">Painel Operacional</div>
-      <button class="nav-btn is-active" id="nav-inicio"      onclick="goView('inicio')">
-        <span class="nav-btn__icon">🏠</span>Início
-      </button>
-      <button class="nav-btn" id="nav-equipamentos"          onclick="goView('equipamentos')">
-        <span class="nav-btn__icon">❄️</span>Equip.
-      </button>
-      <button class="nav-btn" id="nav-registro"              onclick="goView('registro')">
-        <span class="nav-btn__icon">➕</span>Registrar
-      </button>
-      <button class="nav-btn" id="nav-historico"             onclick="goView('historico')">
-        <span class="nav-btn__icon">📋</span>Histórico
-      </button>
-      <button class="nav-btn" id="nav-alertas"               onclick="goView('alertas')">
-        <span class="nav-btn__icon">🔔</span>Alertas
-        <span class="nav-btn__badge" id="alerta-badge">0</span>
-      </button>
-    </nav>
+      <!-- ── Navegação ── -->
+  <nav class="app-nav" aria-label="Navegação principal">
+    <div class="app-nav__title">Painel Operacional</div>
+    <button class="nav-btn is-active" id="nav-inicio"      data-nav="inicio">
+      <span class="nav-btn__icon">🏠</span>Início
+    </button>
+    <button class="nav-btn" id="nav-equipamentos"          data-nav="equipamentos">
+      <span class="nav-btn__icon">❄️</span>Equip.
+    </button>
+    <button class="nav-btn" id="nav-registro"              data-nav="registro">
+      <span class="nav-btn__icon">➕</span>Registrar
+    </button>
+    <button class="nav-btn" id="nav-historico"             data-nav="historico">
+      <span class="nav-btn__icon">📋</span>Histórico
+    </button>
+    <button class="nav-btn" id="nav-alertas"               data-nav="alertas">
+      <span class="nav-btn__icon">🔔</span>Alertas
+      <span class="nav-btn__badge" id="alerta-badge">0</span>
+    </button>
+  </nav>
 
     <!-- ══════════════ VIEWS ══════════════ -->
     <main>
@@ -105,12 +105,12 @@
       <!-- ── EQUIPAMENTOS ── -->
       <div class="view" id="view-equipamentos">
         <div class="page-toolbar">
-          <div class="section-title section-title--toolbar">❄️ Equipamentos</div>
-          <button class="btn btn--primary btn--sm" onclick="openModal('modal-add-eq')">+ Adicionar</button>
-        </div>
+        <div class="section-title section-title--toolbar">❄️ Equipamentos</div>
+        <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">+ Adicionar</button>
+      </div>
         <div class="search-bar">
           <span class="search-bar__icon">🔍</span>
-          <input class="form-control search-bar__input" type="text" placeholder="Buscar equipamento..." oninput="renderEquip(this.value)">
+          <input class="form-control search-bar__input" type="text" placeholder="Buscar equipamento...">
         </div>
         <div id="lista-equip"></div>
       </div>
@@ -158,7 +158,7 @@
           <div class="form-group">
             <label class="form-label">Fotos do Serviço</label>
             <div class="photo-drop">
-              <input type="file" accept="image/*" multiple onchange="Photos.add(this)">
+              <input type="file" accept="image/*" multiple >
               <div class="photo-drop__icon">📷</div>
               <div class="photo-drop__text">Toque para adicionar fotos</div>
             </div>
@@ -178,9 +178,9 @@
               </select>
             </div>
           </div>
-          <div class="btn-group">
-            <button class="btn btn--outline" onclick="Registro.clear()">Limpar</button>
-            <button class="btn btn--primary" onclick="Registro.save()">💾 Salvar</button>
+            <div class="btn-group">
+            <button class="btn btn--outline" data-action="clear-registro">Limpar</button>
+            <button class="btn btn--primary" data-action="save-registro">💾 Salvar</button>
           </div>
         </div>
       </div>
@@ -189,14 +189,14 @@
       <div class="view" id="view-historico">
         <div class="page-toolbar">
           <div class="section-title section-title--toolbar">📋 Histórico</div>
-          <button class="btn btn--outline btn--sm" onclick="goView('relatorio')">📄 Relatório</button>
+                  <button class="btn btn--outline btn--sm" data-nav="relatorio">📄 Relatório</button>
         </div>
         <div class="search-bar">
           <span class="search-bar__icon">🔍</span>
-          <input class="form-control search-bar__input" id="hist-busca" type="text" placeholder="Buscar no histórico..." oninput="renderHist()">
+          <input class="form-control search-bar__input" id="hist-busca" type="text" placeholder="Buscar no histórico...">
         </div>
         <div class="form-group">
-          <select id="hist-equip" class="form-control" onchange="renderHist()">
+          <select id="hist-equip" class="form-control">
             <option value="">Todos os equipamentos</option>
           </select>
         </div>
@@ -214,24 +214,25 @@
         <div class="page-toolbar">
           <div class="section-title section-title--toolbar">📄 Relatório</div>
           <div class="page-toolbar__actions">
-            <button class="btn btn--outline btn--sm" onclick="goView('historico')">← Voltar</button>
+            <button class="btn btn--outline btn--sm" data-nav="historico">← Voltar</button>
             <button class="btn btn--primary btn--sm" id="print-btn" onclick="window.print()">🖨️ Imprimir</button>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Equipamento</label>
-          <select id="rel-equip" class="form-control" onchange="renderRelatorio()">
+          <select id="rel-equip" class="form-control" >
+          </select>
             <option value="">Todos</option>
           </select>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">De</label>
-            <input id="rel-de" class="form-control" type="date" onchange="renderRelatorio()">
+            <input id="rel-de" class="form-control" type="date" >
           </div>
           <div class="form-group">
             <label class="form-label">Até</label>
-            <input id="rel-ate" class="form-control" type="date" onchange="renderRelatorio()">
+            <input id="rel-ate" class="form-control" type="date" >
           </div>
         </div>
         <div id="relatorio-corpo"></div>
@@ -292,11 +293,10 @@
       <label class="form-label">Marca / Modelo</label>
       <input id="eq-modelo" class="form-control" type="text" placeholder="Ex: Carrier 18000 BTU">
     </div>
-    <div class="btn-group">
-      <button class="btn btn--outline" onclick="Modal.close('modal-add-eq')">Cancelar</button>
-      <button class="btn btn--primary" onclick="Equipamentos.save()">✅ Salvar</button>
+        <div class="btn-group">
+      <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button>
+      <button class="btn btn--primary" data-action="save-equip">✅ Salvar</button>
     </div>
-  </div>
 </div>
 
 <!-- Modal: Detalhe Equipamento -->
@@ -308,8 +308,8 @@
 </div>
 
 <!-- Lightbox -->
-<div class="lightbox" id="lightbox" onclick="Photos.closeLightbox()">
-  <button class="lightbox__close" onclick="Photos.closeLightbox()">✕</button>
+<div class="lightbox" id="lightbox" >
+  <button class="lightbox__close" >✕</button>
   <img class="lightbox__img" id="lightbox-img" src="" alt="Foto do serviço">
 </div>
 

@@ -690,4 +690,30 @@ textarea.form-control { min-height: 96px; line-height: 1.5; }
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
+  /* ─── Botão de Ação no Card ─── */
+.equip-card__actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.equip-card__delete {
+  border: none;
+  background: transparent;
+  color: var(--muted-light); /* Cor padrão que o SVG vai herdar */
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-xs);
+  display: flex; /* Alinha o SVG perfeitamente no centro */
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.equip-card__delete:hover {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
 }

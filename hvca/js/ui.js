@@ -223,13 +223,20 @@ export function populateSelects() {
 function equipCardHtml(eq, { showLocal = true } = {}) {
   const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
   const last = lastRegForEquip(eq.id);
-  return `<div class="equip-card equip-card--${eq.status}" onclick="Equipamentos.view('${eq.id}')">
+  return `<div class="equip-card equip-card--${eq.status}" data-action="view-equip" data-id="${eq.id}">
     <div class="equip-card__icon">${icon}</div>
     <div class="equip-card__body">
       <div class="equip-card__name">${Utils.escapeHtml(eq.nome)}</div>
       ${showLocal ? `<div class="equip-card__local">📍 ${Utils.escapeHtml(eq.local)}</div>` : ''}
       <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || eq.tipo)} · ${Utils.escapeHtml(eq.fluido || '')}</div>
       ${last ? `<div class="equip-card__last">Últ: ${Utils.formatDatetime(last.data)}</div>` : ''}
+    </div>
+    <div class="equip-card__actions">
+      <button class="equip-card__delete" data-action="delete-equip" data-id="${eq.id}" title="Excluir equipamento">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+  </svg>
+</button>
     </div>
     <span class="badge badge--${eq.status}"><span class="status-dot status-dot--${eq.status}"></span>${STATUS_LABEL[eq.status]}</span>
   </div>`;
@@ -250,7 +257,7 @@ export function renderInicio() {
   const recent = [...registros].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 3);
   Utils.getEl('dash-recentes').innerHTML = recent.length ? recent.map(r => {
     const eq = findEquip(r.equipId);
-    return `<article class="card recent-card" onclick="goView('historico')">
+    return `<article class="card recent-card" data-nav="historico">
       <div class="recent-card__date">${Utils.formatDatetime(r.data)}</div>
       <div class="recent-card__title">${Utils.escapeHtml(r.tipo)}</div>
       <div class="recent-card__equip">${Utils.escapeHtml(eq?.nome ?? '—')}</div>
@@ -264,13 +271,14 @@ export function renderInicio() {
 }
 function alertCardHtml({ kind, reg, eq }) {
   if (kind === 'critical') {
-    return `<div class="alert-card alert-card--critical" onclick="goView('alertas')"><span class="alert-card__icon">🚨</span><div><div class="alert-card__title">Equipamento fora de operação</div><div class="alert-card__sub">Requer intervenção imediata</div><div class="alert-card__equip">${Utils.escapeHtml(eq.nome)} · ${Utils.escapeHtml(eq.local)}</div></div></div>`;
+    return `<div class="alert-card alert-card--critical" data-nav="alertas"><span class="alert-card__icon">🚨</span><div><div class="alert-card__title">Equipamento fora de operação</div><div class="alert-card__sub">Requer intervenção imediata</div><div class="alert-card__equip">${Utils.escapeHtml(eq.nome)} · ${Utils.escapeHtml(eq.local)}</div></div></div>`;
   }
   const equip = findEquip(reg.equipId);
   if (kind === 'overdue') {
-    return `<div class="alert-card alert-card--critical" onclick="goView('alertas')"><span class="alert-card__icon">🔴</span><div><div class="alert-card__title">Manutenção VENCIDA</div><div class="alert-card__sub">${Utils.escapeHtml(reg.tipo)}</div><div class="alert-card__equip">${Utils.escapeHtml(equip?.nome ?? '—')}</div></div></div>`;
+    return `<div class="alert-card alert-card--critical" data-nav="alertas">
+<span class="alert-card__icon">🔴</span><div><div class="alert-card__title">Manutenção VENCIDA</div><div class="alert-card__sub">${Utils.escapeHtml(reg.tipo)}</div><div class="alert-card__equip">${Utils.escapeHtml(equip?.nome ?? '—')}</div></div></div>`;
   }
-  return `<div class="alert-card" onclick="goView('alertas')"><span class="alert-card__icon">⚠️</span><div><div class="alert-card__title">Manutenção em ${Utils.daysDiff(reg.proxima)} dia(s)</div><div class="alert-card__sub">${Utils.escapeHtml(reg.tipo)}</div><div class="alert-card__equip">${Utils.escapeHtml(equip?.nome ?? '—')}</div></div></div>`;
+  return `<div class="alert-card" data-nav="alertas"><span class="alert-card__icon">⚠️</span><div><div class="alert-card__title">Manutenção em ${Utils.daysDiff(reg.proxima)} dia(s)</div><div class="alert-card__sub">${Utils.escapeHtml(reg.tipo)}</div><div class="alert-card__equip">${Utils.escapeHtml(equip?.nome ?? '—')}</div></div></div>`;
 }
 export function renderHist() {
   const { registros } = getState();
@@ -289,7 +297,7 @@ export function renderHist() {
 function renderTimelineItem(r) {
   const eq = findEquip(r.equipId);
   const dotMod = r.status !== 'ok' ? `timeline__dot--${r.status}` : '';
-  return `<div class="timeline__item"><div class="timeline__dot ${dotMod}"></div><div class="timeline__item-inner"><div class="timeline__item-body"><div class="timeline__date">${Utils.formatDatetime(r.data)}</div><div class="timeline__title">${Utils.escapeHtml(r.tipo)}</div><div class="timeline__equip">📍 ${Utils.escapeHtml(eq?.nome ?? '—')} · ${Utils.escapeHtml(eq?.local ?? '')}</div><div class="timeline__obs">${Utils.escapeHtml(r.obs)}</div>${r.pecas ? `<div class="timeline__parts">🔩 ${Utils.escapeHtml(r.pecas)}</div>` : ''}${r.proxima ? `<div class="timeline__next">📅 Próxima: ${Utils.formatDate(r.proxima)}</div>` : ''}</div><button class="timeline__delete" onclick="Historico.delete('${r.id}')">🗑️</button></div></div>`;
+  return `<div class="timeline__item"><div class="timeline__dot ${dotMod}"></div><div class="timeline__item-inner"><div class="timeline__item-body"><div class="timeline__date">${Utils.formatDatetime(r.data)}</div><div class="timeline__title">${Utils.escapeHtml(r.tipo)}</div><div class="timeline__equip">📍 ${Utils.escapeHtml(eq?.nome ?? '—')} · ${Utils.escapeHtml(eq?.local ?? '')}</div><div class="timeline__obs">${Utils.escapeHtml(r.obs)}</div>${r.pecas ? `<div class="timeline__parts">🔩 ${Utils.escapeHtml(r.pecas)}</div>` : ''}${r.proxima ? `<div class="timeline__next">📅 Próxima: ${Utils.formatDate(r.proxima)}</div>` : ''}</div><button class="timeline__delete" data-action="delete-reg" data-id="${r.id}">🗑️</button></div></div>`;
 }
 export function renderAlertas() {
   const list = Alerts.getAll();
@@ -343,8 +351,8 @@ export const Equipamentos = {
     if (!eq) return;
     const regs = regsForEquip(id).sort((a, b) => b.data.localeCompare(a.data));
     Utils.getEl('eq-det-corpo').innerHTML = `<div class="modal__title">${Utils.escapeHtml(eq.nome)}</div>
-      <div class="btn-group"><button class="btn btn--outline" onclick="Modal.close('modal-eq-det');goView('registro');setTimeout(()=>Utils.setVal('r-equip','${id}'),50)">+ Registrar</button>
-      <button class="btn btn--danger" onclick="if(confirm('Excluir equipamento e todos os seus registros?')){Equipamentos.delete('${id}')}">🗑️ Excluir</button></div>
+      <div class="btn-group"><button class="btn btn--outline" data-action="go-register-equip" data-id="${id}">+ Registrar</button>
+      <button class="btn btn--danger" data-action="delete-equip" data-id="${id}">🗑️ Excluir</button></div>
       <div class="eq-modal-summary">${regs.length} registro(s)</div>${regs.slice(0, 3).map(r => `<div class='eq-modal-quick'>${Utils.escapeHtml(r.tipo)} · ${Utils.formatDatetime(r.data)}</div>`).join('')}`;
     Modal.open('modal-eq-det');
   },
@@ -424,14 +432,3 @@ export function goView(name) {
   updateHeader();
   window.scrollTo(0, 0);
 }
-window.goView = goView;
-window.renderEquip = renderEquip;
-window.renderHist = renderHist;
-window.renderRelatorio = renderRelatorio;
-window.openModal = Modal.open.bind(Modal);
-window.Modal = Modal;
-window.Photos = Photos;
-window.Equipamentos = Equipamentos;
-window.Registro = Registro;
-window.Historico = Historico;
-window.Utils = Utils;
