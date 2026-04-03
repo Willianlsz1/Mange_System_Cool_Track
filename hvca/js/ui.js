@@ -1,5 +1,38 @@
 import { Utils, TIPO_ICON, STATUS_LABEL } from './utils.js';
 import { getState, findEquip, lastRegForEquip, regsForEquip, setState } from './state.js';
+// ─── IMAGE COMPRESSION (Anti-LocalStorage Crash) ───
+function compressImage(file, maxWidth = 1200, quality = 0.7) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Se a largura for maior que o máximo permitido, reduz proporcionalmente
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        
+        // Desenha a imagem reduzida no canvas
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Exporta como JPEG com a qualidade definida (0.7 = 70%)
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 export const Modal = {
   open(id) { Utils.getEl(id)?.classList.add('is-open'); },
   close(id) { Utils.getEl(id)?.classList.remove('is-open'); },
@@ -11,13 +44,22 @@ export const Modal = {
 };
 export const Photos = {
   pending: [],
-  add(input) {
-    Array.from(input.files || []).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = e => { this.pending.push(e.target.result); this.render(); };
-      reader.readAsDataURL(file);
-    });
-    input.value = '';
+   async add(input) {
+    const files = Array.from(input.files || []);
+    
+    // Processa as fotos uma a uma
+    for (const file of files) {
+      try {
+        const compressedFile = await compressImage(file);
+        this.pending.push(compressedFile);
+        this.render(); // Atualiza a preview na tela
+      } catch (error) {
+        console.error("Erro ao comprimir imagem:", error);
+        alert("Erro ao processar uma das fotos. Tente novamente.");
+      }
+    }
+    
+    input.value = ''; // Limpa o input para permitir selecionar o mesmo arquivo de novo
   },
   remove(index) { this.pending.splice(index, 1); this.render(); },
   clear() { this.pending = []; this.render(); },
