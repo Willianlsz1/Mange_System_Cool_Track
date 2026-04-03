@@ -189,20 +189,18 @@ function renderGlobalHealthScore() {
 
   el.textContent = avgScore;
 
-  // Define a cor baseada no score
-  let color = 'var(--success)';
-  if (avgScore < 50) color = 'var(--danger)';
-  else if (avgScore < 80) color = 'var(--warning)';
-  
-  el.style.color = color;
-  
+  // Aplica classe de cor baseada no score (sem inline style)
+  el.classList.remove('bento-kpi__value--ok', 'bento-kpi__value--warn', 'bento-kpi__value--danger');
+  if (avgScore >= 80) el.classList.add('bento-kpi__value--ok');
+  else if (avgScore >= 50) el.classList.add('bento-kpi__value--warn');
+  else el.classList.add('bento-kpi__value--danger');
+
   if (barEl) {
-    barEl.style.width = `${avgScore}%`;
-    barEl.style.background = avgScore >= 80 
-      ? 'linear-gradient(90deg, var(--success), #00FFB2)' 
-      : avgScore >= 50 
-        ? 'linear-gradient(90deg, var(--warning), #FFD566)' 
-        : 'linear-gradient(90deg, var(--danger), #FF7A8A)';
+    barEl.style.width = `${avgScore}%`; // width é dinâmico — não pode ser substituído por classe
+    barEl.classList.remove('health-bar__fill--ok', 'health-bar__fill--warn', 'health-bar__fill--danger');
+    if (avgScore >= 80) barEl.classList.add('health-bar__fill--ok');
+    else if (avgScore >= 50) barEl.classList.add('health-bar__fill--warn');
+    else barEl.classList.add('health-bar__fill--danger');
   }
 }
 export function populateSelects() {
