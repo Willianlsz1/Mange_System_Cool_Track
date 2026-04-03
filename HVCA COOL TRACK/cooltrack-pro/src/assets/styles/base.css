@@ -36,11 +36,11 @@
   --danger:          #FF3D5A;
   --danger-soft:     rgba(255, 61, 90, 0.12);
 
-  /* Text */
-  --text:            #E8EDF5;
-  --text-muted:      #9AAAC5;
-  --muted:           #6B7FA3;
-  --muted-light:     #4A5A78;
+  /* Text — Ajustado para Dark Mode High-Contrast */
+  --text:            #EDF2F7; /* Um pouco mais branco para 'saltar' na tela */
+  --text-muted:      #A0B0CC; /* Mais claro que antes (era #9AAAC5) */
+  --muted:           #7B8DA6; /* Mais claro que antes (era #6B7FA3) */
+  --muted-light:     #5C6E88; /* Mais claro que antes (era #4A5A78) */
 
   /* Utilities */
   --white:           #ffffff;
@@ -86,11 +86,13 @@ body {
   color: var(--text);
   font-family: var(--font-body);
   font-size: 15px;
-  line-height: 1.5;
+  line-height: 1.55; /* Aumentado de 1.5 para dar mais respiro */
   background:
     radial-gradient(ellipse at 10% 0%,   rgba(0, 212, 255, 0.06) 0%, transparent 50%),
     radial-gradient(ellipse at 90% 100%, rgba(124, 58, 237, 0.05) 0%, transparent 50%),
     var(--bg);
+  -webkit-font-smoothing: antialiased; /* Força o navegador a suavizar as fontes (CRÍTICO no Mac/Chrome) */
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button   { font-family: inherit; cursor: pointer; }

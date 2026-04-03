@@ -68,14 +68,38 @@
     <!-- ══════════════ VIEWS ══════════════ -->
     <main>
 
-      <!-- ── INÍCIO ── -->
+           <!-- ── INÍCIO (Bento Grid Layout) ── -->
       <div class="view active" id="view-inicio">
         <div class="section-title">👋 Bom dia!</div>
-        <div id="dash-alertas-mini"></div>
-        <div class="section-title section-title--sm">Últimas manutenções</div>
-        <div id="dash-recentes"></div>
-        <div class="section-title section-title--sm">Equipamentos críticos</div>
-        <div id="dash-criticos"></div>
+        
+        <div class="dashboard-bento">
+          <!-- Linha 1: KPIs -->
+          <div class="bento-kpi bento-kpi--alert" id="bento-kpi-alert">
+            <div class="bento-kpi__label">Alertas Ativos</div>
+            <div class="bento-kpi__value" id="hst-alert-bento">0</div>
+          </div>
+          
+          <div class="bento-kpi bento-kpi--health">
+            <div class="bento-kpi__label">Health Score</div>
+            <div class="bento-kpi__value" id="hst-health" style="color: var(--success);">—</div>
+            <div class="bento-kpi__sub">Score médio do parque</div>
+            <div class="health-bar">
+              <div class="health-bar__fill" id="health-bar-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <div class="bento-kpi bento-kpi--mes">
+            <div class="bento-kpi__label">Manutenções (Mês)</div>
+            <div class="bento-kpi__value" id="hst-mes-bento">0</div>
+          </div>
+
+          <!-- Linha 2: Alertas e Críticos -->
+          <div class="bento-alertas" id="dash-alertas-mini"></div>
+          <div class="bento-criticos" id="dash-criticos"></div>
+
+          <!-- Linha 3: Últimas manutenções -->
+          <div class="bento-recentes" id="dash-recentes"></div>
+        </div>
       </div>
 
       <!-- ── EQUIPAMENTOS ── -->

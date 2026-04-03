@@ -77,13 +77,91 @@ export function updateHeader() {
   const today = new Date();
   const iniMes = new Date(today.getFullYear(), today.getMonth(), 1);
   const alertCount = Alerts.getAll().length;
+  
   Utils.getEl('hdr-date').textContent = today.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase();
-  Utils.getEl('hst-total').textContent = equipamentos.length;
-  Utils.getEl('hst-mes').textContent = registros.filter(r => new Date(r.data) >= iniMes).length;
-  Utils.getEl('hst-alert').textContent = alertCount;
+  
+  // Calcula mês
+  const mesCount = registros.filter(r => new Date(r.data) >= iniMes).length;
+
+  // 1. Atualiza o Header antigo (topo da tela) - usando "|| '—'" para esconder zeros
+  Utils.getEl('hst-total').textContent = equipamentos.length || '—';
+  Utils.getEl('hst-mes').textContent = mesCount || '—';
+  Utils.getEl('hst-alert').textContent = alertCount || '—';
+
+  // 2. Atualiza o Bento Grid Novo (lá embaixo no dashboard)
+  Utils.getEl('hst-mes-bento').textContent = mesCount || '—';
+  Utils.getEl('hst-alert-bento').textContent = alertCount || '—';
+
+  // 3. Atualiza o Badge vermelho do menu lateral
   const badge = Utils.getEl('alerta-badge');
   badge.textContent = String(alertCount);
   badge.classList.toggle('is-visible', alertCount > 0);
+
+  // 4. Chama o cálculo do Health Score (Passo 2)
+  renderGlobalHealthScore();
+}
+
+// ─── HEALTH SCORE CALCULATION ───
+function calcHealthScore(eqId) {
+  const eq = findEquip(eqId);
+  if (!eq) return 0;
+
+  let score = 100;
+  const lastReg = lastRegForEquip(eqId);
+
+  // 1. Penalidade pelo status atual
+  if (eq.status === 'warn') score -= 20;
+  if (eq.status === 'danger') score -= 50;
+
+  // 2. Penalidade por tempo sem manutenção
+  if (lastReg) {
+    const daysSinceLast = Utils.daysDiff(lastReg.data.slice(0, 10)) * -1;
+    if (daysSinceLast > 90) score -= 25;
+    else if (daysSinceLast > 60) score -= 15;
+    else if (daysSinceLast > 30) score -= 10;
+  } else {
+    score -= 30; 
+  }
+
+  // 3. Penalidade se próxima manutenção venceu
+  if (lastReg?.proxima) {
+    const daysToNext = Utils.daysDiff(lastReg.proxima);
+    if (daysToNext < 0) score -= 20;
+  }
+
+  return Math.max(0, Math.min(100, score));
+}
+function renderGlobalHealthScore() {
+  const { equipamentos } = getState();
+  const el = Utils.getEl('hst-health');
+  const barEl = Utils.getEl('health-bar-fill');
+  
+  if (!equipamentos.length) {
+    el.textContent = '—';
+    if (barEl) barEl.style.width = '0%';
+    return;
+  }
+
+  const totalScore = equipamentos.reduce((acc, eq) => acc + calcHealthScore(eq.id), 0);
+  const avgScore = Math.round(totalScore / equipamentos.length);
+
+  el.textContent = avgScore;
+
+  // Define a cor baseada no score
+  let color = 'var(--success)';
+  if (avgScore < 50) color = 'var(--danger)';
+  else if (avgScore < 80) color = 'var(--warning)';
+  
+  el.style.color = color;
+  
+  if (barEl) {
+    barEl.style.width = `${avgScore}%`;
+    barEl.style.background = avgScore >= 80 
+      ? 'linear-gradient(90deg, var(--success), #00FFB2)' 
+      : avgScore >= 50 
+        ? 'linear-gradient(90deg, var(--warning), #FFD566)' 
+        : 'linear-gradient(90deg, var(--danger), #FF7A8A)';
+  }
 }
 export function populateSelects() {
   const { equipamentos } = getState();
