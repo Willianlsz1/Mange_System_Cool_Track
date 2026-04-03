@@ -67,6 +67,7 @@ export function bindEvents() {
   Utils.getEl('rel-equip')?.addEventListener('change', () => renderRelatorio());
   Utils.getEl('rel-de')?.addEventListener('change', () => renderRelatorio());
   Utils.getEl('rel-ate')?.addEventListener('change', () => renderRelatorio());
+  Utils.getEl('hist-tecnico')?.addEventListener('change', () => renderHist());
   
   // Busca de equipamentos com Debounce simples inline
   let searchTimeout;

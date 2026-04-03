@@ -27,6 +27,7 @@ function normalizeRegistro(r, equipamentoIds) {
     pecas: String(r.pecas || ''),
     proxima: String(r.proxima || ''),
     fotos: Array.isArray(r.fotos) ? r.fotos.filter(f => typeof f === 'string') : [],
+    tecnico: String(r.tecnico || '')
   };
 }
 export const Storage = {

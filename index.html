@@ -156,6 +156,13 @@
             <textarea id="r-obs" class="form-control" placeholder="Descreva o que foi feito, valores medidos, condições encontradas..."></textarea>
           </div>
           <div class="form-group">
+            <label class="form-label">Técnico Responsável *</label>
+            <select id="r-tecnico" class="form-control">
+              <option value="">Selecione o técnico...</option>
+              <!-- A lista de técnicos será carregada dinamicamente via JS -->
+            </select>
+          </div>
+          <div class="form-group">
             <label class="form-label">Fotos do Serviço</label>
             <div class="photo-drop">
               <input type="file" accept="image/*" multiple >
@@ -201,6 +208,11 @@
           </select>
         </div>
         <div id="timeline"></div>
+                <div class="form-group">
+          <select id="hist-tecnico" class="form-control">
+            <option value="">Todos os técnicos</option>
+          </select>
+        </div>
       </div>
 
       <!-- ── ALERTAS ── -->

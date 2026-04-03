@@ -55,9 +55,9 @@ export function seedIfEmpty() {
   setState(() => ({
     equipamentos: eq,
     registros: [
-      { id: Utils.uid(), equipId: eq[0].id, data: Utils.datetimeOffset(-2), tipo: 'Manutenção Preventiva', pecas: 'Filtro G4, lubrificante', obs: 'Limpeza geral, verificação de correntes e tensões. Tudo OK.', proxima: Utils.dateOffset(28), status: 'ok', fotos: [] },
-      { id: Utils.uid(), equipId: eq[1].id, data: Utils.datetimeOffset(-5), tipo: 'Carga de Gás Refrigerante', pecas: 'R-410A 1,5 kg', obs: 'Baixa eficiência detectada. Vazamento na linha de líquido, reparo e recarga realizada. Monitorar.', proxima: Utils.dateOffset(10), status: 'warn', fotos: [] },
-      { id: Utils.uid(), equipId: eq[3].id, data: Utils.datetimeOffset(-1), tipo: 'Manutenção Corretiva', pecas: 'Capacitor 35µF', obs: 'Compressor não ligava. Capacitor queimado substituído. Aguardando verificação de temperatura.', proxima: Utils.dateOffset(3), status: 'danger', fotos: [] },
+      { id: Utils.uid(), equipId: eq[0].id, data: Utils.datetimeOffset(-2), tipo: 'Manutenção Preventiva', pecas: 'Filtro G4, lubrificante', obs: 'Limpeza geral, verificação de correntes e tensões. Tudo OK.', proxima: Utils.dateOffset(28), status: 'ok', fotos: [], tecnico: 'Carlos Figuereido' },
+      { id: Utils.uid(), equipId: eq[1].id, data: Utils.datetimeOffset(-5), tipo: 'Carga de Gás Refrigerante', pecas: 'R-410A 1,5 kg', obs: 'Baixa eficiência detectada. Vazamento na linha de líquido, reparo e recarga realizada. Monitorar.', proxima: Utils.dateOffset(10), status: 'warn', fotos: [], tecnico: 'Camila Souza' },
+      { id: Utils.uid(), equipId: eq[3].id, data: Utils.datetimeOffset(-1), tipo: 'Manutenção Corretiva', pecas: 'Capacitor 35µF', obs: 'Compressor não ligava. Capacitor queimado substituído. Aguardando verificação de temperatura.', proxima: Utils.dateOffset(3), status: 'danger', fotos: [], tecnico: 'João Silva' },
     ],
   }));
 }
