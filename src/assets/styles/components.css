@@ -690,7 +690,9 @@ textarea.form-control { min-height: 96px; line-height: 1.5; }
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 600;
-  /* ─── Botão de Ação no Card ─── */
+}
+
+/* ─── Botão de Ação no Card ─── */
 .equip-card__actions {
   display: flex;
   flex-direction: column;
@@ -698,22 +700,82 @@ textarea.form-control { min-height: 96px; line-height: 1.5; }
   gap: var(--space-1);
   margin-left: auto;
 }
-
 .equip-card__delete {
   border: none;
   background: transparent;
-  color: var(--muted-light); /* Cor padrão que o SVG vai herdar */
+  color: var(--muted-light);
   cursor: pointer;
   padding: var(--space-1);
   border-radius: var(--radius-xs);
-  display: flex; /* Alinha o SVG perfeitamente no centro */
+  display: flex;
   align-items: center;
   justify-content: center;
   transition: color 0.15s ease, background-color 0.15s ease;
 }
-
 .equip-card__delete:hover {
   color: var(--danger);
   background: var(--danger-soft);
 }
+
+/* ─── BENTO KPI CARD ─── */
+.bento-kpi {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
+.bento-kpi:hover { border-color: var(--border-strong); }
+.bento-kpi--alert:hover { border-color: rgba(255, 61, 90, 0.3); }
+
+.bento-kpi__label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: var(--space-1);
+}
+.bento-kpi__value {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: var(--text);
+  transition: color 0.3s ease;
+}
+.bento-kpi__value--ok    { color: var(--success); }
+.bento-kpi__value--warn  { color: var(--warning); }
+.bento-kpi__value--danger { color: var(--danger); }
+
+.bento-kpi__sub {
+  margin-top: var(--space-1);
+  font-size: 11px;
+  color: var(--muted-light);
+  font-weight: 500;
+}
+
+/* ─── HEALTH BAR ─── */
+.health-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 99px;
+  margin-top: var(--space-2);
+  overflow: hidden;
+}
+.health-bar__fill {
+  height: 100%;
+  border-radius: 99px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--success), #00FFB2);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+}
+.health-bar__fill--ok    { background: linear-gradient(90deg, var(--success), #00FFB2); }
+.health-bar__fill--warn  { background: linear-gradient(90deg, var(--warning), #FFD566); }
+.health-bar__fill--danger { background: linear-gradient(90deg, var(--danger), #FF7A8A); }

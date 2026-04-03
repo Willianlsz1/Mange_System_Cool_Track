@@ -55,10 +55,14 @@
   line-height: 1.1;
 }
 .app-logo__sub {
-  color: var(--primary);
   font-size: 0.85rem;
   font-weight: 600;
   letter-spacing: 0;
+  background: linear-gradient(135deg, var(--primary) 0%, #00FFB2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.45));
 }
 .app-header__date {
   color: var(--muted);
@@ -184,6 +188,15 @@ main {
   .form-row                              { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #dash-recentes, #dash-criticos,
   #lista-equip, #lista-alertas           { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-bento {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-areas:
+      "alert-kpi health-kpi"
+      "mes-kpi    mes-kpi"
+      "alertas    alertas"
+      "criticos   criticos"
+      "recentes   recentes";
+  }
 }
 
 /* ─── BENTO GRID DASHBOARD ─── */
@@ -206,44 +219,7 @@ main {
 .bento-criticos { grid-area: criticos; }
 .bento-recentes { grid-area: recentes; }
 
-/* KPI Cards Style */
-.bento-kpi {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-4);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-.bento-kpi:hover { border-color: var(--border-strong); }
-.bento-kpi--alert:hover { border-color: rgba(255, 61, 90, 0.3); }
-
-.bento-kpi__label {
-  font-size: 10px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.08em; color: var(--muted); margin-bottom: var(--space-1);
-}
-.bento-kpi__value {
-  font-family: var(--font-display); font-size: 2rem; font-weight: 800;
-  letter-spacing: -0.05em; line-height: 1; color: var(--text);
-}
-.bento-kpi__sub { margin-top: var(--space-1); font-size: 11px; color: var(--muted-light); font-weight: 500; }
-
-/* Barra de progresso */
-.health-bar {
-  height: 4px; background: rgba(255, 255, 255, 0.06);
-  border-radius: 99px; margin-top: var(--space-2); overflow: hidden;
-}
-.health-bar__fill {
-  height: 100%; border-radius: 99px;
-  background: linear-gradient(90deg, var(--success), #00FFB2);
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Internal Bento Grids (A mágica acontece aqui: Full Width com Auto-Fit) */
+/* Internal Bento Grids (Full Width com Auto-Fit) */
 .bento-alertas, .bento-criticos, .bento-recentes {
   display: grid;
   gap: var(--space-2);
@@ -254,19 +230,6 @@ main {
 .bento-alertas { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
 .bento-criticos { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
 .bento-recentes { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-
-/* Responsividade do Bento (Tablet) */
-@media (min-width: 640px) and (max-width: 1024px) {
-  .dashboard-bento {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-areas:
-      "alert-kpi health-kpi"
-      "mes-kpi    mes-kpi"
-      "alertas    alertas"
-      "criticos   criticos"
-      "recentes   recentes";
-  }
-}
 
 /* Responsividade do Bento (Mobile) */
 @media (max-width: 639px) {
@@ -285,33 +248,6 @@ main {
     grid-template-columns: 1fr;
   }
 }
-/* Responsividade do Bento (Tablet) */
-@media (min-width: 640px) and (max-width: 1024px) {
-  .dashboard-bento {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-areas:
-      "alert-kpi health-kpi"
-      "mes-kpi    mes-kpi"
-      "alertas    alertas"
-      "criticos   criticos"
-      "recentes   recentes";
-  }
-}
-
-/* Responsividade do Bento (Mobile) */
-@media (max-width: 639px) {
-  .dashboard-bento {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "alert-kpi"
-      "health-kpi"
-      "mes-kpi"
-      "alertas"
-      "criticos"
-      "recentes";
-  }
-}
-
 /* ─── RESPONSIVE: DESKTOP ─── */
 @media (min-width: 1025px) {
   .app-header__top,
