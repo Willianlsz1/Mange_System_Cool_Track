@@ -304,51 +304,108 @@ function renderNextAction() {
   if (!el) return;
 
   const { equipamentos, registros } = getState();
+
+  // Sem equipamentos — não mostrar nada
   if (!equipamentos.length) { el.innerHTML = ''; return; }
 
-  // Equipamento com manutenção mais próxima de vencer
-  const now = new Date();
-  let best = null;
-  let bestDiff = Infinity;
-
+  // ── 1. Manutenção vencida (urgente) ───────────────────
+  let vencida = null;
   registros.forEach(r => {
     if (!r.proxima) return;
     const diff = Utils.daysDiff(r.proxima);
-    if (diff >= 0 && diff < bestDiff) { bestDiff = diff; best = r; }
+    if (diff < 0) {
+      if (!vencida || diff < Utils.daysDiff(vencida.proxima)) vencida = r;
+    }
   });
 
-  // Equipamentos sem nenhum registro
-  const semRegistro = equipamentos.filter(eq => !registros.find(r => r.equipId === eq.id));
-
-  if (!best && !semRegistro.length) { el.innerHTML = ''; return; }
-
-  let html = '';
-  if (best) {
-    const eq = findEquip(best.equipId);
-    html += `<div class="next-action-card" data-action="go-register-equip" data-id="${eq?.id || ''}">
-      <div class="next-action-card__icon" aria-hidden="true">📅</div>
-      <div>
-        <div class="next-action-card__label">PRÓXIMA AÇÃO RECOMENDADA</div>
-        <div class="next-action-card__title">${Utils.escapeHtml(eq?.nome || '—')} — preventiva ${bestDiff === 0 ? '<strong style="color:var(--danger)">hoje</strong>' : `em <strong>${bestDiff} dia${bestDiff !== 1 ? 's' : ''}</strong>`}</div>
-        <div class="next-action-card__sub">${Utils.escapeHtml(best.tipo)}</div>
-      </div>
-      <button class="btn btn--primary btn--sm" style="white-space:nowrap">Registrar agora</button>
-    </div>`;
+  if (vencida) {
+    const eq  = findEquip(vencida.equipId);
+    const dias = Math.abs(Utils.daysDiff(vencida.proxima));
+    el.innerHTML = `
+      <div class="next-action-card next-action-card--urgent"
+        data-action="go-register-equip" data-id="${eq?.id || ''}">
+        <div class="next-action-card__icon" aria-hidden="true">🔴</div>
+        <div class="next-action-card__body">
+          <div class="next-action-card__label">MANUTENÇÃO VENCIDA HÁ ${dias} DIA${dias !== 1 ? 'S' : ''}</div>
+          <div class="next-action-card__title">${Utils.escapeHtml(eq?.nome || '—')}</div>
+          <div class="next-action-card__sub">${Utils.escapeHtml(vencida.tipo)} · prevista para ${Utils.formatDate(vencida.proxima)}</div>
+        </div>
+        <button class="btn btn--danger btn--sm" style="white-space:nowrap;flex-shrink:0"
+          data-action="go-register-equip" data-id="${eq?.id || ''}">
+          Registrar agora
+        </button>
+      </div>`;
+    return;
   }
 
-  if (semRegistro.length) {
-    const eq = semRegistro[0];
-    html += `<div class="next-action-card next-action-card--info" data-action="go-register-equip" data-id="${eq.id}">
-      <div class="next-action-card__icon" aria-hidden="true">📋</div>
-      <div>
-        <div class="next-action-card__label">SEM HISTÓRICO</div>
-        <div class="next-action-card__title">${Utils.escapeHtml(eq.nome)} não tem registros este mês</div>
-      </div>
-      <button class="btn btn--outline btn--sm" style="white-space:nowrap">Registrar serviço</button>
-    </div>`;
+  // ── 2. Manutenção próxima (≤ 7 dias) ─────────────────
+  let urgente = null;
+  let urgenteDiff = Infinity;
+  registros.forEach(r => {
+    if (!r.proxima) return;
+    const diff = Utils.daysDiff(r.proxima);
+    if (diff >= 0 && diff <= 7 && diff < urgenteDiff) { urgenteDiff = diff; urgente = r; }
+  });
+
+  if (urgente) {
+    const eq = findEquip(urgente.equipId);
+    const label = urgenteDiff === 0 ? 'HOJE' : `EM ${urgenteDiff} DIA${urgenteDiff !== 1 ? 'S' : ''}`;
+    el.innerHTML = `
+      <div class="next-action-card"
+        data-action="go-register-equip" data-id="${eq?.id || ''}">
+        <div class="next-action-card__icon" aria-hidden="true">📅</div>
+        <div class="next-action-card__body">
+          <div class="next-action-card__label">PREVENTIVA ${label}</div>
+          <div class="next-action-card__title">${Utils.escapeHtml(eq?.nome || '—')}</div>
+          <div class="next-action-card__sub">${Utils.escapeHtml(urgente.tipo)}</div>
+        </div>
+        <button class="btn btn--primary btn--sm" style="white-space:nowrap;flex-shrink:0"
+          data-action="go-register-equip" data-id="${eq?.id || ''}">
+          Agendar registro
+        </button>
+      </div>`;
+    return;
   }
 
-  el.innerHTML = html;
+  // ── 3. Equipamento sem nenhum registro ────────────────
+  const semRegistro = equipamentos.find(eq => !registros.find(r => r.equipId === eq.id));
+  if (semRegistro) {
+    el.innerHTML = `
+      <div class="next-action-card next-action-card--info"
+        data-action="go-register-equip" data-id="${semRegistro.id}">
+        <div class="next-action-card__icon" aria-hidden="true">📋</div>
+        <div class="next-action-card__body">
+          <div class="next-action-card__label">SEM HISTÓRICO</div>
+          <div class="next-action-card__title">${Utils.escapeHtml(semRegistro.nome)} não tem nenhum registro</div>
+          <div class="next-action-card__sub">Registre o primeiro serviço para ativar o monitoramento</div>
+        </div>
+        <button class="btn btn--outline btn--sm" style="white-space:nowrap;flex-shrink:0"
+          data-action="go-register-equip" data-id="${semRegistro.id}">
+          Registrar serviço
+        </button>
+      </div>`;
+    return;
+  }
+
+  // ── 4. Tudo em dia — estado positivo real ─────────────
+  // Só mostra se há pelo menos uma data de próxima manutenção registrada
+  const temProxima = registros.some(r => r.proxima && Utils.daysDiff(r.proxima) >= 0);
+  if (temProxima) {
+    // Próxima manutenção mais distante (> 7 dias) — tudo OK
+    el.innerHTML = `
+      <div class="next-action-card next-action-card--ok">
+        <div class="next-action-card__icon" aria-hidden="true">✅</div>
+        <div class="next-action-card__body">
+          <div class="next-action-card__label">NENHUMA AÇÃO URGENTE</div>
+          <div class="next-action-card__title">Todas as manutenções estão dentro do prazo</div>
+          <div class="next-action-card__sub">Continue registrando os serviços para manter o histórico atualizado</div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Sem datas de próxima manutenção — não inventar nada
+  el.innerHTML = '';
 }
 
 // ════════════════════════════════════════════════════════

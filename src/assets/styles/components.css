@@ -1155,3 +1155,23 @@ mark, .mark-highlight {
 [data-client-mode] .timeline__date,
 [data-client-mode] .timeline__parts  { font-size: 13px; }
 [data-client-mode] .app-header__tagline::after { content: ' — MODO CLIENTE'; color: var(--primary); font-weight: 700; }
+
+
+/* ── Next action: variantes de estado ── */
+.next-action-card--urgent {
+  background: var(--danger-dim);
+  border-color: rgba(224,48,64,0.2);
+  border-left-color: var(--danger);
+}
+.next-action-card--urgent:hover { background: rgba(224,48,64,0.1); }
+
+.next-action-card--ok {
+  background: var(--success-dim);
+  border-color: rgba(0,200,112,0.15);
+  border-left-color: var(--success);
+  cursor: default;
+}
+.next-action-card--ok:hover { background: var(--success-dim); }
+
+/* Body do next-action — alinha o texto à esquerda */
+.next-action-card__body { flex: 1; min-width: 0; }
