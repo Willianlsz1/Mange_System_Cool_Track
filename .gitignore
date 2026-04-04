@@ -1,2 +1,28 @@
-HVCA COOL TRACK/auditoria_cooltrack_pro.html
-"node_modules/" 
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.vite/
+
+# Test/Temp files
+Security_Test/
+SECURITY-REPORT.html
+security-test.cjs
+xss-validation-test.cjs
+
+# Environment
+.env
+.env.local
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
