@@ -414,7 +414,7 @@ export function renderEquip(filtro = '') {
   el.innerHTML = list.length
     ? list.map(eq => equipCardHtml(eq)).join('')
     : empty('🔧', 'Nenhum equipamento encontrado', 'Tente outro termo ou cadastre um novo.',
-        `<button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq" style="width:auto">+ Cadastrar</button>`);
+        `<button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq" style="width:auto">+ Novo equipamento</button>`);
 }
 
 // ════════════════════════════════════════════════════════
@@ -600,7 +600,7 @@ export function renderInicio() {
     bento.innerHTML = `<div style="padding:var(--space-6) var(--space-4)">
       ${empty('🔧', 'Seu painel está pronto',
         'Cadastre o primeiro equipamento para ver eficiência, alertas e histórico em tempo real.',
-        `<button class="btn btn--primary" data-action="open-modal" data-id="modal-add-eq" style="width:auto;max-width:260px;margin:0 auto">+ Cadastrar Primeiro Equipamento</button>`
+        `<button class="btn btn--primary" data-action="open-modal" data-id="modal-add-eq" style="width:auto;max-width:260px;margin:0 auto">+ Cadastrar meu primeiro equipamento →</button>`
       )}
     </div>`;
     return;
@@ -918,6 +918,13 @@ export const Registro = {
     SavedHighlight.markForHighlight(novoId);
     this.clear();
     Toast.success('Serviço registrado com sucesso.');
+    // Upsell natural: sugerir relatório após X registros
+    const { registros } = getState ? getState() : { registros: [] };
+    if (registros.length > 0 && registros.length % 3 === 0) {
+      setTimeout(() => {
+        Toast.info('💡 Você tem ' + registros.length + ' registros. Gere um relatório PDF para enviar ao cliente.');
+      }, 1800);
+    }
     goView('historico');
   },
 
