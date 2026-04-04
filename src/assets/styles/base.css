@@ -37,10 +37,10 @@
 
   --text:           #E8F2FA;
   --text-2:         #8AAAC8;
-  --text-3:         #4A6880;
+  --text-3:         #6A8BA8;
   --text-muted:     #8AAAC8;
-  --muted:          #4A6880;
-  --muted-light:    #3A5870;
+  --muted:          #6A8BA8;
+  --muted-light:    #5A7890;
 
   --surface-strong: #112236;
   --border-strong:  rgba(255, 255, 255, 0.12);
@@ -131,8 +131,8 @@ body {
   min-height: 100vh;
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -160,27 +160,3 @@ textarea { resize: vertical; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
 
 ::selection { background: var(--primary-soft); color: var(--primary); }
-/* ========================================
-   base.css - CORREÇÃO DE FONTS PARA DESKTOP
-   ======================================== */
-
-/* ─── BODY - AUMENTAR FONT SIZE ─── */
-body {
-  /* ANTES: font-size: 15px; ← MUITO PEQUENO! */
-  font-size: 16px;  /* ✅ MÍNIMO ACEITÁVEL (WCAG) */
-  line-height: 1.6;  /* ✅ Aumentar line-height para legibilidade */
-}
-
-/* ─── MEDIA QUERY PARA DESKTOP GRANDE (≥1200px) ─── */
-@media (min-width: 1200px) {
-  body {
-    font-size: 17px;  /* ✅ Ideal para desktop */
-  }
-}
-
-/* ─── MEDIA QUERY PARA DESKTOP MUITO GRANDE (≥1600px) ─── */
-@media (min-width: 1600px) {
-  body {
-    font-size: 18px;  /* ✅ Telas 4K/Grandes */
-  }
-}
