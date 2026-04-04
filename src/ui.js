@@ -67,23 +67,72 @@ function getHealthClass(score) {
 // ════════════════════════════════════════════════════════
 // HEADER
 // ════════════════════════════════════════════════════════
+// ── Helpers de métricas temporais ────────────────────
+function _getMonthRange(monthsAgo = 0) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+  const end   = new Date(now.getFullYear(), now.getMonth() - monthsAgo + 1, 1);
+  return { start, end };
+}
+
+function _countRegistrosNoMes(registros, monthsAgo = 0) {
+  const { start, end } = _getMonthRange(monthsAgo);
+  return registros.filter(r => { const d = new Date(r.data); return d >= start && d < end; }).length;
+}
+
+function _sparklineData(registros, months = 6) {
+  return Array.from({ length: months }, (_, i) => _countRegistrosNoMes(registros, months - 1 - i));
+}
+
+function _trendTag(current, previous) {
+  if (previous === 0 && current === 0) return { text: 'Sem dados anteriores', cls: 'neutral' };
+  if (previous === 0 && current > 0)   return { text: `+${current} este mês`, cls: 'up' };
+  const diff = current - previous;
+  if (diff === 0)   return { text: 'Igual ao mês passado', cls: 'neutral' };
+  if (diff > 0)     return { text: `↑ ${diff} vs mês passado`, cls: 'up' };
+  return              { text: `↓ ${Math.abs(diff)} vs mês passado`, cls: 'down' };
+}
+
+function _sparklineHtml(data, color = 'var(--primary)') {
+  const max = Math.max(...data, 1);
+  const bars = data.map((v, i) => {
+    const pct    = Math.round((v / max) * 100);
+    const isLast = i === data.length - 1;
+    const fill   = isLast ? color : 'var(--surface-3)';
+    const height = Math.max(pct, 8);
+    return `<div class="kpi-spark__bar${isLast ? ' kpi-spark__bar--last' : ''}"
+      style="height:${height}%;background:${fill}"
+      title="${v} serviço${v !== 1 ? 's' : ''}"></div>`;
+  }).join('');
+  return `<div class="kpi-spark">${bars}</div>`;
+}
+
+function _alertContextText(count) {
+  if (count === 0) return { text: '✅ Excelente — nenhum alerta', cls: 'ok' };
+  if (count === 1) return { text: '⚠️ 1 alerta requer atenção', cls: 'warn' };
+  return { text: `🔴 ${count} alertas críticos`, cls: 'danger' };
+}
+
 export function updateHeader() {
   const { equipamentos, registros } = getState();
   const today       = new Date();
-  const iniMes      = new Date(today.getFullYear(), today.getMonth(), 1);
   const alerts      = Alerts.getAll();
   const alertCount  = alerts.length;
   const faultCount  = equipamentos.filter(e => e.status === 'danger').length;
-  const mesCount    = registros.filter(r => new Date(r.data) >= iniMes).length;
   const activeCount = equipamentos.filter(e => e.status !== 'danger').length;
 
-  // Data
+  // Serviços: mês atual vs mês anterior
+  const mesCount  = _countRegistrosNoMes(registros, 0);
+  const mesPrev   = _countRegistrosNoMes(registros, 1);
+  const sparkData = _sparklineData(registros, 6);
+
+  // ── Data no header ───────────────────────────────────
   const dateEl = Utils.getEl('hdr-date');
   if (dateEl) dateEl.textContent = today.toLocaleDateString('pt-BR', {
     weekday: 'short', day: '2-digit', month: 'short'
   }).toUpperCase();
 
-  // Stats bar
+  // ── Stats bar (header) — simples ────────────────────
   const totalEl = Utils.getEl('hst-total');
   if (totalEl) totalEl.textContent = equipamentos.length ? `${activeCount}/${equipamentos.length}` : '—';
   const mesEl = Utils.getEl('hst-mes');
@@ -91,30 +140,13 @@ export function updateHeader() {
   const alertEl = Utils.getEl('hst-alert');
   if (alertEl) alertEl.textContent = alertCount || '0';
 
-  // KPIs bento
-  const bentAlert = Utils.getEl('hst-alert-bento');
-  const bentAlertSub = Utils.getEl('hst-alert-bento-sub');
-  if (bentAlert) {
-    bentAlert.textContent = String(activeCount);
-    bentAlert.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'warn' : 'ok'}`;
-  }
-  if (bentAlertSub) bentAlertSub.textContent = faultCount > 0 ? `${faultCount} fora de operação` : 'todos operando';
-
-  const failEl = Utils.getEl('hst-fail-bento');
-  if (failEl) failEl.textContent = String(faultCount);
-
-  const mesB = Utils.getEl('hst-mes-bento');
-  if (mesB) mesB.textContent = String(mesCount);
-  const mesBSub = Utils.getEl('hst-mes-bento-sub');
-  if (mesBSub) mesBSub.textContent = mesCount === 1 ? 'registro realizado' : 'registros realizados';
-
-  // Badge
+  // ── Badge nav ────────────────────────────────────────
   const badge = Utils.getEl('alerta-badge');
   if (badge) { badge.textContent = String(alertCount); badge.classList.toggle('is-visible', alertCount > 0); }
 
-  // Status no header
-  const statusSistema = Utils.getEl('status-sistema');
-  const statusFalhas  = Utils.getEl('status-falhas');
+  // ── Status no header ─────────────────────────────────
+  const statusSistema   = Utils.getEl('status-sistema');
+  const statusFalhas    = Utils.getEl('status-falhas');
   const statusFalhasTxt = Utils.getEl('status-falhas-txt');
   if (statusSistema && statusFalhas) {
     if (faultCount > 0) {
@@ -123,13 +155,53 @@ export function updateHeader() {
       if (statusFalhasTxt) statusFalhasTxt.textContent = `${faultCount} falha${faultCount > 1 ? 's' : ''} ativa${faultCount > 1 ? 's' : ''}`;
     } else if (alertCount > 0) {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>Atenção requerida</span>`;
-      statusSistema.style.display = 'flex';
-      statusFalhas.style.display = 'none';
+      statusSistema.style.display = 'flex'; statusFalhas.style.display = 'none';
     } else {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--ok"></span><span>Sistema operacional</span>`;
-      statusSistema.style.display = 'flex';
-      statusFalhas.style.display = 'none';
+      statusSistema.style.display = 'flex'; statusFalhas.style.display = 'none';
     }
+  }
+
+  // ── KPI 1: Equipamentos Ativos ───────────────────────
+  const bentAlert    = Utils.getEl('hst-alert-bento');
+  const bentAlertSub = Utils.getEl('hst-alert-bento-sub');
+  if (bentAlert) {
+    bentAlert.textContent = String(activeCount);
+    bentAlert.className   = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'warn' : 'ok'}`;
+  }
+  if (bentAlertSub) {
+    const faultText = faultCount > 0
+      ? `<span class="kpi-trend kpi-trend--down">${faultCount} fora de operação</span>`
+      : `<span class="kpi-trend kpi-trend--ok">todos operando</span>`;
+    bentAlertSub.innerHTML = faultText;
+  }
+
+  // ── KPI 2: Eficiência (atualizado em renderGlobalEfficiency) ──
+  // context é adicionado lá
+
+  // ── KPI 3: Falhas ────────────────────────────────────
+  const failEl = Utils.getEl('hst-fail-bento');
+  if (failEl) failEl.textContent = String(faultCount);
+  const failSub = Utils.getEl('hst-fail-bento-sub');
+  if (failSub) {
+    const ctx = _alertContextText(alertCount);
+    failSub.innerHTML = `<span class="kpi-trend kpi-trend--${ctx.cls}">${ctx.text}</span>`;
+  }
+
+  // ── KPI 4: Serviços do mês — com tendência + sparkline ──
+  const mesB    = Utils.getEl('hst-mes-bento');
+  const mesBSub = Utils.getEl('hst-mes-bento-sub');
+  const mesSpark = Utils.getEl('hst-mes-spark');
+
+  if (mesB) mesB.textContent = String(mesCount);
+
+  if (mesBSub) {
+    const trend = _trendTag(mesCount, mesPrev);
+    mesBSub.innerHTML = `<span class="kpi-trend kpi-trend--${trend.cls}">${trend.text}</span>`;
+  }
+
+  if (mesSpark) {
+    mesSpark.innerHTML = _sparklineHtml(sparkData, 'var(--primary)');
   }
 
   renderGlobalEfficiency();
@@ -138,17 +210,39 @@ export function updateHeader() {
 
 function renderGlobalEfficiency() {
   const { equipamentos } = getState();
-  const el    = Utils.getEl('hst-health');
-  const barEl = Utils.getEl('health-bar-fill');
+  const el     = Utils.getEl('hst-health');
+  const barEl  = Utils.getEl('health-bar-fill');
+  const subEl  = Utils.getEl('hst-health-sub');
+
   if (!equipamentos.length) {
-    if (el) el.textContent = '—';
+    if (el)    el.textContent = '—';
     if (barEl) barEl.style.width = '0%';
+    if (subEl) subEl.innerHTML = '';
     return;
   }
-  const avg = Math.round(equipamentos.reduce((acc, eq) => acc + calcHealthScore(eq.id), 0) / equipamentos.length);
-  const cls = getHealthClass(avg);
-  if (el) { el.textContent = `${avg}%`; el.className = `bento-kpi__value bento-kpi__value--${cls === 'ok' ? 'cyan' : cls}`; }
-  if (barEl) { barEl.style.width = `${avg}%`; barEl.className = `health-bar__fill health-bar__fill--${cls}`; }
+
+  const scores = equipamentos.map(eq => calcHealthScore(eq.id));
+  const avg    = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  const cls    = getHealthClass(avg);
+
+  if (el) {
+    el.textContent = `${avg}%`;
+    el.className   = `bento-kpi__value bento-kpi__value--${cls === 'ok' ? 'cyan' : cls}`;
+  }
+  if (barEl) {
+    barEl.style.width = `${avg}%`;
+    barEl.className   = `health-bar__fill health-bar__fill--${cls}`;
+  }
+
+  // Contexto semântico baseado no valor real
+  if (subEl) {
+    let ctx = '';
+    if (avg >= 90)      ctx = `<span class="kpi-trend kpi-trend--ok">↑ Excelente — parque saudável</span>`;
+    else if (avg >= 75) ctx = `<span class="kpi-trend kpi-trend--ok">Bom — manutenção em dia</span>`;
+    else if (avg >= 50) ctx = `<span class="kpi-trend kpi-trend--warn">⚠ Atenção recomendada</span>`;
+    else                ctx = `<span class="kpi-trend kpi-trend--down">↓ Intervenção necessária</span>`;
+    subEl.innerHTML = ctx;
+  }
 }
 
 function updateStorageIndicator() {
