@@ -1,3 +1,5 @@
+# Atualizar vite.config.js
+@"
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -13,7 +15,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    minify: 'terser',
+    minify: 'esbuild',  // ✅ MUDADO: 'terser' → 'esbuild'
     rollupOptions: {
       output: {
         manualChunks: undefined,
@@ -25,3 +27,6 @@ export default defineConfig({
     devSourcemap: true,
   },
 });
+"@ | Out-File -FilePath "vite.config.js" -Encoding utf8
+
+Write-Host "✅ vite.config.js atualizado para esbuild!" -ForegroundColor Green
