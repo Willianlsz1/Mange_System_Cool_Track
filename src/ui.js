@@ -297,25 +297,51 @@ function equipCardHtml(eq, { showLocal = true } = {}) {
   const hcls  = getHealthClass(score);
   const scls  = eq.status;
 
-  let proximaHtml = '<span style="color:var(--text-3)">—</span>';
+  // ── Recência do último serviço ────────────────────────
+  function recencia(data) {
+    const d = new Date(data);
+    const diff = Math.round((new Date() - d) / 86400000);
+    if (diff === 0) return 'Hoje';
+    if (diff === 1) return 'Ontem';
+    if (diff < 30)  return `Há ${diff} dias`;
+    if (diff < 60)  return 'Há 1 mês';
+    return `Há ${Math.floor(diff / 30)} meses`;
+  }
+
+  // ── Próxima manutenção com urgência visual ────────────
+  let proximaLabel = '—';
+  let proximaCls   = 'equip-card__meta-value--muted';
+  let proximaIcon  = '';
   if (last?.proxima) {
     const diff = Utils.daysDiff(last.proxima);
-    if (diff < 0)       proximaHtml = `<span class="equip-card__data-value--danger">Vencida há ${Math.abs(diff)}d</span>`;
-    else if (diff === 0) proximaHtml = `<span class="equip-card__data-value--warn">Hoje</span>`;
-    else if (diff <= 7) proximaHtml = `<span class="equip-card__data-value--warn">em ${diff}d</span>`;
-    else                proximaHtml = `<span>em ${diff} dias</span>`;
+    if (diff < 0)        { proximaLabel = `Vencida há ${Math.abs(diff)}d`;   proximaCls = 'equip-card__meta-value--danger'; proximaIcon = '🔴'; }
+    else if (diff === 0) { proximaLabel = 'Hoje';                             proximaCls = 'equip-card__meta-value--danger'; proximaIcon = '🔴'; }
+    else if (diff <= 7)  { proximaLabel = `Em ${diff} dia${diff > 1 ? 's' : ''}`; proximaCls = 'equip-card__meta-value--warn'; proximaIcon = '⚠️'; }
+    else                 { proximaLabel = `Em ${diff} dias`;                  proximaCls = ''; }
   }
+
+  // ── Health score: cor da barra ────────────────────────
+  const barColor = hcls === 'ok' ? 'var(--success)' : hcls === 'warn' ? 'var(--warning)' : 'var(--danger)';
+
+  // ── CTA contextual baseado no estado ─────────────────
+  let ctaLabel = 'Ver histórico';
+  if (scls === 'danger')                               ctaLabel = 'Registrar corretiva →';
+  else if (last?.proxima && Utils.daysDiff(last.proxima) <= 7) ctaLabel = 'Registrar preventiva →';
+  else if (!last)                                      ctaLabel = 'Primeiro registro →';
+  else                                                 ctaLabel = 'Registrar serviço →';
 
   return `
   <div class="equip-card equip-card--${scls}"
     data-action="view-equip" data-id="${eq.id}"
     role="listitem" tabindex="0"
     aria-label="${Utils.escapeHtml(eq.nome)} — ${STATUS_TECH[scls]}">
+
+    <!-- HEADER: ícone grande + nome + status + delete -->
     <div class="equip-card__header">
-      <div class="equip-card__type-icon" aria-hidden="true">${icon}</div>
+      <div class="equip-card__type-icon equip-card__type-icon--lg" aria-hidden="true">${icon}</div>
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq.nome)}</div>
-        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || eq.tipo)} · ${Utils.escapeHtml(eq.fluido || '')}</div>
+        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)}</div>
       </div>
       <span class="equip-card__status equip-card__status--${scls}">
         <span class="status-dot status-dot--${scls}"></span>
@@ -324,22 +350,57 @@ function equipCardHtml(eq, { showLocal = true } = {}) {
       <div class="equip-card__actions">
         <button class="equip-card__delete" data-action="delete-equip" data-id="${eq.id}"
           aria-label="Excluir ${Utils.escapeHtml(eq.nome)}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
             <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
           </svg>
         </button>
       </div>
     </div>
-    <div class="equip-card__body">
-      ${showLocal ? `<div class="equip-card__data"><div class="equip-card__data-label">LOCAL</div><div class="equip-card__data-value equip-card__data-value--muted">${Utils.escapeHtml(Utils.truncate(eq.local, 26))}</div></div>` : ''}
-      <div class="equip-card__data"><div class="equip-card__data-label">FLUIDO</div><div class="equip-card__data-value">${Utils.escapeHtml(eq.fluido || '—')}</div></div>
-      <div class="equip-card__data"><div class="equip-card__data-label">ÚLTIMO</div><div class="equip-card__data-value equip-card__data-value--muted">${last ? Utils.formatDate(last.data.slice(0,10)) : '—'}</div></div>
-      <div class="equip-card__data"><div class="equip-card__data-label">PRÓXIMA</div><div class="equip-card__data-value">${proximaHtml}</div></div>
+
+    <!-- HEALTH SCORE: barra visual com percentual -->
+    <div class="equip-card__health">
+      <div class="equip-card__health-bar">
+        <div class="equip-card__health-fill" style="width:${score}%;background:${barColor}"></div>
+      </div>
+      <div class="equip-card__health-meta">
+        <span class="equip-card__health-label">Eficiência</span>
+        <span class="equip-card__health-value" style="color:${barColor}">${score}%</span>
+      </div>
     </div>
+
+    <!-- MÉTRICAS: 3 dados que importam -->
+    <div class="equip-card__metrics">
+      <div class="equip-card__metric">
+        <div class="equip-card__metric-label">Último serviço</div>
+        <div class="equip-card__metric-value">
+          ${last ? Utils.escapeHtml(recencia(last.data)) : '<span style="color:var(--text-3)">Nenhum registro</span>'}
+        </div>
+        ${last ? `<div class="equip-card__metric-sub">${Utils.escapeHtml(Utils.truncate(last.tipo, 22))}</div>` : ''}
+      </div>
+      ${showLocal ? `
+      <div class="equip-card__metric">
+        <div class="equip-card__metric-label">Localização</div>
+        <div class="equip-card__metric-value equip-card__metric-value--muted">${Utils.escapeHtml(Utils.truncate(eq.local, 24))}</div>
+      </div>` : ''}
+      <div class="equip-card__metric">
+        <div class="equip-card__metric-label">Próxima prev.</div>
+        <div class="equip-card__metric-value ${proximaCls}">
+          ${proximaIcon ? `<span aria-hidden="true">${proximaIcon}</span> ` : ''}${proximaLabel}
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER: CTA contextual -->
     <div class="equip-card__footer">
-      <span class="equip-card__footer-text">${last ? `${Utils.escapeHtml(Utils.truncate(last.tipo, 30))} · ${Utils.escapeHtml(last.tecnico || '—')}` : 'Nenhum serviço registrado'}</span>
-      <span class="equip-card__footer-action">Ver detalhes →</span>
+      <span class="equip-card__footer-tecnico">
+        ${last?.tecnico ? `👷 ${Utils.escapeHtml(last.tecnico)}` : ''}
+      </span>
+      <button class="equip-card__cta" data-action="go-register-equip" data-id="${eq.id}"
+        aria-label="${ctaLabel} em ${Utils.escapeHtml(eq.nome)}">
+        ${ctaLabel}
+      </button>
     </div>
   </div>`;
 }
