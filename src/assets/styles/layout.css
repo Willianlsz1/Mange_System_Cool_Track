@@ -22,7 +22,7 @@
 .app-header__date { color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; }
 .header-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 
-.app-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 90; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(11, 17, 32, 0.96); border-top: 1px solid var(--border); box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); padding-bottom: env(safe-area-inset-bottom); }
+.app-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(11, 17, 32, 0.96); border-top: 1px solid var(--border); box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); padding-bottom: env(safe-area-inset-bottom); }
 .app-nav__title { display: none; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
 .nav-btn { border: none; background: transparent; cursor: pointer; color: var(--muted-light); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1); position: relative; padding: 13px var(--space-1) 8px; font-size: 12px; font-weight: 700; transition: color 0.18s ease, transform 0.18s ease; }

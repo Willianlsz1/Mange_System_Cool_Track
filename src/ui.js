@@ -1,21 +1,17 @@
 /**
- * CoolTrack Pro - UI Module v3.3 (UX Premium Complete)
- * 
- * Melhorias implementadas:
- * - Toast Notification System (substituiu alert())
- * - Modal UX Premium (focus automático, ESC, Tab trap, animação scale)
- * - Theme Toggle (Dark/Light mode com localStorage)
- * - Validação Visual em Tempo Real (bordas coloridas + progress bar)
- * - Busca Inteligente (destaque mark, botão limpar, contador)
- * - View Transitions (fadeIn + translateX suaves)
- * - KPI Cards com Contexto (comparação mensal + sparklines)
+ * CoolTrack Pro - UI Module v3.5 (P1 + P2 Fixes)
+ *
+ * Correções aplicadas:
+ * [FIX-1] Bug eq?.name → eq?.nome em renderHist (histórico mostrava "—" em todos os registros)
+ * [FIX-2] ID inexistente "dash-chart-status" → removido (elemento não existe no HTML)
+ * [FIX-3] ui.js dividido em seções bem delimitadas com comentários (preparação para split em arquivos)
  */
 
 import { Utils, TIPO_ICON, STATUS_LABEL } from "./utils.js";
 import { getState, findEquip, lastRegForEquip, regsForEquip, setState } from "./state.js";
 import { Charts } from './charts.js';
 import { PDFGenerator } from './pdf.js';
-import { Toast } from './toast.js'; // ✅ NOVO: Toast System
+import { Toast } from './toast.js';
 
 function compressImage(file, maxWidth = 1200, quality = 0.7) {
   return new Promise((resolve) => {
@@ -36,55 +32,28 @@ function compressImage(file, maxWidth = 1200, quality = 0.7) {
 }
 
 // ════════════════════════════════════════════════════════
-// MODAL (UX Premium - Focus Auto, ESC, Tab Trap, Scale Anim)
+// MODAL
 // ════════════════════════════════════════════════════════
 export const Modal = {
-  /**
-   * Abre modal com UX Premium:
-   * - Focus automático no primeiro input
-   * - Esc fecha modal
-   * - Tab trap (não sai do modal com Tab)
-   * - Animação scale(0.95) → scale(1)
-   */
   open(id) {
     const modalEl = Utils.getEl(id);
     if (!modalEl) return;
-
-    // Adiciona classe de abertura
     modalEl.classList.add('is-open');
-    
-    // Remove estado de fechamento se existir
     const modalContent = modalEl.querySelector('.modal');
-    if (modalContent) {
-      modalContent.classList.remove('is-closing');
-    }
-
-    // Focus automático no primeiro input/select/textarea após animação
+    if (modalContent) modalContent.classList.remove('is-closing');
     setTimeout(() => {
       const firstInput = modalEl.querySelector('.form-control');
-      if (firstInput) {
-        firstInput.focus();
-      }
+      if (firstInput) firstInput.focus();
     }, 100);
-
-    // Tab Trap: previne sair do modal com Tab
     this._enableTabTrap(modalEl);
   },
 
-  /**
-   * Fecha modal com animação reversa
-   */
   close(id) {
     const modalEl = Utils.getEl(id);
     if (!modalEl) return;
-
     const modalContent = modalEl.querySelector('.modal');
-    
-    // Adiciona animação de fechamento
     if (modalContent) {
       modalContent.classList.add('is-closing');
-      
-      // Remove is-open após animação completar
       setTimeout(() => {
         modalEl.classList.remove('is-open');
         modalContent.classList.remove('is-closing');
@@ -96,58 +65,27 @@ export const Modal = {
   },
 
   init() {
-    // Fecha ao clicar no backdrop
     document.querySelectorAll(".modal-overlay").forEach((el) => {
-      el.addEventListener("click", (e) => {
-        if (e.target === el) this.close(el.id);
-      });
-
-      // Fecha com tecla ESC
-      el.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && el.classList.contains('is-open')) {
-          this.close(el.id);
-        }
-      });
+      el.addEventListener("click", (e) => { if (e.target === el) this.close(el.id); });
+      el.addEventListener('keydown', (e) => { if (e.key === 'Escape' && el.classList.contains('is-open')) this.close(el.id); });
     });
   },
 
-  /**
-   * Habilita Tab Trap: mantém foco dentro do modal
-   */
   _enableTabTrap(modalEl) {
     const focusableElements = modalEl.querySelectorAll(
       'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-"])'
     );
-    
     if (focusableElements.length === 0) return;
-
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
-
     this._tabTrapHandler = (e) => {
       if (e.key !== 'Tab') return;
-
-      if (e.shiftKey) {
-        // Shift + Tab: se está no primeiro, vai para o último
-        if (document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement.focus();
-        }
-      } else {
-        // Tab: se está no último, vai para o primeiro
-        if (document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement.focus();
-        }
-      }
+      if (e.shiftKey) { if (document.activeElement === firstElement) { e.preventDefault(); lastElement.focus(); } }
+      else { if (document.activeElement === lastElement) { e.preventDefault(); firstElement.focus(); } }
     };
-
     modalEl.addEventListener('keydown', this._tabTrapHandler);
   },
 
-  /**
-   * Desabilita Tab Trap
-   */
   _disableTabTrap(modalEl) {
     if (this._tabTrapHandler) {
       modalEl.removeEventListener('keydown', this._tabTrapHandler);
@@ -184,7 +122,7 @@ export const Photos = {
     const dropText = Utils.getEl('photo-drop-text'); const dropZone = Utils.getEl('photo-drop-zone');
     if (dropZone) dropZone.style.pointerEvents = 'none';
     if (dropText) dropText.textContent = `Processando ${files.length} foto(s)...`;
-    for (const file of files) { try { this.pending.push(await compressImage(file)); this.render(); } catch (e) { Toast.error("Erro ao processar foto."); } } // ✅ Toast em vez de alert
+    for (const file of files) { try { this.pending.push(await compressImage(file)); this.render(); } catch (e) { Toast.error("Erro ao processar foto."); } }
     if (dropText) dropText.textContent = 'Toque para adicionar fotos';
     if (dropZone) dropZone.style.pointerEvents = 'auto';
     input.value = "";
@@ -223,7 +161,12 @@ export const Alerts = {
   },
 };
 
-function empty(icon, msg, sub = "") { return `<div class="empty-state"><div class="empty-state__icon">${icon}</div><div class="empty-state__title">${msg}</div>${sub ? `<div class="empty-state__sub">${sub}</div>` : ""}</div>`; }
+// ════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════
+function empty(icon, msg, sub = "") {
+  return `<div class="empty-state"><div class="empty-state__icon">${icon}</div><div class="empty-state__title">${msg}</div>${sub ? `<div class="empty-state__sub">${sub}</div>` : ""}</div>`;
+}
 
 function calcHealthScore(eqId) {
   const eq = findEquip(eqId); if (!eq) return 0; let score = 100; const lastReg = lastRegForEquip(eqId);
@@ -232,8 +175,12 @@ function calcHealthScore(eqId) {
   if (lastReg?.proxima && Utils.daysDiff(lastReg.proxima) < 0) score -= 20;
   return Math.max(0, Math.min(100, score));
 }
+
 function getHealthClass(score) { return score >= 80 ? 'ok' : score >= 50 ? 'warn' : 'danger'; }
 
+// ════════════════════════════════════════════════════════
+// HEADER
+// ════════════════════════════════════════════════════════
 export function updateHeader() {
   const { equipamentos, registros } = getState(); const today = new Date(); const iniMes = new Date(today.getFullYear(), today.getMonth(), 1);
   const alertCount = Alerts.getAll().length; const mesCount = registros.filter((r) => new Date(r.data) >= iniMes).length;
@@ -262,6 +209,9 @@ export function populateSelects() {
   if (tecDatalist) tecDatalist.innerHTML = (tecnicos || []).map((t) => `<option value="${Utils.escapeHtml(t)}">`).join("");
 }
 
+// ════════════════════════════════════════════════════════
+// EQUIPAMENTOS - RENDER
+// ════════════════════════════════════════════════════════
 function equipCardHtml(eq, { showLocal = true } = {}) {
   const icon = TIPO_ICON[eq.tipo] ?? "⚙️"; const last = lastRegForEquip(eq.id); const score = calcHealthScore(eq.id);
   const nameClass = eq.status === 'danger' ? 'equip-card__name equip-card__name--danger' : 'equip-card__name';
@@ -287,6 +237,9 @@ export function renderEquip(filtro = "") {
   el.innerHTML = list.map((eq) => equipCardHtml(eq)).join("");
 }
 
+// ════════════════════════════════════════════════════════
+// ALERTAS - RENDER
+// ════════════════════════════════════════════════════════
 function alertCardHtml({ kind, reg, eq }) {
   if (kind === "critical") return `<div class="alert-card alert-card--critical" data-nav="alertas"><span class="alert-card__icon">🚨</span><div><div class="alert-card__title">Equipamento fora de operação</div><div class="alert-card__sub">Requer intervenção imediata</div><div class="alert-card__equip">${Utils.escapeHtml(eq.nome)} · ${Utils.escapeHtml(eq.local)}</div></div></div>`;
   const equip = findEquip(reg.equipId);
@@ -294,7 +247,16 @@ function alertCardHtml({ kind, reg, eq }) {
   return `<div class="alert-card" data-nav="alertas"><span class="alert-card__icon">⚠️</span><div><div class="alert-card__title">Manutenção em ${Utils.daysDiff(reg.proxima)} dia(s)</div><div class="alert-card__sub">${Utils.escapeHtml(reg.tipo)}</div><div class="alert-card__equip">${Utils.escapeHtml(equip?.nome ?? "—")}</div></div></div>`;
 }
 
+// ════════════════════════════════════════════════════════
+// DASHBOARD - RENDER
+// [FIX-2] Removida chamada a "dash-chart-status" (ID não existe no HTML).
+//         Charts são iniciados via renderStatusChart() que acessa os canvas corretos.
+// ════════════════════════════════════════════════════════
 function renderStatusChart() {
+  // Guard: só renderiza gráficos se a view início estiver ativa
+  const viewInicio = Utils.getEl('view-inicio');
+  if (!viewInicio?.classList.contains('active')) return;
+
   setTimeout(() => {
     Charts.refreshAll();
   }, 50);
@@ -303,26 +265,97 @@ function renderStatusChart() {
 export function renderInicio() {
   Utils.getEl("dash-greeting").textContent = `👋 ${Utils.getGreeting()}!`;
   const { equipamentos, registros } = getState();
-  if (equipamentos.length === 0) { Utils.getEl("dash-alertas-mini").innerHTML = ''; Utils.getEl("dash-criticos").innerHTML = ''; Utils.getEl("dash-recentes").innerHTML = ''; Utils.getEl("dash-chart-status").innerHTML = ''; document.querySelector('.dashboard-bento').innerHTML = empty("📦", "Nenhum equipamento cadastrado", `<button class="btn btn--primary" data-action="open-modal" data-id="modal-add-eq" style="width: auto; margin-top: 16px;">+ Cadastrar Primeiro</button>`); return; }
+
+  // [FIX-2] "dash-chart-status" não existe — removido da lista de elementos a limpar.
+  // Os elementos válidos do bento são: dash-alertas-mini, dash-criticos, dash-recentes.
+  if (equipamentos.length === 0) {
+    Utils.getEl("dash-alertas-mini").innerHTML = '';
+    Utils.getEl("dash-criticos").innerHTML = '';
+    Utils.getEl("dash-recentes").innerHTML = '';
+    document.querySelector('.dashboard-bento').innerHTML = empty(
+      "📦",
+      "Nenhum equipamento cadastrado",
+      `<button class="btn btn--primary" data-action="open-modal" data-id="modal-add-eq" style="width: auto; margin-top: 16px;">+ Cadastrar Primeiro</button>`
+    );
+    return;
+  }
+
   Utils.getEl("dash-alertas-mini").innerHTML = Alerts.getAll().slice(0, 2).map((a) => alertCardHtml(a)).join("");
+
   const recent = [...registros].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 3);
-  Utils.getEl("dash-recentes").innerHTML = recent.length ? recent.map((r) => { const eq = findEquip(r.equipId); return `<article class="card recent-card" data-nav="historico"><div class="recent-card__date">${Utils.formatDatetime(r.data)}</div><div class="recent-card__title">${Utils.escapeHtml(r.tipo)}</div><div class="recent-card__equip">${Utils.escapeHtml(eq?.nome ?? "—")}</div><div class="recent-card__obs">${Utils.escapeHtml(Utils.truncate(r.obs, 60))}</div></article>`; }).join("") : empty("📭", "Nenhum registro", "Faça seu primeiro lançamento");
+  Utils.getEl("dash-recentes").innerHTML = recent.length
+    ? recent.map((r) => {
+        const eq = findEquip(r.equipId);
+        return `<article class="card recent-card" data-nav="historico">
+          <div class="recent-card__date">${Utils.formatDatetime(r.data)}</div>
+          <div class="recent-card__title">${Utils.escapeHtml(r.tipo)}</div>
+          <div class="recent-card__equip">${Utils.escapeHtml(eq?.nome ?? "—")}</div>
+          <div class="recent-card__obs">${Utils.escapeHtml(Utils.truncate(r.obs, 60))}</div>
+        </article>`;
+      }).join("")
+    : empty("📭", "Nenhum registro", "Faça seu primeiro lançamento");
+
   const critical = equipamentos.filter((e) => e.status !== "ok");
-  Utils.getEl("dash-criticos").innerHTML = critical.length ? critical.map((eq) => equipCardHtml(eq, { showLocal: true })).join("") : empty("✅", "Todos normais");
+  Utils.getEl("dash-criticos").innerHTML = critical.length
+    ? critical.map((eq) => equipCardHtml(eq, { showLocal: true })).join("")
+    : empty("✅", "Todos normais");
+
   renderStatusChart();
 }
 
+// ════════════════════════════════════════════════════════
+// HISTÓRICO - RENDER
+// [FIX-1] eq?.name → eq?.nome (bug que mostrava "—" em todos os registros do histórico)
+// ════════════════════════════════════════════════════════
 export function renderHist() {
-  const { registros } = getState(); const busca = Utils.getVal("hist-busca").toLowerCase(); const filtEq = Utils.getVal("hist-equip");
+  const { registros } = getState();
+  const busca = Utils.getVal("hist-busca").toLowerCase();
+  const filtEq = Utils.getVal("hist-equip");
+
   let list = [...registros].sort((a, b) => b.data.localeCompare(a.data));
   if (filtEq) list = list.filter(r => r.equipId === filtEq);
-  if (busca) list = list.filter((r) => { const eq = findEquip(r.equipId); return r.obs.toLowerCase().includes(busca) || r.tipo.toLowerCase().includes(busca) || (eq?.nome || "").toLowerCase().includes(busca); });
+  if (busca) list = list.filter((r) => {
+    const eq = findEquip(r.equipId);
+    return r.obs.toLowerCase().includes(busca)
+      || r.tipo.toLowerCase().includes(busca)
+      || (eq?.nome || "").toLowerCase().includes(busca); // ← busca também usa .nome agora
+  });
+
   const el = Utils.getEl("timeline");
   if (!list.length) { el.innerHTML = empty("📭", "Nenhum registro"); return; }
-  el.innerHTML = `<div class="timeline">${list.map((r) => { const eq = findEquip(r.equipId); const dotMod = r.status !== "ok" ? `timeline__dot--${r.status}` : ""; return `<div class="timeline__item"><div class="timeline__dot ${dotMod}"></div><div class="timeline__item-inner"><div class="timeline__item-body"><div class="timeline__date">${Utils.formatDatetime(r.data)}</div><div class="timeline__title">${Utils.escapeHtml(r.tipo)}</div><div class="timeline__equip">📍 ${Utils.escapeHtml(eq?.name ?? "—")} · ${Utils.escapeHtml(eq?.local ?? "")}</div><div class="timeline__obs">${Utils.escapeHtml(r.obs)}</div>${r.pecas ? `<div class="timeline__parts">🔩 ${Utils.escapeHtml(r.pecas)}</div>` : ""}${r.tecnico ? `<div class="timeline__parts">👷 ${Utils.escapeHtml(r.tecnico)}</div>` : ""}${r.proxima ? `<div class="timeline__next">📅 Próxima: ${Utils.formatDate(r.proxima)}</div>` : ""}</div><button class="timeline__delete" data-action="delete-reg" data-id="${r.id}" aria-label="Excluir registro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></button></div></div>`; }).join("")}</div>`;
+
+  el.innerHTML = `<div class="timeline">${list.map((r) => {
+    const eq = findEquip(r.equipId);
+    const dotMod = r.status !== "ok" ? `timeline__dot--${r.status}` : "";
+    return `<div class="timeline__item">
+      <div class="timeline__dot ${dotMod}"></div>
+      <div class="timeline__item-inner">
+        <div class="timeline__item-body">
+          <div class="timeline__date">${Utils.formatDatetime(r.data)}</div>
+          <div class="timeline__title">${Utils.escapeHtml(r.tipo)}</div>
+          <div class="timeline__equip">📍 ${Utils.escapeHtml(eq?.nome ?? "—")} · ${Utils.escapeHtml(eq?.local ?? "")}</div>
+          <div class="timeline__obs">${Utils.escapeHtml(r.obs)}</div>
+          ${r.pecas ? `<div class="timeline__parts">🔩 ${Utils.escapeHtml(r.pecas)}</div>` : ""}
+          ${r.tecnico ? `<div class="timeline__parts">👷 ${Utils.escapeHtml(r.tecnico)}</div>` : ""}
+          ${r.proxima ? `<div class="timeline__next">📅 Próxima: ${Utils.formatDate(r.proxima)}</div>` : ""}
+        </div>
+        <button class="timeline__delete" data-action="delete-reg" data-id="${r.id}" aria-label="Excluir registro">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join("")}</div>`;
 }
 
-export function renderAlertas() { const list = Alerts.getAll(); Utils.getEl("lista-alertas").innerHTML = list.length ? list.map(alertCardHtml).join("") : empty("✅", "Tudo em dia!", "Nenhuma manutenção pendente"); }
+// ════════════════════════════════════════════════════════
+// ALERTAS, RELATÓRIO
+// ════════════════════════════════════════════════════════
+export function renderAlertas() {
+  const list = Alerts.getAll();
+  Utils.getEl("lista-alertas").innerHTML = list.length
+    ? list.map(alertCardHtml).join("")
+    : empty("✅", "Tudo em dia!", "Nenhuma manutenção pendente");
+}
 
 export function renderRelatorio() {
   const { registros } = getState(); const filtEq = Utils.getVal("rel-equip"); const de = Utils.getVal("rel-de"); const ate = Utils.getVal("rel-ate");
@@ -335,40 +368,31 @@ export function renderRelatorio() {
 }
 
 // ════════════════════════════════════════════════════════
-// EQUIPAMENTOS MODULE (com Toast em vez de alert)
+// EQUIPAMENTOS MODULE
 // ════════════════════════════════════════════════════════
 export const Equipamentos = {
   save() {
-    const nome = Utils.getVal("eq-nome").trim(); 
+    const nome = Utils.getVal("eq-nome").trim();
     const local = Utils.getVal("eq-local").trim();
-    
-    if (!nome || !local) {
-      Toast.warning("Preencha nome e localização."); // ✅ Toast em vez de alert
-      return;
-    }
-    
-    const rawTag = Utils.getVal("eq-tag").trim(); 
+    if (!nome || !local) { Toast.warning("Preencha nome e localização."); return; }
+    const rawTag = Utils.getVal("eq-tag").trim();
     const normalizedTag = rawTag.toUpperCase();
     const { equipamentos } = getState();
-    
     if (normalizedTag && equipamentos.some((e) => (e.tag || "").toUpperCase() === normalizedTag)) {
-      Toast.error("Já existe equipamento com esta TAG."); // ✅ Toast em vez de alert
-      return;
+      Toast.error("Já existe equipamento com esta TAG."); return;
     }
-    
     setState((prev) => ({ ...prev, equipamentos: [...prev.equipamentos, { id: Utils.uid(), nome, local, status: "ok", tag: normalizedTag, tipo: Utils.getVal("eq-tipo"), modelo: Utils.getVal("eq-modelo").trim(), fluido: Utils.getVal("eq-fluido") }] }));
-    Modal.close("modal-add-eq"); 
-    Utils.clearVals("eq-nome", "eq-tag", "eq-local", "eq-modelo"); 
-    renderEquip(); 
+    Modal.close("modal-add-eq");
+    Utils.clearVals("eq-nome", "eq-tag", "eq-local", "eq-modelo");
+    renderEquip();
     updateHeader();
-    Toast.success("✅ Equipamento cadastrado com sucesso!"); // ✅ Toast de sucesso
+    Toast.success("✅ Equipamento cadastrado com sucesso!");
   },
 
   view(id) {
     const eq = findEquip(id); if (!eq) return;
     const regs = regsForEquip(id).sort((a, b) => b.data.localeCompare(a.data));
     const score = calcHealthScore(id); const scoreClass = getHealthClass(score);
-    
     Utils.getEl("eq-det-corpo").innerHTML = `
       <div class="modal__title">${Utils.escapeHtml(eq.nome)}</div>
       <div class="eq-modal-health">
@@ -388,65 +412,45 @@ export const Equipamentos = {
       ${regs.slice(0, 3).map((r) => `<div class='eq-modal-quick'>${Utils.escapeHtml(r.tipo)} · ${Utils.formatDatetime(r.data)}</div>`).join("")}`;
     Modal.open("modal-eq-det");
   },
-  
-  delete(id) { 
-    setState((prev) => ({ ...prev, equipamentos: prev.equipamentos.filter((e) => e.id !== id), registros: prev.registros.filter((r) => r.equipId !== id) })); 
-    Modal.close("modal-eq-det"); 
-    renderEquip(); 
-    updateHeader(); 
-    Toast.info("Equipamento excluído."); // ✅ Toast informativo
+
+  delete(id) {
+    setState((prev) => ({ ...prev, equipamentos: prev.equipamentos.filter((e) => e.id !== id), registros: prev.registros.filter((r) => r.equipId !== id) }));
+    Modal.close("modal-eq-det");
+    renderEquip();
+    updateHeader();
+    Toast.info("Equipamento excluído.");
   },
 };
 
 // ════════════════════════════════════════════════════════
-// REGISTRO MODULE (com Toast + Validação Visual)
+// REGISTRO MODULE
 // ════════════════════════════════════════════════════════
 export const Registro = {
   save() {
-    const equipId = Utils.getVal("r-equip"); 
-    const data = Utils.getVal("r-data"); 
-    const tipo = Utils.getVal("r-tipo"); 
-    const obs = Utils.getVal("r-obs").trim(); 
-    const tecnico = Utils.getVal("r-tecnico").trim();
-    
+    const equipId = Utils.getVal("r-equip"); const data = Utils.getVal("r-data"); const tipo = Utils.getVal("r-tipo"); const obs = Utils.getVal("r-obs").trim(); const tecnico = Utils.getVal("r-tecnico").trim();
     const missing = [];
-    if (!equipId) missing.push("Equipamento"); 
-    if (!data) missing.push("Data"); 
-    if (!tipo) missing.push("Tipo de Serviço"); 
-    if (!tecnico) missing.push("Técnico Responsável"); 
-    if (!obs || obs.length < 10) missing.push("Observações (mín. 10 caracteres)");
-    
-    if (missing.length > 0) {
-      Toast.warning(`Preencha os campos obrigatórios: ${missing.join(", ")}`); // ✅ Toast em vez de alert
-      return;
-    }
-    
+    if (!equipId) missing.push("Equipamento"); if (!data) missing.push("Data"); if (!tipo) missing.push("Tipo de Serviço"); if (!tecnico) missing.push("Técnico Responsável"); if (!obs || obs.length < 10) missing.push("Observações (mín. 10 caracteres)");
+    if (missing.length > 0) { Toast.warning(`Preencha os campos obrigatórios: ${missing.join(", ")}`); return; }
     const proxima = Utils.getVal("r-proxima");
-    if (proxima && proxima < data.slice(0, 10)) {
-      Toast.error("A próxima manutenção não pode ser anterior à data do serviço."); // ✅ Toast em vez de alert
-      return;
-    }
-    
+    if (proxima && proxima < data.slice(0, 10)) { Toast.error("A próxima manutenção não pode ser anterior à data do serviço."); return; }
     const status = Utils.getVal("r-status");
     setState((prev) => {
       const currentTecnicos = prev.tecnicos || [];
       const updatedTecnicos = tecnico && !currentTecnicos.includes(tecnico) ? [...currentTecnicos, tecnico] : currentTecnicos;
       return { ...prev, tecnicos: updatedTecnicos, registros: [...prev.registros, { id: Utils.uid(), equipId, data, tipo, obs, status, pecas: Utils.getVal("r-pecas").trim(), proxima, fotos: [...Photos.pending], tecnico }], equipamentos: prev.equipamentos.map((e) => e.id === equipId ? { ...e, status } : e) };
     });
-    this.clear(); 
-    Toast.success("✅ Registro salvo com sucesso!"); // ✅ Toast de sucesso
+    this.clear();
+    Toast.success("✅ Registro salvo com sucesso!");
     goView("historico");
   },
-  
+
   clear(preserveEquip = false) {
     const toClear = ["r-tipo", "r-pecas", "r-obs", "r-proxima", "r-tecnico"];
     if (!preserveEquip) toClear.push("r-equip");
-    Utils.clearVals(...toClear); 
-    Utils.setVal("r-status", "ok"); 
-    Utils.setVal("r-data", Utils.nowDatetime()); 
+    Utils.clearVals(...toClear);
+    Utils.setVal("r-status", "ok");
+    Utils.setVal("r-data", Utils.nowDatetime());
     Photos.clear();
-    
-    // Remove barra de progresso se existir
     const progressBar = document.getElementById('form-progress-bar');
     if (progressBar) progressBar.remove();
   },
@@ -458,103 +462,83 @@ export const Registro = {
 export const Historico = {
   delete(id) {
     setState((prev) => {
-      const regToDelete = prev.registros.find((r) => r.id === id); 
+      const regToDelete = prev.registros.find((r) => r.id === id);
       const registros = prev.registros.filter((r) => r.id !== id);
       if (!regToDelete) return { ...prev, registros };
       const lastRemaining = registros.filter((r) => r.equipId === regToDelete.equipId).sort((a, b) => b.data.localeCompare(a.data))[0];
       const equipamentos = prev.equipamentos.map((eq) => eq.id === regToDelete.equipId ? { ...eq, status: lastRemaining?.status || "ok" } : eq);
       return { ...prev, registros, equipamentos };
-    }); 
-    renderHist(); 
+    });
+    renderHist();
     updateHeader();
-    Toast.warning("Registro excluído do histórico."); // ✅ Toast informativo
+    Toast.warning("Registro excluído do histórico.");
   },
 };
 
 // ════════════════════════════════════════════════════════
-// VIEW TRANSITIONS (FadeIn + TranslateX Suaves)
+// VIEW TRANSITIONS
+// [P2-preview] Flag _isTransitioning adicionada para evitar race condition
 // ════════════════════════════════════════════════════════
+let _isTransitioning = false;
+
 export function goView(name) {
+  if (_isTransitioning) return;
+
   const activeView = document.querySelector('.view.active');
   const newView = Utils.getEl(`view-${name}`);
-  
-  // Se já está na view ativa, não faz nada
   if (activeView === newView) return;
 
-  // Animação de saída da view atual (se existir)
   if (activeView) {
+    _isTransitioning = true;
     activeView.classList.add('is-exiting');
-    
-    // Remove classes após animação de saída
     setTimeout(() => {
       activeView.classList.remove('active', 'is-exiting');
-      
-      // Ativa nova view com animação de entrada
       activateNewView(name);
-    }, 200); // Duração do fade-out
+      _isTransitioning = false;
+    }, 200);
   } else {
-    // Se não há view ativa, ativa diretamente
     activateNewView(name);
   }
 }
 
-/**
- * Ativa a nova view com animação de entrada
- */
 function activateNewView(name) {
   document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("is-active"));
-  
   const newView = Utils.getEl(`view-${name}`);
-  if (newView) {
-    newView.classList.add("active"); // Trigger animação fadeIn + translateX
-  }
-  
+  if (newView) newView.classList.add("active");
   Utils.getEl(`nav-${name}`)?.classList.add("is-active");
-  
-  // Renderiza conteúdo específico da view
-  if (name === "inicio") renderInicio(); 
+  if (name === "inicio") renderInicio();
   if (name === "equipamentos") renderEquip();
   if (name === "registro") { populateSelects(); Utils.setVal("r-data", Utils.nowDatetime()); }
   if (name === "historico") { populateSelects(); renderHist(); }
-  if (name === "alertas") renderAlertas(); 
+  if (name === "alertas") renderAlertas();
   if (name === "relatorio") { populateSelects(); renderRelatorio(); }
-  
-  updateHeader(); 
+  updateHeader();
   window.scrollTo(0, 0);
 }
 
 // ════════════════════════════════════════════════════════
-// ACTIONS MODULE (Theme Toggle + Validação + Busca)
+// ACTIONS MODULE
 // ════════════════════════════════════════════════════════
 export const Actions = {
   init() {
     this.initThemeToggle();
     this.initFormValidation();
     this.initSmartSearch();
-    
+
     const rEquipSelect = Utils.getEl('r-equip');
     if (rEquipSelect) {
       rEquipSelect.addEventListener('change', () => {
         const id = rEquipSelect.value;
         let warningDiv = Utils.getEl('reg-pending-warning');
-        
-        if (!id) {
-          if (warningDiv) warningDiv.remove();
-          return;
-        }
-
+        if (!id) { if (warningDiv) warningDiv.remove(); return; }
         const lastReg = lastRegForEquip(id);
         const hasPending = lastReg && Utils.daysDiff(lastReg.proxima) >= 0;
-
         if (hasPending) {
           if (!warningDiv) {
             warningDiv = document.createElement('div');
             warningDiv.id = 'reg-pending-warning';
             warningDiv.className = 'form-label';
-            warningDiv.style.color = 'var(--warning)';
-            warningDiv.style.marginBottom = '12px';
-            warningDiv.style.fontSize = '12px';
-            warningDiv.style.lineHeight = '1.4';
+            warningDiv.style.cssText = 'color: var(--warning); margin-bottom: 12px; font-size: 12px; line-height: 1.4;';
             rEquipSelect.parentNode.parentNode.insertBefore(warningDiv, rEquipSelect.parentNode.nextSibling);
           }
           warningDiv.textContent = '⚠️ Atenção: Este equipamento já possui manutenção agendada. Registre apenas se for uma intervenção de emergência.';
@@ -567,10 +551,9 @@ export const Actions = {
     document.addEventListener("click", (e) => {
       const btn = e.target.closest('[data-action="go-register-equip"]');
       if (!btn) return;
-      const equipId = btn.dataset.id; 
-      Modal.close("modal-eq-det"); 
+      const equipId = btn.dataset.id;
+      Modal.close("modal-eq-det");
       goView("registro");
-      
       setTimeout(() => {
         Utils.setVal("r-equip", equipId);
         rEquipSelect?.dispatchEvent(new Event('change'));
@@ -581,7 +564,6 @@ export const Actions = {
   initThemeToggle() {
     const toggleBtn = Utils.getEl('theme-toggle');
     const themeIcon = Utils.getEl('theme-icon');
-    
     if (!toggleBtn || !themeIcon) return;
 
     function getPreferredTheme() {
@@ -611,11 +593,17 @@ export const Actions = {
       const newTheme = currentTheme === 'light' ? 'dark' : 'light';
       applyTheme(newTheme);
       Toast.info(`Tema alterado para ${newTheme === 'light' ? 'Claro' : 'Escuro'}`);
+
+      // [FIX-CHART-1] Recria os gráficos com as cores do novo tema.
+      // requestAnimationFrame garante que o browser já aplicou as novas
+      // custom properties do CSS antes de lermos via getComputedStyle.
+      requestAnimationFrame(() => Charts.refreshAll());
     });
 
     window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
       if (!localStorage.getItem('cooltrack-theme')) {
         applyTheme(e.matches ? 'light' : 'dark');
+        requestAnimationFrame(() => Charts.refreshAll());
       }
     });
   },
@@ -633,13 +621,11 @@ export const Actions = {
     ];
 
     const PROGRESS_CONTAINER_ID = 'form-progress-container-unique-v333';
-    
+
     function ensureProgressBarExists() {
       if (document.getElementById(PROGRESS_CONTAINER_ID)) return;
-
       const formCard = formView.querySelector('.card');
       if (!formCard) return;
-
       const progressContainer = document.createElement('div');
       progressContainer.id = PROGRESS_CONTAINER_ID;
       progressContainer.className = 'form-progress';
@@ -650,26 +636,19 @@ export const Actions = {
         </div>
         <div class="form-progress__bar">
           <div class="form-progress__fill" id="form-progress-fill" style="width: 0%"></div>
-        </div>
-      `;
-      
+        </div>`;
       formCard.insertBefore(progressContainer, formCard.firstChild);
     }
 
     function updateFieldStatus(fieldConfig) {
       const input = Utils.getEl(fieldConfig.id);
       if (!input) return;
-
       const value = input.value;
       const isValid = fieldConfig.validate(value);
-      
       input.classList.remove('is-valid', 'is-invalid');
-      
       const existingError = input.parentElement.querySelector('.form-error, .form-success');
       if (existingError) existingError.remove();
-
       if (value === '' || value.trim() === '') return;
-
       if (isValid) {
         input.classList.add('is-valid');
       } else {
@@ -683,33 +662,19 @@ export const Actions = {
 
     function updateProgressBar() {
       ensureProgressBarExists();
-
-      const filledCount = requiredFields.filter(f => {
-        const input = Utils.getEl(f.id);
-        return input && f.validate(input.value);
-      }).length;
-      
-      const totalCount = requiredFields.length;
-      const percentage = (filledCount / totalCount) * 100;
-      
+      const filledCount = requiredFields.filter(f => { const input = Utils.getEl(f.id); return input && f.validate(input.value); }).length;
+      const percentage = (filledCount / requiredFields.length) * 100;
       const progressBar = document.getElementById('form-progress-fill');
       const countEl = document.getElementById('form-progress-count');
-      
       if (progressBar) progressBar.style.width = `${percentage}%`;
-      if (countEl) countEl.textContent = `${filledCount}/${totalCount}`;
+      if (countEl) countEl.textContent = `${filledCount}/${requiredFields.length}`;
     }
 
     requiredFields.forEach(field => {
       const input = Utils.getEl(field.id);
       if (input) {
-        input.addEventListener('input', () => {
-          updateFieldStatus(field);
-          updateProgressBar();
-        });
-        
-        input.addEventListener('blur', () => {
-          updateFieldStatus(field);
-        });
+        input.addEventListener('input', () => { updateFieldStatus(field); updateProgressBar(); });
+        input.addEventListener('blur', () => updateFieldStatus(field));
       }
     });
 
@@ -719,7 +684,6 @@ export const Actions = {
   initSmartSearch() {
     const searchEquipWrapper = document.querySelector('#view-equipamentos .search-bar');
     const searchEquipInput = document.querySelector('#view-equipamentos .search-bar__input');
-    
     if (searchEquipInput && searchEquipWrapper) {
       if (!searchEquipWrapper.querySelector('.search-bar__clear')) {
         const clearBtn = document.createElement('button');
@@ -730,7 +694,6 @@ export const Actions = {
         searchEquipWrapper.classList.add('search-bar__wrapper');
         searchEquipWrapper.appendChild(clearBtn);
         searchEquipInput.classList.add('search-bar__input--with-clear');
-        
         clearBtn.addEventListener('click', () => {
           searchEquipInput.value = '';
           searchEquipWrapper.classList.remove('search-bar__has-value');
@@ -740,13 +703,8 @@ export const Actions = {
           if (counter) counter.remove();
         });
       }
-      
       searchEquipInput.addEventListener('input', () => {
-        if (searchEquipInput.value.length > 0) {
-          searchEquipWrapper.classList.add('search-bar__has-value');
-        } else {
-          searchEquipWrapper.classList.remove('search-bar__has-value');
-        }
+        searchEquipWrapper.classList.toggle('search-bar__has-value', searchEquipInput.value.length > 0);
       });
     }
   }
@@ -754,10 +712,7 @@ export const Actions = {
 
 export function highlightText(text, searchTerm) {
   if (!searchTerm || !text) return Utils.escapeHtml(text);
-  
   const escapedTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`(${escapedTerm})`, 'gi');
-  const escapedText = Utils.escapeHtml(text);
-  
-  return escapedText.replace(regex, '<mark class="mark-highlight">$1</mark>');
+  return Utils.escapeHtml(text).replace(regex, '<mark class="mark-highlight">$1</mark>');
 }
