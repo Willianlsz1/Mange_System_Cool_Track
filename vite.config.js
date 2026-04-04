@@ -1,24 +1,28 @@
 import { defineConfig } from 'vite';
 
-// https://vitejs.dev/config/
 export default defineConfig({
+  // Troque 'cooltrack' pelo nome exato do seu repositório no GitHub
+  base: 'https://github.com/Willianlsz1/Mange_System_Cool_Track',
+
   server: {
     port: 5173,
     open: true,
-    host: true
+    host: true,
   },
+
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    sourcemap: true,
+    sourcemap: false,
     minify: 'terser',
     rollupOptions: {
       output: {
-        manualChunks: undefined
-      }
-    }
+        manualChunks: undefined,
+      },
+    },
   },
+
   css: {
-    devSourcemap: true
-  }
+    devSourcemap: true,
+  },
 });

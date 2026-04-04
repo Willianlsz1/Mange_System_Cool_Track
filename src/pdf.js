@@ -1,7 +1,11 @@
 /**
- * CoolTrack Pro - PDF Generator Module v3.4
- * Sem alterações em relação à v3.1 (já estava correto).
- * chart.js movido para dependencies no package.json.
+ * CoolTrack Pro - PDF Generator v4.0
+ * Design industrial HVAC:
+ * - Paleta navy/cyan/amber/red
+ * - Cabeçalho técnico com TAG, fluido, modelo
+ * - Tabela densa com dados de campo
+ * - Rodapé com versão e paginação
+ * - Sem emojis (compatibilidade total com jsPDF)
  */
 
 import { jsPDF } from 'jspdf';
@@ -9,161 +13,302 @@ import autoTable from 'jspdf-autotable';
 import { getState } from './state.js';
 import { Utils } from './utils.js';
 
-const COLORS = {
-  primary: [0, 212, 255],
-  dark:    [15, 23, 42],
-  text:    [37, 242, 247],
-  muted:   [100, 116, 140],
-  success: [0, 180, 130],
-  warning: [230, 160, 0],
-  danger:  [230, 70, 90],
-  white:   [255, 255, 255]
+// ── Paleta HVAC para PDF ──────────────────────────────
+const C = {
+  navy:       [7,   17,  31],   // #07111F
+  navy2:      [12,  25,  41],   // #0C1929
+  navy3:      [23,  34,  53],   // #172235
+  cyan:       [0,   200, 232],  // #00C8E8
+  cyan_dim:   [0,   44,  55],   // fundo ciano suave
+  amber:      [232, 160, 32],   // #E8A020
+  amber_dim:  [50,  38,  10],   // fundo amber suave
+  red:        [224, 48,  64],   // #E03040
+  red_dim:    [50,  15,  18],   // fundo red suave
+  green:      [0,   200, 112],  // #00C870
+  green_dim:  [0,   42,  26],   // fundo green suave
+  text:       [232, 242, 250],  // #E8F2FA
+  text2:      [138, 170, 200],  // #8AAAC8
+  text3:      [74,  104, 128],  // #4A6880
+  white:      [255, 255, 255],
+  border:     [23,  45,  69],   // --surface-3
 };
+
+const STATUS_PDF = {
+  ok:     { label: 'OPERANDO', color: C.green },
+  warn:   { label: 'ATENCAO',  color: C.amber },
+  danger: { label: 'FALHA',    color: C.red   },
+};
+
+function hex(rgb) {
+  return '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+}
 
 export const PDFGenerator = {
 
   generateMaintenanceReport(options = {}) {
-    const { registros, equipamentos } = getState();
-    const { filtEq = '', de = '', ate = '' } = options;
+    try {
+      const { registros, equipamentos } = getState();
+      const { filtEq = '', de = '', ate = '' } = options;
 
-    let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));
-    if (filtEq) filtered = filtered.filter(r => r.equipId === filtEq);
-    if (de)     filtered = filtered.filter(r => r.data >= de);
-    if (ate)    filtered = filtered.filter(r => r.data <= `${ate}T23:59`);
+      // ── Filtragem ──
+      let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));
+      if (filtEq) filtered = filtered.filter(r => r.equipId === filtEq);
+      if (de)     filtered = filtered.filter(r => r.data >= de);
+      if (ate)    filtered = filtered.filter(r => r.data <= `${ate}T23:59`);
 
-    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const pageWidth  = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      const PW  = doc.internal.pageSize.getWidth();
+      const PH  = doc.internal.pageSize.getHeight();
+      const M   = 14; // margem
 
-    // ── CABEÇALHO ──
-    doc.setFillColor(...COLORS.dark);
-    doc.rect(0, 0, pageWidth, 38, 'F');
-    doc.setFillColor(...COLORS.primary);
-    doc.rect(0, 36, pageWidth, 2, 'F');
+      // ════════════════════════════════════════════════
+      // CAPA / CABEÇALHO
+      // ════════════════════════════════════════════════
+      this._drawHeader(doc, PW, M, filtEq, de, ate, filtered, equipamentos);
 
-    doc.setTextColor(...COLORS.white);
-    doc.setFontSize(24);
+      // ════════════════════════════════════════════════
+      // SUMÁRIO EXECUTIVO
+      // ════════════════════════════════════════════════
+      let yPos = 52;
+      yPos = this._drawSummary(doc, PW, M, yPos, filtered, equipamentos);
+
+      // ════════════════════════════════════════════════
+      // TABELA PRINCIPAL
+      // ════════════════════════════════════════════════
+      if (filtered.length > 0) {
+        this._drawTable(doc, PW, PH, M, yPos, filtered, equipamentos);
+      } else {
+        doc.setFontSize(12);
+        doc.setTextColor(...C.text3);
+        doc.text('Nenhum registro encontrado para os filtros selecionados.', PW / 2, yPos + 20, { align: 'center' });
+        this._drawFooter(doc, PW, PH, 1, 1);
+      }
+
+      const fileName = `CoolTrack_Relatorio_${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(fileName);
+      return fileName;
+
+    } catch (err) {
+      console.error('[PDFGenerator] Erro ao gerar PDF:', err);
+      return null;
+    }
+  },
+
+  // ── Cabeçalho industrial ─────────────────────────
+  _drawHeader(doc, PW, M, filtEq, de, ate, filtered, equipamentos) {
+    // Fundo navy escuro
+    doc.setFillColor(...C.navy);
+    doc.rect(0, 0, PW, 44, 'F');
+
+    // Linha cyan no topo
+    doc.setFillColor(...C.cyan);
+    doc.rect(0, 0, PW, 2.5, 'F');
+
+    // Logo texto
+    doc.setTextColor(...C.cyan);
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.text('COOLTRACK PRO', margin, 15);
+    doc.text('COOLTRACK PRO', M, 16);
 
-    doc.setFontSize(13);
-    doc.setTextColor(...COLORS.primary);
-    doc.text('Relatorio de Manutencao de Equipamentos', margin, 24);
-
+    // Subtítulo técnico
     doc.setFontSize(9);
-    doc.setTextColor(...COLORS.muted);
-    const today = new Date().toLocaleDateString('pt-BR', {
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...C.text2);
+    doc.text('Sistema de Gestao de Climatizacao e Refrigeracao', M, 23);
+
+    // Linha divisória vertical
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.3);
+    doc.line(M, 28, PW - M, 28);
+
+    // Metadados do relatório — linha inferior do header
+    const hoje = new Date().toLocaleDateString('pt-BR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit'
     });
-    doc.text(`Gerado: ${today}`, pageWidth - margin, 15, { align: 'right' });
 
-    let yPos = 46;
+    doc.setFontSize(8);
+    doc.setTextColor(...C.text3);
+    doc.text(`Gerado em: ${hoje}`, M, 36);
 
-    // ── RESUMO EXECUTIVO ──
-    doc.setFillColor(240, 242, 245);
-    doc.roundedRect(margin, yPos, pageWidth - (margin * 2), 20, 3, 3, 'F');
+    const eqLabel = filtEq
+      ? (equipamentos.find(e => e.id === filtEq)?.nome || 'Equipamento selecionado')
+      : 'Todos os equipamentos';
+    doc.text(`Equipamento: ${eqLabel}`, M + 80, 36);
 
-    doc.setTextColor(...COLORS.dark);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RESUMO EXECUTIVO', margin + 5, yPos + 8);
+    const periodo = de || ate
+      ? `${de || 'inicio'} a ${ate || 'atual'}`
+      : 'Todo o historico';
+    doc.text(`Periodo: ${periodo}`, M + 180, 36);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(...COLORS.muted);
-    doc.text(`Registros: ${filtered.length}`, margin + 5, yPos + 15);
-    doc.text(`Equipamentos: ${equipamentos.length}`, 60, yPos + 15);
-    doc.text(`Periodo: ${de || 'Inicio'} ate ${ate || 'Atual'}`, 120, yPos + 15);
-
-    yPos += 28;
-
-    // ── TABELA PRINCIPAL ──
-    if (filtered.length > 0) {
-      const tableData = filtered.map(reg => {
-        const eq = equipamentos.find(e => e.id === reg.equipId);
-        let statusText = 'Normal';
-        if (reg.status === 'warn')   statusText = 'Atencao';
-        if (reg.status === 'danger') statusText = 'Critico';
-        return [
-          Utils.formatDatetime(reg.data),
-          eq?.nome?.substring(0, 20) || '--',
-          reg.tipo?.substring(0, 25) || '--',
-          reg.tecnico?.substring(0, 14) || '--',
-          statusText,
-          reg.obs?.substring(0, 80) || '--'
-        ];
-      });
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [['Data/Hora', 'Equipamento', 'Tipo de Servico', 'Tecnico', 'Status', 'Observacoes']],
-        body: tableData,
-        theme: 'grid',
-        styles: {
-          fontSize: 8.5, cellPadding: 4, lineColor: [200, 200, 200], lineWidth: 0.4,
-          textColor: [50, 50, 50], font: 'helvetica', overflow: 'linebreak', cellWidth: 'wrap'
-        },
-        headStyles: {
-          fillColor: [...COLORS.dark], textColor: [...COLORS.white],
-          fontStyle: 'bold', fontSize: 8.5, halign: 'center', valign: 'middle'
-        },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        columnStyles: {
-          0: { cellWidth: 38, halign: 'center', fontSize: 8 },
-          1: { cellWidth: 45, fontSize: 8 },
-          2: { cellWidth: 55, fontSize: 8 },
-          3: { cellWidth: 32, halign: 'center', fontSize: 8 },
-          4: { cellWidth: 22, halign: 'center', fontSize: 8 },
-          5: { cellWidth: 'auto', fontSize: 8 }
-        },
-        didParseCell(data) {
-          if (data.section === 'body' && data.column.index === 4) {
-            const s = data.cell.raw;
-            if (s.includes('Critico'))  { data.cell.styles.textColor = [...COLORS.danger];  data.cell.styles.fontStyle = 'bold'; }
-            else if (s.includes('Atencao')) { data.cell.styles.textColor = [...COLORS.warning]; data.cell.styles.fontStyle = 'bold'; }
-            else                        { data.cell.styles.textColor = [...COLORS.success]; data.cell.styles.fontStyle = 'bold'; }
-          }
-        },
-        didDrawPage(data) {
-          const footerY = pageHeight - 10;
-          doc.setFillColor(...COLORS.dark);
-          doc.rect(0, footerY, pageWidth, 10, 'F');
-          doc.setFontSize(7.5);
-          doc.setTextColor(...COLORS.muted);
-          doc.text(
-            `CoolTrack Pro v3.4.0 | Pagina ${data.pageNumber} de ${doc.getNumberOfPages()}`,
-            pageWidth / 2, footerY + 4, { align: 'center' }
-          );
-        },
-        margin: { top: 10, right: margin, bottom: 20, left: margin },
-        tableWidth: 'auto'
-      });
-
-    } else {
-      doc.setFontSize(14);
-      doc.setTextColor(...COLORS.muted);
-      doc.text('Nenhum registro encontrado.', pageWidth / 2, yPos + 30, { align: 'center' });
-      this._addFooter(doc, pageWidth, pageHeight);
-    }
-
-    const fileName = `CoolTrack_Relatorio_${new Date().toISOString().slice(0, 10)}.pdf`;
-    doc.save(fileName);
-    return fileName;
+    doc.setTextColor(...C.cyan);
+    doc.text(`${filtered.length} registro(s)`, PW - M, 36, { align: 'right' });
   },
 
-  _addFooter(doc, pageWidth, pageHeight) {
-    const footerY = pageHeight - 10;
-    doc.setFillColor(...COLORS.dark);
-    doc.rect(0, footerY, pageWidth, 10, 'F');
-    doc.setFontSize(7.5);
-    doc.setTextColor(...COLORS.muted);
+  // ── Sumário executivo ─────────────────────────────
+  _drawSummary(doc, PW, M, yPos, filtered, equipamentos) {
+    const counts = { ok: 0, warn: 0, danger: 0 };
+    filtered.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+
+    const tiles = [
+      { label: 'Total de Registros', value: String(filtered.length),  color: C.cyan  },
+      { label: 'Operando Normal',    value: String(counts.ok),         color: C.green },
+      { label: 'Requer Atencao',     value: String(counts.warn),       color: C.amber },
+      { label: 'Falha / Critico',    value: String(counts.danger),     color: C.red   },
+    ];
+
+    const tileW = (PW - M * 2 - 9) / 4;
+    tiles.forEach((t, i) => {
+      const x = M + i * (tileW + 3);
+      // Fundo tile
+      doc.setFillColor(...C.navy2);
+      doc.roundedRect(x, yPos, tileW, 18, 1.5, 1.5, 'F');
+      // Borda superior colorida
+      doc.setFillColor(...t.color);
+      doc.roundedRect(x, yPos, tileW, 2, 1, 1, 'F');
+      // Valor
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...t.color);
+      doc.text(t.value, x + tileW / 2, yPos + 11, { align: 'center' });
+      // Label
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...C.text3);
+      doc.text(t.label.toUpperCase(), x + tileW / 2, yPos + 16, { align: 'center' });
+    });
+
+    return yPos + 24;
+  },
+
+  // ── Tabela principal ──────────────────────────────
+  _drawTable(doc, PW, PH, M, yPos, filtered, equipamentos) {
+    const rows = filtered.map(r => {
+      const eq     = equipamentos.find(e => e.id === r.equipId);
+      const stData = STATUS_PDF[r.status] || STATUS_PDF.ok;
+      return [
+        Utils.formatDatetime(r.data),
+        eq?.nome?.substring(0, 22)   || '—',
+        eq?.tag                       || '—',
+        eq?.fluido                    || '—',
+        r.tipo?.substring(0, 24)      || '—',
+        r.tecnico?.substring(0, 16)   || '—',
+        stData.label,
+        r.obs?.substring(0, 90)       || '—',
+      ];
+    });
+
+    autoTable(doc, {
+      startY:       yPos,
+      head: [[
+        'DATA / HORA', 'EQUIPAMENTO', 'TAG',
+        'FLUIDO', 'TIPO DE SERVICO', 'TECNICO',
+        'STATUS', 'DESCRICAO'
+      ]],
+      body: rows,
+      theme: 'plain',
+
+      styles: {
+        fontSize:   7.5,
+        cellPadding: { top: 4, right: 5, bottom: 4, left: 5 },
+        textColor:  C.text2,
+        font:       'helvetica',
+        overflow:   'linebreak',
+        lineColor:  C.border,
+        lineWidth:  0.2,
+      },
+
+      headStyles: {
+        fillColor:  C.navy2,
+        textColor:  C.text3,
+        fontStyle:  'bold',
+        fontSize:   7,
+        halign:     'left',
+        valign:     'middle',
+        lineColor:  C.cyan,
+        lineWidth:  { bottom: 0.5 },
+      },
+
+      alternateRowStyles: {
+        fillColor: C.navy,
+      },
+
+      bodyStyles: {
+        fillColor: C.navy2,
+      },
+
+      columnStyles: {
+        0: { cellWidth: 30, halign: 'center', fontStyle: 'normal', textColor: C.text3, fontSize: 7 },
+        1: { cellWidth: 38 },
+        2: { cellWidth: 20, fontStyle: 'bold', textColor: C.cyan, fontSize: 7 },
+        3: { cellWidth: 18, halign: 'center', fontSize: 7 },
+        4: { cellWidth: 38 },
+        5: { cellWidth: 24, halign: 'center', fontSize: 7 },
+        6: { cellWidth: 18, halign: 'center', fontStyle: 'bold', fontSize: 7 },
+        7: { cellWidth: 'auto' },
+      },
+
+      // Colorir status e TAGs
+      didParseCell: (data) => {
+        if (data.section !== 'body') return;
+
+        // Coluna STATUS
+        if (data.column.index === 6) {
+          const raw = data.cell.raw;
+          if (raw === 'FALHA')    data.cell.styles.textColor = C.red;
+          else if (raw === 'ATENCAO') data.cell.styles.textColor = C.amber;
+          else                    data.cell.styles.textColor = C.green;
+        }
+
+        // Coluna TAG — cyan
+        if (data.column.index === 2) {
+          data.cell.styles.textColor = C.cyan;
+        }
+      },
+
+      // Rodapé em cada página
+      didDrawPage: (data) => {
+        this._drawFooter(
+          doc, PW, PH,
+          data.pageNumber,
+          doc.getNumberOfPages()
+        );
+      },
+
+      margin:     { top: 8, right: M, bottom: 18, left: M },
+      tableWidth: 'auto',
+    });
+  },
+
+  // ── Rodapé técnico ────────────────────────────────
+  _drawFooter(doc, PW, PH, pageNum, totalPages) {
+    const footY = PH - 10;
+
+    // Barra de fundo
+    doc.setFillColor(...C.navy);
+    doc.rect(0, footY - 2, PW, 12, 'F');
+
+    // Linha cyan superior
+    doc.setFillColor(...C.cyan);
+    doc.rect(0, footY - 2, PW, 0.5, 'F');
+
+    // Texto esquerda
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...C.text3);
     doc.text(
-      `CoolTrack Pro v3.4.0 | Relatorio automatico | Pagina 1 de ${doc.getNumberOfPages()}`,
-      pageWidth / 2, footerY + 4, { align: 'center' }
+      'CoolTrack Pro v4.0 — Sistema de Gestao de Climatizacao e Refrigeracao',
+      14, footY + 3
     );
-  }
+
+    // Texto direita — paginação
+    doc.setTextColor(...C.text3);
+    doc.text(
+      `Pagina ${pageNum} de ${totalPages}`,
+      PW - 14, footY + 3,
+      { align: 'right' }
+    );
+  },
 };
 
 export default PDFGenerator;
