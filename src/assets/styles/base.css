@@ -1,97 +1,125 @@
 /* ============================================================
-   base.css — Reset, Design Tokens, Tipografia, Body
-   CoolTrack Pro · Design System v3.4 (Dark Industrial + Light Theme)
+   base.css — Design System Industrial HVAC
+   CoolTrack Pro v4.0
+   Paleta: Navy profundo · Cyan técnico · Amber manutenção · Red falha
    ============================================================ */
 
-/* ─── DESIGN TOKENS ─── */
 :root {
-  --bg:              #070C18;
-  --bg-soft:         #0B1120;
-  --surface:         #0D1528;
-  --surface-strong:  #111D35;
+  --bg:             #07111F;
+  --bg-soft:        #0C1929;
+  --surface:        #0C1929;
+  --surface-2:      #112236;
+  --surface-3:      #172D45;
 
-  --card:            rgba(255, 255, 255, 0.05);
-  --card-hover:      rgba(255, 255, 255, 0.08);
+  --card:           #0C1929;
+  --card-hover:     #112236;
 
-  --border:          rgba(255, 255, 255, 0.08);
-  --border-strong:   rgba(255, 255, 255, 0.14);
-  --border-focus:    rgba(0, 212, 255, 0.4);
+  --border:         rgba(255, 255, 255, 0.07);
+  --border-2:       rgba(255, 255, 255, 0.12);
+  --border-focus:   rgba(0, 200, 232, 0.45);
 
-  --primary:         #00D4FF;
-  --primary-strong:  #00B8E0;
-  --primary-soft:    rgba(0, 212, 255, 0.12);
+  --primary:        #00C8E8;
+  --primary-strong: #00AAC8;
+  --primary-soft:   rgba(0, 200, 232, 0.10);
+  --primary-dim:    rgba(0, 200, 232, 0.06);
 
-  --secondary:       #7C8FA8;
+  --success:        #00C870;
+  --success-soft:   rgba(0, 200, 112, 0.10);
+  --success-dim:    rgba(0, 200, 112, 0.06);
 
-  --success:         #00E5A0;
-  --success-soft:    rgba(0, 229, 160, 0.12);
-  --warning:         #FFB800;
-  --warning-soft:    rgba(255, 184, 0, 0.12);
-  --danger:          #FF3D5A;
-  --danger-soft:     rgba(255, 61, 90, 0.12);
+  --warning:        #E8A020;
+  --warning-soft:   rgba(232, 160, 32, 0.12);
+  --warning-dim:    rgba(232, 160, 32, 0.06);
 
-  --text:            #EDF2F7;
-  --text-muted:      #A0B0CC;
-  --muted:           #7B8DA6;
-  --muted-light:     #6E83A0;
+  --danger:         #E03040;
+  --danger-soft:    rgba(224, 48, 64, 0.10);
+  --danger-dim:     rgba(224, 48, 64, 0.06);
 
-  --white:           #ffffff;
-  --black:           #070C18;
+  --text:           #E8F2FA;
+  --text-2:         #8AAAC8;
+  --text-3:         #4A6880;
+  --text-muted:     #8AAAC8;
+  --muted:          #4A6880;
+  --muted-light:    #3A5870;
 
-  --font-display:    'Inter', sans-serif;
-  --font-body:       'Inter', sans-serif;
-  --font-mono:       'JetBrains Mono', monospace;
+  --surface-strong: #112236;
+  --border-strong:  rgba(255, 255, 255, 0.12);
+  --secondary:      #4A6880;
+  --white:          #E8F2FA;
+  --black:          #07111F;
 
-  --space-0:   0px;
-  --space-0-5: 2px;
-  --space-1:   4px;
-  --space-2:   8px;
-  --space-3:   12px;
-  --space-4:   16px;
-  --space-5:   24px;
-  --space-6:   32px;
-  --space-7:   40px;
-  --space-8:   48px;
+  --font-display: 'Inter', sans-serif;
+  --font-body:    'Inter', sans-serif;
+  --font-mono:    'JetBrains Mono', monospace;
 
-  --radius:    14px;
-  --radius-sm: 10px;
-  --radius-xs: 7px;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  40px;
+  --space-8:  48px;
 
-  --shadow:           0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --shadow-lg:        0 12px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --shadow-elevated:  0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --radius:    6px;
+  --radius-sm: 4px;
+  --radius-xs: 3px;
 
-  --layout-max: 1360px;
+  --shadow:          0 2px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg:       0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06);
+
+  --layout-max: 1440px;
 }
 
-/* ─── LIGHT THEME ─── */
 [data-theme="light"] {
-  --bg:              #F8FAFC;
-  --bg-soft:         #F1F5F9;
-  --surface:         #FFFFFF;
-  --surface-strong:  #E2E8F0;
+  --bg:             #EFF3F8;
+  --bg-soft:        #E4ECF4;
+  --surface:        #FFFFFF;
+  --surface-2:      #F4F7FA;
+  --surface-3:      #E8EFF6;
 
-  --card:            rgba(255, 255, 255, 0.8);
-  --card-hover:      rgba(255, 255, 255, 0.95);
+  --card:           #FFFFFF;
+  --card-hover:     #F4F7FA;
 
-  --border:          rgba(0, 0, 0, 0.08);
-  --border-strong:   rgba(0, 0, 0, 0.15);
-  --border-focus:    rgba(0, 212, 255, 0.5);
+  --border:         rgba(0, 30, 60, 0.08);
+  --border-2:       rgba(0, 30, 60, 0.14);
+  --border-focus:   rgba(0, 150, 200, 0.5);
 
-  --text:            #1E293B;
-  --text-muted:      #475569;
-  --muted:           #64748B;
-  --muted-light:     #94A3B8;
+  --primary:        #0096B4;
+  --primary-strong: #007A96;
+  --primary-soft:   rgba(0, 150, 180, 0.10);
+  --primary-dim:    rgba(0, 150, 180, 0.05);
 
-  --white:           #ffffff;
-  --black:           #1E293B;
+  --success:        #008A50;
+  --success-soft:   rgba(0, 138, 80, 0.10);
+  --success-dim:    rgba(0, 138, 80, 0.05);
 
-  --shadow:           0 4px 24px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --shadow-lg:        0 12px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  --shadow-elevated:  0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --warning:        #B87800;
+  --warning-soft:   rgba(184, 120, 0, 0.10);
+  --warning-dim:    rgba(184, 120, 0, 0.05);
+
+  --danger:         #C02030;
+  --danger-soft:    rgba(192, 32, 48, 0.08);
+  --danger-dim:     rgba(192, 32, 48, 0.04);
+
+  --text:           #0A1E32;
+  --text-2:         #3A5870;
+  --text-3:         #7A9AB8;
+  --text-muted:     #5A7A96;
+  --muted:          #7A9AB8;
+  --muted-light:    #9ABACA;
+
+  --surface-strong: #E8EFF6;
+  --border-strong:  rgba(0, 30, 60, 0.14);
+  --white:          #0A1E32;
+  --black:          #FFFFFF;
+
+  --shadow:          0 1px 6px rgba(0, 30, 60, 0.10);
+  --shadow-lg:       0 4px 20px rgba(0, 30, 60, 0.14);
+  --shadow-elevated: 0 2px 12px rgba(0, 30, 60, 0.12), 0 0 0 1px rgba(0, 30, 60, 0.06);
 }
 
-/* ─── RESET ─── */
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -99,20 +127,36 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ─── BODY ─── */
 body {
   min-height: 100vh;
   color: var(--text);
   font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.55;
-  background:
-    radial-gradient(ellipse at 10% 0%,   rgba(0, 212, 255, 0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 90% 100%, rgba(124, 58, 237, 0.05) 0%, transparent 50%),
-    var(--bg);
+  font-size: 14px;
+  line-height: 1.5;
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 0%, rgba(0, 200, 232, 0.04) 0%, transparent 45%),
+    radial-gradient(circle at 80% 100%, rgba(0, 100, 160, 0.04) 0%, transparent 45%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+#app { position: relative; z-index: 1; }
+
 button   { font-family: inherit; cursor: pointer; }
 textarea { resize: vertical; }
+
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
+
+::selection { background: var(--primary-soft); color: var(--primary); }

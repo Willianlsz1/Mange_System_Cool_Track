@@ -1,29 +1,48 @@
-export const STORAGE_KEY = 'cooltrack_v3';
+/**
+ * CoolTrack Pro - Utils v4.0
+ * Adicionado: R-404A, fluidos industriais, timezone fix em dateOffset
+ */
+
+export const STORAGE_KEY      = 'cooltrack_v3';
 export const MAX_PHOTOS_PER_RECORD = 5;
-export const MAX_PHOTO_WIDTH = 1200;
-export const PHOTO_QUALITY = 0.7;
+export const MAX_PHOTO_WIDTH  = 1200;
+export const PHOTO_QUALITY    = 0.7;
 
 export const TIPO_ICON = {
-  'Split Hi-Wall': '❄️',
-  'Split Cassette': '🌀',
+  'Split Hi-Wall':   '❄️',
+  'Split Cassette':  '🌀',
   'Split Piso Teto': '📐',
-  'Fan Coil': '💨',
-  'Chiller': '🧊',
-  'Câmara Fria': '🏔️',
-  'VRF / VRV': '🔁'
+  'Fan Coil':        '💨',
+  'Chiller':         '🧊',
+  'Câmara Fria':     '🏔️',
+  'VRF / VRV':       '🔁',
+  'Self Contained':  '🏭',
+  'Roof Top':        '🏗️',
+  'Outro':           '⚙️',
 };
 
-export const STATUS_LABEL = { ok: 'Normal', warn: 'Atenção', danger: 'Crítico' };
+export const STATUS_LABEL = {
+  ok:     'Normal',
+  warn:   'Atenção',
+  danger: 'Crítico',
+};
+
+// Fluidos aceitos (inclui industriais)
+export const FLUIDOS_VALIDOS = [
+  'R-410A', 'R-22', 'R-32', 'R-407C',
+  'R-134A', 'R-404A', 'R-448A', 'R-449A',
+  'R-507A', 'R-717', 'R-744', 'Outro'
+];
 
 export const Utils = {
   uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2);
   },
 
+  // Fix: compensa timezone para evitar off-by-one em datas
   dateOffset(days) {
     const d = new Date();
     d.setDate(d.getDate() + days);
-    // Aplica compensação de timezone (fix: dateOffset sem tz)
     d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
     return d.toISOString().slice(0, 10);
   },
@@ -41,24 +60,27 @@ export const Utils = {
     return d.toISOString().slice(0, 16);
   },
 
+  // Greeting técnico — não usado no redesign, mantido por compatibilidade
   getGreeting() {
     const h = new Date().getHours();
-    if (h < 12) return '☀️ Bom dia';
-    if (h < 18) return '🌤️ Boa tarde';
-    return '🌙 Boa noite';
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
   },
 
   formatDatetime(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '—';
-    return `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+    return `${d.toLocaleDateString('pt-BR', {
+      day: '2-digit', month: '2-digit', year: 'numeric'
+    })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   },
 
   formatDate(iso) {
     if (!iso || !iso.includes('-')) return '—';
-    const [y, m, d] = iso.split('-');
-    return `${d}/${m}/${y}`;
+    const [y, m, day] = iso.split('-');
+    return `${day}/${m}/${y}`;
   },
 
   daysDiff(isoDate) {
@@ -78,26 +100,24 @@ export const Utils = {
     }[c]));
   },
 
-  getEl(id) { return document.getElementById(id); },
-  getVal(id) { return Utils.getEl(id)?.value ?? ''; },
-  setVal(id, value) { const el = Utils.getEl(id); if (el) el.value = value; },
-  clearVals(...ids) { ids.forEach(id => Utils.setVal(id, '')); },
+  getEl(id)          { return document.getElementById(id); },
+  getVal(id)         { return Utils.getEl(id)?.value ?? ''; },
+  setVal(id, value)  { const el = Utils.getEl(id); if (el) el.value = value; },
+  clearVals(...ids)  { ids.forEach(id => Utils.setVal(id, '')); },
 
-  /** Retorna uso atual do localStorage em bytes */
   getStorageBytes() {
     try {
       let total = 0;
       for (const key of Object.keys(localStorage)) {
-        total += (localStorage.getItem(key) || '').length * 2; // UTF-16
+        total += (localStorage.getItem(key) || '').length * 2;
       }
       return total;
     } catch (_) { return 0; }
   },
 
-  /** Formata bytes para exibição humana */
   formatBytes(bytes) {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024)         return `${bytes} B`;
+    if (bytes < 1024 * 1024)  return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   }
 };
