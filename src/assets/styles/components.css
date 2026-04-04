@@ -1578,3 +1578,146 @@ mark, .mark-highlight {
   .ftx-path { padding: 12px; }
   .ftx-path__icon { font-size: 20px; }
 }
+
+
+/* ════════════════════════════════════════════════════════
+   MODAL PROGRESSIVO — Cadastro de Equipamento v5.3
+   ════════════════════════════════════════════════════════ */
+
+/* Header com steps */
+.modal-progress-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.modal__subtitle {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 3px;
+}
+
+/* Step dots */
+.modal-steps {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.modal-step {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--surface-3);
+  color: var(--text-3);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.modal-step--active {
+  background: var(--primary);
+  color: var(--black);
+}
+
+.modal-step--done {
+  background: var(--success);
+  color: var(--black);
+}
+
+.modal-step-line {
+  width: 20px;
+  height: 1px;
+  background: var(--border-2);
+}
+
+/* Form hint — texto auxiliar abaixo do campo */
+.form-hint {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Botão de expandir detalhes */
+.eq-expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 0;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font-body);
+  transition: color 0.15s ease;
+  margin-top: 4px;
+}
+
+.eq-expand-btn:hover { color: var(--primary); }
+
+.eq-expand-btn[aria-expanded="true"] { color: var(--primary); }
+
+#eq-expand-icon {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: currentColor;
+}
+
+.eq-expand-btn[aria-expanded="true"] #eq-expand-icon {
+  transform: rotate(180deg);
+}
+
+.eq-expand-hint {
+  color: var(--text-3);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+/* Painel de detalhes colapsável */
+.eq-details-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.25s ease;
+}
+
+.eq-details-panel.is-open {
+  max-height: 600px;
+  opacity: 1;
+}
+
+.eq-details-divider {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  padding: 10px 0 14px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.eq-details-divider span {
+  font-weight: 400;
+  letter-spacing: 0;
+  font-size: 10px;
+}
+
+/* Nota de confiança no rodapé do modal */
+.modal-trust-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 10px;
+}
