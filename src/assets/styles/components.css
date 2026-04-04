@@ -1218,3 +1218,19 @@ mark, .mark-highlight {
 .kpi-spark__bar--last {
   opacity: 1;
 }
+
+
+/* ── Next action: variante convidativa ── */
+.next-action-card--invite {
+  background: var(--primary-dim);
+  border-color: rgba(0,200,232,0.15);
+  border-left-color: var(--primary);
+}
+.next-action-card--invite:hover { background: var(--primary-soft); }
+
+.next-action-card__hint {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+  line-height: 1.4;
+}
