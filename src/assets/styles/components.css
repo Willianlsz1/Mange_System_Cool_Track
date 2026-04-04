@@ -1721,3 +1721,82 @@ mark, .mark-highlight {
   color: var(--text-3);
   margin-top: 10px;
 }
+
+
+/* ════════════════════════════════════════════════════════
+   REGISTRO EM BLOCOS v5.3 — separação temporal clara
+   ════════════════════════════════════════════════════════ */
+
+.registro-bloco {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.registro-bloco:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.registro-bloco__label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.1em;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.registro-bloco__label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.registro-bloco__opcional {
+  font-weight: 400;
+  letter-spacing: 0;
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+/* Bloco futuro — leve destaque visual */
+.registro-bloco--future {
+  background: var(--primary-dim);
+  border: 1px solid rgba(0,200,232,0.1);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-top: 4px;
+  border-bottom: 1px solid rgba(0,200,232,0.1);
+}
+
+.registro-bloco--future .registro-bloco__label {
+  color: var(--primary);
+}
+
+.registro-bloco--future .registro-bloco__label::after {
+  background: rgba(0,200,232,0.15);
+}
+
+.registro-bloco__desc {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 14px;
+  margin-top: -8px;
+  line-height: 1.4;
+}
+
+/* Textarea de observações: mais alta por padrão */
+.registro-obs {
+  min-height: 110px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+@media (min-width: 1025px) {
+  .registro-obs { min-height: 130px; }
+}
