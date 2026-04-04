@@ -461,21 +461,21 @@ function renderNextAction() {
     return;
   }
 
-  // ── 3. Equipamento sem nenhum registro ────────────────
+  // ── 3. Equipamento sem nenhum registro — convidativo, não acusatório ──
   const semRegistro = equipamentos.find(eq => !registros.find(r => r.equipId === eq.id));
   if (semRegistro) {
     el.innerHTML = `
-      <div class="next-action-card next-action-card--info"
+      <div class="next-action-card next-action-card--invite"
         data-action="go-register-equip" data-id="${semRegistro.id}">
-        <div class="next-action-card__icon" aria-hidden="true">📋</div>
+        <div class="next-action-card__icon" aria-hidden="true">🚀</div>
         <div class="next-action-card__body">
-          <div class="next-action-card__label">SEM HISTÓRICO</div>
-          <div class="next-action-card__title">${Utils.escapeHtml(semRegistro.nome)} não tem nenhum registro</div>
-          <div class="next-action-card__sub">Registre o primeiro serviço para ativar o monitoramento</div>
+          <div class="next-action-card__label">COMECE O HISTÓRICO DE ${Utils.escapeHtml(semRegistro.nome.toUpperCase())}</div>
+          <div class="next-action-card__title">Registre a primeira manutenção deste equipamento</div>
+          <div class="next-action-card__hint">💡 Cada registro ajuda a prever falhas e otimizar o desempenho do parque</div>
         </div>
-        <button class="btn btn--outline btn--sm" style="white-space:nowrap;flex-shrink:0"
+        <button class="btn btn--primary btn--sm" style="white-space:nowrap;flex-shrink:0"
           data-action="go-register-equip" data-id="${semRegistro.id}">
-          Registrar serviço
+          Registrar agora →
         </button>
       </div>`;
     return;
