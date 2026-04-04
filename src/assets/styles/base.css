@@ -1,34 +1,28 @@
 /* ============================================================
    base.css — Reset, Design Tokens, Tipografia, Body
-   CoolTrack Pro · Design System v3 (Dark Industrial + Light Theme)
+   CoolTrack Pro · Design System v3.4 (Dark Industrial + Light Theme)
    ============================================================ */
 
 /* ─── DESIGN TOKENS ─── */
 :root {
-  /* Backgrounds (Dark Theme - Default) */
   --bg:              #070C18;
   --bg-soft:         #0B1120;
   --surface:         #0D1528;
   --surface-strong:  #111D35;
 
-  /* Glass cards */
   --card:            rgba(255, 255, 255, 0.05);
   --card-hover:      rgba(255, 255, 255, 0.08);
 
-  /* Borders */
   --border:          rgba(255, 255, 255, 0.08);
   --border-strong:   rgba(255, 255, 255, 0.14);
   --border-focus:    rgba(0, 212, 255, 0.4);
 
-  /* Brand */
   --primary:         #00D4FF;
   --primary-strong:  #00B8E0;
   --primary-soft:    rgba(0, 212, 255, 0.12);
 
-  /* Secondary */
   --secondary:       #7C8FA8;
 
-  /* Status */
   --success:         #00E5A0;
   --success-soft:    rgba(0, 229, 160, 0.12);
   --warning:         #FFB800;
@@ -36,24 +30,18 @@
   --danger:          #FF3D5A;
   --danger-soft:     rgba(255, 61, 90, 0.12);
 
-  /* Text */
   --text:            #EDF2F7;
   --text-muted:      #A0B0CC;
   --muted:           #7B8DA6;
   --muted-light:     #6E83A0;
 
-  /* Utilities */
   --white:           #ffffff;
   --black:           #070C18;
 
-  /* Typography */
   --font-display:    'Inter', sans-serif;
   --font-body:       'Inter', sans-serif;
   --font-mono:       'JetBrains Mono', monospace;
 
-  /* ════════════════════════════════════════
-     SISTEMA DE ESPAÇAMENTO (Múltiplos de 4px)
-     ════════════════════════════════════════ */
   --space-0:   0px;
   --space-0-5: 2px;
   --space-1:   4px;
@@ -65,21 +53,18 @@
   --space-7:   40px;
   --space-8:   48px;
 
-  /* Shape */
   --radius:    14px;
   --radius-sm: 10px;
   --radius-xs: 7px;
 
-  /* Shadows */
-  --shadow:    0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  --shadow:           0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-lg:        0 12px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --shadow-elevated:  0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.08);
 
-  /* Layout */
   --layout-max: 1360px;
 }
 
-/* ─── LIGHT THEME VARIABLES ─── */
+/* ─── LIGHT THEME ─── */
 [data-theme="light"] {
   --bg:              #F8FAFC;
   --bg-soft:         #F1F5F9;
@@ -101,9 +86,9 @@
   --white:           #ffffff;
   --black:           #1E293B;
 
-  --shadow:    0 4px 24px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --shadow:           0 4px 24px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --shadow-lg:        0 12px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --shadow-elevated:  0 8px 32px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.06);
 }
 
 /* ─── RESET ─── */

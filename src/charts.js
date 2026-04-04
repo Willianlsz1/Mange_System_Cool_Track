@@ -1,359 +1,238 @@
 /**
- * CoolTrack Pro - Charts Module v1.1 (P2 Fixes)
- *
- * Correções aplicadas:
- * [FIX-CHART-1] Cores hardcoded substituídas por leitura dinâmica via getComputedStyle
- *               Gráficos agora respondem corretamente ao light/dark mode
- * [FIX-CHART-2] refreshAll() agora verifica se a view "início" está ativa antes de renderizar
- *               Evita trabalho desnecessário e flickering ao chamar updateHeader() de outras views
+ * CoolTrack Pro - Charts Module v3.4
+ * Recriado (arquivo original era binário).
+ * Usa Chart.js (movido para dependencies).
+ * Suporte a dark/light theme via CSS custom properties.
  */
 
-import { Chart, registerables } from 'chart.js';
+import { Chart, ArcElement, BarElement, LineElement, PointElement,
+  CategoryScale, LinearScale, Tooltip, Legend, Filler } from 'chart.js';
+
+Chart.register(
+  ArcElement, BarElement, LineElement, PointElement,
+  CategoryScale, LinearScale, Tooltip, Legend, Filler
+);
+
 import { getState } from './state.js';
 import { Utils } from './utils.js';
 
-Chart.register(...registerables);
+// ── Instâncias ativas ──────────────────────────────────
+let _charts = { pie: null, line: null, bar: null };
 
-// Cache de instâncias (evita memory leak ao recriar gráficos)
-const chartInstances = {};
-
-function destroyChart(canvasId) {
-  if (chartInstances[canvasId]) {
-    chartInstances[canvasId].destroy();
-    delete chartInstances[canvasId];
-  }
-}
-
-// ════════════════════════════════════════════════════════
-// [FIX-CHART-1] CORES DINÂMICAS POR TEMA
-//
-// Em vez de hardcodar "#EDF2F7" (texto claro do dark mode),
-// lemos os valores das custom properties do CSS em tempo de execução.
-// Assim, quando o usuário troca para light mode, os gráficos
-// recriados já usam as cores corretas automaticamente.
-// ════════════════════════════════════════════════════════
-
-/**
- * Lê uma custom property CSS do :root e retorna seu valor.
- * Ex: getCSSVar('--text') → '#EDF2F7' (dark) ou '#1E293B' (light)
- */
-function getCSSVar(name) {
+// ── Leitura de CSS vars (funciona para dark e light theme) ──
+function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
-/**
- * Retorna o objeto de cores atual, baseado no tema ativo.
- * Chamado no momento de criação de cada gráfico — não cacheado —
- * para garantir que sempre reflete o tema correto.
- */
 function getThemeColors() {
   return {
-    // Status semânticos (fixos — mesmos no light e dark)
-    success:  '#00E5A0',
-    warning:  '#FFB800',
-    danger:   '#FF3D5A',
-    primary:  '#00D4FF',
-
-    // Tipografia e superfície — lidos do CSS para respeitar o tema
-    text:     getCSSVar('--text'),          // '#EDF2F7' dark / '#1E293B' light
-    muted:    getCSSVar('--muted'),         // '#7B8DA6' dark / '#64748B' light
-    surface:  getCSSVar('--surface'),       // '#0D1528' dark / '#FFFFFF' light
-    border:   getCSSVar('--border'),        // rgba dark  / rgba light
+    primary:  cssVar('--primary')  || '#00D4FF',
+    success:  cssVar('--success')  || '#00E5A0',
+    warning:  cssVar('--warning')  || '#FFB800',
+    danger:   cssVar('--danger')   || '#FF3D5A',
+    muted:    cssVar('--muted')    || '#7B8DA6',
+    text:     cssVar('--text')     || '#EDF2F7',
+    border:   cssVar('--border')   || 'rgba(255,255,255,0.08)',
+    surface:  cssVar('--surface')  || '#0D1528',
   };
 }
 
-// ════════════════════════════════════════════════════════
-// [FIX-CHART-2] GUARD — só renderiza se a view está ativa
-// ════════════════════════════════════════════════════════
-
-/**
- * Verifica se a view de início está ativa no DOM.
- * Previne que refreshAll() rode em background quando o usuário
- * está em outra view (histórico, equipamentos, etc).
- */
-function isInicioActive() {
-  return Utils.getEl('view-inicio')?.classList.contains('active') ?? false;
+function globalDefaults(colors) {
+  Chart.defaults.color             = colors.text;
+  Chart.defaults.borderColor       = colors.border;
+  Chart.defaults.plugins.legend.labels.color = colors.text;
+  Chart.defaults.plugins.tooltip.backgroundColor = colors.surface;
+  Chart.defaults.plugins.tooltip.titleColor      = colors.text;
+  Chart.defaults.plugins.tooltip.bodyColor       = colors.muted;
+  Chart.defaults.plugins.tooltip.borderColor     = colors.border;
+  Chart.defaults.plugins.tooltip.borderWidth     = 1;
+  Chart.defaults.plugins.tooltip.padding         = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius    = 8;
 }
 
-// ════════════════════════════════════════════════════════
-// CHARTS MODULE
-// ════════════════════════════════════════════════════════
-export const Charts = {
+// ── Destruição segura ──────────────────────────────────
+function destroyAll() {
+  Object.values(_charts).forEach(c => { if (c) c.destroy(); });
+  _charts = { pie: null, line: null, bar: null };
+}
 
-  /**
-   * Gráfico 1: Status dos Equipamentos (Doughnut)
-   * Normal / Atenção / Crítico
-   */
-  renderStatusPie(canvasId) {
-    destroyChart(canvasId);
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
+// ── Dados derivados do state ───────────────────────────
+function buildStatusData(equipamentos, colors) {
+  const counts = { ok: 0, warn: 0, danger: 0 };
+  equipamentos.forEach(e => { if (counts[e.status] !== undefined) counts[e.status]++; });
+  return {
+    labels: ['Normal', 'Atenção', 'Crítico'],
+    datasets: [{
+      data: [counts.ok, counts.warn, counts.danger],
+      backgroundColor: [
+        colors.success + 'CC',
+        colors.warning + 'CC',
+        colors.danger  + 'CC',
+      ],
+      borderColor: [colors.success, colors.warning, colors.danger],
+      borderWidth: 2,
+      hoverOffset: 8,
+    }]
+  };
+}
 
-    const { equipamentos } = getState();
-    const C = getThemeColors(); // ← cores do tema atual
-
-    const statusCount = {
-      ok:     equipamentos.filter(e => e.status === 'ok').length,
-      warn:   equipamentos.filter(e => e.status === 'warn').length,
-      danger: equipamentos.filter(e => e.status === 'danger').length,
-    };
-
-    const total = equipamentos.length || 1;
-    const ctx = canvas.getContext('2d');
-
-    chartInstances[canvasId] = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['✅ Normal', '⚠️ Atenção', '🔴 Crítico'],
-        datasets: [{
-          data: [statusCount.ok, statusCount.warn, statusCount.danger],
-          backgroundColor: [C.success, C.warning, C.danger],
-          borderColor: C.surface,   // ← usa surface do tema (dark ou branco)
-          borderWidth: 3,
-          hoverOffset: 10,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '65%',
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              color: C.text,         // ← texto da legenda adapta ao tema
-              padding: 16,
-              font: { family: "'Inter', sans-serif", size: 12, weight: '600' },
-              usePointStyle: true,
-              pointStyle: 'circle',
-            }
-          },
-          tooltip: {
-            backgroundColor: C.surface,
-            titleColor: C.text,
-            bodyColor: C.muted,
-            borderColor: C.border,
-            borderWidth: 1,
-            padding: 12,
-            displayColors: true,
-            callbacks: {
-              label(context) {
-                const value = context.parsed;
-                const pct = ((value / total) * 100).toFixed(1);
-                return ` ${context.label}: ${value} (${pct}%)`;
-              }
-            }
-          }
-        },
-        animation: { animateRotate: true, animateScale: true, duration: 1000, easing: 'easeOutQuart' }
-      }
-    });
-  },
-
-  /**
-   * Gráfico 2: Manutenções por Mês (Bar)
-   */
-  renderMaintenanceTrend(canvasId) {
-    destroyChart(canvasId);
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-
-    const { registros } = getState();
-    const C = getThemeColors(); // ← cores do tema atual
-
-    // Agrupa por mês
-    const monthlyData = {};
-    registros.forEach(reg => {
-      if (!reg.data) return;
-      try {
-        const date = new Date(reg.data);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        monthlyData[key] = (monthlyData[key] || 0) + 1;
-      } catch (_) { /* ignora datas inválidas */ }
-    });
-
-    const sortedMonths = Object.keys(monthlyData).sort().slice(-6);
-    const labels = sortedMonths.map(m => {
-      const [year, month] = m.split('-');
-      return new Date(year, month - 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
-    });
-    const data = sortedMonths.map(m => monthlyData[m]);
-
-    if (labels.length === 0) {
-      _drawEmptyMessage(canvas, C.muted, 'Sem dados suficientes');
-      return;
-    }
-
-    const ctx = canvas.getContext('2d');
-    chartInstances[canvasId] = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Manutenções',
-          data,
-          backgroundColor: 'rgba(0, 212, 255, 0.6)',
-          borderColor: C.primary,
-          borderWidth: 2,
-          borderRadius: 8,
-          borderSkipped: false,
-          hoverBackgroundColor: C.primary,
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            grid: { color: C.border, drawBorder: false },
-            ticks: { color: C.muted, font: { size: 11 } },
-          },
-          y: {
-            beginAtZero: true,
-            grid: { color: C.border, drawBorder: false },
-            ticks: { color: C.muted, font: { size: 11 }, stepSize: 1 },
-          }
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: C.surface,
-            titleColor: C.text,
-            bodyColor: C.muted,
-            borderColor: C.border,
-            borderWidth: 1,
-            padding: 12,
-            callbacks: { label: (ctx) => ` Manutenções: ${ctx.parsed.y}` }
-          }
-        },
-        animation: { duration: 800, easing: 'easeOutQuart' }
-      }
-    });
-  },
-
-  /**
-   * Gráfico 3: Tipos de Serviço Mais Frequentes (Horizontal Bar)
-   */
-  renderServiceTypes(canvasId) {
-    destroyChart(canvasId);
-    const canvas = document.getElementById(canvasId);
-    if (!canvas) return;
-
-    const { registros } = getState();
-    const C = getThemeColors(); // ← cores do tema atual
-
-    const typeCount = {};
-    registros.forEach(reg => {
-      if (!reg.tipo) return;
-      const tipo = reg.tipo.length > 25 ? reg.tipo.substring(0, 25) + '...' : reg.tipo;
-      typeCount[tipo] = (typeCount[tipo] || 0) + 1;
-    });
-
-    const sortedTypes = Object.entries(typeCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-
-    if (sortedTypes.length === 0) {
-      _drawEmptyMessage(canvas, C.muted, 'Sem dados de serviços');
-      return;
-    }
-
-    const labels = sortedTypes.map(t => t[0]).reverse();
-    const data   = sortedTypes.map(t => t[1]).reverse();
-
-    // Gradiente de opacidade: mais frequente = mais opaco
-    const backgroundColors = data.map((_, i) => {
-      const alpha = 1 - (i * 0.15);
-      return `rgba(0, 212, 255, ${Math.max(alpha, 0.25)})`;
-    });
-
-    const ctx = canvas.getContext('2d');
-    chartInstances[canvasId] = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Quantidade',
-          data,
-          backgroundColor: backgroundColors,
-          borderColor: C.primary,
-          borderWidth: 1,
-          borderRadius: 6,
-          borderSkipped: false,
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            beginAtZero: true,
-            grid: { color: C.border, drawBorder: false },
-            ticks: { color: C.muted, font: { size: 11 }, stepSize: 1 },
-          },
-          y: {
-            grid: { display: false },
-            ticks: { color: C.text, font: { size: 11, weight: '500' } }, // ← C.text adapta ao tema
-          }
-        },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: C.surface,
-            titleColor: C.text,
-            bodyColor: C.muted,
-            borderColor: C.border,
-            borderWidth: 1,
-            padding: 12,
-            callbacks: { label: (ctx) => ` ${ctx.parsed.x} ocorrência(s)` }
-          }
-        },
-        animation: { duration: 1000, easing: 'easeOutQuart' }
-      }
-    });
-  },
-
-  /**
-   * Atualiza todos os gráficos.
-   *
-   * [FIX-CHART-2] Guard adicionado: só executa se a view início estiver ativa.
-   * Antes, qualquer chamada a updateHeader() de qualquer view disparava
-   * renderInicio() → renderStatusChart() → Charts.refreshAll(), criando
-   * instâncias de Chart desnecessárias em background.
-   */
-  refreshAll() {
-    if (!isInicioActive()) return; // ← guard
-
-    this.renderStatusPie('chart-status-pie');
-    this.renderMaintenanceTrend('chart-trend-line');
-    this.renderServiceTypes('chart-types-bar');
-  },
-
-  /**
-   * Destrói todos os gráficos (limpeza ao trocar de view ou encerrar)
-   */
-  destroyAll() {
-    Object.keys(chartInstances).forEach(id => destroyChart(id));
+function buildTrendData(registros, colors) {
+  // Últimos 6 meses
+  const months = [];
+  const counts = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = d.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+    months.push(label);
+    const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    counts.push(registros.filter(r => {
+      const rd = new Date(r.data);
+      return rd >= d && rd < next;
+    }).length);
   }
-};
-
-// ════════════════════════════════════════════════════════
-// HELPER INTERNO
-// ════════════════════════════════════════════════════════
-
-/**
- * Desenha mensagem "sem dados" diretamente no canvas,
- * usando a cor muted do tema atual.
- */
-function _drawEmptyMessage(canvas, mutedColor, message) {
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.font = '14px Inter, sans-serif';
-  ctx.fillStyle = mutedColor;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+  return {
+    labels: months,
+    datasets: [{
+      label: 'Manutenções',
+      data: counts,
+      borderColor: colors.primary,
+      backgroundColor: colors.primary + '20',
+      borderWidth: 2.5,
+      pointBackgroundColor: colors.primary,
+      pointBorderColor: colors.surface,
+      pointBorderWidth: 2,
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      tension: 0.4,
+      fill: true,
+    }]
+  };
 }
 
-export default Charts;
+function buildTypesData(registros, colors) {
+  const freq = {};
+  registros.forEach(r => { freq[r.tipo] = (freq[r.tipo] || 0) + 1; });
+  const sorted = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 7);
+  const palette = [
+    colors.primary, colors.success, colors.warning,
+    colors.danger, '#A78BFA', '#34D399', '#F472B6'
+  ];
+  return {
+    labels: sorted.map(([tipo]) => tipo.length > 22 ? tipo.slice(0, 22) + '…' : tipo),
+    datasets: [{
+      label: 'Ocorrências',
+      data: sorted.map(([, count]) => count),
+      backgroundColor: sorted.map((_, i) => palette[i % palette.length] + 'BB'),
+      borderColor:     sorted.map((_, i) => palette[i % palette.length]),
+      borderWidth: 1.5,
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  };
+}
+
+// ── Renderização individual ────────────────────────────
+function renderPie(canvas, equipamentos, colors) {
+  if (!canvas) return;
+  const data = buildStatusData(equipamentos, colors);
+  if (data.datasets[0].data.every(v => v === 0)) return;
+  _charts.pie = new Chart(canvas, {
+    type: 'doughnut',
+    data,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { padding: 14, boxWidth: 12, font: { size: 12 } }
+        },
+        tooltip: { callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.parsed} equipamento(s)`
+        }}
+      }
+    }
+  });
+}
+
+function renderLine(canvas, registros, colors) {
+  if (!canvas) return;
+  _charts.line = new Chart(canvas, {
+    type: 'line',
+    data: buildTrendData(registros, colors),
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: ctx => ` ${ctx.parsed.y} manutenção(ões)`
+        }}
+      },
+      scales: {
+        x: {
+          grid: { color: colors.border },
+          ticks: { color: colors.muted, font: { size: 11 } }
+        },
+        y: {
+          grid: { color: colors.border },
+          ticks: { color: colors.muted, font: { size: 11 }, stepSize: 1 },
+          beginAtZero: true,
+        }
+      }
+    }
+  });
+}
+
+function renderBar(canvas, registros, colors) {
+  if (!canvas) return;
+  if (!registros.length) return;
+  _charts.bar = new Chart(canvas, {
+    type: 'bar',
+    data: buildTypesData(registros, colors),
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: ctx => ` ${ctx.parsed.x} ocorrência(s)`
+        }}
+      },
+      scales: {
+        x: {
+          grid: { color: colors.border },
+          ticks: { color: colors.muted, font: { size: 11 }, stepSize: 1 },
+          beginAtZero: true,
+        },
+        y: {
+          grid: { display: false },
+          ticks: { color: colors.text, font: { size: 12 } }
+        }
+      }
+    }
+  });
+}
+
+// ── API pública ────────────────────────────────────────
+export const Charts = {
+  refreshAll() {
+    const { equipamentos, registros } = getState();
+    const colors = getThemeColors();
+    globalDefaults(colors);
+    destroyAll();
+
+    const pie    = document.getElementById('chart-status-pie');
+    const line   = document.getElementById('chart-trend-line');
+    const bar    = document.getElementById('chart-types-bar');
+
+    renderPie(pie,   equipamentos, colors);
+    renderLine(line, registros,    colors);
+    renderBar(bar,   registros,    colors);
+  },
+
+  destroyAll
+};

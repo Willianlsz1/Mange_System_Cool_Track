@@ -1,9 +1,7 @@
 /**
- * CoolTrack Pro - PDF Generator Module v3.1 (P2 Fix)
- *
- * Correção aplicada:
- * [FIX-PDF] doc.internal.getNumberOfPages() → doc.getNumberOfPages()
- *           A API interna foi depreciada nas versões recentes do jsPDF.
+ * CoolTrack Pro - PDF Generator Module v3.4
+ * Sem alterações em relação à v3.1 (já estava correto).
+ * chart.js movido para dependencies no package.json.
  */
 
 import { jsPDF } from 'jspdf';
@@ -13,13 +11,13 @@ import { Utils } from './utils.js';
 
 const COLORS = {
   primary: [0, 212, 255],
-  dark: [15, 23, 42],
-  text: [37, 242, 247],
-  muted: [100, 116, 140],
+  dark:    [15, 23, 42],
+  text:    [37, 242, 247],
+  muted:   [100, 116, 140],
   success: [0, 180, 130],
   warning: [230, 160, 0],
-  danger: [230, 70, 90],
-  white: [255, 255, 255]
+  danger:  [230, 70, 90],
+  white:   [255, 255, 255]
 };
 
 export const PDFGenerator = {
@@ -30,16 +28,11 @@ export const PDFGenerator = {
 
     let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));
     if (filtEq) filtered = filtered.filter(r => r.equipId === filtEq);
-    if (de) filtered = filtered.filter(r => r.data >= de);
-    if (ate) filtered = filtered.filter(r => r.data <= `${ate}T23:59`);
+    if (de)     filtered = filtered.filter(r => r.data >= de);
+    if (ate)    filtered = filtered.filter(r => r.data <= `${ate}T23:59`);
 
-    const doc = new jsPDF({
-      orientation: 'landscape',
-      unit: 'mm',
-      format: 'a4'
-    });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const pageWidth  = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 15;
 
@@ -91,7 +84,7 @@ export const PDFGenerator = {
       const tableData = filtered.map(reg => {
         const eq = equipamentos.find(e => e.id === reg.equipId);
         let statusText = 'Normal';
-        if (reg.status === 'warn') statusText = 'Atencao';
+        if (reg.status === 'warn')   statusText = 'Atencao';
         if (reg.status === 'danger') statusText = 'Critico';
         return [
           Utils.formatDatetime(reg.data),
@@ -125,23 +118,22 @@ export const PDFGenerator = {
           4: { cellWidth: 22, halign: 'center', fontSize: 8 },
           5: { cellWidth: 'auto', fontSize: 8 }
         },
-        didParseCell: function(data) {
+        didParseCell(data) {
           if (data.section === 'body' && data.column.index === 4) {
-            const status = data.cell.raw;
-            if (status.includes('Critico')) { data.cell.styles.textColor = [...COLORS.danger]; data.cell.styles.fontStyle = 'bold'; }
-            else if (status.includes('Atencao')) { data.cell.styles.textColor = [...COLORS.warning]; data.cell.styles.fontStyle = 'bold'; }
-            else { data.cell.styles.textColor = [...COLORS.success]; data.cell.styles.fontStyle = 'bold'; }
+            const s = data.cell.raw;
+            if (s.includes('Critico'))  { data.cell.styles.textColor = [...COLORS.danger];  data.cell.styles.fontStyle = 'bold'; }
+            else if (s.includes('Atencao')) { data.cell.styles.textColor = [...COLORS.warning]; data.cell.styles.fontStyle = 'bold'; }
+            else                        { data.cell.styles.textColor = [...COLORS.success]; data.cell.styles.fontStyle = 'bold'; }
           }
         },
-        didDrawPage: function(data) {
+        didDrawPage(data) {
           const footerY = pageHeight - 10;
           doc.setFillColor(...COLORS.dark);
           doc.rect(0, footerY, pageWidth, 10, 'F');
           doc.setFontSize(7.5);
           doc.setTextColor(...COLORS.muted);
-          // [FIX-PDF] Usando doc.getNumberOfPages() em vez de doc.internal.getNumberOfPages()
           doc.text(
-            `CoolTrack Pro v3.2.0 | Pagina ${data.pageNumber} de ${doc.getNumberOfPages()}`,
+            `CoolTrack Pro v3.4.0 | Pagina ${data.pageNumber} de ${doc.getNumberOfPages()}`,
             pageWidth / 2, footerY + 4, { align: 'center' }
           );
         },
@@ -167,9 +159,8 @@ export const PDFGenerator = {
     doc.rect(0, footerY, pageWidth, 10, 'F');
     doc.setFontSize(7.5);
     doc.setTextColor(...COLORS.muted);
-    // [FIX-PDF] Mesma correção no rodapé de fallback
     doc.text(
-      `CoolTrack Pro v3.2.0 | Relatorio automatico | Pagina 1 de ${doc.getNumberOfPages()}`,
+      `CoolTrack Pro v3.4.0 | Relatorio automatico | Pagina 1 de ${doc.getNumberOfPages()}`,
       pageWidth / 2, footerY + 4, { align: 'center' }
     );
   }

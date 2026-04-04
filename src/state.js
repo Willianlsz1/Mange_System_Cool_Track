@@ -1,16 +1,17 @@
+/**
+ * CoolTrack Pro - State Module v3.4
+ */
+
 import { Utils } from './utils.js';
 import { Storage } from './storage.js';
 
-const INITIAL_STATE = { 
-  equipamentos: [], 
-  registros: [], 
-  tecnicos: [] 
-};
+const INITIAL_STATE = { equipamentos: [], registros: [], tecnicos: [] };
 
 const listeners = new Set();
 let state = Storage.load(INITIAL_STATE);
 
 let _regsCache = null;
+
 function getRegsIndex() {
   if (_regsCache) return _regsCache;
   _regsCache = state.registros.reduce((acc, r) => {
@@ -39,7 +40,7 @@ export function subscribe(listener) {
 export function persist() { Storage.save(state); }
 
 export function setState(updater, options = { persist: true, emit: true }) {
-  _regsCache = null; 
+  _regsCache = null;
   const nextState = updater(state);
   if (nextState) state = nextState;
   if (options.persist) persist();
@@ -51,7 +52,7 @@ export function findEquip(id) {
 }
 
 export function regsForEquip(id) {
-  return getRegsIndex()[id] ?? []; 
+  return getRegsIndex()[id] ?? [];
 }
 
 export function lastRegForEquip(id) {
@@ -60,14 +61,14 @@ export function lastRegForEquip(id) {
 
 export function seedIfEmpty() {
   if (state.equipamentos.length) return;
-  
+
   const eq = [
     { id: Utils.uid(), nome: 'Split UTI Adulto', tag: 'AC-UTI-01', local: 'UTI Adulto – 2º Andar', tipo: 'Split Hi-Wall', modelo: 'Carrier 18000 BTU', fluido: 'R-410A', status: 'ok' },
     { id: Utils.uid(), nome: 'Split Centro Cirúrgico', tag: 'AC-CC-01', local: 'Centro Cirúrgico – 3º Andar', tipo: 'Split Piso Teto', modelo: 'Trane 24000 BTU', fluido: 'R-410A', status: 'warn' },
     { id: Utils.uid(), nome: 'Fan Coil Recepção', tag: 'FC-REC-01', local: 'Recepção – Térreo', tipo: 'Fan Coil', modelo: 'Hitachi 36000 BTU', fluido: 'R-22', status: 'ok' },
     { id: Utils.uid(), nome: 'Câmara Fria Farmácia', tag: 'CF-FAR-01', local: 'Farmácia – Subsolo', tipo: 'Câmara Fria', modelo: 'Tecumseh', fluido: 'R-134A', status: 'danger' },
   ];
-  
+
   setState(() => ({
     equipamentos: eq,
     registros: [

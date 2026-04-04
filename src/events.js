@@ -1,25 +1,29 @@
 /**
- * CoolTrack Pro - Events Module v3.3 (UX Premium)
- * 
- * Eventos globais com Toast System integrado
+ * CoolTrack Pro - Events Module v3.4
+ * Importa de módulos separados: modal.js, photos.js
  */
 
 import { Utils } from './utils.js';
-import { goView, Modal, Equipamentos, Registro, Historico, Photos, CustomConfirm, renderEquip, renderHist, renderRelatorio } from './ui.js';
+import { goView, Equipamentos, Registro, Historico, renderEquip, renderHist, renderRelatorio } from './ui.js';
+import { Modal, CustomConfirm } from './modal.js';
+import { Photos } from './photos.js';
 import { PDFGenerator } from './pdf.js';
-import { Toast } from './toast.js'; // ✅ NOVO: Toast System
+import { Toast } from './toast.js';
 
 function debounce(fn, delay) {
   let timeout;
-  return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => fn.apply(this, args), delay); };
+  return function (...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn.apply(this, args), delay);
+  };
 }
 
 export function bindEvents() {
   // ============================================================
-  // EVENTO PRINCIPAL DE CLICK (delegação)
+  // DELEGAÇÃO PRINCIPAL DE CLICKS
   // ============================================================
-  document.addEventListener("click", async (e) => {
-    const navBtn = e.target.closest("[data-nav]");
+  document.addEventListener('click', async e => {
+    const navBtn = e.target.closest('[data-nav]');
     if (navBtn) return goView(navBtn.dataset.nav);
 
     const openModal = e.target.closest('[data-action="open-modal"]');
@@ -37,8 +41,8 @@ export function bindEvents() {
     const deleteEquip = e.target.closest('[data-action="delete-equip"]');
     if (deleteEquip) {
       const confirmed = await CustomConfirm.show(
-        "Excluir Equipamento",
-        "Tem certeza que deseja excluir este equipamento e todos os seus registros de manutenção?",
+        'Excluir Equipamento',
+        'Tem certeza que deseja excluir este equipamento e todos os seus registros de manutenção?'
       );
       if (confirmed) Equipamentos.delete(deleteEquip.dataset.id);
       return;
@@ -53,45 +57,51 @@ export function bindEvents() {
     const deleteReg = e.target.closest('[data-action="delete-reg"]');
     if (deleteReg) {
       const confirmed = await CustomConfirm.show(
-        "Excluir Registro",
-        "Deseja apagar este registro de manutenção do histórico?",
+        'Excluir Registro',
+        'Deseja apagar este registro de manutenção do histórico?'
       );
       if (confirmed) Historico.delete(deleteReg.dataset.id);
       return;
     }
 
-    if (e.target.closest(".lightbox__close")) return Photos.closeLightbox();
-    
-    // NOTA: O botão PDF foi movido PARA FORA deste listener (ver abaixo)
+    if (e.target.closest('.lightbox__close')) return Photos.closeLightbox();
+
+    // Lightbox: fechar ao clicar no fundo (fix: lightbox não fechava no overlay)
+    const lightbox = Utils.getEl('lightbox');
+    if (lightbox && e.target === lightbox) return Photos.closeLightbox();
   });
 
   // ============================================================
-  // EVENTOS DE INPUT (não são clicks)
+  // INPUTS
   // ============================================================
   const inputFotos = Utils.getEl('input-fotos');
-  if (inputFotos) inputFotos.addEventListener('change', (e) => Photos.add(e.target));
+  if (inputFotos) inputFotos.addEventListener('change', e => Photos.add(e.target));
 
   const searchEquip = document.querySelector('#view-equipamentos .search-bar__input');
   if (searchEquip) {
-    const debouncedSearch = debounce((value) => renderEquip(value), 300);
-    searchEquip.addEventListener('input', (e) => debouncedSearch(e.target.value));
+    const debouncedSearch = debounce(value => renderEquip(value), 300);
+    searchEquip.addEventListener('input', e => debouncedSearch(e.target.value));
   }
 
   const histBusca = Utils.getEl('hist-busca');
   if (histBusca) histBusca.addEventListener('input', renderHist);
+
   const histEquip = Utils.getEl('hist-equip');
   if (histEquip) histEquip.addEventListener('change', renderHist);
+
   const relEquip = Utils.getEl('rel-equip');
   if (relEquip) relEquip.addEventListener('change', renderRelatorio);
+
   const relDe = Utils.getEl('rel-de');
   if (relDe) relDe.addEventListener('change', renderRelatorio);
+
   const relAte = Utils.getEl('rel-ate');
   if (relAte) relAte.addEventListener('change', renderRelatorio);
 
   // ============================================================
-  // BOTÃO EXPORTAR PDF (FORA do click listener principal!)
+  // BOTÃO EXPORTAR PDF
   // ============================================================
-  const btnExportPdf = document.getElementById('btn-export-pdf');
+  const btnExportPdf = Utils.getEl('btn-export-pdf');
   if (btnExportPdf) {
     btnExportPdf.addEventListener('click', () => {
       const fileName = PDFGenerator.generateMaintenanceReport({
@@ -99,11 +109,10 @@ export function bindEvents() {
         de: Utils.getVal('rel-de'),
         ate: Utils.getVal('rel-ate')
       });
-      
       if (fileName) {
-        Toast.success(`PDF gerado: ${fileName}`); // ✅ Toast em vez de alert
+        Toast.success(`PDF gerado: ${fileName}`);
       } else {
-        Toast.error('Erro ao gerar PDF. Verifique o console (F12).'); // ✅ Toast em vez de alert
+        Toast.error('Erro ao gerar PDF. Verifique o console (F12).');
       }
     });
   }
