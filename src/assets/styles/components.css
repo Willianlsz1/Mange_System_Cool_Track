@@ -521,11 +521,11 @@
 .form-label {
   display: block;
   margin-bottom: var(--space-1);
-  color: var(--text-3);
-  font-size: 10px;
+  color: var(--muted);
+  font-size: 0.95rem; /* 14px base mais consistente */
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.05em;
 }
 
 .form-control {
