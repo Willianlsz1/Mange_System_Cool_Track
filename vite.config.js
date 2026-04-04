@@ -1,8 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // Troque 'cooltrack' pelo nome exato do seu repositório no GitHub
-  base: 'https://willianlsz1.github.io/Mange_System_Cool_Track/',
+  base: '/Mange_System_Cool_Track/',
 
   server: {
     port: 5173,
