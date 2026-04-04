@@ -1,0 +1,100 @@
+/* ============================================================
+   base.css — Reset, Design Tokens, Tipografia, Body
+   CoolTrack Pro · Design System v2 (Dark Industrial)
+   ============================================================ */
+
+/* ─── DESIGN TOKENS ─── */
+:root {
+  /* Backgrounds */
+  --bg:              #070C18;
+  --bg-soft:         #0B1120;
+  --surface:         #0D1528;
+  --surface-strong:  #111D35;
+
+  /* Glass cards */
+  --card:            rgba(255, 255, 255, 0.05);
+  --card-hover:      rgba(255, 255, 255, 0.08);
+
+  /* Borders */
+  --border:          rgba(255, 255, 255, 0.08);
+  --border-strong:   rgba(255, 255, 255, 0.14);
+  --border-focus:    rgba(0, 212, 255, 0.4);
+
+  /* Brand */
+  --primary:         #00D4FF;
+  --primary-strong:  #00B8E0;
+  --primary-soft:    rgba(0, 212, 255, 0.12);
+
+  /* Secondary */
+  --secondary:       #7C8FA8;
+
+  /* Status */
+  --success:         #00E5A0;
+  --success-soft:    rgba(0, 229, 160, 0.12);
+  --warning:         #FFB800;
+  --warning-soft:    rgba(255, 184, 0, 0.12);
+  --danger:          #FF3D5A;
+  --danger-soft:     rgba(255, 61, 90, 0.12);
+
+  /* Text — Ajustado para Dark Mode High-Contrast */
+  /* Text — Ajuste WCAG AA (Aumentado contraste do muted-light) */
+  --text:            #EDF2F7;
+  --text-muted:      #A0B0CC;
+  --muted:           #7B8DA6;
+  --muted-light:     #6E83A0; /* Era #5C6E88. Agora passa em 4.5:1 no fundo escuro */
+
+  /* Utilities */
+  --white:           #ffffff;
+  --black:           #070C18;
+
+  /* Typography — Inter substituiu Outfit */
+  --font-display:    'Inter', sans-serif;
+  --font-body:       'Inter', sans-serif;
+  --font-mono:       'JetBrains Mono', monospace;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Shape */
+  --radius:    14px;
+  --radius-sm: 10px;
+  --radius-xs: 7px;
+
+  /* Shadows */
+  --shadow:    0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+
+  /* Layout */
+  --layout-max: 1360px;
+}
+
+/* ─── RESET ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── BODY ─── */
+body {
+  min-height: 100vh;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55; /* Aumentado de 1.5 para dar mais respiro */
+  background:
+    radial-gradient(ellipse at 10% 0%,   rgba(0, 212, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 90% 100%, rgba(124, 58, 237, 0.05) 0%, transparent 50%),
+    var(--bg);
+  -webkit-font-smoothing: antialiased; /* Força o navegador a suavizar as fontes (CRÍTICO no Mac/Chrome) */
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button   { font-family: inherit; cursor: pointer; }
+textarea { resize: vertical; }
