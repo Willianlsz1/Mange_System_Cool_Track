@@ -206,97 +206,120 @@
 
           <!-- REGISTRO -->
           <div class="view" id="view-registro">
-            <div class="section-title">Registrar Serviço</div>
+            <div class="section-title">O que foi feito hoje?</div>
             <div class="card">
               <div id="storage-indicator" class="storage-indicator" style="display:none"></div>
-              <div class="form-group">
-                <label class="form-label" for="r-equip">Equipamento *</label>
-                <select id="r-equip" class="form-control" required aria-required="true">
-                  <option value="">Selecione o equipamento...</option>
-                </select>
-              </div>
-              <div class="form-row">
+
+              <!-- BLOCO 1: O SERVIÇO -->
+              <div class="registro-bloco">
+                <div class="registro-bloco__label">O SERVIÇO</div>
                 <div class="form-group">
-                  <label class="form-label" for="r-data">Data e Hora do Serviço *</label>
-                  <input id="r-data" class="form-control" type="datetime-local" required aria-required="true" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="r-tipo">Tipo de Serviço *</label>
-                  <select id="r-tipo" class="form-control" required aria-required="true">
-                    <option value="">Selecione...</option>
-                    <option>Manutenção Preventiva</option>
-                    <option>Manutenção Corretiva</option>
-                    <option>Limpeza de Filtros</option>
-                    <option>Carga de Gás Refrigerante</option>
-                    <option>Troca de Compressor</option>
-                    <option>Troca de Capacitor</option>
-                    <option>Limpeza de Condensador</option>
-                    <option>Limpeza de Evaporador</option>
-                    <option>Verificação Elétrica</option>
-                    <option>Ajuste de Dreno</option>
-                    <option>Inspeção Geral</option>
-                    <option>Outro</option>
+                  <label class="form-label" for="r-equip">Em qual equipamento? *</label>
+                  <select id="r-equip" class="form-control" required aria-required="true">
+                    <option value="">Selecione o equipamento...</option>
                   </select>
                 </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label" for="r-pecas">Peças / Materiais utilizados</label>
-                <input id="r-pecas" class="form-control" type="text" placeholder="Ex: Filtro G4, R-410A 1 kg, Capacitor 30µF" />
-              </div>
-
-              <!-- D2: Campos de custo -->
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="r-custo-pecas">Custo de Peças (R$)</label>
-                  <input id="r-custo-pecas" class="form-control" type="number" min="0" step="0.01" placeholder="0,00" />
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="r-data">Quando foi? *</label>
+                    <input id="r-data" class="form-control" type="datetime-local" required aria-required="true" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="r-tipo">O que foi feito? *</label>
+                    <select id="r-tipo" class="form-control" required aria-required="true">
+                      <option value="">Selecione o tipo...</option>
+                      <option>Manutenção Preventiva</option>
+                      <option>Manutenção Corretiva</option>
+                      <option>Limpeza de Filtros</option>
+                      <option>Carga de Gás Refrigerante</option>
+                      <option>Troca de Compressor</option>
+                      <option>Troca de Capacitor</option>
+                      <option>Limpeza de Condensador</option>
+                      <option>Limpeza de Evaporador</option>
+                      <option>Verificação Elétrica</option>
+                      <option>Ajuste de Dreno</option>
+                      <option>Inspeção Geral</option>
+                      <option>Outro</option>
+                    </select>
+                  </div>
                 </div>
                 <div class="form-group">
-                  <label class="form-label" for="r-custo-mao-obra">Mão de Obra (R$)</label>
-                  <input id="r-custo-mao-obra" class="form-control" type="number" min="0" step="0.01" placeholder="0,00" />
+                  <label class="form-label" for="r-obs">Descreva o serviço *</label>
+                  <textarea id="r-obs" class="form-control registro-obs"
+                    placeholder="O que foi encontrado e o que foi feito. Ex: Filtros sujos, limpeza realizada. Pressão de sucção 68 psi, dentro do normal. Sistema operando corretamente."
+                    required aria-required="true"></textarea>
+                  <div class="form-hint">Seja específico — esse texto vai no relatório que você envia ao cliente</div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="r-tecnico">Quem fez? *</label>
+                  <input list="lista-tecnicos" id="r-tecnico" class="form-control"
+                    placeholder="Seu nome ou o nome do técnico..."
+                    autocomplete="off" required aria-required="true" />
+                  <datalist id="lista-tecnicos"></datalist>
                 </div>
               </div>
 
-              <div class="form-group">
-                <label class="form-label" for="r-obs">Descrição do Serviço *</label>
-                <textarea id="r-obs" class="form-control" placeholder="Descreva o que foi realizado, condições encontradas e observações técnicas..." required aria-required="true"></textarea>
+              <!-- BLOCO 2: MATERIAIS E CUSTO -->
+              <div class="registro-bloco">
+                <div class="registro-bloco__label">MATERIAIS E CUSTO <span class="registro-bloco__opcional">(opcional)</span></div>
+                <div class="form-group">
+                  <label class="form-label" for="r-pecas">Peças e materiais usados</label>
+                  <input id="r-pecas" class="form-control" type="text"
+                    placeholder="Ex: Filtro G4, R-410A 1 kg, Capacitor 30µF 440V" />
+                  <div class="form-hint">Liste o que foi substituído ou consumido — aparece no relatório</div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="r-custo-pecas">Custo das peças (R$)</label>
+                    <input id="r-custo-pecas" class="form-control" type="number" min="0" step="0.01" placeholder="0,00" />
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="r-custo-mao-obra">Mão de obra (R$)</label>
+                    <input id="r-custo-mao-obra" class="form-control" type="number" min="0" step="0.01" placeholder="0,00" />
+                  </div>
+                </div>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="r-tecnico">Técnico Responsável *</label>
-                <input list="lista-tecnicos" id="r-tecnico" class="form-control" placeholder="Nome do técnico..." autocomplete="off" required aria-required="true" />
-                <datalist id="lista-tecnicos"></datalist>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Registro Fotográfico</label>
+
+              <!-- BLOCO 3: EVIDÊNCIAS -->
+              <div class="registro-bloco">
+                <div class="registro-bloco__label">EVIDÊNCIAS <span class="registro-bloco__opcional">(opcional — aumenta credibilidade com o cliente)</span></div>
                 <div class="photo-drop" id="photo-drop-zone">
                   <input type="file" accept="image/*" multiple id="input-fotos" aria-label="Adicionar fotos" />
                   <div class="photo-drop__icon" aria-hidden="true">📷</div>
-                  <div class="photo-drop__text" id="photo-drop-text">Toque para adicionar fotos</div>
-                  <div class="photo-drop__limit">Máx. 5 fotos · compressão automática</div>
+                  <div class="photo-drop__text" id="photo-drop-text">Adicionar fotos do serviço</div>
+                  <div class="photo-drop__limit">Antes e depois · Máx. 5 fotos</div>
                 </div>
                 <div class="photo-grid" id="photo-preview" role="list" aria-label="Fotos adicionadas"></div>
               </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="r-proxima">Próxima Manutenção Prevista</label>
-                  <input id="r-proxima" class="form-control" type="date" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="r-status">Status Pós-Serviço</label>
-                  <select id="r-status" class="form-control">
-                    <option value="ok">Operando Normal</option>
-                    <option value="warn">Requer Atenção</option>
-                    <option value="danger">Fora de Operação</option>
-                  </select>
+
+              <!-- BLOCO 4: O QUE VEM A SEGUIR -->
+              <div class="registro-bloco registro-bloco--future">
+                <div class="registro-bloco__label">O QUE VEM A SEGUIR</div>
+                <div class="registro-bloco__desc">Como o equipamento saiu do serviço? Quando deve voltar?</div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="r-status">Como ficou?</label>
+                    <select id="r-status" class="form-control">
+                      <option value="ok">Operando normalmente</option>
+                      <option value="warn">Requer atenção em breve</option>
+                      <option value="danger">Fora de operação</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label" for="r-proxima">Quando retornar para preventiva?</label>
+                    <input id="r-proxima" class="form-control" type="date" />
+                    <div class="form-hint">Deixe em branco se não souber agora</div>
+                  </div>
                 </div>
               </div>
-              <!-- C4: Botão fixo no mobile via CSS, normal no desktop -->
+
+              <!-- Botões -->
               <div class="btn-group registro-btn-group">
                 <button class="btn btn--outline" data-action="clear-registro" title="Limpa todos os campos">Recomeçar</button>
-                <button class="btn btn--primary" data-action="save-registro">Salvar Registro</button>
+                <button class="btn btn--primary" data-action="save-registro">Salvar registro</button>
               </div>
             </div>
           </div>
-
           <!-- HISTÓRICO -->
           <div class="view" id="view-historico">
             <div class="page-toolbar">
