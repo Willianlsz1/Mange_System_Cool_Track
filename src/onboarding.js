@@ -217,3 +217,131 @@ export const SavedHighlight = {
     }, 200);
   },
 };
+
+
+// ════════════════════════════════════════════════════════
+// FIRST-TIME EXPERIENCE — elimina paralisia de escolha
+// Aparece apenas na primeira visita, se nunca houve equip real
+// ════════════════════════════════════════════════════════
+const FTX_KEY = 'cooltrack-ftx-done';
+
+export const FirstTimeExperience = {
+
+  isDone() {
+    return localStorage.getItem(FTX_KEY) === '1';
+  },
+
+  markDone() {
+    localStorage.setItem(FTX_KEY, '1');
+  },
+
+  /**
+   * Retorna true se deve mostrar o FTX:
+   * - primeira visita (nunca marcou FTX como done)
+   * - E o app ainda tem só dados seed (nenhum equip com tag própria real)
+   */
+  shouldShow(equipamentos) {
+    if (this.isDone()) return false;
+    // Considera "real" se o usuário já dispensou o banner OU já tem mais de 7 equip (seed tem 7)
+    // Critério simples: se já teve interação registrada pelo profile ou dismiss
+    const hasDismissed  = localStorage.getItem('cooltrack-dismissed-seed-banner') === '1';
+    const hasProfile    = !!localStorage.getItem('cooltrack-profile');
+    const hasLastTec    = !!localStorage.getItem('cooltrack-last-tecnico');
+    if (hasDismissed || hasProfile || hasLastTec) { this.markDone(); return false; }
+    return true;
+  },
+
+  show(equipamentos) {
+    if (!this.shouldShow(equipamentos)) return;
+
+    // Overlay de boas-vindas — modal não intrusivo na primeira visita
+    const overlay = document.createElement('div');
+    overlay.id = 'ftx-overlay';
+    overlay.className = 'ftx-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'ftx-title');
+    overlay.innerHTML = `
+      <div class="ftx-modal">
+        <div class="ftx-header">
+          <div class="ftx-logo" aria-hidden="true">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+              <rect x="2" y="2" width="28" height="28" rx="6" stroke="#00C8E8" stroke-width="1.8"/>
+              <circle cx="16" cy="16" r="5" stroke="#00C8E8" stroke-width="1.8"/>
+              <path d="M16 2v6M16 24v6M2 16h6M24 16h6" stroke="#00C8E8" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div class="ftx-title" id="ftx-title">Bem-vindo ao CoolTrack Pro</div>
+            <div class="ftx-subtitle">Gestão de manutenção para técnicos de refrigeração</div>
+          </div>
+        </div>
+
+        <p class="ftx-desc">
+          Você está vendo dados de demonstração. Para começar, escolha o que faz mais sentido agora:
+        </p>
+
+        <!-- Caminhos — máx. 2 opções para evitar paralisia -->
+        <div class="ftx-paths">
+          <button class="ftx-path ftx-path--primary" id="ftx-add-equip">
+            <div class="ftx-path__icon" aria-hidden="true">❄️</div>
+            <div class="ftx-path__body">
+              <div class="ftx-path__title">Cadastrar meu primeiro equipamento</div>
+              <div class="ftx-path__desc">Leva 2 minutos. Você terá controle total do histórico e alertas de manutenção.</div>
+            </div>
+            <div class="ftx-path__arrow" aria-hidden="true">→</div>
+          </button>
+
+          <button class="ftx-path ftx-path--secondary" id="ftx-explore">
+            <div class="ftx-path__icon" aria-hidden="true">👁</div>
+            <div class="ftx-path__body">
+              <div class="ftx-path__title">Explorar com dados de demonstração</div>
+              <div class="ftx-path__desc">Veja como o sistema funciona antes de adicionar seus dados.</div>
+            </div>
+            <div class="ftx-path__arrow" aria-hidden="true">→</div>
+          </button>
+        </div>
+
+        <!-- Prova social mínima -->
+        <div class="ftx-social">
+          <div class="ftx-social__avatars" aria-hidden="true">
+            <span class="ftx-avatar">C</span>
+            <span class="ftx-avatar">R</span>
+            <span class="ftx-avatar">J</span>
+          </div>
+          <span class="ftx-social__text">Técnicos autônomos usam para comprovar serviços e renovar contratos</span>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
+
+    // Caminho 1: cadastrar equipamento
+    document.getElementById('ftx-add-equip')?.addEventListener('click', () => {
+      this._close();
+      // Abrir modal de cadastro diretamente
+      setTimeout(() => {
+        document.querySelector('[data-action="open-modal"][data-id="modal-add-eq"]')?.click();
+      }, 100);
+    });
+
+    // Caminho 2: explorar — apenas fecha
+    document.getElementById('ftx-explore')?.addEventListener('click', () => {
+      this._close();
+    });
+
+    // Animação de entrada
+    requestAnimationFrame(() => overlay.classList.add('is-visible'));
+  },
+
+  _close() {
+    this.markDone();
+    OnboardingBanner.dismiss(); // se explorar, dispensar banner também
+    const overlay = document.getElementById('ftx-overlay');
+    if (!overlay) return;
+    overlay.classList.remove('is-visible');
+    document.body.style.overflow = '';
+    setTimeout(() => overlay.remove(), 250);
+  },
+};
