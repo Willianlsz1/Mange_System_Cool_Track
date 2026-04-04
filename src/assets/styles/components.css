@@ -1374,3 +1374,207 @@ mark, .mark-highlight {
 
 /* Cards em atenção: CTA em amber */
 .equip-card--warn .equip-card__cta { color: var(--warning); }
+
+
+/* ════════════════════════════════════════════════════════
+   FIRST TIME EXPERIENCE (FTX) v5.3
+   Modal de boas-vindas — elimina paralisia de escolha
+   ════════════════════════════════════════════════════════ */
+
+.ftx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: rgba(4, 10, 20, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.ftx-overlay.is-visible { opacity: 1; }
+
+.ftx-modal {
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  transform: translateY(12px);
+  transition: transform 0.25s ease;
+  box-shadow: var(--shadow-lg);
+}
+
+.ftx-overlay.is-visible .ftx-modal { transform: translateY(0); }
+
+/* Header */
+.ftx-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.ftx-logo {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  background: var(--primary-dim);
+  border: 1px solid rgba(0,200,232,0.2);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ftx-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.ftx-subtitle {
+  font-size: 12px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+.ftx-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+/* Caminhos — 2 opções claras */
+.ftx-paths {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ftx-path {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  font-family: var(--font-body);
+}
+
+.ftx-path:hover { transform: translateX(3px); }
+.ftx-path:active { transform: translateX(1px); }
+
+/* Caminho primário — destaque visual */
+.ftx-path--primary {
+  border-color: rgba(0,200,232,0.3);
+  background: var(--primary-dim);
+}
+
+.ftx-path--primary:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.ftx-path--secondary {
+  opacity: 0.8;
+}
+
+.ftx-path--secondary:hover {
+  opacity: 1;
+  border-color: var(--border-2);
+  background: var(--card-hover);
+}
+
+.ftx-path__icon {
+  font-size: 24px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ftx-path__body { flex: 1; min-width: 0; }
+
+.ftx-path__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.ftx-path--primary .ftx-path__title { color: var(--primary); }
+
+.ftx-path__desc {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+.ftx-path__arrow {
+  font-size: 16px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.ftx-path:hover .ftx-path__arrow {
+  color: var(--primary);
+  transform: translateX(3px);
+}
+
+/* Prova social */
+.ftx-social {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.ftx-social__avatars {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.ftx-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  border: 2px solid var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-left: -6px;
+}
+
+.ftx-avatar:first-child { margin-left: 0; }
+
+.ftx-social__text {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+/* Mobile: modal ocupa mais tela */
+@media (max-width: 520px) {
+  .ftx-modal {
+    padding: 20px 16px;
+    max-width: 100%;
+  }
+  .ftx-path { padding: 12px; }
+  .ftx-path__icon { font-size: 20px; }
+}
