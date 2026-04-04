@@ -1,5 +1,7 @@
 import { Utils, TIPO_ICON, STATUS_LABEL } from "./utils.js";
 import { getState, findEquip, lastRegForEquip, regsForEquip, setState } from "./state.js";
+import { Charts } from './charts.js';
+import { PDFGenerator } from './pdf.js';
 
 function compressImage(file, maxWidth = 1200, quality = 0.7) {
   return new Promise((resolve) => {
@@ -155,18 +157,10 @@ function alertCardHtml({ kind, reg, eq }) {
 }
 
 function renderStatusChart() {
-  const { equipamentos } = getState(); const total = equipamentos.length || 1;
-  const ok = equipamentos.filter(e => e.status === 'ok').length;
-  const warn = equipamentos.filter(e => e.status === 'warn').length;
-  const danger = equipamentos.filter(e => e.status === 'danger').length;
-  const el = Utils.getEl("dash-chart-status"); if (!el) return;
-  
-  // FIX: Removido styles inline do background, mantido apenas width dinâmico
-  el.innerHTML = `<div class="chart-container"><div class="chart-container__title">Distribuição de Status do Parque</div><div class="chart-bars">
-    <div class="chart-bar-row"><span class="chart-bar-label" style="color: var(--success)">Normal</span><div class="chart-bar-track"><div class="chart-bar-fill chart-bar-fill--ok" style="width: ${(ok / total) * 100}%;"></div></div><span class="chart-bar-val">${ok}</span></div>
-    <div class="chart-bar-row"><span class="chart-bar-label" style="color: var(--warning)">Atenção</span><div class="chart-bar-track"><div class="chart-bar-fill chart-bar-fill--warn" style="width: ${(warn / total) * 100}%;"></div></div><span class="chart-bar-val">${warn}</span></div>
-    <div class="chart-bar-row"><span class="chart-bar-label" style="color: var(--danger)">Crítico</span><div class="chart-bar-track"><div class="chart-bar-fill chart-bar-fill--danger" style="width: ${(danger / total) * 100}%;"></div></div><span class="chart-bar-val">${danger}</span></div>
-  </div></div>`;
+  // NOVO: Usa Chart.js para gráficos interativos!
+  setTimeout(() => {
+    Charts.refreshAll();
+  }, 50);
 }
 
 export function renderInicio() {

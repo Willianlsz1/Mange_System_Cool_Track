@@ -1,5 +1,6 @@
 import { Utils } from './utils.js';
 import { goView, Modal, Equipamentos, Registro, Historico, Photos, CustomConfirm, renderEquip, renderHist, renderRelatorio } from './ui.js';
+import { PDFGenerator } from './pdf.js'; // ← IMPORTANTE: Adicionar esta linha!
 
 function debounce(fn, delay) {
   let timeout;
@@ -7,8 +8,11 @@ function debounce(fn, delay) {
 }
 
 export function bindEvents() {
-  document.addEventListener('click', async (e) => {
-    const navBtn = e.target.closest('[data-nav]');
+  // ============================================================
+  // EVENTO PRINCIPAL DE CLICK (delegação)
+  // ============================================================
+  document.addEventListener("click", async (e) => {
+    const navBtn = e.target.closest("[data-nav]");
     if (navBtn) return goView(navBtn.dataset.nav);
 
     const openModal = e.target.closest('[data-action="open-modal"]');
@@ -23,10 +27,12 @@ export function bindEvents() {
     const viewEquip = e.target.closest('[data-action="view-equip"]');
     if (viewEquip) return Equipamentos.view(viewEquip.dataset.id);
 
-    // FIX 5: Modal customizado para excluir equipamento
     const deleteEquip = e.target.closest('[data-action="delete-equip"]');
     if (deleteEquip) {
-      const confirmed = await CustomConfirm.show('Excluir Equipamento', 'Tem certeza que deseja excluir este equipamento e todos os seus registros de manutenção?');
+      const confirmed = await CustomConfirm.show(
+        "Excluir Equipamento",
+        "Tem certeza que deseja excluir este equipamento e todos os seus registros de manutenção?",
+      );
       if (confirmed) Equipamentos.delete(deleteEquip.dataset.id);
       return;
     }
@@ -34,21 +40,27 @@ export function bindEvents() {
     const saveReg = e.target.closest('[data-action="save-registro"]');
     if (saveReg) return Registro.save();
 
-    // FIX 3: O botão "Limpar" agora reseta TUDO. O fluxo vindo do modal não usa mais o clear().
     const clearReg = e.target.closest('[data-action="clear-registro"]');
     if (clearReg) return Registro.clear(false);
 
-    // FIX 5: Modal customizado para excluir registro
     const deleteReg = e.target.closest('[data-action="delete-reg"]');
     if (deleteReg) {
-      const confirmed = await CustomConfirm.show('Excluir Registro', 'Deseja apagar este registro de manutenção do histórico?');
+      const confirmed = await CustomConfirm.show(
+        "Excluir Registro",
+        "Deseja apagar este registro de manutenção do histórico?",
+      );
       if (confirmed) Historico.delete(deleteReg.dataset.id);
       return;
     }
 
-    if (e.target.closest('.lightbox__close')) return Photos.closeLightbox();
+    if (e.target.closest(".lightbox__close")) return Photos.closeLightbox();
+    
+    // NOTA: O botão PDF foi movido PARA FORA deste listener (ver abaixo)
   });
 
+  // ============================================================
+  // EVENTOS DE INPUT (não são clicks)
+  // ============================================================
   const inputFotos = Utils.getEl('input-fotos');
   if (inputFotos) inputFotos.addEventListener('change', (e) => Photos.add(e.target));
 
@@ -68,4 +80,24 @@ export function bindEvents() {
   if (relDe) relDe.addEventListener('change', renderRelatorio);
   const relAte = Utils.getEl('rel-ate');
   if (relAte) relAte.addEventListener('change', renderRelatorio);
+
+  // ============================================================
+  // BOTÃO EXPORTAR PDF (FORA do click listener principal!)
+  // ============================================================
+  const btnExportPdf = document.getElementById('btn-export-pdf');
+  if (btnExportPdf) {
+    btnExportPdf.addEventListener('click', () => {
+      const fileName = PDFGenerator.generateMaintenanceReport({
+        filtEq: Utils.getVal('rel-equip'),
+        de: Utils.getVal('rel-de'),
+        ate: Utils.getVal('rel-ate')
+      });
+      
+      if (fileName) {
+        alert(`✅ PDF gerado com sucesso!\n\nArquivo: ${fileName}`);
+      } else {
+        alert('❌ Erro ao gerar PDF. Verifique o console (F12).');
+      }
+    });
+  }
 }

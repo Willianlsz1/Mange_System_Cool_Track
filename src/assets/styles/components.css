@@ -229,3 +229,54 @@ textarea.form-control { min-height: 96px; line-height: 1.5; }
 .chart-bar-fill--warn { background: var(--warning); }
 .chart-bar-fill--danger { background: var(--danger); }
 .chart-bar-val { font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-align: right; color: var(--text); }
+/* ============================================================
+   CHARTS - Estilos para gráficos Chart.js (Fase 3.2)
+   ============================================================ */
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-3);
+  grid-area: chart;
+}
+
+.chart-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: var(--space-4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.chart-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: rgba(0, 212, 255, 0.2);
+}
+
+.chart-card--full {
+  grid-column: 1 / -1;
+}
+
+.chart-card__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: var(--space-3);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.chart-card__body {
+  position: relative;
+  height: 250px;
+  width: 100%;
+}
+
+.chart-card__body canvas {
+  width: 100% !important;
+  height: 100% !important;
+}

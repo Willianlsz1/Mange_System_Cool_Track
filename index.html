@@ -1,132 +1,455 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CoolTrack Pro</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./src/assets/styles/base.css">
-  <link rel="stylesheet" href="./src/assets/styles/components.css">
-  <link rel="stylesheet" href="./src/assets/styles/layout.css">
-</head>
-<body>
-<div id="app">
-
-  <header class="app-header">
-    <div class="app-header__top">
-      <div class="app-logo">CoolTrack <span class="app-logo__sub">Pro</span></div>
-      <div class="app-header__date" id="hdr-date"></div>
-    </div>
-    <div class="header-stats">
-      <div class="stat-pill"><div class="stat-pill__value" id="hst-total">0</div><div class="stat-pill__label">Equipamentos</div></div>
-      <div class="stat-pill"><div class="stat-pill__value" id="hst-mes">0</div><div class="stat-pill__label">Este mês</div></div>
-      <div class="stat-pill"><div class="stat-pill__value" id="hst-alert">0</div><div class="stat-pill__label">Alertas</div></div>
-    </div>
-  </header>
-
-  <div class="app-content">
-    <nav class="app-nav" aria-label="Navegação principal">
-      <div class="app-nav__title">Painel Operacional</div>
-      <button class="nav-btn is-active" id="nav-inicio" data-nav="inicio"><span class="nav-btn__icon">🏠</span>Início</button>
-      <button class="nav-btn" id="nav-equipamentos" data-nav="equipamentos"><span class="nav-btn__icon">❄️</span>Equip.</button>
-      <button class="nav-btn" id="nav-registro" data-nav="registro"><span class="nav-btn__icon">➕</span>Registrar</button>
-      <button class="nav-btn" id="nav-historico" data-nav="historico"><span class="nav-btn__icon">📋</span>Histórico</button>
-      <button class="nav-btn" id="nav-alertas" data-nav="alertas"><span class="nav-btn__icon">🔔</span>Alertas<span class="nav-btn__badge" id="alerta-badge">0</span></button>
-    </nav>
-
-    <main>
-      <div class="view active" id="view-inicio">
-        <div class="section-title" id="dash-greeting">👋 Bom dia!</div>
-        <div class="dashboard-bento">
-          <div class="bento-kpi bento-kpi--alert"><div class="bento-kpi__label">Alertas Ativos</div><div class="bento-kpi__value" id="hst-alert-bento">0</div></div>
-          <div class="bento-kpi bento-kpi--health"><div class="bento-kpi__label">Health Score</div><div class="bento-kpi__value bento-kpi__value--ok" id="hst-health">—</div><div class="bento-kpi__sub">Score médio do parque</div><div class="health-bar"><div class="health-bar__fill health-bar__fill--ok" id="health-bar-fill"></div></div></div>
-          <div class="bento-kpi bento-kpi--mes"><div class="bento-kpi__label">Manutenções (Mês)</div><div class="bento-kpi__value" id="hst-mes-bento">0</div></div>
-          <div class="bento-alertas" id="dash-alertas-mini"></div>
-          <div class="bento-criticos" id="dash-criticos"></div>
-          <div class="bento-recentes" id="dash-recentes"></div>
-          <div class="bento-chart" id="dash-chart-status"></div>
-        </div>
-      </div>
-
-      <div class="view" id="view-equipamentos">
-        <div class="page-toolbar"><div class="section-title section-title--toolbar">❄️ Equipamentos</div><button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">+ Adicionar</button></div>
-        <div class="search-bar"><span class="search-bar__icon">🔍</span><input class="form-control search-bar__input" type="text" placeholder="Buscar equipamento..."></div>
-        <div id="lista-equip"></div>
-      </div>
-
-      <div class="view" id="view-registro">
-        <div class="section-title">✏️ Novo Registro</div>
-        <div class="card">
-          <div class="form-group"><label class="form-label">Equipamento *</label><select id="r-equip" class="form-control" required><option value="">Selecione...</option></select></div>
-          <div class="form-group"><label class="form-label">Data e Hora *</label><input id="r-data" class="form-control" type="datetime-local" required></div>
-          <div class="form-group"><label class="form-label">Tipo de Serviço *</label><select id="r-tipo" class="form-control" required><option value="">Selecione...</option><option>Manutenção Preventiva</option><option>Manutenção Corretiva</option><option>Limpeza de Filtros</option><option>Carga de Gás Refrigerante</option><option>Troca de Compressor</option><option>Troca de Capacitor</option><option>Limpeza de Condensador</option><option>Limpeza de Evaporador</option><option>Verificação Elétrica</option><option>Ajuste de Dreno</option><option>Inspeção Geral</option><option>Outro</option></select></div>
-          <div class="form-group"><label class="form-label">Peças / Materiais utilizados</label><input id="r-pecas" class="form-control" type="text" placeholder="Ex: Filtro G4, R-410A 1kg, Capacitor 30µF"></div>
-          <div class="form-group"><label class="form-label">Observações / Serviço Realizado *</label><textarea id="r-obs" class="form-control" placeholder="Descreva o que foi feito..." required></textarea></div>
-          <div class="form-group"><label class="form-label">Técnico Responsável *</label><input list="lista-tecnicos" id="r-tecnico" class="form-control" placeholder="Digite ou selecione o técnico..." autocomplete="off" required><datalist id="lista-tecnicos"></datalist></div>
-          <div class="form-group"><label class="form-label">Fotos do Serviço</label><div class="photo-drop" id="photo-drop-zone"><input type="file" accept="image/*" multiple id="input-fotos"><div class="photo-drop__icon">📷</div><div class="photo-drop__text" id="photo-drop-text">Toque para adicionar fotos</div></div><div class="photo-grid" id="photo-preview"></div></div>
-          <div class="form-row">
-            <div class="form-group"><label class="form-label">Próxima Manutenção Prevista</label><input id="r-proxima" class="form-control" type="date"></div>
-            <div class="form-group"><label class="form-label">Status do Equipamento</label><select id="r-status" class="form-control"><option value="ok">✅ Operando Normal</option><option value="warn">⚠️ Requer Atenção</option><option value="danger">🔴 Fora de Operação</option></select></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CoolTrack Pro</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/assets/styles/base.css" />
+    <link rel="stylesheet" href="./src/assets/styles/components.css" />
+    <link rel="stylesheet" href="./src/assets/styles/layout.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="app-header">
+        <div class="app-header__top">
+          <div class="app-logo">
+            CoolTrack <span class="app-logo__sub">Pro</span>
           </div>
-          <div class="btn-group"><button class="btn btn--outline" data-action="clear-registro">Limpar</button><button class="btn btn--primary" data-action="save-registro">💾 Salvar</button></div>
+          <div class="app-header__date" id="hdr-date"></div>
+        </div>
+        <div class="header-stats">
+          <div class="stat-pill">
+            <div class="stat-pill__value" id="hst-total">0</div>
+            <div class="stat-pill__label">Equipamentos</div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-pill__value" id="hst-mes">0</div>
+            <div class="stat-pill__label">Este mês</div>
+          </div>
+          <div class="stat-pill">
+            <div class="stat-pill__value" id="hst-alert">0</div>
+            <div class="stat-pill__label">Alertas</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="app-content">
+        <nav class="app-nav" aria-label="Navegação principal">
+          <div class="app-nav__title">Painel Operacional</div>
+          <button class="nav-btn is-active" id="nav-inicio" data-nav="inicio">
+            <span class="nav-btn__icon">🏠</span>Início
+          </button>
+          <button class="nav-btn" id="nav-equipamentos" data-nav="equipamentos">
+            <span class="nav-btn__icon">❄️</span>Equip.
+          </button>
+          <button class="nav-btn" id="nav-registro" data-nav="registro">
+            <span class="nav-btn__icon">➕</span>Registrar
+          </button>
+          <button class="nav-btn" id="nav-historico" data-nav="historico">
+            <span class="nav-btn__icon">📋</span>Histórico
+          </button>
+          <button class="nav-btn" id="nav-alertas" data-nav="alertas">
+            <span class="nav-btn__icon">🔔</span>Alertas<span
+              class="nav-btn__badge"
+              id="alerta-badge"
+              >0</span
+            >
+          </button>
+        </nav>
+
+        <main>
+          <div class="view active" id="view-inicio">
+            <div class="section-title" id="dash-greeting">👋 Bom dia!</div>
+            <div class="dashboard-bento">
+              <div class="bento-kpi bento-kpi--alert">
+                <div class="bento-kpi__label">Alertas Ativos</div>
+                <div class="bento-kpi__value" id="hst-alert-bento">0</div>
+              </div>
+              <div class="bento-kpi bento-kpi--health">
+                <div class="bento-kpi__label">Health Score</div>
+                <div
+                  class="bento-kpi__value bento-kpi__value--ok"
+                  id="hst-health"
+                >
+                  —
+                </div>
+                <div class="bento-kpi__sub">Score médio do parque</div>
+                <div class="health-bar">
+                  <div
+                    class="health-bar__fill health-bar__fill--ok"
+                    id="health-bar-fill"
+                  ></div>
+                </div>
+              </div>
+              <div class="bento-kpi bento-kpi--mes">
+                <div class="bento-kpi__label">Manutenções (Mês)</div>
+                <div class="bento-kpi__value" id="hst-mes-bento">0</div>
+              </div>
+              <div class="bento-alertas" id="dash-alertas-mini"></div>
+              <div class="bento-criticos" id="dash-criticos"></div>
+              <div class="bento-recentes" id="dash-recentes"></div>
+              <!-- NOVO: Seção de Gráficos com Chart.js -->
+              <div class="bento-chart" id="dash-charts">
+                <div class="charts-grid">
+                  <div class="chart-card">
+                    <div class="chart-card__title">📊 Status do Parque</div>
+                    <div class="chart-card__body">
+                      <canvas id="chart-status-pie"></canvas>
+                    </div>
+                  </div>
+                  <div class="chart-card">
+                    <div class="chart-card__title">
+                      📈 Manutenções por Período
+                    </div>
+                    <div class="chart-card__body">
+                      <canvas id="chart-trend-line"></canvas>
+                    </div>
+                  </div>
+                  <div class="chart-card chart-card--full">
+                    <div class="chart-card__title">
+                      🔧 Tipos de Serviço Mais Frequentes
+                    </div>
+                    <div class="chart-card__body">
+                      <canvas id="chart-types-bar"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="view" id="view-equipamentos">
+            <div class="page-toolbar">
+              <div class="section-title section-title--toolbar">
+                ❄️ Equipamentos
+              </div>
+              <button
+                class="btn btn--primary btn--sm"
+                data-action="open-modal"
+                data-id="modal-add-eq"
+              >
+                + Adicionar
+              </button>
+            </div>
+            <div class="search-bar">
+              <span class="search-bar__icon">🔍</span
+              ><input
+                class="form-control search-bar__input"
+                type="text"
+                placeholder="Buscar equipamento..."
+              />
+            </div>
+            <div id="lista-equip"></div>
+          </div>
+
+          <div class="view" id="view-registro">
+            <div class="section-title">✏️ Novo Registro</div>
+            <div class="card">
+              <div class="form-group">
+                <label class="form-label">Equipamento *</label
+                ><select id="r-equip" class="form-control" required>
+                  <option value="">Selecione...</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Data e Hora *</label
+                ><input
+                  id="r-data"
+                  class="form-control"
+                  type="datetime-local"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Tipo de Serviço *</label
+                ><select id="r-tipo" class="form-control" required>
+                  <option value="">Selecione...</option>
+                  <option>Manutenção Preventiva</option>
+                  <option>Manutenção Corretiva</option>
+                  <option>Limpeza de Filtros</option>
+                  <option>Carga de Gás Refrigerante</option>
+                  <option>Troca de Compressor</option>
+                  <option>Troca de Capacitor</option>
+                  <option>Limpeza de Condensador</option>
+                  <option>Limpeza de Evaporador</option>
+                  <option>Verificação Elétrica</option>
+                  <option>Ajuste de Dreno</option>
+                  <option>Inspeção Geral</option>
+                  <option>Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Peças / Materiais utilizados</label
+                ><input
+                  id="r-pecas"
+                  class="form-control"
+                  type="text"
+                  placeholder="Ex: Filtro G4, R-410A 1kg, Capacitor 30µF"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label"
+                  >Observações / Serviço Realizado *</label
+                ><textarea
+                  id="r-obs"
+                  class="form-control"
+                  placeholder="Descreva o que foi feito..."
+                  required
+                ></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Técnico Responsável *</label
+                ><input
+                  list="lista-tecnicos"
+                  id="r-tecnico"
+                  class="form-control"
+                  placeholder="Digite ou selecione o técnico..."
+                  autocomplete="off"
+                  required
+                /><datalist id="lista-tecnicos"></datalist>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Fotos do Serviço</label>
+                <div class="photo-drop" id="photo-drop-zone">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    id="input-fotos"
+                  />
+                  <div class="photo-drop__icon">📷</div>
+                  <div class="photo-drop__text" id="photo-drop-text">
+                    Toque para adicionar fotos
+                  </div>
+                </div>
+                <div class="photo-grid" id="photo-preview"></div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label">Próxima Manutenção Prevista</label
+                  ><input id="r-proxima" class="form-control" type="date" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Status do Equipamento</label
+                  ><select id="r-status" class="form-control">
+                    <option value="ok">✅ Operando Normal</option>
+                    <option value="warn">⚠️ Requer Atenção</option>
+                    <option value="danger">🔴 Fora de Operação</option>
+                  </select>
+                </div>
+              </div>
+              <div class="btn-group">
+                <button class="btn btn--outline" data-action="clear-registro">
+                  Limpar</button
+                ><button class="btn btn--primary" data-action="save-registro">
+                  💾 Salvar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="view" id="view-historico">
+            <div class="page-toolbar">
+              <div class="section-title section-title--toolbar">
+                📋 Histórico
+              </div>
+              <button class="btn btn--outline btn--sm" data-nav="relatorio">
+                📄 Relatório
+              </button>
+            </div>
+            <div class="search-bar">
+              <span class="search-bar__icon">🔍</span
+              ><input
+                class="form-control search-bar__input"
+                id="hist-busca"
+                type="text"
+                placeholder="Buscar no histórico..."
+              />
+            </div>
+            <div class="form-group">
+              <select id="hist-equip" class="form-control">
+                <option value="">Todos os equipamentos</option>
+              </select>
+            </div>
+            <div id="timeline"></div>
+          </div>
+
+          <div class="view" id="view-alertas">
+            <div class="section-title">🔔 Alertas</div>
+            <div id="lista-alertas"></div>
+          </div>
+
+          <div class="view" id="view-relatorio">
+            <div class="page-toolbar">
+              <div class="section-title section-title--toolbar">
+                📄 Relatório
+              </div>
+              <div class="page-toolbar__actions">
+                <button class="btn btn--outline btn--sm" data-nav="historico">
+                  ← Voltar</button
+                ><button class="btn btn--primary btn--sm" id="btn-export-pdf" style="margin-left: 8px;">📄 Exportar PDF</button>
+                ><button
+                  class="btn btn--primary btn--sm"
+                  onclick="window.print()"
+                >
+                  🖨️ Imprimir
+                </button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Equipamento</label
+              ><select id="rel-equip" class="form-control">
+                <option value="">Todos</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">De</label
+                ><input id="rel-de" class="form-control" type="date" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Até</label
+                ><input id="rel-ate" class="form-control" type="date" />
+              </div>
+            </div>
+            <div id="relatorio-corpo"></div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modais -->
+    <div class="modal-overlay" id="modal-add-eq">
+      <div class="modal">
+        <div class="modal__handle"></div>
+        <div class="modal__title">Novo Equipamento</div>
+        <div class="form-group">
+          <label class="form-label">Nome *</label
+          ><input
+            id="eq-nome"
+            class="form-control"
+            type="text"
+            placeholder="Ex: Split UTI Adulto"
+            required
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">TAG / Identificação</label
+          ><input
+            id="eq-tag"
+            class="form-control"
+            type="text"
+            placeholder="Ex: AC-UTI-01"
+          />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Localização *</label
+          ><input
+            id="eq-local"
+            class="form-control"
+            type="text"
+            placeholder="Ex: UTI Adulto – 2º Andar"
+            required
+          />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tipo</label
+            ><select id="eq-tipo" class="form-control">
+              <option>Split Hi-Wall</option>
+              <option>Split Cassette</option>
+              <option>Split Piso Teto</option>
+              <option>VRF / VRV</option>
+              <option>Chiller</option>
+              <option>Fan Coil</option>
+              <option>Self Contained</option>
+              <option>Roof Top</option>
+              <option>Câmara Fria</option>
+              <option>Outro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fluido Refrigerante</label
+            ><select id="eq-fluido" class="form-control">
+              <option>R-410A</option>
+              <option>R-22</option>
+              <option>R-32</option>
+              <option>R-407C</option>
+              <option>R-134A</option>
+              <option>Outro</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Marca / Modelo</label
+          ><input
+            id="eq-modelo"
+            class="form-control"
+            type="text"
+            placeholder="Ex: Carrier 18000 BTU"
+          />
+        </div>
+        <div class="btn-group">
+          <button
+            class="btn btn--outline"
+            data-action="close-modal"
+            data-id="modal-add-eq"
+          >
+            Cancelar</button
+          ><button class="btn btn--primary" data-action="save-equip">
+            ✅ Salvar
+          </button>
         </div>
       </div>
-
-      <div class="view" id="view-historico">
-        <div class="page-toolbar"><div class="section-title section-title--toolbar">📋 Histórico</div><button class="btn btn--outline btn--sm" data-nav="relatorio">📄 Relatório</button></div>
-        <div class="search-bar"><span class="search-bar__icon">🔍</span><input class="form-control search-bar__input" id="hist-busca" type="text" placeholder="Buscar no histórico..."></div>
-        <div class="form-group"><select id="hist-equip" class="form-control"><option value="">Todos os equipamentos</option></select></div>
-        <div id="timeline"></div>
-      </div>
-
-      <div class="view" id="view-alertas"><div class="section-title">🔔 Alertas</div><div id="lista-alertas"></div></div>
-
-      <div class="view" id="view-relatorio">
-        <div class="page-toolbar"><div class="section-title section-title--toolbar">📄 Relatório</div><div class="page-toolbar__actions"><button class="btn btn--outline btn--sm" data-nav="historico">← Voltar</button><button class="btn btn--primary btn--sm" onclick="window.print()">🖨️ Imprimir</button></div></div>
-        <div class="form-group"><label class="form-label">Equipamento</label><select id="rel-equip" class="form-control"><option value="">Todos</option></select></div>
-        <div class="form-row"><div class="form-group"><label class="form-label">De</label><input id="rel-de" class="form-control" type="date"></div><div class="form-group"><label class="form-label">Até</label><input id="rel-ate" class="form-control" type="date"></div></div>
-        <div id="relatorio-corpo"></div>
-      </div>
-    </main>
-  </div>
-</div>
-
-<!-- Modais -->
-<div class="modal-overlay" id="modal-add-eq">
-  <div class="modal"><div class="modal__handle"></div><div class="modal__title">Novo Equipamento</div>
-    <div class="form-group"><label class="form-label">Nome *</label><input id="eq-nome" class="form-control" type="text" placeholder="Ex: Split UTI Adulto" required></div>
-    <div class="form-group"><label class="form-label">TAG / Identificação</label><input id="eq-tag" class="form-control" type="text" placeholder="Ex: AC-UTI-01"></div>
-    <div class="form-group"><label class="form-label">Localização *</label><input id="eq-local" class="form-control" type="text" placeholder="Ex: UTI Adulto – 2º Andar" required></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Tipo</label><select id="eq-tipo" class="form-control"><option>Split Hi-Wall</option><option>Split Cassette</option><option>Split Piso Teto</option><option>VRF / VRV</option><option>Chiller</option><option>Fan Coil</option><option>Self Contained</option><option>Roof Top</option><option>Câmara Fria</option><option>Outro</option></select></div>
-      <div class="form-group"><label class="form-label">Fluido Refrigerante</label><select id="eq-fluido" class="form-control"><option>R-410A</option><option>R-22</option><option>R-32</option><option>R-407C</option><option>R-134A</option><option>Outro</option></select></div>
     </div>
-    <div class="form-group"><label class="form-label">Marca / Modelo</label><input id="eq-modelo" class="form-control" type="text" placeholder="Ex: Carrier 18000 BTU"></div>
-    <div class="btn-group"><button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button><button class="btn btn--primary" data-action="save-equip">✅ Salvar</button></div>
-  </div>
-</div>
 
-<div class="modal-overlay" id="modal-eq-det"><div class="modal"><div class="modal__handle"></div><div id="eq-det-corpo"></div></div></div>
-
-<div class="modal-overlay" id="modal-confirm">
-  <div class="modal modal--sm">
-    <div class="modal__title" id="confirm-title">Confirmar Ação</div>
-    <div class="modal__text" id="confirm-msg">Tem certeza?</div>
-    <div class="btn-group" style="margin-top: 20px;">
-      <button class="btn btn--outline" id="confirm-no">Cancelar</button>
-      <button class="btn btn--danger" id="confirm-yes">Excluir</button>
+    <div class="modal-overlay" id="modal-eq-det">
+      <div class="modal">
+        <div class="modal__handle"></div>
+        <div id="eq-det-corpo"></div>
+      </div>
     </div>
-  </div>
-</div>
 
-<div class="lightbox" id="lightbox">
-  <button class="lightbox__close" aria-label="Fechar visualização">✕</button>
-  <img class="lightbox__img" id="lightbox-img" src="" alt="Foto do serviço">
-</div>
+    <div class="modal-overlay" id="modal-confirm">
+      <div class="modal modal--sm">
+        <div class="modal__title" id="confirm-title">Confirmar Ação</div>
+        <div class="modal__text" id="confirm-msg">Tem certeza?</div>
+        <div class="btn-group" style="margin-top: 20px">
+          <button class="btn btn--outline" id="confirm-no">Cancelar</button>
+          <button class="btn btn--danger" id="confirm-yes">Excluir</button>
+        </div>
+      </div>
+    </div>
 
-<script>(function () { const params = new URLSearchParams(window.location.search); if (!params.has('p')) return; history.replaceState(null, '', `${window.location.pathname}${window.location.hash || ''}`); })();</script>
-<script type="module" src="/src/app.js"></script>
-</body>
+    <div class="lightbox" id="lightbox">
+      <button class="lightbox__close" aria-label="Fechar visualização">
+        ✕
+      </button>
+      <img
+        class="lightbox__img"
+        id="lightbox-img"
+        src=""
+        alt="Foto do serviço"
+      />
+    </div>
+
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search);
+        if (!params.has("p")) return;
+        history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.hash || ""}`,
+        );
+      })();
+    </script>
+    <script type="module" src="/src/app.js"></script>
+  </body>
 </html>
