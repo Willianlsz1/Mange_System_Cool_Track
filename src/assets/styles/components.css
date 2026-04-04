@@ -521,11 +521,11 @@
 .form-label {
   display: block;
   margin-bottom: var(--space-1);
-  color: var(--muted);
-  font-size: 0.95rem; /* 14px base mais consistente */
+  color: var(--text-3);
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
 }
 
 .form-control {
@@ -819,3 +819,155 @@ mark, .mark-highlight {
 .modal::-webkit-scrollbar { width: 4px; }
 .modal::-webkit-scrollbar-track { background: transparent; }
 .modal::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
+
+
+/* ════════════════════════════════════════════════════════
+   DESKTOP READABILITY v4.3
+   Tipografia escalada, formulários legíveis, max-width centrado
+   ════════════════════════════════════════════════════════ */
+
+@media (min-width: 1025px) {
+
+  /* ── BASE ── */
+  body {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ── FORMULÁRIOS — container centralizado com max-width ── */
+  #view-registro .card,
+  #view-equipamentos .card,
+  #view-relatorio .card,
+  #view-historico .card {
+    max-width: 860px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── LABELS — mais legíveis, menos grito ── */
+  .form-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-2);        /* #8AAAC8 — passa WCAG AA sobre navy */
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+
+  /* ── INPUTS — altura e fonte maiores ── */
+  .form-control {
+    font-size: 15px;
+    padding: 12px 14px;
+    line-height: 1.5;
+    border-radius: var(--radius-sm);
+  }
+
+  textarea.form-control {
+    min-height: 120px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  select.form-control {
+    height: auto;
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  /* ── SECTION TITLE ── */
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  /* ── BOTÕES — altura proporcional ── */
+  .btn {
+    padding: 12px 20px;
+    font-size: 14px;
+    border-radius: var(--radius-sm);
+  }
+
+  .btn--sm {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  /* ── PHOTO DROP — mais alto ── */
+  .photo-drop {
+    padding: 32px 24px;
+  }
+
+  .photo-drop__text { font-size: 14px; }
+  .photo-drop__limit { font-size: 12px; }
+
+  /* ── FORM ROW — gap mais generoso ── */
+  .form-row {
+    gap: 16px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  /* ── PAGE TOOLBAR ── */
+  .page-toolbar {
+    margin-bottom: 16px;
+  }
+
+  /* ── MODAL — formulário interno ── */
+  .modal .form-control {
+    font-size: 15px;
+    padding: 12px 14px;
+  }
+
+  .modal .form-label {
+    font-size: 11px;
+    color: var(--text-2);
+  }
+
+  .modal__title {
+    font-size: 17px;
+  }
+
+  /* ── TIMELINE — texto legível ── */
+  .timeline__title { font-size: 14px; }
+  .timeline__obs   { font-size: 13px; line-height: 1.55; }
+  .timeline__equip { font-size: 12px; }
+  .timeline__parts { font-size: 12px; }
+  .timeline__date  { font-size: 11px; }
+
+  /* ── RELATÓRIO ── */
+  .report-record__title { font-size: 14px; }
+  .report-record__obs   { font-size: 13px; line-height: 1.55; padding: 12px 14px; }
+  .info-row             { font-size: 13px; padding: 10px 0; }
+  .info-row__label      { font-size: 12px; }
+
+  /* ── FORM PROGRESS BAR ── */
+  .form-progress__text {
+    font-size: 12px;
+  }
+
+  /* ── SEARCH BAR ── */
+  .search-bar .form-control {
+    font-size: 14px;
+    padding: 11px 14px 11px 38px;
+  }
+
+  /* ── STAT PILL no header ── */
+  .stat-pill__value { font-size: 24px; }
+  .stat-pill__label { font-size: 10px; }
+
+}
+
+/* ── Ultrawide: limitar largura das views de formulário ── */
+@media (min-width: 1400px) {
+  #view-registro .card {
+    max-width: 900px;
+  }
+
+  #view-relatorio .form-row {
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}

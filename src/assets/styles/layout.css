@@ -428,6 +428,13 @@ main:focus { outline: none; }
   main { padding: 0; overflow: visible; }
   .view.active { min-height: calc(100vh - 160px); }
 
+  /* Formulários não esticam até a borda — leitura confortável */
+  #view-registro > *:not(.section-title),
+  #view-registro .section-title { max-width: 900px; }
+
+  #view-historico .search-bar,
+  #view-historico .form-group { max-width: 900px; }
+
   .form-row              { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-criticos-list    { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
