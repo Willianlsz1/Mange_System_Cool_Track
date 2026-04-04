@@ -16,12 +16,47 @@ import { WhatsAppExport }                             from './whatsapp.js';
 import { ProfileModal }                               from './onboarding.js';
 import { ClientMode }                                 from './clientmode.js';
 
+function _initEquipModal() {
+  const btn = document.getElementById('eq-expand-details');
+  const panel = document.getElementById('eq-step-2');
+  const stepDot2 = document.getElementById('step-dot-2');
+  if (!btn || !panel) return;
+
+  btn.addEventListener('click', () => {
+    const isOpen = btn.getAttribute('aria-expanded') === 'true';
+    btn.setAttribute('aria-expanded', String(!isOpen));
+    panel.setAttribute('aria-hidden', String(isOpen));
+    panel.classList.toggle('is-open', !isOpen);
+    if (!isOpen && stepDot2) stepDot2.classList.add('modal-step--active');
+  });
+
+  // Resetar estado ao fechar o modal
+  document.getElementById('modal-add-eq')?.addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-add-eq')) _resetEquipModal();
+  });
+
+  document.querySelector('[data-action="close-modal"][data-id="modal-add-eq"]')
+    ?.addEventListener('click', _resetEquipModal);
+}
+
+function _resetEquipModal() {
+  const btn = document.getElementById('eq-expand-details');
+  const panel = document.getElementById('eq-step-2');
+  const stepDot2 = document.getElementById('step-dot-2');
+  if (btn) btn.setAttribute('aria-expanded', 'false');
+  if (panel) { panel.classList.remove('is-open'); panel.setAttribute('aria-hidden', 'true'); }
+  if (stepDot2) stepDot2.classList.remove('modal-step--active');
+}
+
 function debounce(fn, delay) {
   let t;
   return function (...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), delay); };
 }
 
 export function bindEvents() {
+
+  // ── Modal progressivo de cadastro de equipamento ──────
+  _initEquipModal();
 
   // ── Delegação principal ──────────────────────────────
   document.addEventListener('click', async e => {
