@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+﻿import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: '/Mange_System_Cool_Track/',
@@ -13,7 +13,7 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    minify: 'terser',
+    minify: 'esbuild',  // ✅ MUDADO: 'terser' → 'esbuild'
     rollupOptions: {
       output: {
         manualChunks: undefined,
