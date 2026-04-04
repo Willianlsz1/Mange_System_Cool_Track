@@ -1800,3 +1800,117 @@ mark, .mark-highlight {
 @media (min-width: 1025px) {
   .registro-obs { min-height: 130px; }
 }
+
+
+/* ════════════════════════════════════════════════════════
+   HISTÓRICO v5.3 — sticky header, badges cronológicos
+   ════════════════════════════════════════════════════════ */
+
+/* Sticky header do histórico */
+.hist-sticky-header {
+  position: sticky;
+  top: 80px; /* abaixo do app-header */
+  z-index: 40;
+  background: var(--bg);
+  padding: 10px 0 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hist-sticky-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.hist-sticky-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Contador de registros */
+.hist-count {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--text-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Linha de filtros lado a lado */
+.hist-filters {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.hist-equip-select {
+  width: auto;
+  min-width: 140px;
+  max-width: 200px;
+  flex-shrink: 0;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+/* Label cronológico */
+.hist-chrono-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
+}
+
+/* Badge "Mais recente" no primeiro card */
+.timeline__recency-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-dim);
+  border: 1px solid rgba(0,200,232,0.2);
+  border-radius: var(--radius-xs);
+  padding: 2px 7px;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+/* Primeiro card: borda mais visível */
+.timeline__item--latest {
+  border-color: rgba(0,200,232,0.2);
+  border-left-width: 2px;
+}
+
+/* Badge "Hoje" na data */
+.timeline__today-badge {
+  display: inline-flex;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--success);
+  background: var(--success-dim);
+  border-radius: 3px;
+  padding: 1px 5px;
+  letter-spacing: 0.04em;
+  vertical-align: middle;
+  margin-right: 3px;
+}
+
+/* Mobile: sticky header compacto */
+@media (max-width: 639px) {
+  .hist-sticky-header { top: 70px; }
+  .hist-equip-select  { min-width: 100px; font-size: 12px; }
+  .hist-sticky-header__top .btn { display: none; } /* relatório some no mobile */
+}
+
+/* Desktop: sticky 60px (altura do header fixo) */
+@media (min-width: 1025px) {
+  .hist-sticky-header { top: 60px; }
+}
