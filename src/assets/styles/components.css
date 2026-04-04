@@ -941,4 +941,138 @@ textarea.form-control { min-height: 96px; line-height: 1.5; }
     transform: translateX(0);
     opacity: 1;
   }
+}/* ════════════════════════════════════════════════════════
+   DASHBOARD REDESIGN v3.3.1 (Clean & Organized)
+   ════════════════════════════════════════════════════════ */
+
+/* Grid principal do dashboard - Mais respirado */
+.dashboard-bento {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4); /* Aumentei o gap de 2 para 4 */
+  grid-template-areas: 
+    "kpi-row"
+    "alertas"
+    "criticos"
+    "recentes"
+    "charts";
+}
+
+/* Fila de KPIs - 3 colunas iguais */
+.bento-kpi--alert { grid-area: auto; }
+.bento-kpi--health { grid-area: auto; }
+.bento-kpi--mes { grid-area: auto; }
+
+/* KPI Row - 3 colunas em desktop */
+@media (min-width: 768px) {
+  .dashboard-bento {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-areas: 
+      "kpi-alert kpi-health kpi-mes"
+      "alertas alertas alertas"
+      "criticos criticos criticos"
+      "recentes recentes recentes"
+      "charts charts charts";
+  }
+  
+  /* KPIs na primeira fileira */
+  .bento-kpi--alert { grid-area: kpi-alert; }
+  .bento-kpi--health { grid-area: kpi-health; }
+  .bento-kpi--mes { grid-area: kpi-mes; }
+}
+
+/* Seções com headers estilizados */
+#dash-alertas-mini,
+#dash-criticos,
+#dash-recentes {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  display: block; /* Mudar de grid para block quando não há conteúdo */
+}
+
+/* Cards de alerta mais compactos */
+.alert-card {
+  padding: var(--space-3) !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.alert-card__title {
+  font-size: 13px !important;
+}
+
+.alert-card__sub,
+.alert-card__equip {
+  font-size: 11px !important;
+}
+
+/* Cards recentes melhorados */
+.recent-card {
+  border-left: 3px solid var(--border-strong);
+  transition: all 0.2s ease;
+}
+
+.recent-card:hover {
+  border-left-color: var(--primary);
+  transform: translateX(4px); /* Sutil movimento lateral */
+}
+
+/* Espaçamento interno dos containers */
+.bento-alertas,
+.bento-criticos,
+.bento-recentes {
+  padding: var(--space-4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: block;
+}
+
+/* Títulos de seção */
+.dash-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+
+/* Gráficos container */
+.bento-chart {
+  padding: var(--space-4);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.charts-grid {
+  gap: var(--space-4); /* Aumentei spacing */
+}
+
+.chart-card {
+  padding: var(--space-4);
+}
+
+/* Mobile: empilhar tudo */
+@media (max-width: 767px) {
+  .dashboard-bento {
+    grid-template-columns: 1fr;
+    grid-template-areas: 
+      "kpi-alert"
+      "kpi-health"
+      "kpi-mes"
+      "alertas"
+      "criticos"
+      "recentes"
+      "charts";
+    gap: var(--space-3);
+  }
+  
+  .bento-kpi {
+    padding: var(--space-3) !important;
+  }
 }
