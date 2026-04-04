@@ -1,27 +1,26 @@
 /* ============================================================
    layout.css — App Shell, Header, Nav, Grid, Responsive, Print
-   CoolTrack Pro v3.3
+   CoolTrack Pro v3.4
    ============================================================ */
 
 #app { width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
 .app-content { flex: 1; width: min(var(--layout-max), calc(100% - (var(--space-4) * 2))); margin: var(--space-4) auto 0; display: flex; flex-direction: column; min-width: 0; }
 
+/* ─── HEADER ─── */
 .app-header { position: sticky; top: 0; z-index: 80; background: rgba(7, 12, 24, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--border); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 32px rgba(0, 0, 0, 0.4); padding: var(--space-4) 0; }
 .app-header__top, .header-stats { width: min(var(--layout-max), calc(100% - (var(--space-4) * 2))); margin-inline: auto; }
 .app-header__top { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); }
-
-/* Container da data + theme toggle */
-.app-header__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
+.app-header__actions { display: flex; align-items: center; gap: var(--space-3); }
 
 .app-logo { display: flex; align-items: baseline; gap: var(--space-1); color: var(--text); font-family: var(--font-display); font-size: clamp(1.1rem, 2vw, 1.3rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.1; }
 .app-logo__sub { font-size: 0.85rem; font-weight: 600; letter-spacing: 0; background: linear-gradient(135deg, var(--primary) 0%, #00FFB2 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.45)); }
 .app-header__date { color: var(--muted); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; }
 .header-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 
+/* ─── LIGHT HEADER ─── */
+[data-theme="light"] .app-header { background: rgba(248, 250, 252, 0.9); }
+
+/* ─── NAV ─── */
 .app-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: rgba(11, 17, 32, 0.96); border-top: 1px solid var(--border); box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); padding-bottom: env(safe-area-inset-bottom); }
 .app-nav__title { display: none; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
@@ -33,14 +32,34 @@
 .nav-btn__badge { display: none; position: absolute; top: 5px; right: calc(50% - 17px); width: 16px; height: 16px; border-radius: 50%; align-items: center; justify-content: center; background: var(--danger); color: var(--white); font-size: 9px; font-weight: 700; box-shadow: 0 0 0 2px var(--bg), 0 0 8px var(--danger); }
 .nav-btn__badge.is-visible { display: flex; }
 
+/* ─── MAIN ─── */
 main { flex: 1; min-width: 0; padding: 0 0 calc(92px + env(safe-area-inset-bottom)); overflow: auto; }
-.view { display: none; }
-.view.active { display: block; animation: fade-up 0.22s ease; }
-@keyframes fade-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+main:focus { outline: none; }
 
+/* ─── BENTO GRID ─── */
+.dashboard-bento { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "alert-kpi health-kpi mes-kpi" "alertas alertas alertas" "criticos criticos criticos" "recentes recentes recentes" "chart chart chart"; gap: var(--space-2); }
+.bento-kpi--alert  { grid-area: alert-kpi; }
+.bento-kpi--health { grid-area: health-kpi; }
+.bento-kpi--mes    { grid-area: mes-kpi; }
+.bento-alertas     { grid-area: alertas; }
+.bento-criticos    { grid-area: criticos; }
+.bento-recentes    { grid-area: recentes; }
+.bento-chart       { grid-area: chart; }
+
+.bento-alertas, .bento-criticos, .bento-recentes { display: grid; gap: var(--space-2); align-content: start; }
+.bento-alertas  { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.bento-criticos { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.bento-recentes { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+
+/* ─── LISTS ─── */
 #dash-alertas-mini, #dash-recentes, #dash-criticos, #lista-equip, #lista-alertas { display: grid; gap: var(--space-3); }
 
-/* ─── RESPONSIVE BREAKPOINTS ─── */
+/* ─── RESPONSIVE ─── */
+@media (max-width: 639px) {
+  .dashboard-bento { grid-template-columns: 1fr; grid-template-areas: "alert-kpi" "health-kpi" "mes-kpi" "alertas" "criticos" "recentes" "chart"; }
+  .bento-alertas, .bento-criticos, .bento-recentes { grid-template-columns: 1fr; }
+}
+
 @media (min-width: 640px) and (max-width: 1024px) {
   .app-header__top, .header-stats, .app-content { width: min(var(--layout-max), calc(100% - (var(--space-5) * 2))); }
   .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -48,47 +67,32 @@ main { flex: 1; min-width: 0; padding: 0 0 calc(92px + env(safe-area-inset-botto
   .dashboard-bento { grid-template-columns: repeat(2, 1fr); grid-template-areas: "alert-kpi health-kpi" "mes-kpi mes-kpi" "alertas alertas" "criticos criticos" "recentes recentes" "chart chart"; }
 }
 
-/* ─── BENTO GRID DASHBOARD ─── */
-.dashboard-bento { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-areas: "alert-kpi health-kpi mes-kpi" "alertas alertas alertas" "criticos criticos criticos" "recentes recentes recentes" "chart chart chart"; gap: var(--space-2); }
-.bento-kpi--alert { grid-area: alert-kpi; }
-.bento-kpi--health { grid-area: health-kpi; }
-.bento-kpi--mes { grid-area: mes-kpi; }
-.bento-alertas { grid-area: alertas; }
-.bento-criticos { grid-area: criticos; }
-.bento-recentes { grid-area: recentes; }
-.bento-chart { grid-area: chart; }
-
-.bento-alertas, .bento-criticos, .bento-recentes { display: grid; gap: var(--space-2); align-content: start; }
-.bento-alertas { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-.bento-criticos { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-.bento-recentes { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-
-@media (max-width: 639px) {
-  .dashboard-bento { grid-template-columns: 1fr; grid-template-areas: "alert-kpi" "health-kpi" "mes-kpi" "alertas" "criticos" "recentes" "chart"; }
-  .bento-alertas, .bento-criticos, .bento-recentes { grid-template-columns: 1fr; }
-}
-
 @media (min-width: 1025px) {
   .app-header__top, .header-stats, .app-content { width: min(var(--layout-max), calc(100% - (var(--space-6) * 2))); }
   .app-content { margin-top: var(--space-5); margin-bottom: var(--space-5); display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: var(--space-5); align-items: start; }
+
   .app-nav { position: sticky; top: 92px; left: auto; right: auto; bottom: auto; height: calc(100vh - 122px); overflow: auto; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); box-shadow: var(--shadow); grid-template-columns: unset; }
   .app-nav__title { display: block; margin: 2px 6px var(--space-2); }
+
   .nav-btn { flex-direction: row; justify-content: flex-start; gap: var(--space-2); padding: 10px; border-radius: 10px; font-size: 13px; }
   .nav-btn__icon { font-size: 17px; }
   .nav-btn.is-active { background: var(--primary-soft); color: var(--primary); }
   .nav-btn.is-active::after { display: none; }
   .nav-btn__badge { top: 8px; right: 8px; }
+
   main { padding: 0; }
   .view.active { min-height: calc(100vh - 200px); }
   .form-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #dash-alertas-mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #dash-recentes, #dash-criticos { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #lista-equip, #lista-alertas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
   .modal-overlay { align-items: center; padding: var(--space-5); }
   .modal { width: min(820px, 100%); border-radius: 16px; padding: var(--space-5); box-shadow: var(--shadow-lg); }
   .modal__handle { display: none; }
 }
 
+/* ─── PRINT ─── */
 @media print {
   .app-header, .app-nav, .page-toolbar, .btn-group, .modal-overlay { display: none !important; }
   body { background: #fff; color: #000; }
