@@ -1,4 +1,11 @@
+/**
+ * CoolTrack Pro - Storage Module v3.3
+ * 
+ * Persistência de dados com Toast para erros
+ */
+
 import { STORAGE_KEY } from './utils.js';
+import { Toast } from './toast.js'; // ✅ NOVO: Toast System
 
 function normalizeEquip(e) {
   if (!e || typeof e !== 'object') return null;
@@ -45,12 +52,13 @@ export const Storage = {
       return defaultState;
     }
   },
+  
   save(state) {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       return true;
     } catch (_) {
-      alert('Falha ao salvar dados locais. Verifique armazenamento do navegador.');
+      Toast.error('Falha ao salvar dados locais. Verifique armazenamento do navegador.'); // ✅ Toast em vez de alert
       return false;
     }
   },

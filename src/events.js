@@ -1,6 +1,13 @@
+/**
+ * CoolTrack Pro - Events Module v3.3 (UX Premium)
+ * 
+ * Eventos globais com Toast System integrado
+ */
+
 import { Utils } from './utils.js';
 import { goView, Modal, Equipamentos, Registro, Historico, Photos, CustomConfirm, renderEquip, renderHist, renderRelatorio } from './ui.js';
-import { PDFGenerator } from './pdf.js'; // ← IMPORTANTE: Adicionar esta linha!
+import { PDFGenerator } from './pdf.js';
+import { Toast } from './toast.js'; // ✅ NOVO: Toast System
 
 function debounce(fn, delay) {
   let timeout;
@@ -94,9 +101,9 @@ export function bindEvents() {
       });
       
       if (fileName) {
-        alert(`✅ PDF gerado com sucesso!\n\nArquivo: ${fileName}`);
+        Toast.success(`PDF gerado: ${fileName}`); // ✅ Toast em vez de alert
       } else {
-        alert('❌ Erro ao gerar PDF. Verifique o console (F12).');
+        Toast.error('Erro ao gerar PDF. Verifique o console (F12).'); // ✅ Toast em vez de alert
       }
     });
   }
