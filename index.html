@@ -322,19 +322,37 @@
           </div>
           <!-- HISTÓRICO -->
           <div class="view" id="view-historico">
-            <div class="page-toolbar">
-              <div class="section-title">Histórico de Serviços</div>
-              <button class="btn btn--outline btn--sm" data-nav="relatorio">Gerar Relatório</button>
+
+            <!-- Sticky header — fica fixo enquanto o usuário rola -->
+            <div class="hist-sticky-header" id="hist-sticky-header">
+              <div class="hist-sticky-header__top">
+                <div class="section-title" style="margin-bottom:0">Histórico de Serviços</div>
+                <div class="hist-sticky-header__actions">
+                  <span class="hist-count" id="hist-count"></span>
+                  <button class="btn btn--outline btn--sm" data-nav="relatorio">Gerar Relatório</button>
+                </div>
+              </div>
+              <div class="hist-filters">
+                <div class="search-bar" style="margin-bottom:0;flex:1">
+                  <span class="search-bar__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 9.5L12 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+                  <input class="form-control search-bar__input" id="hist-busca" type="text"
+                    placeholder="Buscar equipamento, tipo, técnico..." aria-label="Buscar no histórico" />
+                </div>
+                <select id="hist-equip" class="form-control hist-equip-select" aria-label="Filtrar por equipamento">
+                  <option value="">Todos</option>
+                </select>
+              </div>
             </div>
-            <div class="search-bar">
-              <span class="search-bar__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><path d="M9.5 9.5L12 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg></span>
-              <input class="form-control search-bar__input" id="hist-busca" type="text" placeholder="Buscar por equipamento, tipo ou técnico..." aria-label="Buscar no histórico" />
+
+            <!-- Label cronológico — deixa óbvio a ordem -->
+            <div class="hist-chrono-label" id="hist-chrono-label">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1"/>
+                <path d="M6 3v3l2 1.2" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+              </svg>
+              Mais recente primeiro
             </div>
-            <div class="form-group">
-              <select id="hist-equip" class="form-control" aria-label="Filtrar por equipamento">
-                <option value="">Todos os equipamentos</option>
-              </select>
-            </div>
+
             <div id="timeline" role="list"></div>
           </div>
 
