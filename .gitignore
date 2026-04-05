@@ -4,5 +4,3 @@ dist/
 .env.local
 .DS_Store
 *.log
-# Supabase
-src/core/supabase.js
