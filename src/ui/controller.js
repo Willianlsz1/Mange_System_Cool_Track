@@ -198,13 +198,13 @@ function _showAccountModal(user) {
   overlay.className = 'modal-overlay is-open';
 
   overlay.innerHTML = `
-    <div class="modal modal--sm" style="align-self:center;padding:0;overflow:hidden">
+    <div class="modal" style="align-self:center;padding:0;overflow:hidden;max-width:420px;width:100%">
 
       <!-- Header com avatar -->
       <div style="
         background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(0,212,255,0.03));
         border-bottom:1px solid rgba(255,255,255,0.07);
-        padding:24px 24px 20px;
+        padding:28px 28px 24px;
         display:flex;align-items:center;gap:14px
       ">
         <div style="
@@ -226,11 +226,11 @@ function _showAccountModal(user) {
       </div>
 
       <!-- Ações -->
-      <div style="padding:12px">
+      <div style="padding:16px">
         <button id="btn-edit-profile" style="
           width:100%;background:transparent;
           border:1px solid rgba(255,255,255,0.08);
-          border-radius:8px;padding:11px 14px;
+          border-radius:8px;padding:14px 16px;
           display:flex;align-items:center;gap:10px;
           color:#8AAAC8;font-size:14px;font-family:inherit;
           cursor:pointer;transition:all .15s;margin-bottom:6px;
