@@ -97,22 +97,6 @@ body::before {
 
 /* ===== NAVBAR FIXO — DESKTOP ONLY (≥1025px) ===== */
 @media (min-width: 1025px) {
-  .app-nav {
-    position: fixed !important;
-    top: 60px;
-    left: 0;
-    right: 0;
-    z-index: 100 !important;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border-radius: 0 0 var(--premier-radius, 8px) var(--premier-radius, 8px);
-    background: rgba(22, 27, 34, 0.8);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-  }
-
-  .app-content { padding-top: 52px; }
-  .app-nav__title { display: none; }
-
   .nav-btn {
     flex-direction: row;
     justify-content: center;
@@ -169,9 +153,6 @@ body::before {
   }
 
   .nav-btn__badge.is-visible { display: flex; }
-
-  main { padding: 0; }
-  .view.active { min-height: auto; }
 
   .modal {
     border-radius: var(--premier-radius);
