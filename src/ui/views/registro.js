@@ -11,8 +11,6 @@ import { goTo }                      from '../../core/router.js';
 import { Photos }                    from '../components/photos.js';
 import { SavedHighlight }            from '../components/onboarding.js';
 import { Profile }                   from '../../features/profile.js';
-import { updateHeader,}              from './dashboard.js';
-import { renderHist }                from './historico.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
 
@@ -60,21 +58,6 @@ function _bindEquipChangeWarning() {
       sel.parentNode.parentNode.insertBefore(w, sel.parentNode.nextSibling);
     }
   });
-}
-
-// ── Smart search no campo de equipamentos ──────────────
-function _initSmartSearch() {
-  const wrapper = document.querySelector('#view-equipamentos .search-bar');
-  const input   = document.querySelector('#view-equipamentos .search-bar__input');
-  if (!input || !wrapper) return;
-  if (wrapper.querySelector('.search-bar__clear')) return;
-  const btn = document.createElement('button');
-  btn.type = 'button'; btn.className = 'search-bar__clear'; btn.innerHTML = '✕'; btn.setAttribute('aria-label', 'Limpar busca');
-  wrapper.classList.add('search-bar__wrapper'); wrapper.appendChild(btn);
-  input.classList.add('search-bar__input--with-clear');
-  const { renderEquip } = require('./equipamentos.js');
-  btn.addEventListener('click', () => { input.value = ''; wrapper.classList.remove('search-bar__has-value'); renderEquip(''); input.focus(); });
-  input.addEventListener('input', () => wrapper.classList.toggle('search-bar__has-value', input.value.length > 0));
 }
 
 // ═══════════════════════════════════════════════════════
