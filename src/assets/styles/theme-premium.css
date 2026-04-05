@@ -12,6 +12,8 @@
 /* ════════════════════════════════════════════════════════
    GLOBAL — Fundo mais profundo, bordas arredondadas
    ════════════════════════════════════════════════════════ */
+/* Aplicar tema premium apenas no modo dark */
+:root:not([data-theme="light"]) {  
 :root {
   --premier-radius: 12px;
   --premier-radius-sm: 8px;
@@ -1004,3 +1006,4 @@ mark, .mark-highlight {
   border-color: rgba(0, 255, 136, 0.35);
   box-shadow: 0 0 12px rgba(0, 255, 136, 0.08);
 }
+} /* fecha :root:not([data-theme="light"]) */
