@@ -121,8 +121,7 @@ export function initController() {
       else ProfileModal.open();
     });
   });
-  on("toggle-client-mode", () => ClientMode.toggle());
-
+  
   on("export-pdf", (el) => {
     el.textContent = "Gerando...";
     el.disabled = true;
