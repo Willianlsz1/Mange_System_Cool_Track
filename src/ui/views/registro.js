@@ -131,9 +131,37 @@ export async function saveRegistro() {
     return;
   }
 
-  const status = Utils.getVal("r-status");
-  const custoPecas = parseFloat(Utils.getVal("r-custo-pecas") || "0") || 0;
-  const custoMaoObra = parseFloat(Utils.getVal("r-custo-mao-obra") || "0") || 0;
+  const status      = Utils.getVal('r-status');
+  const custoPecas  = parseFloat(Utils.getVal('r-custo-pecas')    || '0') || 0;
+  const custoMaoObra = parseFloat(Utils.getVal('r-custo-mao-obra') || '0') || 0;
+
+  Profile.saveLastTecnico(tecnico);
+
+  // Modo edição — atualiza registro existente
+  const editingId = sessionStorage.getItem('cooltrack-editing-id');
+  if (editingId) {
+    setState(prev => ({
+      ...prev,
+      registros: prev.registros.map(r => r.id === editingId ? {
+        ...r,
+        equipId, data, tipo, obs, tecnico, status,
+        pecas:        Utils.getVal('r-pecas').trim(),
+        proxima:      Utils.getVal('r-proxima'),
+        custoPecas,
+        custoMaoObra,
+      } : r),
+      equipamentos: prev.equipamentos.map(e =>
+        e.id === equipId ? { ...e, status } : e
+      ),
+    }));
+    sessionStorage.removeItem('cooltrack-editing-id');
+    clearRegistro();
+    Toast.success('Registro atualizado.');
+    goTo('historico');
+    return;
+  }
+
+  // Modo criação — continua fluxo normal
   const novoId = Utils.uid();
 
   Profile.saveLastTecnico(tecnico);
