@@ -1,594 +1,530 @@
 /**
- * CoolTrack Pro - PDF Generator v5.2 (SaaS)
- * 
- * MELHORIAS v5.2:
- * ✅ Corrigido STATUS quebrado (OP/ER/AN/DO → OPERANDO)
- * ✅ Otimizado larguras das colunas
- * ✅ Aumentado legibilidade (fontes, padding, lineHeight)
- * ✅ Adicionado minCellHeight para evitar sobreposição
- * ✅ Layout mais profissional e balanceado
+ * CoolTrack Pro - PDF Generator v6.0
+ * ─────────────────────────────────────────────────────────────────
+ * Melhorias v6:
+ *   • Capa executiva com logo textual, branding e dados do técnico
+ *   • Tema dark preservado em TODAS as páginas (sem fundo branco)
+ *   • Página de resumo executivo com KPIs visuais e gráfico de barras
+ *   • Tabela de registros com densidade e legibilidade melhoradas
+ *   • Header/footer profissionais e consistentes em cada página
+ *   • Páginas de assinatura redesenhadas
+ * ─────────────────────────────────────────────────────────────────
  */
 
-import { jsPDF }     from 'jspdf';
-import autoTable     from 'jspdf-autotable';
-import { getState }  from './state.js';
-import { Utils }     from './utils.js';
-import { Profile }   from './onboarding.js';
+import { jsPDF }    from 'jspdf';
+import autoTable    from 'jspdf-autotable';
+import { getState } from './state.js';
+import { Utils }    from './utils.js';
+import { Profile }  from './onboarding.js';
 import { getSignatureForRecord } from './signature.js';
 
-// ==========================================
-// PALETA DE CORES - TEMA DARK PROFISSIONAL
-// ==========================================
+/* ── Paleta de cores (RGB) ───────────────────────────────────────── */
 const C = {
-  navy:   [11,  17,  32],   // #0B1120
-  navy2:  [15,  23,  42],
-  navy3:  [23,  34,  53],
-  cyan:   [0,   212, 255],
-  amber:  [232, 160, 32],
-  red:    [224, 48,  64],
-  green:  [0,   200, 112],
-  text:   [232, 242, 250],
-  text2:  [138, 170, 200],
-  text3:  [106, 139, 168],
-  white:  [255, 255, 255],
-  border: [23,  45,  69],
+  bg:      [7,   17,  31],   // fundo principal (navy profundo)
+  bg2:     [12,  25,  41],   // card/tabela linha par
+  bg3:     [18,  34,  56],   // card/tabela linha ímpar
+  surface: [23,  38,  62],   // superfície elevada
+  border:  [35,  60,  95],   // bordas sutis
+  cyan:    [0,   200, 232],  // accent primário
+  cyan2:   [0,   150, 175],  // accent secundário
+  amber:   [232, 160, 32],   // aviso
+  red:     [220, 48,  64],   // crítico
+  green:   [0,   195, 110],  // ok
+  text:    [232, 242, 250],  // texto primário
+  text2:   [138, 170, 200],  // texto secundário
+  text3:   [80,  115, 150],  // texto terciário / muted
+  white:   [255, 255, 255],
 };
 
 const STATUS_PDF = {
   ok:     { label: 'OPERANDO', color: C.green },
-  warn:   { label: 'ATENCAO',  color: C.amber },
+  warn:   { label: 'ATENÇÃO',  color: C.amber },
   danger: { label: 'FALHA',    color: C.red   },
 };
 
+/* ── Helpers internos ────────────────────────────────────────────── */
+function rgb(doc, arr)     { doc.setFillColor(...arr); }
+function stroke(doc, arr)  { doc.setDrawColor(...arr); }
+function color(doc, arr)   { doc.setTextColor(...arr); }
+
+function fillRect(doc, x, y, w, h, c) {
+  rgb(doc, c); doc.rect(x, y, w, h, 'F');
+}
+
+function roundRect(doc, x, y, w, h, r, c) {
+  rgb(doc, c); doc.roundedRect(x, y, w, h, r, r, 'F');
+}
+
+/* Fundo escuro total da página */
+function fillPage(doc, PW, PH) {
+  fillRect(doc, 0, 0, PW, PH, C.bg);
+}
+
+/* Linha divisória com accent cyan */
+function accentLine(doc, x1, y, x2) {
+  stroke(doc, C.cyan); doc.setLineWidth(0.35);
+  doc.line(x1, y, x2, y);
+}
+
+/* Texto com fonte definida inline */
+function txt(doc, text, x, y, opts = {}) {
+  doc.setFont('helvetica', opts.style || 'normal');
+  doc.setFontSize(opts.size || 9);
+  if (opts.color) color(doc, opts.color);
+  doc.text(text, x, y, { align: opts.align || 'left', maxWidth: opts.maxWidth });
+}
+
+/* ── Export principal ─────────────────────────────────────────────── */
 export const PDFGenerator = {
 
-  // ==========================================
-  // FUNÇÃO PRINCIPAL - GERAR RELATÓRIO
-  // ==========================================
   generateMaintenanceReport(options = {}) {
     try {
       const { registros, equipamentos } = getState();
       const { filtEq = '', de = '', ate = '' } = options;
       const profile = Profile.get();
 
+      /* Filtragem e ordenação */
       let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));
       if (filtEq) filtered = filtered.filter(r => r.equipId === filtEq);
       if (de)     filtered = filtered.filter(r => r.data >= de);
       if (ate)    filtered = filtered.filter(r => r.data <= `${ate}T23:59`);
 
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-      const PW  = doc.internal.pageSize.getWidth();
-      const PH  = doc.internal.pageSize.getHeight();
-      const M   = 14;
+      const PW  = doc.internal.pageSize.getWidth();   // 297mm
+      const PH  = doc.internal.pageSize.getHeight();  // 210mm
+      const M   = 16;
 
-      // Desenhar header principal
-      this._drawHeader(doc, PW, M, profile, filtEq, de, ate, filtered, equipamentos);
-      
-      let yPos = 56;  // Espaçamento generoso após header
-      
-      // Desenhar resumo executivo (com de e ate como parâmetros)
-      yPos = this._drawSummary(doc, PW, M, yPos, filtered, de, ate);
+      /* ① Capa executiva */
+      this._drawCoverPage(doc, PW, PH, M, profile, filtEq, de, ate, filtered, equipamentos);
 
+      /* ② Página de resumo / KPIs */
+      doc.addPage();
+      fillPage(doc, PW, PH);
+      this._drawPageHeader(doc, PW, M, 'RESUMO EXECUTIVO', profile, 2);
+      this._drawExecutiveSummary(doc, PW, PH, M, filtered, equipamentos);
+      this._drawFooter(doc, PW, PH, M, profile, 2);
+
+      /* ③ Tabela de registros */
       if (filtered.length > 0) {
-        // Desenhar tabela otimizada
-        this._drawTable(doc, PW, PH, M, yPos, filtered, equipamentos);
-        
-        // Páginas de assinatura (se existirem)
-        this._drawSignaturePages(doc, PW, PH, M, filtered, equipamentos);
+        doc.addPage();
+        fillPage(doc, PW, PH);
+        this._drawPageHeader(doc, PW, M, 'HISTÓRICO DE MANUTENÇÃO', profile, 3);
+        this._drawTable(doc, PW, PH, M, filtered, equipamentos, profile);
+        this._drawSignaturePages(doc, PW, PH, M, filtered, equipamentos, profile);
       } else {
-        doc.setFontSize(13);
-        doc.setTextColor(...C.text3);
-        doc.text('Nenhum registro encontrado.', PW / 2, yPos + 20, { align: 'center' });
-        this._drawFooter(doc, PW, PH, profile, 1, 1);
+        doc.addPage();
+        fillPage(doc, PW, PH);
+        this._drawPageHeader(doc, PW, M, 'HISTÓRICO DE MANUTENÇÃO', profile, 3);
+        txt(doc, 'Nenhum registro encontrado para os filtros selecionados.', PW / 2, PH / 2,
+          { align: 'center', color: C.text3, size: 11 });
+        this._drawFooter(doc, PW, PH, M, profile, 3);
       }
 
-      // Salvar PDF
-      const fileName = `CoolTrack_${(profile?.empresa || 'Relatorio').replace(/\s/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      /* Atualiza número total de páginas no rodapé (não é possível retroativamente com jsPDF simples,
+         mas usamos a abordagem de totalPages já conhecido ao final) */
+
+      const fileName = `CoolTrack_${(profile?.empresa || 'Relatorio').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.pdf`;
       doc.save(fileName);
       return fileName;
-      
     } catch (err) {
-      console.error('[PDFGenerator]', err);
+      console.error('[PDFGenerator v6]', err);
       return null;
     }
   },
 
-  // ==========================================
-  // HEADER PRINCIPAL - Design Dark Profissional
-  // ==========================================
-  _drawHeader(doc, PW, M, profile, filtEq, de, ate, filtered, equipamentos) {
-    
-    // Fundo escuro principal (#0B1120)
-    doc.setFillColor(...C.navy);
-    doc.rect(0, 0, PW, 52, 'F');
-    
-    // Linha decorativa cyan no topo (3mm de espessura)
-    doc.setFillColor(...C.cyan);
-    doc.rect(0, 0, PW, 3, 'F');
-    
-    // TÍTULO PRINCIPAL - 22px Bold Cyan
-    doc.setTextColor(...C.cyan);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('COOLTRACK PRO', M, 17);
+  /* ── CAPA ──────────────────────────────────────────────────────── */
+  _drawCoverPage(doc, PW, PH, M, profile, filtEq, de, ate, filtered, equipamentos) {
+    fillPage(doc, PW, PH);
 
-    // SUBTÍTULO - 14px Cinza Claro
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.text2);
-    doc.text('Sistema de Gestao de Climatizacao e Refrigeracao', M, 26);
+    /* Faixa lateral esquerda decorativa */
+    fillRect(doc, 0, 0, 5, PH, C.cyan);
 
-    // Perfil do técnico (se disponível)
+    /* Bloco superior escuro */
+    fillRect(doc, 0, 0, PW, PH * 0.55, C.bg2);
+
+    /* Linha accent separadora */
+    accentLine(doc, 0, PH * 0.55, PW);
+
+    /* ── Logo / Produto ── */
+    txt(doc, 'COOLTRACK', M + 6, 38, { size: 36, style: 'bold', color: C.white });
+
+    /* "PRO" em cyan ao lado */
+    doc.setFontSize(36); doc.setFont('helvetica', 'bold'); color(doc, C.cyan);
+    const cooltrackWidth = doc.getTextWidth('COOLTRACK');
+    doc.text('PRO', M + 6 + cooltrackWidth + 3, 38);
+
+    txt(doc, 'Sistema de Gestão de Climatização e Refrigeração', M + 6, 47, {
+      size: 9, color: C.text3,
+    });
+
+    /* Linha fina sob o nome */
+    stroke(doc, C.border); doc.setLineWidth(0.2);
+    doc.line(M + 6, 52, PW * 0.55, 52);
+
+    /* Título do relatório */
+    txt(doc, 'RELATÓRIO DE MANUTENÇÃO', M + 6, 68, {
+      size: 18, style: 'bold', color: C.text,
+    });
+
+    /* Período */
+    const periodoStr = (de || ate)
+      ? `${de ? Utils.formatDate(de) : 'início'} — ${ate ? Utils.formatDate(ate) : 'atual'}`
+      : 'Período completo';
+    txt(doc, periodoStr, M + 6, 78, { size: 10, color: C.cyan });
+
+    /* Equipamento filtrado */
+    const eqLabel = filtEq
+      ? (equipamentos.find(e => e.id === filtEq)?.nome || filtEq)
+      : 'Todos os equipamentos';
+    txt(doc, eqLabel, M + 6, 87, { size: 9, color: C.text2 });
+
+    /* ── Bloco de dados do técnico (card) ── */
     if (profile?.nome) {
-      doc.setTextColor(...C.text);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text(profile.nome + (profile.empresa ? ` — ${profile.empresa}` : ''), M, 35);
-      
-      if (profile.telefone) {
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(...C.text3);
-        doc.text(profile.telefone, M, 42);
+      const cardX = M + 6, cardY = 100, cardW = 130, cardH = 38;
+      roundRect(doc, cardX, cardY, cardW, cardH, 2, C.surface);
+      fillRect(doc, cardX, cardY, 3, cardH, C.cyan);
+
+      txt(doc, 'TÉCNICO RESPONSÁVEL', cardX + 8, cardY + 8, { size: 6.5, color: C.text3, style: 'bold' });
+      txt(doc, profile.nome, cardX + 8, cardY + 16, { size: 11, style: 'bold', color: C.text });
+      if (profile.empresa) txt(doc, profile.empresa, cardX + 8, cardY + 23, { size: 8, color: C.cyan });
+      if (profile.telefone) txt(doc, profile.telefone, cardX + 8, cardY + 30, { size: 8, color: C.text2 });
+      if (profile.crea || profile.registro) {
+        const reg = profile.crea || profile.registro;
+        txt(doc, `Reg: ${reg}`, cardX + cardW - 4, cardY + 30, { size: 7, color: C.text3, align: 'right' });
       }
     }
 
-    // Linha separadora cyan (mais forte)
-    doc.setDrawColor(...C.cyan);
-    doc.setLineWidth(0.6);
-    doc.line(M, 47, PW - M, 47);
-
-    // Informações de geração (data, equipamento, período, contagem)
-    const hoje = new Date().toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-
-    doc.setFontSize(9);
-    doc.setTextColor(...C.text3);
-    doc.text(`Gerado: ${hoje}`, M, 50);
-
-    const eqLabel = filtEq ? (equipamentos.find(e => e.id === filtEq)?.nome || '—') : 'Todos';
-    doc.text(`Equipamento: ${eqLabel}`, M + 85, 50);
-    doc.text(`Periodo: ${de || 'inicio'} ate ${ate || 'atual'}`, M + 190, 50);
-    
-    // Contagem de registros em destaque cyan
-    doc.setTextColor(...C.cyan);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${filtered.length} registro(s)`, PW - M, 50, { align: 'right' });
-  },
-
-  // ==========================================
-  // RESUMO EXECUTIVO - Com Bordas Decorativas
-  // ==========================================
-  _drawSummary(doc, PW, M, yPos, filtered, de, ate) {
-    
-    // Calcular estatísticas
+    /* ── KPI mini tiles na capa ── */
     const counts = { ok: 0, warn: 0, danger: 0 };
     let totalCusto = 0;
-
     filtered.forEach(r => {
       if (counts[r.status] !== undefined) counts[r.status]++;
       totalCusto += (parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0));
     });
 
-    const resumoY = yPos;
+    const tiles = [
+      { label: 'Registros',  value: String(filtered.length), c: C.cyan  },
+      { label: 'Operando',   value: String(counts.ok),       c: C.green },
+      { label: 'Atenção',    value: String(counts.warn),     c: C.amber },
+      { label: 'Falha',      value: String(counts.danger),   c: C.red   },
+    ];
+    const tileW = 28, tileH = 28, tileGap = 4;
+    let tx = PW - M - (tiles.length * tileW) - ((tiles.length - 1) * tileGap);
+    const ty = PH * 0.55 + 18;
 
-    // Borda lateral esquerda cyan (decorativa)
-    doc.setFillColor(...C.cyan);
-    doc.rect(M, resumoY, 3, 26, 'F');
+    tiles.forEach(t => {
+      roundRect(doc, tx, ty, tileW, tileH, 2, C.surface);
+      fillRect(doc, tx, ty, tileW, 2, t.c);
+      txt(doc, t.value, tx + tileW / 2, ty + 15, { size: 16, style: 'bold', color: t.c, align: 'center' });
+      txt(doc, t.label.toUpperCase(), tx + tileW / 2, ty + 23, { size: 5.5, color: C.text3, align: 'center' });
+      tx += tileW + tileGap;
+    });
 
-    // Fundo dark do resumo
-    doc.setFillColor(15, 23, 42);
-    doc.roundedRect(M + 5, resumoY, PW - (M * 2) - 5, 26, 4, 4, 'F');
+    /* Custo total em destaque */
+    if (totalCusto > 0) {
+      const custoX = PW - M - (tiles.length * tileW) - ((tiles.length - 1) * tileGap);
+      txt(doc, `Custo Total: R$ ${totalCusto.toFixed(2).replace('.', ',')}`, custoX, ty - 6, {
+        size: 9, style: 'bold', color: C.cyan,
+      });
+    }
 
-    // Título "RESUMO EXECUTIVO" - 13px Bold Cyan
-    doc.setTextColor(...C.cyan);
-    doc.setFontSize(13);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RESUMO EXECUTIVO', M + 16, resumoY + 10);
-
-    // Dados do resumo - 10px
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.text2);
-
-    // Texto com estatísticas completas
-    const numEquipamentos = filtered.length > 0 ? new Set(filtered.map(r => r.equipId)).size : 0;
-    const summaryText = `Registros: ${filtered.length}  |  Equipamentos: ${numEquipamentos}  |  Periodo: ${de || 'Inicio'} ate ${ate || 'Atual'}  |  Custo Total: R$${totalCusto.toFixed(2).replace('.', ',')}`.trim().replace(/\s+/g, ' ');
-    
-    doc.text(summaryText, M + 16, resumoY + 19);
-
-    // Retornar posição Y atualizada (com margem extra)
-    return resumoY + 32;  // 26 (altura) + 6 (margem)
+    /* Data de geração */
+    const hoje = new Date().toLocaleDateString('pt-BR', {
+      day: '2-digit', month: 'long', year: 'numeric',
+    });
+    txt(doc, `Gerado em ${hoje}`, M + 6, PH - 12, { size: 7.5, color: C.text3 });
+    txt(doc, 'CoolTrack Pro v6.0 — Confidencial', PW - M, PH - 12, { size: 7.5, color: C.text3, align: 'right' });
   },
 
-  // ==========================================
-  // TABELA DE REGISTROS - OTIMIZADA v5.2 ⭐
-  // ==========================================
-  _drawTable(doc, PW, PH, M, yPos, filtered, equipamentos) {
-    
-    // Preparar dados das linhas
-    const rows = filtered.map(r => {
-      const eq = equipamentos.find(e => e.id === r.equipId);
-      const stData = STATUS_PDF[r.status] || STATUS_PDF.ok;
-      const custoTotal = (parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0));
+  /* ── HEADER DE PÁGINA INTERNA ──────────────────────────────────── */
+  _drawPageHeader(doc, PW, M, title, profile, pageNum) {
+    /* Faixa topo */
+    fillRect(doc, 0, 0, PW, 20, C.bg2);
+    fillRect(doc, 0, 0, 4, 20, C.cyan);
 
+    txt(doc, 'COOLTRACK PRO', M + 2, 9, { size: 8, style: 'bold', color: C.cyan });
+    txt(doc, title, M + 40, 9, { size: 8, style: 'bold', color: C.text });
+
+    const nomeEmpresa = profile?.empresa || profile?.nome || '';
+    if (nomeEmpresa) {
+      txt(doc, nomeEmpresa, PW - M, 9, { size: 7.5, color: C.text3, align: 'right' });
+    }
+
+    accentLine(doc, 0, 20, PW);
+  },
+
+  /* ── RESUMO EXECUTIVO ──────────────────────────────────────────── */
+  _drawExecutiveSummary(doc, PW, PH, M, filtered, equipamentos) {
+    const counts = { ok: 0, warn: 0, danger: 0 };
+    let totalCusto = 0, totalPecas = 0, totalMao = 0;
+
+    const eqMap = {};
+    filtered.forEach(r => {
+      if (counts[r.status] !== undefined) counts[r.status]++;
+      const p = parseFloat(r.custoPecas || 0);
+      const mo = parseFloat(r.custoMaoObra || 0);
+      totalPecas += p; totalMao += mo; totalCusto += p + mo;
+
+      const eq = equipamentos.find(e => e.id === r.equipId);
+      const nome = eq?.nome || r.equipId;
+      eqMap[nome] = (eqMap[nome] || 0) + 1;
+    });
+
+    /* ── KPI tiles ── */
+    const tiles = [
+      { label: 'Total de Registros',  value: String(filtered.length),                             c: C.cyan  },
+      { label: 'Operando Normal',      value: String(counts.ok),                                   c: C.green },
+      { label: 'Requer Atenção',       value: String(counts.warn),                                  c: C.amber },
+      { label: 'Falha / Crítico',      value: String(counts.danger),                               c: C.red   },
+      { label: 'Custo Total',          value: totalCusto > 0 ? `R$${totalCusto.toFixed(0)}` : '—', c: C.text2 },
+      { label: 'Peças',               value: totalPecas > 0  ? `R$${totalPecas.toFixed(0)}`  : '—', c: C.text3 },
+      { label: 'Mão de Obra',          value: totalMao > 0    ? `R$${totalMao.toFixed(0)}`    : '—', c: C.text3 },
+    ];
+
+    const cols  = 7;
+    const tileW = (PW - M * 2 - (cols - 1) * 3) / cols;
+    const tileH = 26;
+    const startY = 28;
+
+    tiles.forEach((t, i) => {
+      const x = M + i * (tileW + 3);
+      roundRect(doc, x, startY, tileW, tileH, 1.5, C.surface);
+      fillRect(doc, x, startY, tileW, 2.5, t.c);
+      txt(doc, t.value, x + tileW / 2, startY + 14, { size: 13, style: 'bold', color: t.c, align: 'center' });
+      txt(doc, t.label.toUpperCase(), x + tileW / 2, startY + 21, { size: 5.5, color: C.text3, align: 'center' });
+    });
+
+    /* ── Gráfico de barras: registros por equipamento ── */
+    const eqEntries = Object.entries(eqMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    if (eqEntries.length > 0) {
+      const chartY = startY + tileH + 14;
+      txt(doc, 'REGISTROS POR EQUIPAMENTO', M, chartY - 5, { size: 7, style: 'bold', color: C.text3 });
+      accentLine(doc, M, chartY - 3, M + 130);
+
+      const maxVal  = Math.max(...eqEntries.map(e => e[1]));
+      const barMaxW = 110;
+      const barH    = 7;
+      const barGap  = 3;
+
+      eqEntries.forEach(([nome, count], idx) => {
+        const by   = chartY + idx * (barH + barGap);
+        const barW = (count / maxVal) * barMaxW;
+        const lbl  = nome.length > 20 ? nome.slice(0, 18) + '…' : nome;
+
+        /* label */
+        txt(doc, lbl, M + 38, by + barH - 1.5, { size: 6, color: C.text2, align: 'right' });
+
+        /* trilho */
+        roundRect(doc, M + 40, by, barMaxW, barH, 1, C.bg3);
+
+        /* barra preenchida */
+        const barColor = idx === 0 ? C.cyan : idx < 3 ? C.cyan2 : C.border;
+        roundRect(doc, M + 40, by, Math.max(barW, 2), barH, 1, barColor);
+
+        /* valor */
+        txt(doc, String(count), M + 40 + barW + 3, by + barH - 1.5, { size: 6, style: 'bold', color: C.text });
+      });
+
+      /* ── Distribuição de status (legenda visual) ── */
+      const pieSectionX = M + 165;
+      const pieSectionY = chartY - 5;
+      txt(doc, 'DISTRIBUIÇÃO DE STATUS', pieSectionX, pieSectionY, { size: 7, style: 'bold', color: C.text3 });
+      accentLine(doc, pieSectionX, pieSectionY + 2, pieSectionX + 110);
+
+      const total = filtered.length || 1;
+      [
+        { label: 'Operando Normal', count: counts.ok,     c: C.green },
+        { label: 'Requer Atenção',  count: counts.warn,   c: C.amber },
+        { label: 'Falha / Crítico', count: counts.danger, c: C.red   },
+      ].forEach((item, i) => {
+        const by   = pieSectionY + 10 + i * 16;
+        const pct  = Math.round((item.count / total) * 100);
+        const barW = (item.count / total) * 100;
+
+        txt(doc, item.label, pieSectionX, by + 5, { size: 7, color: C.text2 });
+
+        roundRect(doc, pieSectionX, by + 7, 100, 5, 1, C.bg3);
+        if (barW > 0) roundRect(doc, pieSectionX, by + 7, barW, 5, 1, item.c);
+
+        txt(doc, `${item.count} (${pct}%)`, pieSectionX + 104, by + 11, { size: 6.5, style: 'bold', color: item.c });
+      });
+    }
+  },
+
+  /* ── TABELA DE REGISTROS ───────────────────────────────────────── */
+  _drawTable(doc, PW, PH, M, filtered, equipamentos, profile) {
+    const rows = filtered.map(r => {
+      const eq         = equipamentos.find(e => e.id === r.equipId);
+      const stData     = STATUS_PDF[r.status] || STATUS_PDF.ok;
+      const custoTotal = parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0);
       return [
-        Utils.formatDatetime(r.data),                    // DATA/HORA
-        eq?.nome?.substring(0, 22) || '—',              // EQUIPAMENTO
-        eq?.tag || '—',                                  // TAG
-        eq?.fluido || '—',                              // FLUIDO
-        r.tipo?.substring(0, 25) || '—',             // TIPO DE SERVICO
-        r.tecnico?.substring(0, 16) || '—',           // TECNICO
-        stData.label,                                     // STATUS
-        custoTotal > 0 ? `R$${custoTotal.toFixed(2).replace('.', ',')}` : '—',  // CUSTO
-        r.obs?.substring(0, 80) || '—'               // DESCRICAO
+        Utils.formatDatetime(r.data),
+        eq?.nome?.substring(0, 22) || '—',
+        eq?.tag || '—',
+        eq?.fluido || '—',
+        r.tipo?.substring(0, 24) || '—',
+        r.tecnico?.substring(0, 16) || '—',
+        stData.label,
+        custoTotal > 0 ? `R$${custoTotal.toFixed(2).replace('.', ',')}` : '—',
+        r.obs?.substring(0, 80) || '—',
       ];
     });
 
-    // ✅✅✅ CONFIGURAÇÃO OTIMIZADA DA TABELA v5.2 ✅✅✅
     autoTable(doc, {
-      startY: yPos,
-      
-      // Cabeçalhos das colunas
-      head: [[
-        'DATA / HORA',
-        'EQUIPAMENTO',
-        'TAG',
-        'FLUIDO',
-        'TIPO DE SERVICO',
-        'TECNICO',
-        'STATUS',
-        'CUSTO',
-        'DESCRICAO'
-      ]],
-      
+      startY: 28,
+      head: [['DATA / HORA', 'EQUIPAMENTO', 'TAG', 'FLUIDO', 'TIPO DE SERVIÇO', 'TÉCNICO', 'STATUS', 'CUSTO', 'DESCRIÇÃO']],
       body: rows,
       theme: 'plain',
-
-      // =========================================
-      // ESTILOS GLOBAIS DA TABELA
-      // =========================================
       styles: {
-        fontSize: 9,           // ← AUMENTADO: era 7px
-        cellPadding: {       // ← AUMENTADO: era {3,4,3,4}
-          top: 7,
-          right: 8,
-          bottom: 7,
-          left: 8
-        },
+        fontSize: 6.8,
+        cellPadding: { top: 3.5, right: 4, bottom: 3.5, left: 4 },
         textColor: C.text2,
         font: 'helvetica',
         overflow: 'linebreak',
         lineColor: C.border,
-        lineWidth: 0.3,
-        lineHeight: 1.5,      // ← NOVO: melhora legibilidade
-        minCellHeight: 14     // ← NOVO: evita sobreposição ⭐
+        lineWidth: 0.15,
+        fillColor: C.bg2,
       },
-
-      // =========================================
-      // ESTILOS DO CABEÇALHO
-      // =========================================
       headStyles: {
-        fillColor: C.navy2,
+        fillColor: C.surface,
         textColor: C.text3,
         fontStyle: 'bold',
-        fontSize: 9,         // ← AUMENTADO: era 6.5px
+        fontSize: 6.2,
         halign: 'left',
         lineColor: C.cyan,
-        lineWidth: { bottom: 0.8 },  // ← AUMENTADO: era 0.4
-        cellPadding: {
-          top: 8,
-          right: 8,
-          bottom: 8,
-          left: 8
-        },
-        fontStyle: 'bold'
+        lineWidth: { bottom: 0.5 },
       },
-
-      // =========================================
-      // ESTILOS DO CORPO DA TABELA
-      // =========================================
-      bodyStyles: {
-        fillColor: C.navy2,
-        fontSize: 9
-      },
-
-      // Linhas alternadas (zebradas)
-      alternateRowStyles: {
-        fillColor: C.navy
-      },
-
-      // =========================================
-      // LARGURAS DAS COLUNAS - OTIMIZADAS v5.2 ⭐
-      // =========================================
+      alternateRowStyles: { fillColor: C.bg3 },
+      bodyStyles:         { fillColor: C.bg2 },
       columnStyles: {
-        0: {  // DATA / HORA
-          cellWidth: 32,        // ← AUMENTADO: era 28
-          halign: 'center',
-          fontSize: 9,
-          textColor: C.text3
-        },
-        
-        1: {  // EQUIPAMENTO
-          cellWidth: 38,        // ← AUMENTADO: era 34
-          fontSize: 10,        // ← AUMENTADO: era 9
-          fontWeight: '600'
-        },
-        
-        2: {  // TAG
-          cellWidth: 22,        // ← AUMENTADO: era 18
-          halign: 'center',
-          fontStyle: 'bold',
-          textColor: C.cyan,
-          fontSize: 9
-        },
-        
-        3: {  // FLUIDO
-          cellWidth: 18,
-          halign: 'center',
-          fontSize: 9
-        },
-        
-        4: {  // TIPO DE SERVICO
-          cellWidth: 36,        // ← AUMENTADO: era 34
-          fontSize: 9
-        },
-        
-        5: {  // TECNICO
-          cellWidth: 26,        // ← AUMENTADO: era 22
-          halign: 'center',
-          fontSize: 9
-        },
-        
-        6: {  // STATUS ⭐⭐⭐ CORREÇÃO PRINCIPAL
-          cellWidth: 24,        // ← AUMENTADO: era 18 (EVITA QUEBRA!)
-          halign: 'center',
-          fontStyle: 'bold',
-          fontSize: 9         // ← AUMENTADO: era 6.5
-        },
-        
-        7: {  // CUSTO
-          cellWidth: 24,        // ← AUMENTADO: era 20
-          halign: 'right',
-          fontSize: 9,
-          textColor: C.cyan,
-          fontWeight: '600'
-        },
-        
-        8: {  // DESCRICAO
-          cellWidth: 'auto',    // Preenche o restante
-          fontSize: 9
-        }
+        0: { cellWidth: 27, halign: 'center', fontSize: 6.2, textColor: C.text3 },
+        1: { cellWidth: 34 },
+        2: { cellWidth: 17, fontStyle: 'bold', textColor: C.cyan, fontSize: 6.2, halign: 'center' },
+        3: { cellWidth: 16, halign: 'center', fontSize: 6.2 },
+        4: { cellWidth: 34 },
+        5: { cellWidth: 22, halign: 'center', fontSize: 6.2 },
+        6: { cellWidth: 17, halign: 'center', fontStyle: 'bold', fontSize: 6.5 },
+        7: { cellWidth: 20, halign: 'right', fontSize: 6.2, textColor: C.cyan },
+        8: { cellWidth: 'auto' },
       },
-
-      // =========================================
-      // PROCESSAMENTO DE CÉLULAS (CORES DINÂMICAS)
-      // =========================================
       didParseCell: (data) => {
-        // Aplicar apenas ao corpo da tabela
         if (data.section !== 'body') return;
-
-        // Coluna STATUS (índice 6) - cores por status
         if (data.column.index === 6) {
           const v = data.cell.raw;
-          
-          switch (v) {
-            case 'FALHA':
-              data.cell.styles.textColor = C.red;
-              break;
-            case 'ATENCAO':
-              data.cell.styles.textColor = C.amber;
-              break;
-            default:  // OPERANDO
-              data.cell.styles.textColor = C.green;
-              break;
-          }
-          
-          // Garantir negrito
-          data.cell.styles.fontStyle = 'bold';
-        }
-
-        // Coluna TAG (índice 2) - sempre cyan
-        if (data.column.index === 2) {
-          data.cell.styles.textColor = C.cyan;
-          data.cell.styles.fontStyle = 'bold';
-        }
-
-        // Coluna CUSTO (índice 7) - sempre cyan
-        if (data.column.index === 7) {
-          data.cell.styles.textColor = C.cyan;
+          data.cell.styles.textColor =
+            v === 'FALHA' ? C.red : v === 'ATENÇÃO' ? C.amber : C.green;
         }
       },
-
-      // Callback após desenhar página (para footer)
+      willDrawCell: (data) => {
+        /* Garante que o fundo da célula seja sempre escuro */
+        if (data.section === 'body') {
+          doc.setFillColor(...(data.row.index % 2 === 0 ? C.bg2 : C.bg3));
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        }
+        if (data.section === 'head') {
+          doc.setFillColor(...C.surface);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, 'F');
+        }
+      },
       didDrawPage: (data) => {
-        this._drawFooter(
-          doc,
-          PW,
-          PH,
-          Profile.get(),
-          data.pageNumber,
-          doc.getNumberOfPages()
-        );
+        fillPage(doc, PW, doc.internal.pageSize.getHeight());  // re-pinta fundo nas novas páginas
+        this._drawPageHeader(doc, PW, M, 'HISTÓRICO DE MANUTENÇÃO', profile, data.pageNumber + 2);
+        this._drawFooter(doc, PW, doc.internal.pageSize.getHeight(), M, profile, data.pageNumber + 2);
       },
-
-      // Margens da tabela
-      margin: {
-        top: 14,      // ← AUMENTADO: era 12
-        right: M,
-        bottom: 22,   // ← AUMENTADO: era 20
-        left: M
-      },
-
-      // Largura automática baseada na página
-      tableWidth: 'auto'
+      margin: { top: 28, right: M, bottom: 20, left: M },
+      tableWidth: 'auto',
     });
   },
 
-  // ==========================================
-  // PÁGINAS DE ASSINATURA DIGITAL
-  // ==========================================
-  _drawSignaturePages(doc, PW, PH, M, filtered, equipamentos) {
-    
-    // Filtrar registros que possuem assinatura
+  /* ── PÁGINAS DE ASSINATURA ─────────────────────────────────────── */
+  _drawSignaturePages(doc, PW, PH, M, filtered, equipamentos, profile) {
     const withSig = filtered.filter(r => r.assinatura);
     if (!withSig.length) return;
 
-    // Gerar página individual para cada assinatura
     withSig.forEach(r => {
       const sigData = getSignatureForRecord(r.id);
       if (!sigData) return;
 
-      // Nova página para este comprovante
       doc.addPage();
-      
+      fillPage(doc, PW, PH);
+      this._drawPageHeader(doc, PW, M, 'COMPROVANTE DE SERVIÇO', profile,
+        doc.getCurrentPageInfo().pageNumber);
+
       const eq = equipamentos.find(e => e.id === r.equipId);
 
-      // Header do comprovante
-      doc.setFillColor(...C.navy);
-      doc.rect(0, 0, PW, 34, 'F');
-      
-      doc.setFillColor(...C.cyan);
-      doc.rect(0, 0, PW, 3, 'F');
-      
-      doc.setTextColor(...C.cyan);
-      doc.setFontSize(15);
-      doc.setFont('helvetica', 'bold');
-      doc.text('COOLTRACK PRO — COMPROVANTE DE SERVIÇO', M, 16);
-      
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...C.text2);
-      doc.text(`${eq?.nome || '—'} · ${Utils.formatDatetime(r.data)}`, M, 26);
+      /* Dados do serviço — coluna esquerda */
+      let y = 30;
+      const col1 = M, col2 = M + 55;
 
-      // Dados do serviço
-      let y = 44;
-      doc.setFontSize(10);
-      doc.setTextColor(...C.text3);
+      txt(doc, 'DETALHES DO SERVIÇO REALIZADO', col1, y, { size: 7, style: 'bold', color: C.text3 });
+      accentLine(doc, col1, y + 2, col1 + 140);
+      y += 10;
 
-      const lines = [
-        ['Equipamento:', eq?.nome || '—'],
-        ['TAG:', eq?.tag || '—'],
-        ['Local:', eq?.local || '—'],
-        ['Tipo de Serviço:', r.tipo],
-        ['Técnico:', r.tecnico || '—'],
-        ['Data/Hora:', Utils.formatDatetime(r.data)],
-        [
-          'Status pós-serviço:',
-          r.status === 'ok' ? 'Operando Normal' :
-          r.status === 'warn' ? 'Requer Atenção' :
-          'Fora de Operação'
-        ]
+      const campos = [
+        ['Equipamento',      eq?.nome || '—'],
+        ['TAG',              eq?.tag  || '—'],
+        ['Local',            eq?.local || '—'],
+        ['Tipo de Serviço',  r.tipo || '—'],
+        ['Técnico',          r.tecnico || '—'],
+        ['Data / Hora',      Utils.formatDatetime(r.data)],
+        ['Status Pós-Serviço', STATUS_PDF[r.status]?.label || r.status],
       ];
 
-      lines.forEach(([label, val]) => {
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...C.text2);
-        doc.text(label, M, y);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...C.text);
-        doc.text(val, M + 58, y);
-        
-        y += 9;  // Espaçamento entre linhas
+      campos.forEach(([label, val]) => {
+        txt(doc, label, col1, y, { size: 7, style: 'bold', color: C.text3 });
+        txt(doc, val,   col2, y, { size: 7.5, color: C.text });
+        y += 8;
       });
 
-      // Descrição do serviço
-      y += 6;
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...C.text2);
-      doc.text('Descrição do Serviço:', M, y);
-      
+      /* Descrição */
+      y += 4;
+      txt(doc, 'DESCRIÇÃO DO SERVIÇO', col1, y, { size: 7, style: 'bold', color: C.text3 });
+      accentLine(doc, col1, y + 2, col1 + 140);
       y += 8;
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...C.text);
-      
-      const obsLines = doc.splitTextToSize(r.obs, PW - M * 2);
-      doc.text(obsLines, M, y);
-      
-      y += obsLines.length * 6 + 14;
+      const obsLines = doc.splitTextToSize(r.obs || '—', 130);
+      txt(doc, obsLines, col1, y, { size: 7.5, color: C.text });
 
-      // Área da assinatura
-      doc.setFillColor(...C.navy2);
-      doc.roundedRect(M, y, PW / 2.2, 54, 2, 2, 'F');
+      /* Assinatura — lado direito */
+      const sigX = PW / 2 + 10, sigY = 30;
+      const sigW  = PW - sigX - M, sigH = 65;
 
-      // Imagem da assinatura (se existir)
+      txt(doc, 'ASSINATURA DO CLIENTE', sigX, sigY, { size: 7, style: 'bold', color: C.text3 });
+      accentLine(doc, sigX, sigY + 2, sigX + sigW);
+
+      roundRect(doc, sigX, sigY + 8, sigW, sigH, 2, C.surface);
+      fillRect(doc, sigX, sigY + 8, sigW, 2, C.cyan);
+
       try {
-        doc.addImage(sigData, 'PNG', M + 5, y + 5, (PW / 2.2) - 10, 44);
-      } catch (_) {
-        // Se falhar, continua sem imagem
-      }
+        doc.addImage(sigData, 'PNG', sigX + 4, sigY + 12, sigW - 8, sigH - 14);
+      } catch (_) {}
 
-      // Linha abaixo da assinatura
-      doc.setDrawColor(...C.cyan);
-      doc.setLineWidth(0.5);
-      doc.line(M + 5, y + 52, M + (PW / 2.2) - 10, y + 52);
+      stroke(doc, C.border); doc.setLineWidth(0.2);
+      doc.line(sigX + 4, sigY + 8 + sigH - 5, sigX + sigW - 4, sigY + 8 + sigH - 5);
 
-      // Textos abaixo da assinatura
-      doc.setFontSize(9);
-      doc.setTextColor(...C.text3);
-      doc.text('Assinatura do Cliente', M + 5, y + 58);
-      
-      doc.setTextColor(...C.green);
-      doc.setFontSize(8);
-      doc.text(
-        `Assinado digitalmente em ${Utils.formatDatetime(new Date().toISOString())}`,
-        M + 5,
-        y + 64
-      );
+      txt(doc, 'Assinatura do responsável', sigX + 4, sigY + 8 + sigH + 6,
+        { size: 6.5, color: C.text3 });
 
-      // Footer desta página
-      this._drawFooter(
-        doc,
-        PW,
-        PH,
-        Profile.get(),
-        doc.getCurrentPageInfo().pageNumber,
-        doc.getNumberOfPages()
-      );
+      const tsStr = Utils.formatDatetime(new Date().toISOString());
+      txt(doc, `✓ Assinado digitalmente em ${tsStr}`, sigX + 4, sigY + 8 + sigH + 13,
+        { size: 6.5, color: C.green });
+
+      this._drawFooter(doc, PW, PH, M, profile, doc.getCurrentPageInfo().pageNumber);
     });
   },
 
-  // ==========================================
-  // FOOTER (RODAPÉ) DE TODAS AS PÁGINAS
-  // ==========================================
-  _drawFooter(doc, PW, PH, profile, pageNum, totalPages) {
-    
-    const footY = PH - 13;
+  /* ── RODAPÉ ────────────────────────────────────────────────────── */
+  _drawFooter(doc, PW, PH, M, profile, pageNum) {
+    const fy = PH - 12;
+    fillRect(doc, 0, fy - 2, PW, 14, C.bg2);
+    fillRect(doc, 0, fy - 2, PW, 0.4, C.border);
 
-    // Fundo do footer
-    doc.setFillColor(...C.navy);
-    doc.rect(0, footY - 2, PW, 15, 'F');
+    const leftTxt = profile?.nome
+      ? `CoolTrack Pro v6.0  ·  ${profile.nome}${profile.empresa ? `  /  ${profile.empresa}` : ''}`
+      : 'CoolTrack Pro v6.0  ·  Sistema de Gestão de Climatização e Refrigeração';
 
-    // Linha cyan superior do footer
-    doc.setFillColor(...C.cyan);
-    doc.rect(0, footY - 2, PW, 0.7, 'F');
-
-    // Texto à esquerda (versão + perfil)
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...C.text3);
-
-    const leftText = profile?.nome
-      ? `CoolTrack Pro v5.2 — ${profile.nome}${profile.empresa ? ` / ${profile.empresa}` : ''}`
-      : 'CoolTrack Pro v5.2 — Sistema de Gestao de Climatizacao e Refrigeracao';
-
-    doc.text(leftText, 14, footY + 5);
-
-    // Texto à direita (paginação)
-    doc.text(
-      `Página ${pageNum} de ${totalPages}`,
-      PW - 14,
-      footY + 5,
-      { align: 'right' }
-    );
-  }
+    txt(doc, leftTxt, M, fy + 4, { size: 6.5, color: C.text3 });
+    txt(doc, `Página ${pageNum}`, PW - M, fy + 4, { size: 6.5, color: C.text3, align: 'right' });
+  },
 };
 
 export default PDFGenerator;
