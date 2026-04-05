@@ -30,10 +30,7 @@ import {
 import { initRegistro, saveRegistro, clearRegistro } from "./views/registro.js";
 import { renderHist, deleteReg } from "./views/historico.js";
 import { renderAlertas } from "./views/alertas.js";
-import {
-  renderRelatorio,
-  populateRelatorioSelects,
-} from "./views/relatorio.js";
+import {  renderRelatorio, populateRelatorioSelects, } from "./views/relatorio.js";
 
 // components/ — MESMO nível (./), pois components/ está dentro de ui/
 import { Photos } from "./components/photos.js";
@@ -193,7 +190,7 @@ function _showAccountModal(user) {
   overlay.className = 'modal-overlay is-open';
 
   overlay.innerHTML = `
-    <div class="modal" style="align-self:center;padding:0;overflow:hidden;max-width:420px;width:100%">
+    <div class="modal" style="align-self:center;padding:0;overflow:hidden;max-width:420px;width:100%;border-radius:var(--premier-radius)">
 
       <!-- Header com avatar -->
       <div style="
