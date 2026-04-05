@@ -1,6 +1,6 @@
 /* ============================================================
    layout.css — App Shell, Header, Nav, Grid
-   CoolTrack Pro v5.0 — Nav horizontal sticky
+   CoolTrack Pro v5.0
    ============================================================ */
 
 #app { width: 100%; min-height: 100vh; display: flex; flex-direction: column; }
@@ -128,9 +128,7 @@
   border-radius: 0 0 3px 3px;
 }
 
-.nav-btn {
-  position: relative;
-}
+.nav-btn { position: relative; }
 
 .nav-btn__badge {
   display: none;
@@ -151,9 +149,7 @@
   line-height: 1;
 }
 
-.nav-btn__badge.is-visible {
-  display: flex;
-}
+.nav-btn__badge.is-visible { display: flex; }
 
 /* MAIN */
 main { flex: 1; min-width: 0; padding: 0 0 calc(80px + env(safe-area-inset-bottom)); }
@@ -188,16 +184,86 @@ main:focus { outline: none; }
 .page-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
 .page-toolbar__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* RESPONSIVE */
-@media (max-width: 639px) {
+/* ============================================================
+   RESPONSIVE — ORGANIZADO POR TAMANHO DE TELA
+   ============================================================ */
+
+/* ── MOBILE (≤640px) ────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* Header compacto */
+  .app-header__top {
+    height: auto;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+
+  .app-header__tagline { display: none; }
+
+  .app-header__actions { gap: 4px; margin-left: auto; }
+
+  .header-icon-btn {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 13px !important;
+    padding: 0 !important;
+  }
+
+  /* Stats bar mobile */
+  .stat-pill { padding: 6px 10px; }
+  .stat-pill__value { font-size: 18px; }
+  .stat-pill__label { font-size: 8px; }
+
+  /* Espaço para navbar fixo no fundo */
+  .app-content {
+    padding-bottom: 70px;
+    margin-top: 8px;
+  }
+
+  /* Grids */
   .kpi-row            { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-center-grid   { grid-template-columns: 1fr; }
   .dash-recentes-grid { grid-template-columns: 1fr; }
   .charts-grid        { grid-template-columns: 1fr; }
   .dash-criticos-list { grid-template-columns: 1fr; }
+
+  /* Report toolbar mobile */
+  .page-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .page-toolbar__actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .page-toolbar__actions .btn {
+    font-size: 12px;
+    padding: 10px 8px;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .page-toolbar__actions .btn--primary {
+    grid-column: 1 / -1;
+  }
+
+  /* Badge mobile */
+  .nav-btn__badge {
+    top: 0 !important;
+    right: 2px !important;
+    min-width: 14px !important;
+    height: 14px !important;
+    font-size: 8px !important;
+  }
 }
 
-@media (min-width: 640px) and (max-width: 1024px) {
+/* ── TABLET (641px–1024px) ──────────────────────── */
+@media (min-width: 641px) and (max-width: 1024px) {
   .app-header__top, .header-stats-bar__inner, .app-content { width: min(var(--layout-max), calc(100% - 48px)); }
   .kpi-row               { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-center-grid      { grid-template-columns: minmax(0, 1fr) 260px; }
@@ -206,18 +272,17 @@ main:focus { outline: none; }
   #lista-equip, #lista-alertas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 }
 
+/* ── DESKTOP (≥1025px) ─────────────────────────── */
 @media (min-width: 1025px) {
   .app-header__top, .header-stats-bar__inner, .app-content { width: min(var(--layout-max), calc(100% - 64px)); }
 
-  /* Layout em bloco — nav horizontal acima do conteudo */
   .app-content { margin-top: 0; margin-bottom: 20px; display: block; }
 
-  /* NAV HORIZONTAL STICKY — FIX: removido 100vw que quebrava o sticky */
   .app-nav {
     position: sticky;
     top: 80px;
     z-index: 60;
-    align-self: flex-start;   /* ← PREVINE que o flex quebre o sticky */
+    align-self: flex-start;
     left: auto; right: auto; bottom: auto;
     height: auto; overflow: visible;
     display: flex; flex-direction: row; align-items: stretch;
@@ -260,7 +325,6 @@ main:focus { outline: none; }
 
   .nav-btn.is-active::after { display: none; }
 
-  /* Registrar vai para a direita com destaque */
   #nav-registro { margin-left: auto; color: var(--primary); font-weight: 600; }
   #nav-registro:hover { background: var(--primary-dim); }
 
@@ -269,13 +333,9 @@ main:focus { outline: none; }
 
   .form-row           { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dash-criticos-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
   #lista-equip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-
-  /* Alertas: lista vertical */
   #lista-alertas { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
 
-  /* Modais */
   .modal-overlay { align-items: center; padding: 20px; }
   .modal { width: min(820px, 100%); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow-lg); }
   .modal__handle { display: none; }
@@ -295,72 +355,4 @@ main:focus { outline: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .view.active, .view.is-exiting, .toast, .modal, .spinner { animation: none; transition: none; }
-}
-/* ── Report toolbar mobile ─────────────────────────── */
-@media (max-width: 639px) {
-  .page-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .page-toolbar__actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-  }
-
-  .page-toolbar__actions .btn {
-    font-size: 12px;
-    padding: 10px 8px;
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  .page-toolbar__actions .btn--primary {
-    grid-column: 1 / -1;
-  }
-}
-/* ── Mobile geral ────────────────────────────────── */
-@media (max-width: 640px) {
-  /* Espaço para navbar fixo no fundo */
-  .app-content {
-    padding-bottom: 80px !important;
-    padding-top: 0 !important;
-  }
-
-  /* Header mais compacto no mobile */
-  .app-header__top {
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 12px;
-  }
-
-  .app-header__tagline {
-    display: none;
-  }
-
-  .app-header__actions {
-    gap: 4px;
-  }
-
-  .header-icon-btn {
-    width: 32px !important;
-    height: 32px !important;
-    font-size: 14px !important;
-  }
-
-  /* Navbar bottom: 6 colunas para caber todas as abas */
-  .app-nav {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
-  }
-
-  /* Badge no mobile navbar */
-  .nav-btn__badge {
-    top: 0 !important;
-    right: 2px !important;
-    min-width: 14px !important;
-    height: 14px !important;
-    font-size: 8px !important;
-  }
 }
