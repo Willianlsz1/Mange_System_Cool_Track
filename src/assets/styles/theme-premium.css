@@ -58,7 +58,7 @@ body::before {
 }
 
 .app-header__top {
-  height: 52px;
+  min-height: 52px;
 }
 
 .app-logo {
