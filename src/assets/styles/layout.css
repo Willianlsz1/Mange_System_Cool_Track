@@ -191,17 +191,26 @@ main:focus { outline: none; }
 /* ── MOBILE (≤640px) ────────────────────────────── */
 @media (max-width: 640px) {
 
-  /* Header compacto */
-  .app-header__top {
-    height: auto;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 8px 12px;
+  /* Header */
+  .app-header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 80 !important;
   }
 
-  .app-header__tagline { display: none; }
+  .app-header__top {
+    height: auto !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+  }
 
-  .app-header__actions { gap: 4px; margin-left: auto; }
+  .app-header__tagline { display: none !important; }
+
+  .app-header__actions {
+    gap: 4px !important;
+    margin-left: auto !important;
+  }
 
   .header-icon-btn {
     width: 30px !important;
@@ -210,15 +219,28 @@ main:focus { outline: none; }
     padding: 0 !important;
   }
 
-  /* Stats bar mobile */
-  .stat-pill { padding: 6px 10px; }
-  .stat-pill__value { font-size: 18px; }
-  .stat-pill__label { font-size: 8px; }
+  /* Stats bar */
+  .header-stats-bar {
+    padding: 4px 0 !important;
+  }
+
+  .stat-pill {
+    padding: 6px 8px !important;
+  }
+
+  .stat-pill__value {
+    font-size: 16px !important;
+  }
+
+  .stat-pill__label {
+    font-size: 7px !important;
+  }
 
   /* Espaço para navbar fixo no fundo */
   .app-content {
-    padding-bottom: 70px;
-    margin-top: 8px;
+    padding-bottom: 70px !important;
+    padding-top: 8px !important;
+    margin-top: 0 !important;
   }
 
   /* Grids */
