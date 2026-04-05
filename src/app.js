@@ -8,18 +8,20 @@ import { bindEvents }             from './core/events.js';
 import { Modal }                  from './core/modal.js';
 import { goTo }                   from './core/router.js';
 import { initController }         from './ui/controller.js';
-import { FirstTimeExperience }    from './ui/components/onboarding.js';
 
 function bootstrap() {
-  const ftxDone = localStorage.getItem('cooltrack-ftx-done');
-    if (ftxDone) seedIfEmpty();
+  const done = localStorage.getItem('cooltrack-onboarding-done');
+
+  if (!done) {
+    window.location.href = '/onboarding-cooltrack.html';
+    return; // para aqui — não sobe o app
+  }
+
+  // Onboarding já foi feito — fluxo normal, sem seed de dados falsos
   Modal.init();
   bindEvents();
   initController();
   goTo('inicio');
-
-  const { equipamentos } = getState();
-  FirstTimeExperience.show(equipamentos);
 }
 
 bootstrap();
