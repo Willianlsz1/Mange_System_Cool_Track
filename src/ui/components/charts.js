@@ -5,7 +5,7 @@
  */
 
 import Chart from 'chart.js/auto';
-import { getState } from './state.js';
+import { getState } from '../../core/state.js';
 
 // ── CSS vars → valores resolvidos ─────────────────────
 function cssVar(name) {

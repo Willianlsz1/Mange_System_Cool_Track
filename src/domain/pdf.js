@@ -10,10 +10,10 @@
 
 import { jsPDF }    from 'jspdf';
 import autoTable    from 'jspdf-autotable';
-import { getState } from './state.js';
-import { Utils }    from './utils.js';
-import { Profile }  from './onboarding.js';
-import { getSignatureForRecord } from './signature.js';
+import { getState }               from '../core/state.js';
+import { Utils }                  from '../core/utils.js';
+import { Profile }                from '../ui/components/onboarding.js';
+import { getSignatureForRecord }  from '../ui/components/signature.js';
 
 /* ── Paleta ─────────────────────────────────────────── */
 const C = {

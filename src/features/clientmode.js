@@ -3,7 +3,7 @@
  * Modo de apresentação para o cliente: interface limpa, sem densidade técnica
  */
 
-import { Utils } from './utils.js';
+import { Utils } from '../core/utils.js';
 
 const CLIENT_MODE_KEY = 'cooltrack-client-mode';
 
