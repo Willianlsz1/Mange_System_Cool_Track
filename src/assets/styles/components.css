@@ -729,7 +729,7 @@ mark, .mark-highlight {
 .modal__handle { width: 32px; height: 3px; border-radius: 2px; background: var(--border-2); margin: 0 auto var(--space-4); }
 .modal__title  { margin-bottom: var(--space-4); color: var(--text); font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
 .modal__text   { color: var(--text-2); font-size: 13px; line-height: 1.5; }
-.modal--sm     { max-width: 380px; padding: var(--space-5); }
+.modal--sm { max-width: 380px; padding: var(--space-5); align-self: center; }
 
 /* ─── LIGHTBOX ─── */
 .lightbox {

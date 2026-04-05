@@ -187,33 +187,35 @@ export function initController() {
 }
 
 function _showAccountModal(user) {
-  document.getElementById('account-modal-overlay')?.remove();
+  document.getElementById("account-modal-overlay")?.remove();
 
-  const overlay = document.createElement('div');
-  overlay.id = 'account-modal-overlay';
-  overlay.className = 'modal-overlay is-open';
+  const overlay = document.createElement("div");
+  overlay.id = "account-modal-overlay";
+  overlay.className = "modal-overlay is-open";
 
   overlay.innerHTML = `
-    <div class="modal modal--sm">
-      <div class="modal__handle"></div>
-      <div class="modal__title">Minha conta</div>
-      <div class="modal__text" style="margin-bottom:16px">${user.email}</div>
-      <button class="btn btn--outline" id="btn-edit-profile" style="margin-bottom:10px">Editar perfil</button>
-      <button class="btn btn--danger" id="btn-signout">Sair da conta</button>
-    </div>`;
+  <div class="modal modal--sm" style="align-self:center">
+    <div class="modal__handle"></div>
+    <div class="modal__title">Minha conta</div>
+    <div class="modal__text" style="margin-bottom:16px">${user.email}</div>
+    <button class="btn btn--outline" id="btn-edit-profile" style="margin-bottom:10px">Editar perfil</button>
+    <button class="btn btn--danger" id="btn-signout">Sair da conta</button>
+  </div>`;
 
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
 
-  overlay.querySelector('#btn-edit-profile').addEventListener('click', () => {
+  overlay.querySelector("#btn-edit-profile").addEventListener("click", () => {
     overlay.remove();
     ProfileModal.open();
   });
 
-  overlay.querySelector('#btn-signout').addEventListener('click', () => {
+  overlay.querySelector("#btn-signout").addEventListener("click", () => {
     overlay.remove();
-    localStorage.removeItem('cooltrack-guest-mode');
-    localStorage.removeItem('cooltrack-ftx-done');
+    localStorage.removeItem("cooltrack-guest-mode");
+    localStorage.removeItem("cooltrack-ftx-done");
     Auth.signOut();
   });
 }
