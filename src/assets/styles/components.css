@@ -696,15 +696,21 @@ mark, .mark-highlight {
   z-index: 200;
   background: rgba(4, 10, 20, 0.75);
   backdrop-filter: blur(4px);
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
+  overflow-y: auto;
 }
-.modal-overlay.is-open { display: flex; animation: modal-bg-in 0.2s ease; }
+
+.modal-overlay.is-open {
+  display: flex;
+  animation: modal-bg-in 0.2s ease;
+}
+
 @keyframes modal-bg-in { from{opacity:0} to{opacity:1} }
 
 .modal {
   width: 100%;
-  max-height: 90vh;
+  max-height: 85vh;
   overflow-y: auto;
   background: var(--surface);
   border: 1px solid var(--border-2);
@@ -712,6 +718,9 @@ mark, .mark-highlight {
   padding: var(--space-5) var(--space-4) var(--space-6);
   box-shadow: 0 -12px 40px rgba(0,0,0,0.6);
   animation: modal-up 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* garante que botões ficam dentro do modal */
+  display: flex;
+  flex-direction: column;
 }
 @keyframes modal-up { from{transform:translateY(24px);opacity:0} to{transform:translateY(0);opacity:1} }
 .modal.is-closing { animation: modal-down 0.18s ease forwards; }
