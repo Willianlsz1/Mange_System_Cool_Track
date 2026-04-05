@@ -630,6 +630,14 @@ body::before {
     align-items: unset;
     max-height: 90vh;
   }
+  .modal .btn-group {
+  margin-top: auto;
+  padding-top: 20px;
+  position: sticky;
+  bottom: 0;
+  background: var(--surface-card);
+  z-index: 1;
+  }
 }
 
 /* ════════════════════════════════════════════════════════
