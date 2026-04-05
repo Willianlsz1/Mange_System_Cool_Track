@@ -11,7 +11,7 @@ import { goTo }                      from '../../core/router.js';
 import { Photos }                    from '../components/photos.js';
 import { SavedHighlight }            from '../components/onboarding.js';
 import { Profile }                   from '../../features/profile.js';
-import { updateHeader }              from './dashboard.js';
+import { updateHeader,}              from './dashboard.js';
 import { renderHist }                from './historico.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
