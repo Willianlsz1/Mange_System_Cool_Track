@@ -104,7 +104,7 @@ export const ProfileModal = {
     overlay.setAttribute('aria-labelledby', 'profile-title');
 
     overlay.innerHTML = `
-      <div class="modal" style="max-width:480px">
+        <div class="modal" style="max-width:480px;align-self:center">
         <div class="modal__handle"></div>
         <div class="modal__title" id="profile-title">Meu Perfil</div>
         <div class="form-group">
