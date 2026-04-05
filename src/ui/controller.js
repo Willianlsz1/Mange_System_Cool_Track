@@ -187,35 +187,103 @@ export function initController() {
 }
 
 function _showAccountModal(user) {
-  document.getElementById("account-modal-overlay")?.remove();
+  document.getElementById('account-modal-overlay')?.remove();
 
-  const overlay = document.createElement("div");
-  overlay.id = "account-modal-overlay";
-  overlay.className = "modal-overlay is-open";
+  const profile = Profile.get();
+  const nome    = profile?.nome || 'Técnico';
+  const iniciais = nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'account-modal-overlay';
+  overlay.className = 'modal-overlay is-open';
 
   overlay.innerHTML = `
-  <div class="modal modal--sm" style="align-self:center">
-    <div class="modal__handle"></div>
-    <div class="modal__title">Minha conta</div>
-    <div class="modal__text" style="margin-bottom:16px">${user.email}</div>
-    <button class="btn btn--outline" id="btn-edit-profile" style="margin-bottom:10px">Editar perfil</button>
-    <button class="btn btn--danger" id="btn-signout">Sair da conta</button>
-  </div>`;
+    <div class="modal modal--sm" style="align-self:center;padding:0;overflow:hidden">
+
+      <!-- Header com avatar -->
+      <div style="
+        background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(0,212,255,0.03));
+        border-bottom:1px solid rgba(255,255,255,0.07);
+        padding:24px 24px 20px;
+        display:flex;align-items:center;gap:14px
+      ">
+        <div style="
+          width:48px;height:48px;border-radius:50%;
+          background:rgba(0,212,255,0.15);
+          border:1.5px solid rgba(0,212,255,0.3);
+          display:flex;align-items:center;justify-content:center;
+          font-size:17px;font-weight:700;color:#00D4FF;
+          flex-shrink:0;letter-spacing:.02em
+        ">${iniciais}</div>
+        <div style="min-width:0">
+          <div style="font-size:15px;font-weight:600;color:#E8F2FA;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${nome}
+          </div>
+          <div style="font-size:12px;color:#4A6880;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${user.email}
+          </div>
+        </div>
+      </div>
+
+      <!-- Ações -->
+      <div style="padding:12px">
+        <button id="btn-edit-profile" style="
+          width:100%;background:transparent;
+          border:1px solid rgba(255,255,255,0.08);
+          border-radius:8px;padding:11px 14px;
+          display:flex;align-items:center;gap:10px;
+          color:#8AAAC8;font-size:14px;font-family:inherit;
+          cursor:pointer;transition:all .15s;margin-bottom:6px;
+          text-align:left
+        ">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <circle cx="7.5" cy="5" r="3" stroke="currentColor" stroke-width="1.2"/>
+            <path d="M2 14c0-3 2.5-4.5 5.5-4.5S13 11 13 14" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          Editar perfil
+        </button>
+        <button id="btn-signout" style="
+          width:100%;background:rgba(255,68,102,0.08);
+          border:1px solid rgba(255,68,102,0.18);
+          border-radius:8px;padding:11px 14px;
+          display:flex;align-items:center;gap:10px;
+          color:#FF4466;font-size:14px;font-family:inherit;
+          cursor:pointer;transition:all .15s;
+          text-align:left
+        ">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+            <path d="M6 2H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+            <path d="M10 10l3-2.5L10 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M13 7.5H6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          Sair da conta
+        </button>
+      </div>
+    </div>`;
 
   document.body.appendChild(overlay);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) overlay.remove();
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  overlay.querySelector('#btn-edit-profile').addEventListener('mouseenter', e => {
+    e.target.style.borderColor = 'rgba(255,255,255,0.16)';
+    e.target.style.color = '#E8F2FA';
+    e.target.style.background = 'rgba(255,255,255,0.04)';
+  });
+  overlay.querySelector('#btn-edit-profile').addEventListener('mouseleave', e => {
+    e.target.style.borderColor = 'rgba(255,255,255,0.08)';
+    e.target.style.color = '#8AAAC8';
+    e.target.style.background = 'transparent';
   });
 
-  overlay.querySelector("#btn-edit-profile").addEventListener("click", () => {
+  overlay.querySelector('#btn-edit-profile').addEventListener('click', () => {
     overlay.remove();
     ProfileModal.open();
   });
 
-  overlay.querySelector("#btn-signout").addEventListener("click", () => {
+  overlay.querySelector('#btn-signout').addEventListener('click', () => {
     overlay.remove();
-    localStorage.removeItem("cooltrack-guest-mode");
-    localStorage.removeItem("cooltrack-ftx-done");
+    localStorage.removeItem('cooltrack-guest-mode');
+    localStorage.removeItem('cooltrack-ftx-done');
     Auth.signOut();
   });
 }
