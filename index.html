@@ -46,13 +46,11 @@
             </div>
             <div class="app-header__date" id="hdr-date"></div>
 
-            <!-- Modo Cliente (D4) -->
             <button id="client-mode-toggle" class="header-icon-btn"
               aria-label="Modo cliente" title="Modo cliente — apresentação para o cliente">
               <span id="client-mode-icon">👁</span>
             </button>
 
-            <!-- Perfil do técnico (H1) -->
             <button class="header-icon-btn" data-action="open-profile"
               aria-label="Meu perfil" title="Meu perfil — pré-preenche seu nome nos registros">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -67,7 +65,6 @@
           </div>
         </div>
 
-        <!-- Stats bar -->
         <div class="header-stats-bar">
           <div class="header-stats-bar__inner">
             <div class="stat-pill">
@@ -127,10 +124,7 @@
             <div class="section-title" id="dash-greeting">Sistema Operacional</div>
             <div class="dashboard-bento">
               <div id="dash-alert-strip"></div>
-
-              <!-- Próxima ação (D3) -->
               <div id="dash-next-action"></div>
-
               <div class="kpi-row">
                 <div class="bento-kpi bento-kpi--alert">
                   <div class="bento-kpi__label">EQUIPAMENTOS ATIVOS</div>
@@ -155,7 +149,6 @@
                   <div class="bento-kpi__sub" id="hst-mes-bento-sub"></div>
                 </div>
               </div>
-
               <div class="dash-center-grid">
                 <div class="dash-section">
                   <div class="dash-section-header">
@@ -172,7 +165,6 @@
                   <div id="dash-alertas-mini"></div>
                 </div>
               </div>
-
               <div class="dash-section">
                 <div class="dash-section-header">
                   <span class="dash-section-header__label">ÚLTIMOS SERVIÇOS</span>
@@ -180,7 +172,6 @@
                 </div>
                 <div id="dash-recentes"></div>
               </div>
-
               <div class="dash-section">
                 <div class="dash-section-header">
                   <span class="dash-section-header__label">ANÁLISE DO PARQUE</span>
@@ -213,8 +204,6 @@
             <div class="section-title">O que foi feito hoje?</div>
             <div class="card">
               <div id="storage-indicator" class="storage-indicator" style="display:none"></div>
-
-              <!-- BLOCO 1: O SERVIÇO -->
               <div class="registro-bloco">
                 <div class="registro-bloco__label">O SERVIÇO</div>
                 <div class="form-group">
@@ -262,8 +251,6 @@
                   <datalist id="lista-tecnicos"></datalist>
                 </div>
               </div>
-
-              <!-- BLOCO 2: MATERIAIS E CUSTO -->
               <div class="registro-bloco">
                 <div class="registro-bloco__label">MATERIAIS E CUSTO <span class="registro-bloco__opcional">(opcional)</span></div>
                 <div class="form-group">
@@ -283,8 +270,6 @@
                   </div>
                 </div>
               </div>
-
-              <!-- BLOCO 3: EVIDÊNCIAS -->
               <div class="registro-bloco">
                 <div class="registro-bloco__label">EVIDÊNCIAS <span class="registro-bloco__opcional">(opcional — aumenta credibilidade com o cliente)</span></div>
                 <div class="photo-drop" id="photo-drop-zone">
@@ -295,8 +280,6 @@
                 </div>
                 <div class="photo-grid" id="photo-preview" role="list" aria-label="Fotos adicionadas"></div>
               </div>
-
-              <!-- BLOCO 4: O QUE VEM A SEGUIR -->
               <div class="registro-bloco registro-bloco--future">
                 <div class="registro-bloco__label">O QUE VEM A SEGUIR</div>
                 <div class="registro-bloco__desc">Como o equipamento saiu do serviço? Quando deve voltar?</div>
@@ -316,18 +299,15 @@
                   </div>
                 </div>
               </div>
-
-              <!-- Botões -->
               <div class="btn-group registro-btn-group">
                 <button class="btn btn--outline" data-action="clear-registro" title="Limpa todos os campos">Recomeçar</button>
                 <button class="btn btn--primary" data-action="save-registro">Salvar registro</button>
               </div>
             </div>
           </div>
+
           <!-- HISTÓRICO -->
           <div class="view" id="view-historico">
-
-            <!-- Sticky header — fica fixo enquanto o usuário rola -->
             <div class="hist-sticky-header" id="hist-sticky-header">
               <div class="hist-sticky-header__top">
                 <div class="section-title" style="margin-bottom:0">Histórico de Serviços</div>
@@ -347,8 +327,6 @@
                 </select>
               </div>
             </div>
-
-            <!-- Label cronológico — deixa óbvio a ordem -->
             <div class="hist-chrono-label" id="hist-chrono-label">
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1"/>
@@ -356,7 +334,6 @@
               </svg>
               Mais recente primeiro
             </div>
-
             <div id="timeline" role="list"></div>
           </div>
 
@@ -373,10 +350,9 @@
               <div class="page-toolbar__actions">
                 <button class="btn btn--outline btn--sm" data-nav="historico">← Voltar</button>
                 <button class="btn btn--outline btn--sm" id="btn-print" data-action="print">Imprimir</button>
-                <!-- D5: WhatsApp -->
                 <button class="btn btn--outline btn--sm btn--whatsapp" id="btn-whatsapp" data-action="whatsapp-export">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/></svg>
-                    WhatsApp
+                  WhatsApp
                 </button>
                 <button class="btn btn--primary btn--sm" id="btn-export-pdf" data-action="export-pdf">Exportar PDF</button>
               </div>
@@ -402,138 +378,130 @@
       </div>
     </div>
 
-    <!-- MODAIS -->
-    <!-- MODAL: Cadastrar Equipamento — Formulário Progressivo -->
+    <!-- ═══════════════════════════════════════════
+         MODAIS
+    ═══════════════════════════════════════════ -->
+
+    <!-- MODAL: Cadastrar Equipamento -->
     <div class="modal-overlay" id="modal-add-eq" role="dialog" aria-modal="true" aria-labelledby="modal-add-eq-title">
-      <div class="modal">
+      <div class="modal" style="display:flex;flex-direction:column">
         <div class="modal__handle"></div>
 
-        <!-- Título com indicador de progresso -->
-        <div class="modal-progress-header">
-          <div>
-            <div class="modal__title" id="modal-add-eq-title">Qual equipamento você quer monitorar?</div>
-            <div class="modal__subtitle">Só 2 campos obrigatórios para começar</div>
+        <!-- Conteúdo com scroll -->
+        <div style="flex:1;overflow-y:auto;padding-bottom:8px">
+          <div class="modal-progress-header">
+            <div>
+              <div class="modal__title" id="modal-add-eq-title">Qual equipamento você quer monitorar?</div>
+              <div class="modal__subtitle">Só 2 campos obrigatórios para começar</div>
+            </div>
+            <div class="modal-steps" aria-label="Etapas">
+              <span class="modal-step modal-step--active" id="step-dot-1">1</span>
+              <span class="modal-step-line"></span>
+              <span class="modal-step" id="step-dot-2">2</span>
+            </div>
           </div>
-          <div class="modal-steps" aria-label="Etapas">
-            <span class="modal-step modal-step--active" id="step-dot-1">1</span>
-            <span class="modal-step-line"></span>
-            <span class="modal-step" id="step-dot-2">2</span>
+
+          <div id="eq-step-1">
+            <div class="form-group">
+              <label class="form-label" for="eq-nome">Como você chama esse equipamento? *</label>
+              <input id="eq-nome" class="form-control" type="text"
+                placeholder="Ex: Split da recepção, Câmara do estoque..."
+                required autocomplete="off" />
+              <div class="form-hint">Use um nome que você reconheça rapidamente no campo</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-local">Onde ele fica? *</label>
+              <input id="eq-local" class="form-control" type="text"
+                placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..."
+                required autocomplete="off" />
+            </div>
+            <button class="eq-expand-btn" id="eq-expand-details" type="button"
+              aria-expanded="false" aria-controls="eq-step-2">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" id="eq-expand-icon">
+                <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Adicionar detalhes técnicos
+              <span class="eq-expand-hint">(TAG, fluido, modelo — opcional)</span>
+            </button>
+          </div>
+
+          <div id="eq-step-2" class="eq-details-panel" aria-hidden="true">
+            <div class="eq-details-divider">Detalhes técnicos <span>(opcional — pode preencher depois)</span></div>
+            <div class="form-group">
+              <label class="form-label" for="eq-tag">TAG / Código de identificação</label>
+              <input id="eq-tag" class="form-control" type="text"
+                placeholder="Ex: AC-01, CF-FARM, VRF-A"
+                style="font-family:var(--font-mono);letter-spacing:0.05em" />
+              <div class="form-hint">Código que você usa na etiqueta ou plaqueta do equipamento</div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="eq-tipo">Tipo de equipamento</label>
+                <select id="eq-tipo" class="form-control">
+                  <option>Split Hi-Wall</option>
+                  <option>Split Cassette</option>
+                  <option>Split Piso Teto</option>
+                  <option>VRF / VRV</option>
+                  <option>Chiller</option>
+                  <option>Fan Coil</option>
+                  <option>Self Contained</option>
+                  <option>Roof Top</option>
+                  <option>Câmara Fria</option>
+                  <option>Outro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="eq-fluido">Fluido refrigerante</label>
+                <select id="eq-fluido" class="form-control">
+                  <option>R-410A</option>
+                  <option>R-22</option>
+                  <option>R-32</option>
+                  <option>R-407C</option>
+                  <option>R-134A</option>
+                  <option>R-404A</option>
+                  <option>Outro</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-modelo">Marca / Modelo</label>
+              <input id="eq-modelo" class="form-control" type="text"
+                placeholder="Ex: Carrier 18.000 BTU, York 30 TR..." />
+            </div>
           </div>
         </div>
 
-        <!-- ETAPA 1: Essencial (sempre visível) -->
-        <div id="eq-step-1">
-          <div class="form-group">
-            <label class="form-label" for="eq-nome">Como você chama esse equipamento? *</label>
-            <input id="eq-nome" class="form-control" type="text"
-              placeholder="Ex: Split da recepção, Câmara do estoque..."
-              required autocomplete="off" />
-            <div class="form-hint">Use um nome que você reconheça rapidamente no campo</div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="eq-local">Onde ele fica? *</label>
-            <input id="eq-local" class="form-control" type="text"
-              placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..."
-              required autocomplete="off" />
-          </div>
-
-          <!-- Expandir detalhes técnicos -->
-          <div class="modal-overlay" id="modal-add-eq" role="dialog" aria-modal="true" aria-labelledby="modal-add-eq-title">
-  <div class="modal" style="display:flex;flex-direction:column">
-    <div class="modal__handle"></div>
-
-    <div style="flex:1;overflow-y:auto">
-      <div class="modal-progress-header">
-        <div>
-          <div class="modal__title" id="modal-add-eq-title">Qual equipamento você quer monitorar?</div>
-          <div class="modal__subtitle">Só 2 campos obrigatórios para começar</div>
+        <!-- Botões fixos no fundo -->
+        <div class="btn-group" style="padding:16px 0 0;border-top:1px solid var(--border);flex-shrink:0;margin-top:0">
+          <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button>
+          <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento →</button>
         </div>
-        <div class="modal-steps" aria-label="Etapas">
-          <span class="modal-step modal-step--active" id="step-dot-1">1</span>
-          <span class="modal-step-line"></span>
-          <span class="modal-step" id="step-dot-2">2</span>
-        </div>
+        <p class="modal-trust-note">✓ Você pode editar ou excluir a qualquer momento</p>
       </div>
+    </div>
 
-      <div id="eq-step-1">
-        <div class="form-group">
-          <label class="form-label" for="eq-nome">Como você chama esse equipamento? *</label>
-          <input id="eq-nome" class="form-control" type="text"
-            placeholder="Ex: Split da recepção, Câmara do estoque..."
-            required autocomplete="off" />
-          <div class="form-hint">Use um nome que você reconheça rapidamente no campo</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="eq-local">Onde ele fica? *</label>
-          <input id="eq-local" class="form-control" type="text"
-            placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..."
-            required autocomplete="off" />
-        </div>
-        <button class="eq-expand-btn" id="eq-expand-details" type="button"
-          aria-expanded="false" aria-controls="eq-step-2">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" id="eq-expand-icon">
-            <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Adicionar detalhes técnicos
-          <span class="eq-expand-hint">(TAG, fluido, modelo — opcional)</span>
-        </button>
-      </div>
+    <!-- MODAL: Detalhes do Equipamento -->
+    <div class="modal-overlay" id="modal-eq-det" role="dialog" aria-modal="true" aria-labelledby="eq-det-title">
+      <div class="modal"><div class="modal__handle"></div><div id="eq-det-corpo"></div></div>
+    </div>
 
-      <div id="eq-step-2" class="eq-details-panel" aria-hidden="true">
-        <div class="eq-details-divider">Detalhes técnicos <span>(opcional — pode preencher depois)</span></div>
-        <div class="form-group">
-          <label class="form-label" for="eq-tag">TAG / Código de identificação</label>
-          <input id="eq-tag" class="form-control" type="text"
-            placeholder="Ex: AC-01, CF-FARM, VRF-A"
-            style="font-family:var(--font-mono);letter-spacing:0.05em" />
-          <div class="form-hint">Código que você usa na etiqueta ou plaqueta do equipamento</div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="eq-tipo">Tipo de equipamento</label>
-            <select id="eq-tipo" class="form-control">
-              <option>Split Hi-Wall</option>
-              <option>Split Cassette</option>
-              <option>Split Piso Teto</option>
-              <option>VRF / VRV</option>
-              <option>Chiller</option>
-              <option>Fan Coil</option>
-              <option>Self Contained</option>
-              <option>Roof Top</option>
-              <option>Câmara Fria</option>
-              <option>Outro</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="eq-fluido">Fluido refrigerante</label>
-            <select id="eq-fluido" class="form-control">
-              <option>R-410A</option>
-              <option>R-22</option>
-              <option>R-32</option>
-              <option>R-407C</option>
-              <option>R-134A</option>
-              <option>R-404A</option>
-              <option>Outro</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="eq-modelo">Marca / Modelo</label>
-          <input id="eq-modelo" class="form-control" type="text"
-            placeholder="Ex: Carrier 18.000 BTU, York 30 TR..." />
+    <!-- MODAL: Confirmação -->
+    <div class="modal-overlay" id="modal-confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-msg">
+      <div class="modal modal--sm">
+        <div class="modal__title" id="confirm-title">Confirmar Ação</div>
+        <div class="modal__text" id="confirm-msg">Tem certeza?</div>
+        <div class="btn-group" style="margin-top:20px">
+          <button class="btn btn--outline" id="confirm-no">Cancelar</button>
+          <button class="btn btn--danger" id="confirm-yes">Confirmar</button>
         </div>
       </div>
     </div>
 
-    <div class="btn-group" style="padding:16px 0 0;border-top:1px solid var(--border);flex-shrink:0">
-      <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button>
-      <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento →</button>
+    <!-- LIGHTBOX -->
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Visualizar foto">
+      <button class="lightbox__close" aria-label="Fechar">✕</button>
+      <img class="lightbox__img" id="lightbox-img" src="" alt="Registro fotográfico" />
     </div>
-
-    <p class="modal-trust-note">✓ Você pode editar ou excluir a qualquer momento</p>
-  </div>
-</div>
 
     <script>
       (function () {
