@@ -594,7 +594,6 @@ export const FirstTimeExperience = {
         goTo('inicio');
       });
     };
-
     /* Skip */
     overlay.querySelector('#ftx-skip-btn').addEventListener('click', () => {
       _dismiss(overlay);
@@ -603,6 +602,7 @@ export const FirstTimeExperience = {
     /* Render inicial */
     renderStep0();
   },
+  
 };
 
 /* ── Fechar overlay ── */
