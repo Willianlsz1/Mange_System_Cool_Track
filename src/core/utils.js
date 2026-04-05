@@ -1,12 +1,12 @@
 /**
- * CoolTrack Pro - Utils v4.0
- * Adicionado: R-404A, fluidos industriais, timezone fix em dateOffset
+ * CoolTrack Pro - Utils v5.0
+ * Movido para core/utils.js
  */
 
-export const STORAGE_KEY      = 'cooltrack_v3';
+export const STORAGE_KEY           = 'cooltrack_v3';
 export const MAX_PHOTOS_PER_RECORD = 5;
-export const MAX_PHOTO_WIDTH  = 1200;
-export const PHOTO_QUALITY    = 0.7;
+export const MAX_PHOTO_WIDTH       = 1200;
+export const PHOTO_QUALITY         = 0.7;
 
 export const TIPO_ICON = {
   'Split Hi-Wall':   '❄️',
@@ -27,11 +27,10 @@ export const STATUS_LABEL = {
   danger: 'Crítico',
 };
 
-// Fluidos aceitos (inclui industriais)
 export const FLUIDOS_VALIDOS = [
   'R-410A', 'R-22', 'R-32', 'R-407C',
   'R-134A', 'R-404A', 'R-448A', 'R-449A',
-  'R-507A', 'R-717', 'R-744', 'Outro'
+  'R-507A', 'R-717', 'R-744', 'Outro',
 ];
 
 export const Utils = {
@@ -39,7 +38,6 @@ export const Utils = {
     return Date.now().toString(36) + Math.random().toString(36).slice(2);
   },
 
-  // Fix: compensa timezone para evitar off-by-one em datas
   dateOffset(days) {
     const d = new Date();
     d.setDate(d.getDate() + days);
@@ -60,20 +58,12 @@ export const Utils = {
     return d.toISOString().slice(0, 16);
   },
 
-  // Greeting técnico — não usado no redesign, mantido por compatibilidade
-  getGreeting() {
-    const h = new Date().getHours();
-    if (h < 12) return 'Bom dia';
-    if (h < 18) return 'Boa tarde';
-    return 'Boa noite';
-  },
-
   formatDatetime(iso) {
     if (!iso) return '—';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '—';
     return `${d.toLocaleDateString('pt-BR', {
-      day: '2-digit', month: '2-digit', year: 'numeric'
+      day: '2-digit', month: '2-digit', year: 'numeric',
     })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   },
 
@@ -96,14 +86,14 @@ export const Utils = {
 
   escapeHtml(value = '') {
     return String(value).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     }[c]));
   },
 
-  getEl(id)          { return document.getElementById(id); },
-  getVal(id)         { return Utils.getEl(id)?.value ?? ''; },
-  setVal(id, value)  { const el = Utils.getEl(id); if (el) el.value = value; },
-  clearVals(...ids)  { ids.forEach(id => Utils.setVal(id, '')); },
+  getEl(id)         { return document.getElementById(id); },
+  getVal(id)        { return Utils.getEl(id)?.value ?? ''; },
+  setVal(id, value) { const el = Utils.getEl(id); if (el) el.value = value; },
+  clearVals(...ids) { ids.forEach(id => Utils.setVal(id, '')); },
 
   getStorageBytes() {
     try {
@@ -116,8 +106,8 @@ export const Utils = {
   },
 
   formatBytes(bytes) {
-    if (bytes < 1024)         return `${bytes} B`;
-    if (bytes < 1024 * 1024)  return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024)        return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  }
+  },
 };

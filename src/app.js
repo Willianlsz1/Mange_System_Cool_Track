@@ -1,26 +1,22 @@
 /**
- * CoolTrack Pro - Bootstrap v5.0 (SaaS)
+ * CoolTrack Pro - Bootstrap v5.0
+ * Entrada única: 15 linhas.
  */
 
-import { seedIfEmpty, getState }                       from './state.js';
-import { Modal }                                      from './modal.js';
-import { Actions, updateHeader, renderInicio,
-         populateSelects }                            from './ui.js';
-import { bindEvents }                                 from './events.js';
-import { ClientMode }                                 from './clientmode.js';
-import { FirstTimeExperience }                        from './onboarding.js';
+import { seedIfEmpty, getState }  from './core/state.js';
+import { bindEvents }             from './core/events.js';
+import { Modal }                  from './core/modal.js';
+import { goTo }                   from './core/router.js';
+import { initController }         from './ui/controller.js';
+import { FirstTimeExperience }    from './ui/components/onboarding.js';
 
 function bootstrap() {
   seedIfEmpty();
   Modal.init();
-  Actions.init();
   bindEvents();
-  populateSelects();
-  updateHeader();
-  renderInicio();
-  ClientMode.restore();
+  initController();
+  goTo('inicio');
 
-  // FTX: mostrar fluxo de boas-vindas na primeira visita
   const { equipamentos } = getState();
   setTimeout(() => FirstTimeExperience.show(equipamentos), 400);
 }
