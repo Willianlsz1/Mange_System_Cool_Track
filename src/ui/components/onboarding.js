@@ -6,8 +6,9 @@
  * H2: Tagline no header
  */
 
-import { Utils } from './utils.js';
-import { Toast } from './toast.js';
+// src/ui/components/onboarding.js
+import { Utils } from '../../core/utils.js';
+import { Toast } from '../../core/toast.js';
 
 const PROFILE_KEY  = 'cooltrack-profile';
 const ONBOARDED_KEY = 'cooltrack-onboarded';

@@ -3,7 +3,7 @@
  * Extraído de ui.js.
  */
 
-import { getState } from './state.js';
+import { getState } from '../core/state.js';
 
 export const Alerts = {
   getAll() {

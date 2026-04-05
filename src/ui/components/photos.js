@@ -3,9 +3,9 @@
  * Extraído de ui.js. Limite de 5 fotos por registro + aviso de storage.
  */
 
-import { Utils, MAX_PHOTOS_PER_RECORD, MAX_PHOTO_WIDTH, PHOTO_QUALITY } from './utils.js';
-import { Toast } from './toast.js';
-import { Storage } from './storage.js';
+import { Utils, MAX_PHOTOS_PER_RECORD, MAX_PHOTO_WIDTH, PHOTO_QUALITY } from '../../core/utils.js';
+import { Toast } from '../../core/toast.js';
+import { Storage } from '../../core/storage.js';
 
 function compressImage(file) {
   return new Promise(resolve => {

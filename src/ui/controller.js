@@ -4,29 +4,37 @@
  * REGRA: < 120 linhas. Só chama funções — nunca renderiza diretamente.
  */
 
-import { registerRoute, goTo }           from '../../core/router.js';
+// core/ — sobe 1 nível (ui/ → src/)
+import { registerRoute, goTo }           from '../core/router.js';
 import { on }                            from '../core/events.js';
-import { Modal, CustomConfirm }          from '../../core/modal.js';
-import { Toast }                         from '../../core/toast.js';
-import { Profile }                       from '../../features/profile.js';
-import { ClientMode }                    from '../../features/clientmode.js';
-import { PDFGenerator }                  from '../../domain/pdf.js';
-import { WhatsAppExport }                from '../../domain/whatsapp.js';
+import { Modal, CustomConfirm }          from '../core/modal.js';
+import { Toast }                         from '../core/toast.js';
 
-import { renderDashboard, updateHeader } from '../views/dashboard.js';
+// domain/ — sobe 1 nível
+import { PDFGenerator }                  from '../domain/pdf.js';
+import { WhatsAppExport }                from '../domain/whatsapp.js';
+
+// features/ — sobe 1 nível
+import { Profile }                       from '../features/profile.js';
+import { ClientMode }                    from '../features/clientmode.js';
+
+// views/ — MESMO nível (./), pois views/ está dentro de ui/
+import { renderDashboard, updateHeader } from './views/dashboard.js';
 import { renderEquip, saveEquip,
          viewEquip, deleteEquip,
-         populateEquipSelects }          from '../views/equipamentos.js';
+         populateEquipSelects }          from './views/equipamentos.js';
 import { initRegistro, saveRegistro,
-         clearRegistro }                 from '../views/registro.js';
-import { renderHist, deleteReg }        from '../views/historico.js';
-import { renderAlertas }                 from '../views/alertas.js';
+         clearRegistro }                 from './views/registro.js';
+import { renderHist, deleteReg }        from './views/historico.js';
+import { renderAlertas }                 from './views/alertas.js';
 import { renderRelatorio,
-         populateRelatorioSelects }      from '../views/relatorio.js';
-import { Photos }                        from '../components/photos.js';
+         populateRelatorioSelects }      from './views/relatorio.js';
+
+// components/ — MESMO nível (./), pois components/ está dentro de ui/
+import { Photos }                        from './components/photos.js';
 import { ProfileModal,
          OnboardingBanner,
-         FirstTimeExperience }           from '../components/onboarding.js';
+         FirstTimeExperience }           from './components/onboarding.js';
 
 export function initController() {
 

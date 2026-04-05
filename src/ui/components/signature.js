@@ -4,8 +4,8 @@
  * Embedded no PDF via jsPDF
  */
 
-import { Utils } from './utils.js';
-import { Toast }  from './toast.js';
+import { Utils } from '../../core/utils.js';
+import { Toast }  from '../../core/toast.js';
 
 const SIG_KEY = 'cooltrack-pending-signature';
 

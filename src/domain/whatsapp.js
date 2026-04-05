@@ -3,10 +3,9 @@
  * Gera resumo formatado do relatório para envio via WhatsApp Web
  */
 
-import { getState, findEquip } from './state.js';
-import { Utils } from './utils.js';
-import { Profile } from './onboarding.js';
-
+import { getState, findEquip } from '../core/state.js';
+import { Utils }               from '../core/utils.js';
+import { Profile }             from '../ui/components/onboarding.js';
 export const WhatsAppExport = {
 
   generateText({ filtEq = '', de = '', ate = '' } = {}) {
