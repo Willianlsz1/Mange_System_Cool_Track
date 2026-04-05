@@ -1,0 +1,184 @@
+/**
+ * CoolTrack Pro - Registro View v5.0
+ * Funções: initRegistro, saveRegistro, clearRegistro
+ */
+
+import { Utils }                     from '../../core/utils.js';
+import { getState, findEquip,
+         setState, lastRegForEquip }  from '../../core/state.js';
+import { Toast }                     from '../../core/toast.js';
+import { goTo }                      from '../../core/router.js';
+import { Photos }                    from '../components/photos.js';
+import { SavedHighlight }            from '../components/onboarding.js';
+import { Profile }                   from '../../features/profile.js';
+import { updateHeader }              from './dashboard.js';
+import { renderHist }                from './historico.js';
+
+const CONTAINER_ID = 'form-progress-container-v5';
+
+// ── Barra de progresso do formulário ──────────────────
+const _fields = [
+  { id: 'r-equip',   validate: v => v !== '' },
+  { id: 'r-data',    validate: v => v !== '' },
+  { id: 'r-tipo',    validate: v => v !== '' },
+  { id: 'r-tecnico', validate: v => v.trim() !== '' },
+  { id: 'r-obs',     validate: v => v.trim().length >= 10 },
+];
+
+function _ensureProgressBar(formView) {
+  if (document.getElementById(CONTAINER_ID)) return;
+  const c = document.createElement('div');
+  c.id        = CONTAINER_ID;
+  c.className = 'form-progress';
+  c.innerHTML = `<div class="form-progress__text"><span>Campos preenchidos</span><span id="form-progress-count">0/${_fields.length}</span></div>
+    <div class="form-progress__bar"><div class="form-progress__fill" id="form-progress-fill" style="width:0%"></div></div>`;
+  formView.querySelector('.card')?.insertBefore(c, formView.querySelector('.card').firstChild);
+}
+
+function _updateProgressBar() {
+  const filled = _fields.filter(f => { const i = Utils.getEl(f.id); return i && f.validate(i.value); }).length;
+  const bar = document.getElementById('form-progress-fill');
+  const cnt = document.getElementById('form-progress-count');
+  if (bar) bar.style.width = `${(filled / _fields.length) * 100}%`;
+  if (cnt) cnt.textContent = `${filled}/${_fields.length}`;
+}
+
+// ── Aviso de manutenção agendada ───────────────────────
+function _bindEquipChangeWarning() {
+  const sel = Utils.getEl('r-equip');
+  if (!sel) return;
+  sel.addEventListener('change', () => {
+    const id = sel.value;
+    document.getElementById('reg-pending-warning')?.remove();
+    if (!id) return;
+    const lastReg = lastRegForEquip(id);
+    if (lastReg && Utils.daysDiff(lastReg.proxima) >= 0) {
+      const w = document.createElement('div');
+      w.id = 'reg-pending-warning';
+      w.style.cssText = 'color:var(--warning);margin-bottom:12px;font-size:12px;line-height:1.4;padding:8px 10px;background:var(--warning-dim);border:1px solid rgba(232,160,32,0.2);border-radius:var(--radius-xs);';
+      w.textContent = '⚠ Manutenção preventiva agendada. Registre apenas em emergência.';
+      sel.parentNode.parentNode.insertBefore(w, sel.parentNode.nextSibling);
+    }
+  });
+}
+
+// ── Smart search no campo de equipamentos ──────────────
+function _initSmartSearch() {
+  const wrapper = document.querySelector('#view-equipamentos .search-bar');
+  const input   = document.querySelector('#view-equipamentos .search-bar__input');
+  if (!input || !wrapper) return;
+  if (wrapper.querySelector('.search-bar__clear')) return;
+  const btn = document.createElement('button');
+  btn.type = 'button'; btn.className = 'search-bar__clear'; btn.innerHTML = '✕'; btn.setAttribute('aria-label', 'Limpar busca');
+  wrapper.classList.add('search-bar__wrapper'); wrapper.appendChild(btn);
+  input.classList.add('search-bar__input--with-clear');
+  const { renderEquip } = require('./equipamentos.js');
+  btn.addEventListener('click', () => { input.value = ''; wrapper.classList.remove('search-bar__has-value'); renderEquip(''); input.focus(); });
+  input.addEventListener('input', () => wrapper.classList.toggle('search-bar__has-value', input.value.length > 0));
+}
+
+// ═══════════════════════════════════════════════════════
+// API PÚBLICA
+// ═══════════════════════════════════════════════════════
+
+export function initRegistro() {
+  const formView = Utils.getEl('view-registro');
+  if (!formView) return;
+
+  _ensureProgressBar(formView);
+  _fields.forEach(f => {
+    const i = Utils.getEl(f.id);
+    if (i) { i.addEventListener('input', _updateProgressBar); i.addEventListener('change', _updateProgressBar); }
+  });
+  _updateProgressBar();
+  _bindEquipChangeWarning();
+
+  // Data padrão
+  if (!Utils.getVal('r-data')) Utils.setVal('r-data', Utils.nowDatetime());
+
+  // H1: técnico padrão
+  const rTecnico = Utils.getEl('r-tecnico');
+  if (rTecnico && !rTecnico.value) {
+    const def = Profile.getDefaultTecnico();
+    if (def) rTecnico.value = def;
+  }
+}
+
+export async function saveRegistro() {
+  const equipId = Utils.getVal('r-equip');
+  const data    = Utils.getVal('r-data');
+  const tipo    = Utils.getVal('r-tipo');
+  const obs     = Utils.getVal('r-obs').trim();
+  const tecnico = Utils.getVal('r-tecnico').trim();
+
+  const missing = [];
+  if (!equipId) missing.push('Equipamento');
+  if (!data)    missing.push('Data');
+  if (!tipo)    missing.push('Tipo de Serviço');
+  if (!tecnico) missing.push('Técnico Responsável');
+  if (!obs || obs.length < 10) missing.push('Descrição (mín. 10 caracteres)');
+  if (missing.length) { Toast.warning(`Campos obrigatórios: ${missing.join(', ')}`); return; }
+
+  const proxima = Utils.getVal('r-proxima');
+  if (proxima && proxima < data.slice(0, 10)) {
+    Toast.error('Próxima manutenção não pode ser anterior ao serviço.'); return;
+  }
+
+  const status      = Utils.getVal('r-status');
+  const custoPecas  = parseFloat(Utils.getVal('r-custo-pecas')   || '0') || 0;
+  const custoMaoObra = parseFloat(Utils.getVal('r-custo-mao-obra') || '0') || 0;
+  const novoId      = Utils.uid();
+
+  Profile.saveLastTecnico(tecnico);
+
+  // D1: assinatura digital
+  let assinatura = null;
+  const { SignatureModal, saveSignatureForRecord } = await import('../components/signature.js');
+  const eq = findEquip(equipId);
+  assinatura = await SignatureModal.request(novoId, eq?.nome || 'Equipamento');
+  if (assinatura) saveSignatureForRecord(novoId, assinatura);
+
+  setState(prev => {
+    const currentTecs  = prev.tecnicos || [];
+    const updatedTecs  = tecnico && !currentTecs.includes(tecnico) ? [...currentTecs, tecnico] : currentTecs;
+    return {
+      ...prev,
+      tecnicos: updatedTecs,
+      registros: [...prev.registros, {
+        id: novoId, equipId, data, tipo, obs, status,
+        pecas:        Utils.getVal('r-pecas').trim(),
+        proxima,
+        fotos:        [...Photos.pending],
+        tecnico,
+        custoPecas,
+        custoMaoObra,
+        assinatura:   assinatura ? true : false,
+      }],
+      equipamentos: prev.equipamentos.map(e => e.id === equipId ? { ...e, status } : e),
+    };
+  });
+
+  SavedHighlight.markForHighlight(novoId);
+  clearRegistro();
+  Toast.success('Serviço registrado com sucesso.');
+
+  const { registros } = getState();
+  if (registros.length > 0 && registros.length % 3 === 0) {
+    setTimeout(() => Toast.info(`💡 Você tem ${registros.length} registros. Gere um relatório PDF para enviar ao cliente.`), 1800);
+  }
+
+  goTo('historico');
+}
+
+export function clearRegistro(preserveEquip = false) {
+  const toClear = ['r-tipo', 'r-pecas', 'r-obs', 'r-proxima', 'r-tecnico', 'r-custo-pecas', 'r-custo-mao-obra'];
+  if (!preserveEquip) toClear.push('r-equip');
+  Utils.clearVals(...toClear);
+  Utils.setVal('r-status', 'ok');
+  Utils.setVal('r-data', Utils.nowDatetime());
+  Photos.clear();
+  document.getElementById(CONTAINER_ID)?.remove();
+
+  const rTecnico = Utils.getEl('r-tecnico');
+  if (rTecnico) rTecnico.value = Profile.getDefaultTecnico();
+}

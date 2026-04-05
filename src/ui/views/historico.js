@@ -1,0 +1,90 @@
+/**
+ * CoolTrack Pro - Histórico View v5.0
+ * Funções: renderHist, deleteReg
+ */
+
+import { Utils }                           from '../../core/utils.js';
+import { getState, findEquip, setState }   from '../../core/state.js';
+import { Toast }                           from '../../core/toast.js';
+import { SavedHighlight }                  from '../components/onboarding.js';
+import { updateHeader }                    from './dashboard.js';
+
+export function renderHist() {
+  const { registros } = getState();
+  const busca  = Utils.getVal('hist-busca').toLowerCase();
+  const filtEq = Utils.getVal('hist-equip');
+
+  let list = [...registros].sort((a, b) => b.data.localeCompare(a.data));
+  if (filtEq) list = list.filter(r => r.equipId === filtEq);
+  if (busca)  list = list.filter(r => {
+    const eq = findEquip(r.equipId);
+    return r.obs.toLowerCase().includes(busca) ||
+      r.tipo.toLowerCase().includes(busca) ||
+      (eq?.nome || '').toLowerCase().includes(busca) ||
+      (r.tecnico || '').toLowerCase().includes(busca);
+  });
+
+  const el = Utils.getEl('timeline');
+  if (!el) return;
+
+  const countEl = Utils.getEl('hist-count');
+  if (countEl) countEl.textContent = list.length ? `${list.length} registro${list.length !== 1 ? 's' : ''}` : '';
+
+  if (!list.length) {
+    el.innerHTML = (busca || filtEq)
+      ? `<div class="empty-state"><div class="empty-state__icon">🔍</div><div class="empty-state__title">Nenhum resultado para esse filtro</div><div class="empty-state__sub">Tente outro termo ou remova o filtro</div></div>`
+      : `<div class="empty-state"><div class="empty-state__icon">📋</div><div class="empty-state__title">Nenhum registro ainda</div><div class="empty-state__sub">Registre o primeiro serviço na aba Registrar</div></div>`;
+    return;
+  }
+
+  const prevScrollY = window.scrollY;
+
+  el.innerHTML = `<div class="timeline">${list.map((r, idx) => {
+    const eq         = findEquip(r.equipId);
+    const dotMod     = r.status !== 'ok' ? `timeline__dot--${r.status}` : '';
+    const custoTotal = parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0);
+    const isFirst    = idx === 0;
+    const isToday    = r.data.slice(0, 10) === new Date().toISOString().slice(0, 10);
+
+    return `<div class="timeline__item${isFirst ? ' timeline__item--latest' : ''}" role="listitem" data-reg-id="${r.id}">
+      ${isFirst ? `<div class="timeline__recency-badge">Mais recente</div>` : ''}
+      <div class="timeline__dot ${dotMod}"></div>
+      <div class="timeline__item-inner">
+        <div class="timeline__item-body">
+          <div class="timeline__date">${isToday ? '<span class="timeline__today-badge">Hoje</span> ' : ''}${Utils.formatDatetime(r.data)}</div>
+          <div class="timeline__title">${Utils.escapeHtml(r.tipo)}</div>
+          <div class="timeline__equip">${Utils.escapeHtml(eq?.nome ?? '—')} · ${Utils.escapeHtml(eq?.tag ?? eq?.local ?? '')}</div>
+          <div class="timeline__obs">${Utils.escapeHtml(r.obs)}</div>
+          ${r.pecas    ? `<div class="timeline__parts">Peças: ${Utils.escapeHtml(r.pecas)}</div>` : ''}
+          ${r.tecnico  ? `<div class="timeline__parts">Técnico: ${Utils.escapeHtml(r.tecnico)}</div>` : ''}
+          ${custoTotal > 0 ? `<div class="timeline__parts timeline__custo">Total: R$ ${custoTotal.toFixed(2).replace('.', ',')}</div>` : ''}
+          ${r.proxima  ? `<div class="timeline__next">Próxima: ${Utils.formatDate(r.proxima)}</div>` : ''}
+          ${r.assinatura ? `<div class="timeline__signed"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="var(--success)" stroke-width="1"/><path d="M3.5 6l1.5 1.5 3-3" stroke="var(--success)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Assinado pelo cliente</div>` : ''}
+        </div>
+        <button class="timeline__delete" data-action="delete-reg" data-id="${r.id}" aria-label="Excluir registro de ${Utils.escapeHtml(r.tipo)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+
+  if (prevScrollY > 0) requestAnimationFrame(() => window.scrollTo(0, prevScrollY));
+
+  // H5: highlight do item recém-salvo
+  SavedHighlight.applyIfPending();
+}
+
+export function deleteReg(id) {
+  setState(prev => {
+    const reg    = prev.registros.find(r => r.id === id);
+    const regs   = prev.registros.filter(r => r.id !== id);
+    if (!reg) return { ...prev, registros: regs };
+    const last   = regs.filter(r => r.equipId === reg.equipId).sort((a, b) => b.data.localeCompare(a.data))[0];
+    const equips = prev.equipamentos.map(eq => eq.id === reg.equipId ? { ...eq, status: last?.status || 'ok' } : eq);
+    return { ...prev, registros: regs, equipamentos: equips };
+  });
+  localStorage.removeItem(`cooltrack-sig-${id}`);
+  renderHist();
+  updateHeader();
+  Toast.warning('Registro removido do histórico.');
+}
