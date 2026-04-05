@@ -66,7 +66,7 @@
         </button>
 
         <div class="header-stats-bar">
-          <div class="header-stats-bar__inner">
+          <div class="header-stats-bar__inner" id="stats-bar-inner">
             <div class="stat-pill">
               <div class="stat-pill__value" id="hst-total">—</div>
               <div class="stat-pill__label">EQUIPAMENTOS ATIVOS</div>
@@ -564,6 +564,15 @@
     })();
   </script>
   <script type="module" src="/src/app.js"></script>
+  <style>
+@media (max-width: 640px) {
+  .stat-pill { padding: 5px 4px !important; }
+  .stat-pill__value { font-size: 13px !important; }
+  .stat-pill__label { font-size: 6px !important; letter-spacing: 0.02em !important; }
+  .app-header__status span:last-child { display: none; }
+  .app-header__date { display: none !important; }
+}
+</style>
 </body>
 
 </html>
