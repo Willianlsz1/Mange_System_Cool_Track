@@ -152,10 +152,10 @@ export const PDFGenerator = {
 
     /* Tiles de resumo — 4 por linha */
     const tiles = [
-      { label: 'Serviços\nrealizados',    value: String(filtered.length), color: C.cyan },
-      { label: 'Equipamentos\noperando',  value: String(ok),              color: C.green },
-      { label: 'Precisam de\natenção',    value: String(warn),            color: C.amber },
-      { label: 'Fora de\noperação',       value: String(danger),          color: C.red },
+      { label: 'Serviços',    value: String(filtered.length), color: C.cyan },
+      { label: 'Operando',    value: String(ok),              color: C.green },
+      { label: 'Atenção',     value: String(warn),            color: C.amber },
+      { label: 'Fora de op.', value: String(danger),          color: C.red },
     ];
 
     const tileW = (PW - M * 2 - 12) / 4;
@@ -163,15 +163,10 @@ export const PDFGenerator = {
 
     tiles.forEach((t, i) => {
       const x = M + i * (tileW + 4);
-      if (tileW >= 4 && 28 >= 4) roundRect(doc, x, tileY, tileW, 28, 2, C.surface);
-      else fillRect(doc, x, tileY, tileW, 28, C.surface);
+      fillRect(doc, x, tileY, tileW, 26, C.surface);
       fillRect(doc, x, tileY, tileW, 3, t.color);
-      txt(doc, t.value, x + tileW / 2, tileY + 14, { size: 18, style: 'bold', color: t.color, align: 'center' });
-      // Label em 2 linhas
-      const lines = t.label.split('\n');
-      lines.forEach((l, li) => {
-        txt(doc, l, x + tileW / 2, tileY + 21 + li * 5, { size: 6, color: C.text3, align: 'center' });
-      });
+      txt(doc, t.value, x + tileW / 2, tileY + 15, { size: 18, style: 'bold', color: t.color, align: 'center' });
+      txt(doc, t.label, x + tileW / 2, tileY + 22, { size: 7, color: C.text3, align: 'center' });
     });
 
     if (totalCusto > 0) {
@@ -292,19 +287,23 @@ export const PDFGenerator = {
       fillRect(doc, M, y, 4, cardH, st.color);
 
       /* Cabeçalho do card */
+      /* Data */
       txt(doc, Utils.formatDatetime(r.data), M + 8, y + 7, { size: 7, color: C.text3 });
-      txt(doc, r.tipo, M + 8, y + 13, { size: 11, style: 'bold', color: C.text });
-      /* Status no canto direito */
-      txt(doc, st.icon + ' ' + st.label, PW - M - 4, y + 10, { size: 8, style: 'bold', color: st.color, align: 'right' });
-
+      /* Status badge — no topo direito, dentro do card */
+      const stLabel = st.label;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...st.color);
+      const stW = doc.getTextWidth(stLabel) + 8;
+      fillRect(doc, PW - M - stW - 2, y + 2, stW + 2, 8, [st.color[0]*0.15, st.color[1]*0.15, st.color[2]*0.15]);
+      doc.text(stLabel, PW - M - stW / 2 - 1, y + 7.5, { align: 'center' });
+      /* Tipo do serviço */
+      txt(doc, r.tipo, M + 8, y + 16, { size: 11, style: 'bold', color: C.text });
       /* Equipamento e local */
       txt(doc, (eq?.nome || '—') + (eq?.local ? '  ·  ' + eq.local : ''),
-        M + 8, y + 20, { size: 8, color: C.cyan });
-
-      accentLine(doc, M + 6, y + 23, PW - M - 4, C.border);
+        M + 8, y + 23, { size: 8, color: C.cyan });
+      accentLine(doc, M + 6, y + 26, PW - M - 4, C.border);
 
       /* O que foi feito — o texto principal para o cliente */
-      let cy = y + 29;
+      let cy = y + 32;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(...C.text2);
