@@ -30,7 +30,16 @@ import {
 import { initRegistro, saveRegistro, clearRegistro } from "./views/registro.js";
 import { renderHist, deleteReg } from "./views/historico.js";
 import { renderAlertas } from "./views/alertas.js";
-import {  renderRelatorio, populateRelatorioSelects, } from "./views/relatorio.js";
+import {
+  renderRelatorio,
+  populateRelatorioSelects,
+} from "./views/relatorio.js";
+import {
+  initRegistro,
+  saveRegistro,
+  clearRegistro,
+  loadRegistroForEdit,
+} from "./views/registro.js";
 
 // components/ — MESMO nível (./), pois components/ está dentro de ui/
 import { Photos } from "./components/photos.js";
@@ -97,6 +106,15 @@ export function initController() {
 
   on("save-registro", () => saveRegistro());
   on("clear-registro", () => clearRegistro());
+  sessionStorage.removeItem("cooltrack-editing-id");
+  // restaura título e botão
+  const btn = document.querySelector('[data-action="save-registro"]');
+  if (btn) {
+    btn.textContent = "Salvar registro";
+    btn.style.background = "";
+  }
+  const title = document.querySelector("#view-registro .section-title");
+  if (title) title.textContent = "O que foi feito hoje?";
 
   on("delete-reg", async (el) => {
     const ok = await CustomConfirm.show(
@@ -106,18 +124,31 @@ export function initController() {
     if (ok) deleteReg(el.dataset.id);
   });
 
-  on("open-profile", () => {
-  const isGuest = localStorage.getItem("cooltrack-guest-mode") === "1";
-  if (isGuest) { ProfileModal.open(); return; }
-  Auth.getUser().then((user) => {
-    console.log('[Profile] user:', user);
-    if (user) _showAccountModal(user);
-    else ProfileModal.open();
-  }).catch((err) => {
-    console.error('[Profile] error:', err);
-    ProfileModal.open();
+  on("edit-reg", (el) => {
+    goTo("registro");
+    setTimeout(() => {
+      populateEquipSelects();
+      loadRegistroForEdit(el.dataset.id);
+    }, 200);
   });
-});
+
+  on("open-profile", () => {
+    const isGuest = localStorage.getItem("cooltrack-guest-mode") === "1";
+    if (isGuest) {
+      ProfileModal.open();
+      return;
+    }
+    Auth.getUser()
+      .then((user) => {
+        console.log("[Profile] user:", user);
+        if (user) _showAccountModal(user);
+        else ProfileModal.open();
+      })
+      .catch((err) => {
+        console.error("[Profile] error:", err);
+        ProfileModal.open();
+      });
+  });
 
   on("export-pdf", (el) => {
     el.textContent = "Gerando...";
@@ -176,19 +207,23 @@ export function initController() {
 
   // Tema
   _initTheme();
-
 }
 
 function _showAccountModal(user) {
-  document.getElementById('account-modal-overlay')?.remove();
+  document.getElementById("account-modal-overlay")?.remove();
 
   const profile = Profile.get();
-  const nome    = profile?.nome || 'Técnico';
-  const iniciais = nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+  const nome = profile?.nome || "Técnico";
+  const iniciais = nome
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 
-  const overlay = document.createElement('div');
-  overlay.id = 'account-modal-overlay';
-  overlay.className = 'modal-overlay is-open';
+  const overlay = document.createElement("div");
+  overlay.id = "account-modal-overlay";
+  overlay.className = "modal-overlay is-open";
 
   overlay.innerHTML = `
     <div class="modal" style="align-self:center;padding:0;overflow:hidden;max-width:420px;width:100%;border-radius:var(--premier-radius)">
@@ -255,28 +290,34 @@ function _showAccountModal(user) {
     </div>`;
 
   document.body.appendChild(overlay);
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-
-  overlay.querySelector('#btn-edit-profile').addEventListener('mouseenter', e => {
-    e.target.style.borderColor = 'rgba(255,255,255,0.16)';
-    e.target.style.color = '#E8F2FA';
-    e.target.style.background = 'rgba(255,255,255,0.04)';
-  });
-  overlay.querySelector('#btn-edit-profile').addEventListener('mouseleave', e => {
-    e.target.style.borderColor = 'rgba(255,255,255,0.08)';
-    e.target.style.color = '#8AAAC8';
-    e.target.style.background = 'transparent';
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
   });
 
-  overlay.querySelector('#btn-edit-profile').addEventListener('click', () => {
+  overlay
+    .querySelector("#btn-edit-profile")
+    .addEventListener("mouseenter", (e) => {
+      e.target.style.borderColor = "rgba(255,255,255,0.16)";
+      e.target.style.color = "#E8F2FA";
+      e.target.style.background = "rgba(255,255,255,0.04)";
+    });
+  overlay
+    .querySelector("#btn-edit-profile")
+    .addEventListener("mouseleave", (e) => {
+      e.target.style.borderColor = "rgba(255,255,255,0.08)";
+      e.target.style.color = "#8AAAC8";
+      e.target.style.background = "transparent";
+    });
+
+  overlay.querySelector("#btn-edit-profile").addEventListener("click", () => {
     overlay.remove();
     ProfileModal.open();
   });
 
-  overlay.querySelector('#btn-signout').addEventListener('click', () => {
+  overlay.querySelector("#btn-signout").addEventListener("click", () => {
     overlay.remove();
-    localStorage.removeItem('cooltrack-guest-mode');
-    localStorage.removeItem('cooltrack-ftx-done');
+    localStorage.removeItem("cooltrack-guest-mode");
+    localStorage.removeItem("cooltrack-ftx-done");
     Auth.signOut();
   });
 }
@@ -296,26 +337,33 @@ function _bindHistFilters() {
 }
 
 function _initTheme() {
-  const btn  = document.getElementById('theme-toggle');
-  const icon = document.getElementById('theme-icon');
+  const btn = document.getElementById("theme-toggle");
+  const icon = document.getElementById("theme-icon");
   if (!btn || !icon) return;
 
   const apply = (theme) => {
-    if (theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-      icon.textContent = '☀️';
+    if (theme === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+      icon.textContent = "☀️";
     } else {
-      document.documentElement.removeAttribute('data-theme');
-      icon.textContent = '🌙';
+      document.documentElement.removeAttribute("data-theme");
+      icon.textContent = "🌙";
     }
-    localStorage.setItem('cooltrack-theme', theme);
+    localStorage.setItem("cooltrack-theme", theme);
   };
 
-  const preferred = localStorage.getItem('cooltrack-theme') ||
-    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  const preferred =
+    localStorage.getItem("cooltrack-theme") ||
+    (window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark");
   apply(preferred);
 
-  btn.addEventListener('click', () => {
-    apply(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+  btn.addEventListener("click", () => {
+    apply(
+      document.documentElement.getAttribute("data-theme") === "light"
+        ? "dark"
+        : "light",
+    );
   });
 }
