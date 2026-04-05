@@ -245,3 +245,28 @@ export function clearRegistro(preserveEquip = false) {
   const rTecnico = Utils.getEl("r-tecnico");
   if (rTecnico) rTecnico.value = Profile.getDefaultTecnico();
 }
+export function loadRegistroForEdit(id) {
+  const { registros } = getState();
+  const r = registros.find(r => r.id === id);
+  if (!r) return;
+
+  sessionStorage.setItem('cooltrack-editing-id', id);
+
+  Utils.setVal('r-equip',          r.equipId);
+  Utils.setVal('r-data',           r.data);
+  Utils.setVal('r-tipo',           r.tipo);
+  Utils.setVal('r-obs',            r.obs);
+  Utils.setVal('r-tecnico',        r.tecnico);
+  Utils.setVal('r-pecas',          r.pecas || '');
+  Utils.setVal('r-custo-pecas',    String(r.custoPecas   || ''));
+  Utils.setVal('r-custo-mao-obra', String(r.custoMaoObra || ''));
+  Utils.setVal('r-proxima',        r.proxima || '');
+  Utils.setVal('r-status',         r.status);
+
+  const btn = document.querySelector('[data-action="save-registro"]');
+  if (btn) { btn.textContent = 'Salvar alterações'; btn.style.background = 'var(--warning)'; btn.style.color = '#07111F'; }
+
+  const title = document.querySelector('#view-registro .section-title');
+  if (title) title.textContent = 'Editar registro';
+}
+
