@@ -9,6 +9,7 @@ import { registerRoute, goTo } from "../core/router.js";
 import { on } from "../core/events.js";
 import { Modal, CustomConfirm } from "../core/modal.js";
 import { Toast } from "../core/toast.js";
+import { Auth } from "../core/auth.js";
 
 // domain/ — sobe 1 nível
 import { PDFGenerator } from "../domain/pdf.js";
@@ -109,7 +110,17 @@ export function initController() {
     if (ok) deleteReg(el.dataset.id);
   });
 
-  on("open-profile", () => ProfileModal.open());
+  on("open-profile", () => {
+    const isGuest = localStorage.getItem("cooltrack-guest-mode") === "1";
+    if (isGuest) {
+      ProfileModal.open();
+      return;
+    }
+    Auth.getUser().then((user) => {
+      if (user) _showAccountModal(user);
+      else ProfileModal.open();
+    });
+  });
   on("toggle-client-mode", () => ClientMode.toggle());
 
   on("export-pdf", (el) => {
@@ -173,6 +184,38 @@ export function initController() {
   // ClientMode
   ClientMode.restore();
   ClientMode.initToggleButton?.();
+}
+
+function _showAccountModal(user) {
+  document.getElementById('account-modal-overlay')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'account-modal-overlay';
+  overlay.className = 'modal-overlay is-open';
+
+  overlay.innerHTML = `
+    <div class="modal modal--sm">
+      <div class="modal__handle"></div>
+      <div class="modal__title">Minha conta</div>
+      <div class="modal__text" style="margin-bottom:16px">${user.email}</div>
+      <button class="btn btn--outline" id="btn-edit-profile" style="margin-bottom:10px">Editar perfil</button>
+      <button class="btn btn--danger" id="btn-signout">Sair da conta</button>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  overlay.querySelector('#btn-edit-profile').addEventListener('click', () => {
+    overlay.remove();
+    ProfileModal.open();
+  });
+
+  overlay.querySelector('#btn-signout').addEventListener('click', () => {
+    overlay.remove();
+    localStorage.removeItem('cooltrack-guest-mode');
+    localStorage.removeItem('cooltrack-ftx-done');
+    Auth.signOut();
+  });
 }
 
 function _bindHistFilters() {
