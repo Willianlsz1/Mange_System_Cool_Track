@@ -321,3 +321,46 @@ main:focus { outline: none; }
     grid-column: 1 / -1;
   }
 }
+/* ── Mobile geral ────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Espaço para navbar fixo no fundo */
+  .app-content {
+    padding-bottom: 80px !important;
+    padding-top: 0 !important;
+  }
+
+  /* Header mais compacto no mobile */
+  .app-header__top {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+
+  .app-header__tagline {
+    display: none;
+  }
+
+  .app-header__actions {
+    gap: 4px;
+  }
+
+  .header-icon-btn {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 14px !important;
+  }
+
+  /* Navbar bottom: 6 colunas para caber todas as abas */
+  .app-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+
+  /* Badge no mobile navbar */
+  .nav-btn__badge {
+    top: 0 !important;
+    right: 2px !important;
+    min-width: 14px !important;
+    height: 14px !important;
+    font-size: 8px !important;
+  }
+}
