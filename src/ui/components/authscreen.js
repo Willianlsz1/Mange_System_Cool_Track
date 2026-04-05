@@ -1,18 +1,19 @@
 import { Auth } from "../../core/auth.js";
 import { Toast } from "../../core/toast.js";
+import { supabase } from '../../core/supabase.js';
 
 export const AuthScreen = {
-    show() {
-        const overlay = document.createElement("div");
-        overlay.id = "auth-overlay";
-        overlay.style.cssText = `
+  show() {
+    const overlay = document.createElement("div");
+    overlay.id = "auth-overlay";
+    overlay.style.cssText = `
       position:fixed;inset:0;z-index:300;
       background:#07111F;
       display:flex;align-items:center;justify-content:center;
       padding:16px;
     `;
 
-        overlay.innerHTML = `
+    overlay.innerHTML = `
       <style>
         .auth-card {
           background:#0C1929;
@@ -100,6 +101,16 @@ export const AuthScreen = {
             transition:border-color .15s, color .15s;
             }
         .auth-btn-guest:hover { border-color:rgba(255,255,255,0.2);color:#E8F2FA; }
+        .auth-btn-forgot {
+          background: none;
+          border: none;
+          color: #4A6880;
+          font-size: 13px;
+          font-family: inherit;
+          cursor: pointer;
+          transition: color .15s;
+          }
+        .auth-btn-forgot:hover { color: #8AAAC8; }
       </style>
 
       <div class="auth-card">
@@ -126,6 +137,9 @@ export const AuthScreen = {
             <label class="auth-label">SENHA</label>
             <input class="auth-input" id="signin-password" type="password" placeholder="••••••••"/>
             <button class="auth-btn" id="btn-signin">Entrar →</button>
+            <div style="text-align:center;margin-top:12px">
+            <button class="auth-btn-forgot" id="btn-forgot">Esqueci minha senha</button>
+            </div>
             <div class="auth-hint">Seus dados ficam salvos na nuvem,<br>acessíveis de qualquer dispositivo.</div>
             <div style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);text-align:center">
             <button class="auth-btn-guest" id="btn-guest">Explorar sem conta →</button>
@@ -146,63 +160,77 @@ export const AuthScreen = {
       </div>
     `;
 
-        document.body.appendChild(overlay);
+    document.body.appendChild(overlay);
 
-        // Tabs
-        overlay.querySelector("#tab-signin").addEventListener("click", () => {
-            overlay.querySelector("#tab-signin").classList.add("active");
-            overlay.querySelector("#tab-signup").classList.remove("active");
-            overlay.querySelector("#auth-form-signin").style.display = "block";
-            overlay.querySelector("#auth-form-signup").style.display = "none";
-        });
+    // Tabs
+    overlay.querySelector("#tab-signin").addEventListener("click", () => {
+      overlay.querySelector("#tab-signin").classList.add("active");
+      overlay.querySelector("#tab-signup").classList.remove("active");
+      overlay.querySelector("#auth-form-signin").style.display = "block";
+      overlay.querySelector("#auth-form-signup").style.display = "none";
+    });
 
-        overlay.querySelector("#tab-signup").addEventListener("click", () => {
-            overlay.querySelector("#tab-signup").classList.add("active");
-            overlay.querySelector("#tab-signin").classList.remove("active");
-            overlay.querySelector("#auth-form-signup").style.display = "block";
-            overlay.querySelector("#auth-form-signin").style.display = "none";
-        });
+    overlay.querySelector("#tab-signup").addEventListener("click", () => {
+      overlay.querySelector("#tab-signup").classList.add("active");
+      overlay.querySelector("#tab-signin").classList.remove("active");
+      overlay.querySelector("#auth-form-signup").style.display = "block";
+      overlay.querySelector("#auth-form-signin").style.display = "none";
+    });
 
-        // Sign in
-        overlay.querySelector("#btn-signin").addEventListener("click", async () => {
-            const btn = overlay.querySelector("#btn-signin");
-            const email = overlay.querySelector("#signin-email").value.trim();
-            const password = overlay.querySelector("#signin-password").value;
-            if (!email || !password) return;
-            btn.disabled = true;
-            btn.textContent = "Entrando...";
-            const user = await Auth.signIn(email, password);
-            if (user) {
-                overlay.remove();
-                window.location.reload();
-            } else {
-                btn.disabled = false;
-                btn.textContent = "Entrar →";
-            }
-        });
-
-        // Sign up
-        overlay.querySelector('#btn-signup').addEventListener('click', async () => {
-      const btn      = overlay.querySelector('#btn-signup');
-      const nome     = overlay.querySelector('#signup-nome').value.trim();
-      const email    = overlay.querySelector('#signup-email').value.trim();
-      const password = overlay.querySelector('#signup-password').value;
-      if (!nome || !email || !password) return;
-      if (password.length < 6) { Toast.error('Senha deve ter no mínimo 6 caracteres.'); return; }
+    // Sign in
+    overlay.querySelector('#btn-signin').addEventListener('click', async () => {
+      const btn = overlay.querySelector('#btn-signin');
+      const email = overlay.querySelector('#signin-email').value.trim();
+      const password = overlay.querySelector('#signin-password').value;
+      if (!email || !password) return;
       btn.disabled = true;
-      btn.textContent = 'Criando conta...';
+      btn.textContent = 'Entrando...';
+      const user = await Auth.signIn(email, password);
+      if (user) {
+        overlay.remove();
+        window.location.reload();
+      } else {
+        btn.disabled = false;
+        btn.textContent = 'Entrar →';
+      }
+    });
+
+    overlay.querySelector('#btn-forgot').addEventListener('click', async () => {
+      const email = overlay.querySelector('#signin-email').value.trim();
+      if (!email) {
+        Toast.warning('Digite seu email primeiro.');
+        return;
+      }
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (!error) Toast.success('Email de recuperação enviado. Verifique sua caixa de entrada.');
+      else Toast.error('Erro ao enviar email. Verifique o endereço digitado.');
+    });
+
+    // Sign up
+    overlay.querySelector("#btn-signup").addEventListener("click", async () => {
+      const btn = overlay.querySelector("#btn-signup");
+      const nome = overlay.querySelector("#signup-nome").value.trim();
+      const email = overlay.querySelector("#signup-email").value.trim();
+      const password = overlay.querySelector("#signup-password").value;
+      if (!nome || !email || !password) return;
+      if (password.length < 6) {
+        Toast.error("Senha deve ter no mínimo 6 caracteres.");
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = "Criando conta...";
       const user = await Auth.signUp(email, password, nome);
       if (user) {
         overlay.remove();
         window.location.reload();
       } else {
         btn.disabled = false;
-        btn.textContent = 'Criar conta grátis →';
+        btn.textContent = "Criar conta grátis →";
       }
     });
 
-    overlay.querySelector('#btn-guest').addEventListener('click', () => {
-      localStorage.setItem('cooltrack-guest-mode', '1');
+    overlay.querySelector("#btn-guest").addEventListener("click", () => {
+      localStorage.setItem("cooltrack-guest-mode", "1");
       overlay.remove();
       window.location.reload();
     });
