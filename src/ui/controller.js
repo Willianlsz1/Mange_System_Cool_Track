@@ -107,7 +107,6 @@ export function initController() {
     el.textContent = 'Gerando...';
     el.disabled    = true;
     setTimeout(() => {
-      const { Utils } = require('../../core/utils.js');
       const fileName = PDFGenerator.generateMaintenanceReport({
         filtEq: document.getElementById('rel-equip')?.value || '',
         de:     document.getElementById('rel-de')?.value    || '',
