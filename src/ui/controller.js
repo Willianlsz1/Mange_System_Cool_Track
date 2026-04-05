@@ -107,16 +107,17 @@ export function initController() {
   });
 
   on("open-profile", () => {
-    const isGuest = localStorage.getItem("cooltrack-guest-mode") === "1";
-    if (isGuest) {
-      ProfileModal.open();
-      return;
-    }
-    Auth.getUser().then((user) => {
-      if (user) _showAccountModal(user);
-      else ProfileModal.open();
-    });
+  const isGuest = localStorage.getItem("cooltrack-guest-mode") === "1";
+  if (isGuest) { ProfileModal.open(); return; }
+  Auth.getUser().then((user) => {
+    console.log('[Profile] user:', user);
+    if (user) _showAccountModal(user);
+    else ProfileModal.open();
+  }).catch((err) => {
+    console.error('[Profile] error:', err);
+    ProfileModal.open();
   });
+});
 
   on("export-pdf", (el) => {
     el.textContent = "Gerando...";
