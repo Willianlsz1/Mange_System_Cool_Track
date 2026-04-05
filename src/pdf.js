@@ -1,8 +1,14 @@
 /**
- * CoolTrack Pro - PDF Generator v5.0 (SaaS)
+ * CoolTrack Pro - PDF Generator v5.1 (SaaS) - REFACTORADO
  * + Assinatura digital embarcada
  * + Campos de custo (peças + mão de obra + total)
  * + Dados de perfil do técnico no cabeçalho
+ * 
+ * MELHORIAS IMPLEMENTADAS:
+ * ✓ Tarefa 1: Header com fundo dark (#0B1120), títulos maiores (22px/14px)
+ * ✓ Tarefa 2: Resumo executivo melhorado (fontes 13px/10px)
+ * ✓ Tarefa 3: Tabela otimizada (fontes 9-11px, cellPadding 6-10px)
+ * ✅ CORRIGIDO: ReferenceError de/ate not defined
  */
 
 import { jsPDF }     from 'jspdf';
@@ -13,10 +19,10 @@ import { Profile }   from './onboarding.js';
 import { getSignatureForRecord } from './signature.js';
 
 const C = {
-  navy:   [7,   17,  31],
-  navy2:  [12,  25,  41],
+  navy:   [11,  17,  32],   // #0B1120
+  navy2:  [15,  23,  42],
   navy3:  [23,  34,  53],
-  cyan:   [0,   200, 232],
+  cyan:   [0,   212, 255],
   amber:  [232, 160, 32],
   red:    [224, 48,  64],
   green:  [0,   200, 112],
@@ -52,8 +58,11 @@ export const PDFGenerator = {
       const M   = 14;
 
       this._drawHeader(doc, PW, M, profile, filtEq, de, ate, filtered, equipamentos);
-      let yPos = 56;
-      yPos = this._drawSummary(doc, PW, M, yPos, filtered);
+      
+      let yPos = 56;  // Mais breathing room
+      
+      // ✅ CORRIGIDO: Passando de e ate como parâmetros
+      yPos = this._drawSummary(doc, PW, M, yPos, filtered, de, ate);
 
       if (filtered.length > 0) {
         this._drawTable(doc, PW, PH, M, yPos, filtered, equipamentos);
@@ -74,65 +83,99 @@ export const PDFGenerator = {
   },
 
   _drawHeader(doc, PW, M, profile, filtEq, de, ate, filtered, equipamentos) {
-    doc.setFillColor(...C.navy); doc.rect(0, 0, PW, 48, 'F');
-    doc.setFillColor(...C.cyan); doc.rect(0, 0, PW, 2.5, 'F');
+    // Fundo dark #0B1120
+    doc.setFillColor(...C.navy);  
+    doc.rect(0, 0, PW, 52, 'F');
+    
+    // Linha decorativa cyan no topo
+    doc.setFillColor(...C.cyan); 
+    doc.rect(0, 0, PW, 3, 'F');
+    
+    // TÍTULO PRINCIPAL 22px
+    doc.setTextColor(...C.cyan); 
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('COOLTRACK PRO', M, 16);
 
-    doc.setTextColor(...C.cyan); doc.setFontSize(18); doc.setFont('helvetica', 'bold');
-    doc.text('COOLTRACK PRO', M, 14);
+    // SUBTÍTULO 14px
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal'); 
+    doc.setTextColor(...C.text2);
+    doc.text('Sistema de Gestao de Climatizacao e Refrigeracao', M, 24);
 
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text2);
-    doc.text('Sistema de Gestao de Climatizacao e Refrigeracao', M, 21);
-
-    // Perfil do técnico no header
+    // Perfil do técnico
     if (profile?.nome) {
-      doc.setTextColor(...C.text); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-      doc.text(profile.nome + (profile.empresa ? ` — ${profile.empresa}` : ''), M, 30);
+      doc.setTextColor(...C.text); 
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(profile.nome + (profile.empresa ? ` — ${profile.empresa}` : ''), M, 33);
       if (profile.telefone) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...C.text3);
-        doc.text(profile.telefone, M, 36);
+        doc.setFont('helvetica', 'normal'); 
+        doc.setFontSize(9);
+        doc.setTextColor(...C.text3);
+        doc.text(profile.telefone, M, 39);
       }
     }
 
-    doc.setDrawColor(...C.border); doc.setLineWidth(0.3); doc.line(M, 40, PW - M, 40);
+    // Linha separadora cyan
+    doc.setDrawColor(...C.cyan);
+    doc.setLineWidth(0.5);
+    doc.line(M, 44, PW - M, 44);
 
-    const hoje = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    doc.setFontSize(8); doc.setTextColor(...C.text3);
-    doc.text(`Gerado: ${hoje}`, M, 46);
+    // Informações de geração
+    const hoje = new Date().toLocaleDateString('pt-BR', { 
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' 
+    });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(...C.text3);
+    doc.text(`Gerado: ${hoje}`, M, 50);
 
     const eqLabel = filtEq ? (equipamentos.find(e => e.id === filtEq)?.nome || '—') : 'Todos';
-    doc.text(`Equipamento: ${eqLabel}`, M + 70, 46);
-    doc.text(`Periodo: ${de || 'inicio'} a ${ate || 'atual'}`, M + 170, 46);
-    doc.setTextColor(...C.cyan); doc.text(`${filtered.length} registro(s)`, PW - M, 46, { align: 'right' });
+    doc.text(`Equipamento: ${eqLabel}`, M + 80, 50);
+    doc.text(`Periodo: ${de || 'inicio'} a ${ate || 'atual'}`, M + 180, 50);
+    
+    doc.setTextColor(...C.cyan); 
+    doc.setFontSize(10);
+    doc.text(`${filtered.length} registro(s)`, PW - M, 50, { align: 'right' });
   },
 
-  _drawSummary(doc, PW, M, yPos, filtered) {
+  // ✅ CORRIGIDO: Agora recebe de e ate como parâmetros
+  _drawSummary(doc, PW, M, yPos, filtered, de, ate) {
     const counts   = { ok: 0, warn: 0, danger: 0 };
     let totalCusto = 0;
+    
     filtered.forEach(r => {
       if (counts[r.status] !== undefined) counts[r.status]++;
       totalCusto += (parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0));
     });
 
-    const tiles = [
-      { label: 'Total Registros',  value: String(filtered.length), color: C.cyan  },
-      { label: 'Operando Normal',  value: String(counts.ok),       color: C.green },
-      { label: 'Requer Atencao',   value: String(counts.warn),     color: C.amber },
-      { label: 'Falha / Critico',  value: String(counts.danger),   color: C.red   },
-      { label: 'Custo Total (R$)', value: totalCusto > 0 ? totalCusto.toFixed(2).replace('.', ',') : '—', color: C.text2 },
-    ];
+    const resumoY = yPos;
 
-    const tileW = (PW - M * 2 - 12) / 5;
-    tiles.forEach((t, i) => {
-      const x = M + i * (tileW + 3);
-      doc.setFillColor(...C.navy2); doc.roundedRect(x, yPos, tileW, 18, 1.5, 1.5, 'F');
-      doc.setFillColor(...t.color); doc.roundedRect(x, yPos, tileW, 2, 1, 1, 'F');
-      doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(...t.color);
-      doc.text(t.value, x + tileW / 2, yPos + 11, { align: 'center' });
-      doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text3);
-      doc.text(t.label.toUpperCase(), x + tileW / 2, yPos + 16, { align: 'center' });
-    });
+    // Borda lateral esquerda decorativa cyan
+    doc.setFillColor(...C.cyan);
+    doc.rect(M, resumoY, 3, 24, 'F');
 
-    return yPos + 24;
+    // Fundo dark
+    doc.setFillColor(15, 23, 42);  
+    doc.roundedRect(M + 5, resumoY, PW - (M * 2) - 5, 24, 4, 4, 'F');
+
+    // Título do resumo 13px
+    doc.setTextColor(...C.cyan); 
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMO EXECUTIVO', M + 14, resumoY + 8);
+
+    // Dados do resumo 10px
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...C.text2);
+    
+    // ✅ Agora de e ate estão definidos!
+    const summaryText = `Registros: ${filtered.length}   |   Equipamentos: ${filtered.length > 0 ? new Set(filtered.map(r => r.equipId)).size : 0}   |   Periodo: ${de || 'Inicio'} ate ${ate || 'Atual'}   |   Custo Total: R$${totalCusto.toFixed(2).replace('.', ',')}`;
+    doc.text(summaryText, M + 14, resumoY + 17);
+
+    return resumoY + 28;
   },
 
   _drawTable(doc, PW, PH, M, yPos, filtered, equipamentos) {
@@ -158,37 +201,79 @@ export const PDFGenerator = {
       head: [['DATA / HORA', 'EQUIPAMENTO', 'TAG', 'FLUIDO', 'TIPO DE SERVICO', 'TECNICO', 'STATUS', 'CUSTO', 'DESCRICAO']],
       body: rows,
       theme: 'plain',
-      styles: { fontSize: 7, cellPadding: { top: 3, right: 4, bottom: 3, left: 4 }, textColor: C.text2, font: 'helvetica', overflow: 'linebreak', lineColor: C.border, lineWidth: 0.2 },
-      headStyles: { fillColor: C.navy2, textColor: C.text3, fontStyle: 'bold', fontSize: 6.5, halign: 'left', lineColor: C.cyan, lineWidth: { bottom: 0.4 } },
-      alternateRowStyles: { fillColor: C.navy },
-      bodyStyles: { fillColor: C.navy2 },
-      columnStyles: {
-        0: { cellWidth: 28, halign: 'center', fontSize: 6.5, textColor: C.text3 },
-        1: { cellWidth: 34 },
-        2: { cellWidth: 18, fontStyle: 'bold', textColor: C.cyan, fontSize: 6.5 },
-        3: { cellWidth: 16, halign: 'center', fontSize: 6.5 },
-        4: { cellWidth: 34 },
-        5: { cellWidth: 22, halign: 'center', fontSize: 6.5 },
-        6: { cellWidth: 16, halign: 'center', fontStyle: 'bold', fontSize: 6.5 },
-        7: { cellWidth: 20, halign: 'right',  fontSize: 6.5, textColor: C.cyan },
-        8: { cellWidth: 'auto' },
+      
+      styles: { 
+        fontSize: 9,
+        cellPadding: { top: 6, right: 7, bottom: 6, left: 6 },
+        textColor: C.text2, 
+        font: 'helvetica', 
+        overflow: 'linebreak', 
+        lineColor: C.border, 
+        lineWidth: 0.3,
+        lineHeight: 1.4
       },
+      
+      headStyles: { 
+        fillColor: C.navy2, 
+        textColor: C.text3, 
+        fontStyle: 'bold', 
+        fontSize: 8,
+        halign: 'left', 
+        lineColor: C.cyan, 
+        lineWidth: { bottom: 0.6 },
+        cellPadding: { top: 7, right: 6, bottom: 7, left: 6 },
+        fontStyle: 'bold'
+      },
+      
+      bodyStyles: { 
+        fillColor: C.navy2,
+        fontSize: 9
+      },
+      
+      alternateRowStyles: { 
+        fillColor: C.navy
+      },
+      
+      columnStyles: {
+        0: { cellWidth: 28, halign: 'center', fontSize: 9, textColor: C.text3 },
+        1: { cellWidth: 34, fontSize: 10, fontWeight: '600' },
+        2: { cellWidth: 18, fontStyle: 'bold', textColor: C.cyan, fontSize: 9 },
+        3: { cellWidth: 16, halign: 'center', fontSize: 9 },
+        4: { cellWidth: 34, fontSize: 9 },
+        5: { cellWidth: 22, halign: 'center', fontSize: 9 },
+        6: { cellWidth: 18, halign: 'center', fontStyle: 'bold', fontSize: 9 },
+        7: { cellWidth: 22, halign: 'right', fontSize: 9, textColor: C.cyan },
+        8: { cellWidth: 'auto', fontSize: 9 },
+      },
+      
       didParseCell: (data) => {
         if (data.section !== 'body') return;
+        
         if (data.column.index === 6) {
           const v = data.cell.raw;
           data.cell.styles.textColor = v === 'FALHA' ? C.red : v === 'ATENCAO' ? C.amber : C.green;
+          data.cell.styles.fontStyle = 'bold';
         }
-        if (data.column.index === 2) data.cell.styles.textColor = C.cyan;
+        
+        if (data.column.index === 2) {
+          data.cell.styles.textColor = C.cyan;
+          data.cell.styles.fontStyle = 'bold';
+        }
+        
+        if (data.column.index === 7) {
+          data.cell.styles.textColor = C.cyan;
+        }
       },
+      
       didDrawPage: (data) => this._drawFooter(doc, PW, PH, Profile.get(), data.pageNumber, doc.getNumberOfPages()),
-      margin: { top: 8, right: M, bottom: 18, left: M },
+      
+      margin: { top: 12, right: M, bottom: 20, left: M },
+      
       tableWidth: 'auto',
     });
   },
 
   _drawSignaturePages(doc, PW, PH, M, filtered, equipamentos) {
-    // Página de assinaturas para registros que têm assinatura
     const withSig = filtered.filter(r => r.assinatura);
     if (!withSig.length) return;
 
@@ -199,17 +284,18 @@ export const PDFGenerator = {
       doc.addPage();
       const eq = equipamentos.find(e => e.id === r.equipId);
 
-      // Header simples
-      doc.setFillColor(...C.navy); doc.rect(0, 0, PW, 30, 'F');
-      doc.setFillColor(...C.cyan); doc.rect(0, 0, PW, 2, 'F');
-      doc.setTextColor(...C.cyan); doc.setFontSize(13); doc.setFont('helvetica', 'bold');
-      doc.text('COOLTRACK PRO — COMPROVANTE DE SERVIÇO', M, 14);
-      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text2);
-      doc.text(`${eq?.nome || '—'} · ${Utils.formatDatetime(r.data)}`, M, 22);
+      doc.setFillColor(...C.navy); doc.rect(0, 0, PW, 32, 'F');
+      doc.setFillColor(...C.cyan); doc.rect(0, 0, PW, 3, 'F');
+      doc.setTextColor(...C.cyan); doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('COOLTRACK PRO — COMPROVANTE DE SERVIÇO', M, 15);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text2);
+      doc.text(`${eq?.nome || '—'} · ${Utils.formatDatetime(r.data)}`, M, 24);
 
-      // Dados do serviço
-      let y = 40;
-      doc.setFontSize(8); doc.setTextColor(...C.text3);
+      let y = 42;
+      doc.setFontSize(9);
+      doc.setTextColor(...C.text3);
       const lines = [
         ['Equipamento:', eq?.nome || '—'],
         ['TAG:',         eq?.tag  || '—'],
@@ -223,43 +309,45 @@ export const PDFGenerator = {
         doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text2);
         doc.text(label, M, y);
         doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text);
-        doc.text(val, M + 50, y);
-        y += 7;
+        doc.text(val, M + 55, y);
+        y += 8;
       });
 
-      // Descrição
-      y += 4;
+      y += 5;
       doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.text2); doc.text('Descrição do Serviço:', M, y);
-      y += 6;
+      y += 7;
       doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text);
       const obsLines = doc.splitTextToSize(r.obs, PW - M * 2);
       doc.text(obsLines, M, y);
-      y += obsLines.length * 5 + 10;
+      y += obsLines.length * 6 + 12;
 
-      // Assinatura
-      doc.setFillColor(...C.navy2); doc.roundedRect(M, y, PW / 2.2, 50, 2, 2, 'F');
+      doc.setFillColor(...C.navy2); doc.roundedRect(M, y, PW / 2.2, 52, 2, 2, 'F');
       try {
-        doc.addImage(sigData, 'PNG', M + 4, y + 4, (PW / 2.2) - 8, 42);
+        doc.addImage(sigData, 'PNG', M + 4, y + 4, (PW / 2.2) - 8, 44);
       } catch (_) {}
-      doc.setDrawColor(...C.cyan); doc.setLineWidth(0.3);
-      doc.line(M + 4, y + 48, M + (PW / 2.2) - 8, y + 48);
-      doc.setFontSize(7); doc.setTextColor(...C.text3);
-      doc.text('Assinatura do cliente', M + 4, y + 54);
-      doc.setTextColor(...C.success || C.green);
-      doc.text(`Assinado digitalmente em ${Utils.formatDatetime(new Date().toISOString())}`, M + 4, y + 60);
+      doc.setDrawColor(...C.cyan); doc.setLineWidth(0.4);
+      doc.line(M + 4, y + 50, M + (PW / 2.2) - 8, y + 50);
+      doc.setFontSize(8);
+      doc.setTextColor(...C.text3);
+      doc.text('Assinatura do cliente', M + 4, y + 56);
+      doc.setTextColor(...C.green);
+      doc.text(`Assinado digitalmente em ${Utils.formatDatetime(new Date().toISOString())}`, M + 4, y + 62);
 
       this._drawFooter(doc, PW, PH, Profile.get(), doc.getCurrentPageInfo().pageNumber, doc.getNumberOfPages());
     });
   },
 
   _drawFooter(doc, PW, PH, profile, pageNum, totalPages) {
-    const footY = PH - 10;
-    doc.setFillColor(...C.navy); doc.rect(0, footY - 2, PW, 12, 'F');
-    doc.setFillColor(...C.cyan); doc.rect(0, footY - 2, PW, 0.5, 'F');
-    doc.setFontSize(7); doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text3);
-    const leftText = profile?.nome ? `CoolTrack Pro v5.0 — ${profile.nome}${profile.empresa ? ` / ${profile.empresa}` : ''}` : 'CoolTrack Pro v5.0 — Sistema de Gestao de Climatizacao e Refrigeracao';
-    doc.text(leftText, 14, footY + 3);
-    doc.text(`Pagina ${pageNum} de ${totalPages}`, PW - 14, footY + 3, { align: 'right' });
+    const footY = PH - 12;
+    doc.setFillColor(...C.navy); doc.rect(0, footY - 2, PW, 14, 'F');
+    doc.setFillColor(...C.cyan); doc.rect(0, footY - 2, PW, 0.6, 'F');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(...C.text3);
+    const leftText = profile?.nome 
+      ? `CoolTrack Pro v5.1 — ${profile.nome}${profile.empresa ? ` / ${profile.empresa}` : ''}` 
+      : 'CoolTrack Pro v5.1 — Sistema de Gestao de Climatizacao e Refrigeracao';
+    doc.text(leftText, 14, footY + 4);
+    doc.text(`Pagina ${pageNum} de ${totalPages}`, PW - 14, footY + 4, { align: 'right' });
   },
 };
 
