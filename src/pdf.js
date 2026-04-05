@@ -130,7 +130,7 @@ export const PDFGenerator = {
 
     /* ── Card do técnico responsável ── */
     const cardY = 82, cardW = PW - M * 2, cardH = 42;
-    roundRect(doc, M, cardY, cardW, cardH, 2, C.bg2);
+    fillRect(doc, M, cardY, cardW, cardH, C.bg2);
     fillRect(doc, M, cardY, 4, cardH, C.cyan);
 
     txt(doc, 'TÉCNICO RESPONSÁVEL', M + 10, cardY + 9, { size: 7, style: 'bold', color: C.text3 });
@@ -163,7 +163,8 @@ export const PDFGenerator = {
 
     tiles.forEach((t, i) => {
       const x = M + i * (tileW + 4);
-      roundRect(doc, x, tileY, tileW, 28, 2, C.surface);
+      if (tileW >= 4 && 28 >= 4) roundRect(doc, x, tileY, tileW, 28, 2, C.surface);
+      else fillRect(doc, x, tileY, tileW, 28, C.surface);
       fillRect(doc, x, tileY, tileW, 3, t.color);
       txt(doc, t.value, x + tileW / 2, tileY + 14, { size: 18, style: 'bold', color: t.color, align: 'center' });
       // Label em 2 linhas
@@ -192,7 +193,7 @@ export const PDFGenerator = {
     let ey = eqY + 10;
     eqUnicos.forEach(({ eq, status }) => {
       const st = STATUS_CLIENTE[status] || STATUS_CLIENTE.ok;
-      roundRect(doc, M, ey, PW - M * 2, 14, 1.5, C.bg2);
+      fillRect(doc, M, ey, PW - M * 2, 14, C.bg2);
       // Indicador de cor
       fillRect(doc, M, ey, 4, 14, st.color);
       // Nome do equipamento
@@ -220,7 +221,7 @@ export const PDFGenerator = {
         const eq = equipamentos.find(e => e.id === r.equipId);
         const isUrgent = r.status === 'danger';
         const cor = isUrgent ? C.red : C.amber;
-        roundRect(doc, M, py, PW - M * 2, 16, 1.5, isUrgent ? [30, 12, 14] : [28, 22, 8]);
+        fillRect(doc, M, py, PW - M * 2, 16, isUrgent ? [30, 12, 14] : [28, 22, 8]);
         fillRect(doc, M, py, 4, 16, cor);
         const acao = isUrgent
           ? 'Requer intervenção imediata'
@@ -230,7 +231,7 @@ export const PDFGenerator = {
         py += 20;
       });
     } else if (pendentesY < PH - 40) {
-      roundRect(doc, M, pendentesY, PW - M * 2, 16, 1.5, C.surface);
+      fillRect(doc, M, pendentesY, PW - M * 2, 16, C.surface);
       fillRect(doc, M, pendentesY, 4, 16, C.green);
       txt(doc, 'Nenhuma ação necessária no momento.', M + 8, pendentesY + 7, { size: 10, style: 'bold', color: C.green });
       txt(doc, 'Todos os equipamentos estão dentro do prazo de manutenção.', M + 8, pendentesY + 13, { size: 8, color: C.text2 });
@@ -263,8 +264,10 @@ export const PDFGenerator = {
       const custo = parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0);
 
       /* Calcular altura necessária para este card */
-      const obsLines = doc.setFontSize(8) || doc.splitTextToSize(r.obs || '', PW - M * 2 - 16);
-      const cardH = 14 + (obsLines.length * 4.5) + (r.pecas ? 8 : 0) + (custo > 0 ? 8 : 0) + 6;
+      doc.setFontSize(8);
+      const obsLines = doc.splitTextToSize(r.obs || '', PW - M * 2 - 16);
+      const obsH  = Math.max(obsLines.length, 1) * 4.5;
+      const cardH = Math.max(34, 28 + obsH + (r.pecas ? 8 : 0) + (custo > 0 ? 8 : 0));
 
       /* Nova página se necessário */
       if (y + cardH > pageBottom) {
@@ -280,7 +283,12 @@ export const PDFGenerator = {
       }
 
       /* Card do serviço */
-      roundRect(doc, M, y, PW - M * 2, cardH, 2, C.bg2);
+      const cw2 = PW - M * 2;
+      if (cardH >= 4) {
+        roundRect(doc, M, y, cw2, cardH, 2, C.bg2);
+      } else {
+        fillRect(doc, M, y, cw2, cardH, C.bg2);
+      }
       fillRect(doc, M, y, 4, cardH, st.color);
 
       /* Cabeçalho do card */
@@ -383,7 +391,7 @@ export const PDFGenerator = {
       y += 14;
 
       const sigW = PW - M * 2, sigH = 45;
-      roundRect(doc, M, y, sigW, sigH, 2, C.surface);
+      fillRect(doc, M, y, sigW, sigH, C.surface);
       fillRect(doc, M, y, sigW, 3, C.cyan);
       try { doc.addImage(sigData, 'PNG', M + 4, y + 5, sigW - 8, sigH - 10); } catch (_) {}
       accentLine(doc, M + 8, y + sigH - 5, M + sigW - 8);
