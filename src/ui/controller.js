@@ -27,7 +27,6 @@ import {
   deleteEquip,
   populateEquipSelects,
 } from "./views/equipamentos.js";
-import { initRegistro, saveRegistro, clearRegistro } from "./views/registro.js";
 import { renderHist, deleteReg } from "./views/historico.js";
 import { renderAlertas } from "./views/alertas.js";
 import {
