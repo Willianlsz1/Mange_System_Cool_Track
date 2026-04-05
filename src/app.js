@@ -11,14 +11,15 @@ import { initController }         from './ui/controller.js';
 import { FirstTimeExperience }    from './ui/components/onboarding.js';
 
 function bootstrap() {
-  seedIfEmpty();
+  const ftxDone = localStorage.getItem('cooltrack-ftx-done');
+    if (ftxDone) seedIfEmpty();
   Modal.init();
   bindEvents();
   initController();
   goTo('inicio');
 
   const { equipamentos } = getState();
-  setTimeout(() => FirstTimeExperience.show(equipamentos), 400);
+  FirstTimeExperience.show(equipamentos);
 }
 
 bootstrap();
