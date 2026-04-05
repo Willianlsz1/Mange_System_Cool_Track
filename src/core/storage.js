@@ -1,15 +1,17 @@
 /**
- * CoolTrack Pro - Storage Module v4.0
- * Aceita fluidos industriais (R-404A, R-448A etc.)
- * Aviso em 4MB, bloqueio em 5MB
+ * CoolTrack Pro - Storage v5.0
+ * localStorage como cache + Supabase como fonte de verdade
+ * Offline first: salva local imediatamente, sincroniza com Supabase em background
  */
 
 import { STORAGE_KEY, Utils } from './utils.js';
-import { Toast } from './toast.js';
+import { Toast }              from './toast.js';
+import { supabase }           from './supabase.js';
 
 const STORAGE_WARN_BYTES  = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
 
+/* ── Normalização (mantida igual) ───────────────────── */
 function normalizeEquip(e) {
   if (!e || typeof e !== 'object') return null;
   if (!e.id || !e.nome || !e.local) return null;
@@ -21,7 +23,7 @@ function normalizeEquip(e) {
     tag:    String(e.tag    || ''),
     tipo:   String(e.tipo   || 'Outro'),
     modelo: String(e.modelo || ''),
-    fluido: String(e.fluido || ''),  // aceita qualquer fluido — validação no form
+    fluido: String(e.fluido || ''),
   };
 }
 
@@ -30,62 +32,211 @@ function normalizeRegistro(r, equipamentoIds) {
   if (!r.id || !r.equipId || !equipamentoIds.has(String(r.equipId))) return null;
   if (!r.data || !r.tipo) return null;
   return {
-    id:      String(r.id),
-    equipId: String(r.equipId),
-    data:    String(r.data),
-    tipo:    String(r.tipo),
-    obs:     String(r.obs  || ''),
-    status:  ['ok', 'warn', 'danger'].includes(r.status) ? r.status : 'ok',
-    pecas:   String(r.pecas   || ''),
-    proxima: String(r.proxima || ''),
-    fotos:   Array.isArray(r.fotos) ? r.fotos.filter(f => typeof f === 'string') : [],
-    tecnico: String(r.tecnico || ''),
+    id:           String(r.id),
+    equipId:      String(r.equipId),
+    data:         String(r.data),
+    tipo:         String(r.tipo),
+    obs:          String(r.obs   || ''),
+    status:       ['ok', 'warn', 'danger'].includes(r.status) ? r.status : 'ok',
+    pecas:        String(r.pecas   || ''),
+    proxima:      String(r.proxima || ''),
+    fotos:        Array.isArray(r.fotos) ? r.fotos.filter(f => typeof f === 'string') : [],
+    tecnico:      String(r.tecnico || ''),
+    custoPecas:   parseFloat(r.custoPecas   || 0) || 0,
+    custoMaoObra: parseFloat(r.custoMaoObra || 0) || 0,
+    assinatura:   Boolean(r.assinatura),
   };
 }
 
+/* ── Supabase helpers ───────────────────────────────── */
+async function getUserId() {
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+async function pushEquipamentos(equipamentos, userId) {
+  if (!equipamentos.length) return;
+  const rows = equipamentos.map(e => ({
+    id:      e.id,
+    user_id: userId,
+    nome:    e.nome,
+    local:   e.local,
+    status:  e.status,
+    tag:     e.tag,
+    tipo:    e.tipo,
+    modelo:  e.modelo,
+    fluido:  e.fluido,
+  }));
+  await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
+}
+
+async function pushRegistros(registros, userId) {
+  if (!registros.length) return;
+  const rows = registros.map(r => ({
+    id:             r.id,
+    user_id:        userId,
+    equip_id:       r.equipId,
+    data:           r.data,
+    tipo:           r.tipo,
+    obs:            r.obs,
+    status:         r.status,
+    pecas:          r.pecas,
+    proxima:        r.proxima,
+    tecnico:        r.tecnico,
+    custo_pecas:    r.custoPecas,
+    custo_mao_obra: r.custoMaoObra,
+    assinatura:     r.assinatura,
+    fotos:          r.fotos,
+  }));
+  await supabase.from('registros').upsert(rows, { onConflict: 'id' });
+}
+
+async function pushTecnicos(tecnicos, userId) {
+  if (!tecnicos.length) return;
+  for (const nome of tecnicos) {
+    await supabase
+      .from('tecnicos')
+      .upsert({ user_id: userId, nome }, { onConflict: 'user_id,nome' });
+  }
+}
+
+async function pullFromSupabase(userId) {
+  const [eqRes, regRes, tecRes] = await Promise.all([
+    supabase.from('equipamentos').select('*').eq('user_id', userId),
+    supabase.from('registros').select('*').eq('user_id', userId),
+    supabase.from('tecnicos').select('nome').eq('user_id', userId),
+  ]);
+
+  const equipamentos = (eqRes.data || []).map(e => ({
+    id:     e.id,
+    nome:   e.nome,
+    local:  e.local,
+    status: e.status,
+    tag:    e.tag     || '',
+    tipo:   e.tipo    || 'Outro',
+    modelo: e.modelo  || '',
+    fluido: e.fluido  || '',
+  }));
+
+  const equipIds = new Set(equipamentos.map(e => e.id));
+
+  const registros = (regRes.data || []).map(r => ({
+    id:           r.id,
+    equipId:      r.equip_id,
+    data:         r.data,
+    tipo:         r.tipo,
+    obs:          r.obs          || '',
+    status:       r.status       || 'ok',
+    pecas:        r.pecas        || '',
+    proxima:      r.proxima      || '',
+    tecnico:      r.tecnico      || '',
+    custoPecas:   parseFloat(r.custo_pecas    || 0),
+    custoMaoObra: parseFloat(r.custo_mao_obra || 0),
+    assinatura:   Boolean(r.assinatura),
+    fotos:        Array.isArray(r.fotos) ? r.fotos : [],
+  })).filter(r => equipIds.has(r.equipId));
+
+  const tecnicos = (tecRes.data || []).map(t => t.nome);
+
+  return { equipamentos, registros, tecnicos };
+}
+
+/* ── Migração automática localStorage → Supabase ────── */
+async function migrateIfNeeded(userId) {
+  const MIGRATED_KEY = `cooltrack-migrated-${userId}`;
+  if (localStorage.getItem(MIGRATED_KEY)) return;
+
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) { localStorage.setItem(MIGRATED_KEY, '1'); return; }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed?.equipamentos?.length) {
+      localStorage.setItem(MIGRATED_KEY, '1');
+      return;
+    }
+
+    Toast.info('Migrando seus dados para a nuvem...');
+    await pushEquipamentos(parsed.equipamentos, userId);
+    await pushRegistros(parsed.registros || [], userId);
+    await pushTecnicos(parsed.tecnicos || [], userId);
+    localStorage.setItem(MIGRATED_KEY, '1');
+    Toast.success('Dados migrados com sucesso.');
+  } catch (_) {
+    // falha silenciosa — tenta na próxima vez
+  }
+}
+
+/* ── API pública ─────────────────────────────────────── */
 export const Storage = {
-  load(defaultState) {
+
+  async loadFromSupabase() {
+    const userId = await getUserId();
+    if (!userId) return null;
+
+    await migrateIfNeeded(userId);
+
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return defaultState;
-
-      const parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.equipamentos) || !Array.isArray(parsed.registros)) {
-        return defaultState;
-      }
-
-      const equipamentos  = parsed.equipamentos.map(normalizeEquip).filter(Boolean);
-      const equipamentoIds = new Set(equipamentos.map(e => e.id));
-      const registros     = parsed.registros.map(r => normalizeRegistro(r, equipamentoIds)).filter(Boolean);
-      const tecnicos      = Array.isArray(parsed.tecnicos)
-        ? parsed.tecnicos.filter(t => typeof t === 'string' && t.trim())
-        : (defaultState.tecnicos || []);
-
-      return { equipamentos, registros, tecnicos };
+      const state = await pullFromSupabase(userId);
+      // Atualiza cache local
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      return state;
     } catch (_) {
-      return defaultState;
+      // Offline — usa cache local
+      return this._loadLocal();
     }
   },
 
+  load(defaultState) {
+    return this._loadLocal() || defaultState;
+  },
+
+  _loadLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.equipamentos)) return null;
+      const equipamentos  = parsed.equipamentos.map(normalizeEquip).filter(Boolean);
+      const equipIds      = new Set(equipamentos.map(e => e.id));
+      const registros     = (parsed.registros || []).map(r => normalizeRegistro(r, equipIds)).filter(Boolean);
+      const tecnicos      = Array.isArray(parsed.tecnicos) ? parsed.tecnicos.filter(t => typeof t === 'string') : [];
+      return { equipamentos, registros, tecnicos };
+    } catch (_) { return null; }
+  },
+
   save(state) {
+    // 1. Salva local imediatamente (offline first)
     try {
       const serialized = JSON.stringify(state);
       const byteSize   = serialized.length * 2;
-
       if (byteSize >= STORAGE_LIMIT_BYTES) {
-        Toast.error(`Armazenamento cheio (${Utils.formatBytes(byteSize)}). Remova registros com fotos antes de continuar.`);
+        Toast.error(`Armazenamento cheio. Remova registros antigos com fotos.`);
         return false;
       }
-
       if (byteSize >= STORAGE_WARN_BYTES) {
         Toast.warning(`Uso de armazenamento elevado: ${Utils.formatBytes(byteSize)} / 5 MB.`);
       }
-
       localStorage.setItem(STORAGE_KEY, serialized);
-      return true;
     } catch (_) {
-      Toast.error('Falha ao salvar. Verifique o armazenamento do navegador.');
+      Toast.error('Falha ao salvar localmente.');
       return false;
+    }
+
+    // 2. Sincroniza com Supabase em background (não bloqueia UI)
+    this._syncToSupabase(state);
+    return true;
+  },
+
+  async _syncToSupabase(state) {
+    const userId = await getUserId();
+    if (!userId) return; // guest mode — não sincroniza
+    try {
+      await pushEquipamentos(state.equipamentos, userId);
+      await pushRegistros(state.registros, userId);
+      await pushTecnicos(state.tecnicos, userId);
+    } catch (_) {
+      // falha silenciosa — dados já estão salvos local
     }
   },
 
