@@ -17,7 +17,6 @@ import { WhatsAppExport } from "../domain/whatsapp.js";
 
 // features/ — sobe 1 nível
 import { Profile } from "../features/profile.js";
-import { ClientMode } from "../features/clientmode.js";
 
 // views/ — MESMO nível (./), pois views/ está dentro de ui/
 import { renderDashboard, updateHeader } from "./views/dashboard.js";
@@ -121,7 +120,7 @@ export function initController() {
       else ProfileModal.open();
     });
   });
-  
+
   on("export-pdf", (el) => {
     el.textContent = "Gerando...";
     el.disabled = true;
@@ -179,10 +178,7 @@ export function initController() {
 
   // Tema
   _initTheme();
-
-  // ClientMode
-  ClientMode.restore();
-  ClientMode.initToggleButton?.();
+  
 }
 
 function _showAccountModal(user) {
