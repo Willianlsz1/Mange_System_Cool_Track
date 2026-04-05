@@ -109,14 +109,9 @@ body::before {
     background: rgba(22, 27, 34, 0.8);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   }
-  
-  .app-content {
-    padding-top: 52px;
-  }
 
-  .app-nav__title {
-    display: none;
-  }
+  .app-content { padding-top: 52px; }
+  .app-nav__title { display: none; }
 
   .nav-btn {
     flex-direction: row;
@@ -130,6 +125,7 @@ body::before {
     border-left: none;
     border-radius: var(--premier-radius);
     transition: all 0.2s ease;
+    position: relative;
   }
 
   .nav-btn__icon {
@@ -142,9 +138,7 @@ body::before {
     background: rgba(255, 255, 255, 0.04);
   }
 
-  .nav-btn:hover .nav-btn__icon {
-    transform: translateY(-1px);
-  }
+  .nav-btn:hover .nav-btn__icon { transform: translateY(-1px); }
 
   .nav-btn.is-active {
     color: var(--neon-cyan);
@@ -153,43 +147,40 @@ body::before {
     box-shadow: 0 0 20px var(--neon-cyan-faint), inset 0 0 20px var(--neon-cyan-faint);
   }
 
-  .nav-btn.is-active::after {
+  .nav-btn.is-active::after { display: none; }
+
+  .nav-btn__badge {
     display: none;
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    background: var(--danger);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 0 4px;
+    z-index: 10;
+    line-height: 1;
   }
 
-  .nav-btn {
-  position: relative;
-}
+  .nav-btn__badge.is-visible { display: flex; }
 
-.nav-btn__badge {
-  display: none;
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  min-width: 16px;
-  height: 16px;
-  border-radius: 8px;
-  align-items: center;
-  justify-content: center;
-  background: var(--danger);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 0 4px;
-  z-index: 10;
-  line-height: 1;
-}
+  main { padding: 0; }
+  .view.active { min-height: auto; }
 
-.nav-btn__badge.is-visible {
-  display: flex;
-}
-
-  main {
+  .modal {
+    border-radius: var(--premier-radius);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 1px var(--border-premium-hover);
     padding: 0;
-  }
-
-  .view.active {
-    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh;
+    overflow: hidden;
   }
 }
 
@@ -622,13 +613,6 @@ body::before {
   border-radius: 2px;
 }
 
-@media (min-width: 1025px) {
-  .modal {
-    border-radius: var(--premier-radius);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 1px var(--border-premium-hover);
-    padding: 0;
-  }
-}
   .modal .btn-group {
   margin-top: auto;
   padding-top: 20px;
