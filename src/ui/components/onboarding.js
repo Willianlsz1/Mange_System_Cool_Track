@@ -592,8 +592,15 @@ export const FirstTimeExperience = {
       overlay.querySelector('#ftx-go-dashboard').addEventListener('click', () => {
         _dismiss(overlay);
         goTo('inicio');
+        setTimeout(() => {
+          import('../views/dashboard.js').then(({ renderDashboard, updateHeader }) => {
+            updateHeader();
+            renderDashboard();
+          });
+        }, 250);
       });
-    };
+    }; // ← fecha o renderStep2 que estava faltando
+
     /* Skip */
     overlay.querySelector('#ftx-skip-btn').addEventListener('click', () => {
       _dismiss(overlay);
@@ -602,7 +609,7 @@ export const FirstTimeExperience = {
     /* Render inicial */
     renderStep0();
   },
-  
+
 };
 
 /* ── Fechar overlay ── */
