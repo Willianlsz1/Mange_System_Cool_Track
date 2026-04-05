@@ -95,30 +95,23 @@ body::before {
   border-bottom: 1px solid var(--border-premium);
 }
 
-/* ════════════════════════════════════════════════════════
-   NAVIGATION — Horizontal top bar on desktop
-   ════════════════════════════════════════════════════════ */
+/* ===== NAVBAR FIXO — DESKTOP ONLY (≥1025px) ===== */
 @media (min-width: 1025px) {
- .app-content {
-    display: flex;
-    flex-direction: column;
-    margin-top: 8px;
-    margin-bottom: 8px;
-    padding-top: 52px;   /* <<< ADICIONE ISTO — altura do navbar (~48-52px) */
-}
-
   .app-nav {
     position: fixed !important;
-    top: 60px;          /* logo abaixo do header — ajuste se o header tiver altura diferente */
+    top: 60px;
     left: 0;
     right: 0;
     z-index: 100 !important;
+    backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     border-radius: 0 0 var(--premier-radius, 8px) var(--premier-radius, 8px);
     background: rgba(22, 27, 34, 0.8);
-    backdrop-filter: blur(8px);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
-    margin-bottom: 20px;
+  }
+  
+  .app-content {
+    padding-top: 52px;
   }
 
   .app-nav__title {
