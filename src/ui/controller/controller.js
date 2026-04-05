@@ -4,29 +4,29 @@
  * REGRA: < 120 linhas. Só chama funções — nunca renderiza diretamente.
  */
 
-import { registerRoute, goTo }           from '../core/router.js';
+import { registerRoute, goTo }           from '../../core/router.js';
 import { on }                            from '../core/events.js';
-import { Modal, CustomConfirm }          from '../core/modal.js';
-import { Toast }                         from '../core/toast.js';
-import { Profile }                       from '../features/profile.js';
-import { ClientMode }                    from '../features/clientmode.js';
-import { PDFGenerator }                  from '../domain/pdf.js';
-import { WhatsAppExport }                from '../domain/whatsapp.js';
+import { Modal, CustomConfirm }          from '../../core/modal.js';
+import { Toast }                         from '../../core/toast.js';
+import { Profile }                       from '../../features/profile.js';
+import { ClientMode }                    from '../../features/clientmode.js';
+import { PDFGenerator }                  from '../../domain/pdf.js';
+import { WhatsAppExport }                from '../../domain/whatsapp.js';
 
-import { renderDashboard, updateHeader } from './views/dashboard.js';
+import { renderDashboard, updateHeader } from '../views/dashboard.js';
 import { renderEquip, saveEquip,
          viewEquip, deleteEquip,
-         populateEquipSelects }          from './views/equipamentos.js';
+         populateEquipSelects }          from '../views/equipamentos.js';
 import { initRegistro, saveRegistro,
-         clearRegistro }                 from './views/registro.js';
-import { renderHist, deleteReg }        from './views/historico.js';
-import { renderAlertas }                 from './views/alertas.js';
+         clearRegistro }                 from '../views/registro.js';
+import { renderHist, deleteReg }        from '../views/historico.js';
+import { renderAlertas }                 from '../views/alertas.js';
 import { renderRelatorio,
-         populateRelatorioSelects }      from './views/relatorio.js';
-import { Photos }                        from './components/photos.js';
+         populateRelatorioSelects }      from '../views/relatorio.js';
+import { Photos }                        from '../components/photos.js';
 import { ProfileModal,
          OnboardingBanner,
-         FirstTimeExperience }           from './components/onboarding.js';
+         FirstTimeExperience }           from '../components/onboarding.js';
 
 export function initController() {
 
@@ -99,7 +99,7 @@ export function initController() {
     el.textContent = 'Gerando...';
     el.disabled    = true;
     setTimeout(() => {
-      const { Utils } = require('../core/utils.js');
+      const { Utils } = require('../../core/utils.js');
       const fileName = PDFGenerator.generateMaintenanceReport({
         filtEq: document.getElementById('rel-equip')?.value || '',
         de:     document.getElementById('rel-de')?.value    || '',
