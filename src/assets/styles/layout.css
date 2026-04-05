@@ -128,17 +128,32 @@
   border-radius: 0 0 3px 3px;
 }
 
+.nav-btn {
+  position: relative;
+}
+
 .nav-btn__badge {
   display: none;
   position: absolute;
-  top: 6px; right: calc(50% - 18px);
-  min-width: 16px; height: 16px;
-  border-radius: 3px;
-  align-items: center; justify-content: center;
-  background: var(--danger); color: #fff;
-  font-size: 9px; font-weight: 700; padding: 0 4px;
+  top: 2px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+  background: var(--danger);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 0 4px;
+  z-index: 10;
+  line-height: 1;
 }
-.nav-btn__badge.is-visible { display: flex; }
+
+.nav-btn__badge.is-visible {
+  display: flex;
+}
 
 /* MAIN */
 main { flex: 1; min-width: 0; padding: 0 0 calc(80px + env(safe-area-inset-bottom)); }
@@ -244,7 +259,6 @@ main:focus { outline: none; }
   }
 
   .nav-btn.is-active::after { display: none; }
-  .nav-btn__badge { top: 4px; right: 2px; min-width: 14px; height: 14px; font-size: 8px; }
 
   /* Registrar vai para a direita com destaque */
   #nav-registro { margin-left: auto; color: var(--primary); font-weight: 600; }
