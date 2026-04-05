@@ -99,24 +99,22 @@ body::before {
    NAVIGATION — Horizontal top bar on desktop
    ════════════════════════════════════════════════════════ */
 @media (min-width: 1025px) {
-  .app-content {
-    /* Remove grid — nav e main ficam em fluxo normal */
+ .app-content {
     display: flex;
     flex-direction: column;
     margin-top: 8px;
     margin-bottom: 8px;
-  }
+    padding-top: 52px;   /* <<< ADICIONE ISTO — altura do navbar (~48-52px) */
+}
 
   .app-nav {
-    position: static;
-    display: flex;
-    flex-direction: row;
-    height: auto;
-    overflow: visible;
-    padding: 0;
-    gap: 0;
-    border: none;
-    border-radius: var(--premier-radius);
+    position: fixed !important;
+    top: 60px;          /* logo abaixo do header — ajuste se o header tiver altura diferente */
+    left: 0;
+    right: 0;
+    z-index: 100 !important;
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 0 0 var(--premier-radius, 8px) var(--premier-radius, 8px);
     background: rgba(22, 27, 34, 0.8);
     backdrop-filter: blur(8px);
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
@@ -504,9 +502,17 @@ body::before {
    BUTTONS — Neon glow
    ════════════════════════════════════════════════════════ */
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border-radius: var(--premier-radius-sm);
   transition: all 0.2s ease;
   font-weight: 600;
+}
+
+.btn svg {
+  flex-shrink: 0;
 }
 
 .btn--primary {
