@@ -625,11 +625,10 @@ body::before {
 @media (min-width: 1025px) {
   .modal {
     border-radius: var(--premier-radius);
-    padding: 28px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 1px var(--border-premium-hover);
-    align-items: unset;
-    max-height: 90vh;
+    padding: 0;
   }
+}
   .modal .btn-group {
   margin-top: auto;
   padding-top: 20px;
@@ -638,7 +637,6 @@ body::before {
   background: var(--surface-card);
   z-index: 1;
   }
-}
 
 /* ════════════════════════════════════════════════════════
    TOAST — Premium neon
