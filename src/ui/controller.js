@@ -178,7 +178,7 @@ export function initController() {
 
   // Tema
   _initTheme();
-  
+
 }
 
 function _showAccountModal(user) {
@@ -298,33 +298,9 @@ function _bindHistFilters() {
 }
 
 function _initTheme() {
-  const btn = document.getElementById("theme-toggle");
-  const icon = document.getElementById("theme-icon");
+  const btn  = document.getElementById('theme-toggle');
+  const icon = document.getElementById('theme-icon');
   if (!btn || !icon) return;
-
-  const apply = (theme) => {
-    if (theme === "light") {
-      document.documentElement.setAttribute("data-theme", "light");
-      icon.textContent = "☀️";
-    } else {
-      document.documentElement.removeAttribute("data-theme");
-      icon.textContent = "🌙";
-    }
-    localStorage.setItem("cooltrack-theme", theme);
-  };
-
-  const preferred =
-    localStorage.getItem("cooltrack-theme") ||
-    (window.matchMedia("(prefers-color-scheme: light)").matches
-      ? "light"
-      : "dark");
-  apply(preferred);
-
-  btn.addEventListener("click", () => {
-    apply(
-      document.documentElement.getAttribute("data-theme") === "light"
-        ? "dark"
-        : "light",
-    );
-  });
+  icon.textContent = '🌙';
+  btn.style.display = 'none'; // esconde o botão temporariamente
 }
