@@ -187,6 +187,9 @@ export function saveEquip() {
   Utils.clearVals("eq-nome", "eq-tag", "eq-local", "eq-modelo");
   OnboardingBanner.dismiss();
   OnboardingBanner.remove();
+  import('./dashboard.js').then(({ renderDashboard }) => {
+    renderDashboard();
+  });
   renderEquip();
   updateHeader();
   Toast.success("Equipamento cadastrado.");

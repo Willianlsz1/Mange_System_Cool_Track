@@ -145,14 +145,12 @@ export function initController() {
   // Expand detalhes técnicos no modal de cadastro
   const expandBtn = document.getElementById("eq-expand-details");
   const expandPanel = document.getElementById("eq-step-2");
-  const expandIcon = document.getElementById("eq-expand-icon");
 
   if (expandBtn && expandPanel) {
     expandBtn.addEventListener("click", () => {
       const isOpen = expandBtn.getAttribute("aria-expanded") === "true";
       expandBtn.setAttribute("aria-expanded", String(!isOpen));
-      expandPanel.setAttribute("aria-hidden", String(isOpen));
-      expandPanel.style.display = isOpen ? "none" : "block";
+      expandPanel.classList.toggle("is-open", !isOpen);
     });
   }
 
