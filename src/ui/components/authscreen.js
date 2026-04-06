@@ -1,6 +1,5 @@
 import { Auth } from "../../core/auth.js";
 import { Toast } from "../../core/toast.js";
-import { supabase } from '../../core/supabase.js';
 
 export const AuthScreen = {
   show() {
@@ -196,14 +195,21 @@ export const AuthScreen = {
     });
 
     overlay.querySelector('#btn-forgot').addEventListener('click', async () => {
+      const btn = overlay.querySelector('#btn-forgot');
       const email = overlay.querySelector('#signin-email').value.trim();
-      if (!email) {
-        Toast.warning('Digite seu email primeiro.');
-        return;
+      if (!email) return Toast.warning('Digite seu email primeiro.');
+
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+      const result = await Auth.requestPasswordReset(email);
+      btn.disabled = false;
+      btn.textContent = 'Esqueci minha senha';
+
+      if (result.ok) {
+        Toast.success('Email de recuperação enviado. Abra o link para definir uma nova senha.');
+      } else {
+        Toast.error(result.message || 'Erro ao enviar email. Verifique o endereço digitado.');
       }
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (!error) Toast.success('Email de recuperação enviado. Verifique sua caixa de entrada.');
-      else Toast.error('Erro ao enviar email. Verifique o endereço digitado.');
     });
 
     // Sign up

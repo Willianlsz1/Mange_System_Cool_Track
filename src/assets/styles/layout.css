@@ -314,13 +314,26 @@ main:focus { outline: none; }
 /* PRINT */
 @media print {
   .app-header, .app-nav, .page-toolbar, .btn-group, .modal-overlay { display: none !important; }
+  body::before { content: none !important; display: none !important; }
+  html, body, #app, .app-content, main, #view-relatorio {
+    background: #fff !important;
+    color: #111 !important;
+  }
+  #view-relatorio * {
+    background-color: transparent !important;
+    color: #111 !important;
+    box-shadow: none !important;
+  }
   body { background: #fff; color: #000; font-size: 12px; }
   #app { width: 100%; }
   .app-content { display: block; width: 100%; margin: 0; }
   main { padding: 0; }
   .view { display: none !important; }
   #view-relatorio { display: block !important; }
-  .card { background: #fff; border: 1px solid #ccc; box-shadow: none; }
+  #view-relatorio .card, #view-relatorio table {
+    background: #fff !important;
+    border: 1px solid #ccc !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
