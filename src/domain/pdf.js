@@ -17,18 +17,18 @@ import { getSignatureForRecord }  from '../ui/components/signature.js';
 
 /* ── Paleta ─────────────────────────────────────────── */
 const C = {
-  bg:      [7,   17,  31],
-  bg2:     [12,  25,  41],
-  bg3:     [18,  34,  56],
-  surface: [23,  38,  62],
-  border:  [35,  60,  95],
-  cyan:    [0,   200, 232],
-  green:   [0,   195, 110],
-  amber:   [232, 160, 32],
-  red:     [220, 48,  64],
-  text:    [232, 242, 250],
-  text2:   [138, 170, 200],
-  text3:   [90,  125, 158],
+  bg:      [255, 255, 255],
+  bg2:     [255, 255, 255],
+  bg3:     [245, 245, 245],
+  surface: [255, 255, 255],
+  border:  [204, 204, 204],
+  primary: [0,   200, 232],
+  green:   [46,  125, 50],
+  amber:   [245, 127, 23],
+  red:     [198, 40,  40],
+  text:    [0,   0,   0],
+  text2:   [26,  26,  26],
+  text3:   [85,  85,  85],
   white:   [255, 255, 255],
 };
 
@@ -44,7 +44,7 @@ function fillRect(doc, x, y, w, h, c) {
   doc.setFillColor(...c); doc.rect(x, y, w, h, 'F');
 }
 function fillPage(doc, PW, PH) { fillRect(doc, 0, 0, PW, PH, C.bg); }
-function accentLine(doc, x1, y, x2, color = C.cyan) {
+function accentLine(doc, x1, y, x2, color = C.primary) {
   doc.setDrawColor(...color); doc.setLineWidth(0.35); doc.line(x1, y, x2, y);
 }
 function txt(doc, text, x, y, opts = {}) {
@@ -54,12 +54,14 @@ function txt(doc, text, x, y, opts = {}) {
   doc.text(String(text), x, y, { align: opts.align || 'left', maxWidth: opts.maxWidth });
 }
 function roundRect(doc, x, y, w, h, r, c) {
-  doc.setFillColor(...c); doc.roundedRect(x, y, w, h, r, r, 'F');
+  doc.setFillColor(...c);
+  doc.setDrawColor(...C.border);
+  doc.roundedRect(x, y, w, h, r, r, 'FD');
 }
 function drawSignaturePageHeader(doc, PW, M) {
   fillRect(doc, 0, 0, PW, 18, C.bg2);
-  fillRect(doc, 0, 0, 4, 18, C.cyan);
-  txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.cyan });
+  fillRect(doc, 0, 0, PW, 3, C.primary);
+  txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.primary });
   txt(doc, 'COMPROVANTE DE SERVIÇO', M + 40, 8, { size: 7, style: 'bold', color: C.text });
   accentLine(doc, 0, 18, PW);
 }
@@ -130,38 +132,38 @@ export const PDFGenerator = {
   _drawCover(doc, PW, PH, M, profile, filtEq, de, ate, filtered, equipamentos) {
     fillPage(doc, PW, PH);
 
-    /* Faixa lateral cyan */
-    fillRect(doc, 0, 0, 5, PH, C.cyan);
+    /* Faixa fina de identidade da marca */
+    fillRect(doc, 0, 0, PW, 3, C.primary);
 
-    /* Cabeçalho escuro */
-    fillRect(doc, 0, 0, PW, 70, C.bg2);
-    accentLine(doc, 0, 70, PW);
+    /* Cabeçalho */
+    fillRect(doc, 0, 0, PW, 52, C.bg2);
+    accentLine(doc, M, 52, PW - M, C.border);
 
     /* Logo */
     txt(doc, 'COOLTRACK', M + 2, 28, { size: 28, style: 'bold', color: C.text });
-    doc.setFontSize(28); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.cyan);
+    doc.setFontSize(28); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.primary);
     const cw = doc.getTextWidth('COOLTRACK');
     doc.text('PRO', M + 2 + cw + 3, 28);
 
     txt(doc, 'Sistema de Gestão de Manutenção', M + 2, 37, { size: 9, color: C.text3 });
 
     /* Título do documento */
-    txt(doc, 'RELATÓRIO DE SERVIÇOS REALIZADOS', M + 2, 54, { size: 14, style: 'bold', color: C.text });
+    txt(doc, 'RELATÓRIO DE SERVIÇOS REALIZADOS', M + 2, 48, { size: 14, style: 'bold', color: C.text });
 
     /* Período */
     const periodo = (de || ate)
       ? `Período: ${de ? Utils.formatDate(de) : 'início'} a ${ate ? Utils.formatDate(ate) : 'atual'}`
       : `Gerado em: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
-    txt(doc, periodo, M + 2, 63, { size: 9, color: C.cyan });
+    txt(doc, periodo, M + 2, 56, { size: 9, color: C.text3 });
 
     /* ── Card do técnico responsável ── */
-    const cardY = 82, cardW = PW - M * 2, cardH = 42;
-    fillRect(doc, M, cardY, cardW, cardH, C.bg2);
-    fillRect(doc, M, cardY, 4, cardH, C.cyan);
+    const cardY = 64, cardW = PW - M * 2, cardH = 42;
+    roundRect(doc, M, cardY, cardW, cardH, 2, C.surface);
+    fillRect(doc, M, cardY, 4, cardH, C.primary);
 
     txt(doc, 'TÉCNICO RESPONSÁVEL', M + 10, cardY + 9, { size: 7, style: 'bold', color: C.text3 });
     txt(doc, profile?.nome || 'Técnico', M + 10, cardY + 19, { size: 14, style: 'bold', color: C.text });
-    if (profile?.empresa)  txt(doc, profile.empresa,  M + 10, cardY + 28, { size: 9, color: C.cyan });
+    if (profile?.empresa)  txt(doc, profile.empresa,  M + 10, cardY + 28, { size: 9, color: C.text2 });
     if (profile?.telefone) txt(doc, profile.telefone, M + 10, cardY + 36, { size: 9, color: C.text2 });
 
     /* ── Resumo em linguagem simples ── */
@@ -178,7 +180,7 @@ export const PDFGenerator = {
 
     /* Tiles de resumo — 4 por linha */
     const tiles = [
-      { label: 'Serviços',    value: String(filtered.length), color: C.cyan },
+      { label: 'Serviços',    value: String(filtered.length), color: C.text2 },
       { label: 'Operando',    value: String(ok),              color: C.green },
       { label: 'Atenção',     value: String(warn),            color: C.amber },
       { label: 'Fora de op.', value: String(danger),          color: C.red },
@@ -189,7 +191,7 @@ export const PDFGenerator = {
 
     tiles.forEach((t, i) => {
       const x = M + i * (tileW + 4);
-      fillRect(doc, x, tileY, tileW, 26, C.surface);
+      roundRect(doc, x, tileY, tileW, 26, 1.5, C.surface);
       fillRect(doc, x, tileY, tileW, 3, t.color);
       txt(doc, t.value, x + tileW / 2, tileY + 15, { size: 18, style: 'bold', color: t.color, align: 'center' });
       txt(doc, t.label, x + tileW / 2, tileY + 22, { size: 7, color: C.text3, align: 'center' });
@@ -197,7 +199,7 @@ export const PDFGenerator = {
 
     if (totalCusto > 0) {
       txt(doc, `Custo total dos serviços: R$ ${totalCusto.toFixed(2).replace('.', ',')}`,
-        M, tileY + 36, { size: 9, style: 'bold', color: C.cyan });
+        M, tileY + 36, { size: 9, style: 'bold', color: C.text2 });
     }
 
     /* ── Situação atual dos equipamentos ── */
@@ -214,7 +216,7 @@ export const PDFGenerator = {
     let ey = eqY + 10;
     eqUnicos.forEach(({ eq, status }) => {
       const st = STATUS_CLIENTE[status] || STATUS_CLIENTE.ok;
-      fillRect(doc, M, ey, PW - M * 2, 14, C.bg2);
+      roundRect(doc, M, ey, PW - M * 2, 14, 1.5, C.surface);
       // Indicador de cor
       fillRect(doc, M, ey, 4, 14, st.color);
       // Nome do equipamento
@@ -242,17 +244,17 @@ export const PDFGenerator = {
         const eq = equipamentos.find(e => e.id === r.equipId);
         const isUrgent = r.status === 'danger';
         const cor = isUrgent ? C.red : C.amber;
-        fillRect(doc, M, py, PW - M * 2, 16, isUrgent ? [30, 12, 14] : [28, 22, 8]);
+        roundRect(doc, M, py, PW - M * 2, 16, 1.5, C.surface);
         fillRect(doc, M, py, 4, 16, cor);
         const acao = isUrgent
           ? 'Requer intervenção imediata'
           : `Preventiva recomendada${r.proxima ? ` até ${Utils.formatDate(r.proxima)}` : ''}`;
         txt(doc, eq?.nome || '—', M + 8, py + 6, { size: 10, style: 'bold', color: C.text });
-        txt(doc, acao, M + 8, py + 12, { size: 8, color: cor });
+        txt(doc, acao, M + 8, py + 12, { size: 8, color: C.text3 });
         py += 20;
       });
     } else if (pendentesY < PH - 40) {
-      fillRect(doc, M, pendentesY, PW - M * 2, 16, C.surface);
+      roundRect(doc, M, pendentesY, PW - M * 2, 16, 1.5, C.surface);
       fillRect(doc, M, pendentesY, 4, 16, C.green);
       txt(doc, 'Nenhuma ação necessária no momento.', M + 8, pendentesY + 7, { size: 10, style: 'bold', color: C.green });
       txt(doc, 'Todos os equipamentos estão dentro do prazo de manutenção.', M + 8, pendentesY + 13, { size: 8, color: C.text2 });
@@ -268,8 +270,8 @@ export const PDFGenerator = {
   _drawServicos(doc, PW, PH, M, filtered, equipamentos, profile) {
     /* Cabeçalho da página */
     fillRect(doc, 0, 0, PW, 18, C.bg2);
-    fillRect(doc, 0, 0, 4, 18, C.cyan);
-    txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.cyan });
+    fillRect(doc, 0, 0, PW, 3, C.primary);
+    txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.primary });
     txt(doc, 'DETALHES DOS SERVIÇOS REALIZADOS', M + 40, 8, { size: 7, style: 'bold', color: C.text });
     if (profile?.empresa) {
       txt(doc, profile.empresa, PW - M, 8, { size: 7, color: C.text3, align: 'right' });
@@ -288,15 +290,18 @@ export const PDFGenerator = {
       doc.setFontSize(8);
       const obsLines = doc.splitTextToSize(r.obs || '', PW - M * 2 - 16);
       const obsH  = Math.max(obsLines.length, 1) * 4.5;
-      const cardH = Math.max(34, 28 + obsH + (r.pecas ? 8 : 0) + (custo > 0 ? 8 : 0));
+      const photos = Array.isArray(r.fotos) ? r.fotos.filter(Boolean).slice(0, 4) : [];
+      const photoRows = Math.ceil(photos.length / 2);
+      const photosH = photos.length ? (photoRows * 26) + 10 : 0;
+      const cardH = Math.max(34, 28 + obsH + (r.pecas ? 8 : 0) + (custo > 0 ? 8 : 0) + photosH);
 
       /* Nova página se necessário */
       if (y + cardH > pageBottom) {
         doc.addPage();
         fillPage(doc, PW, PH);
         fillRect(doc, 0, 0, PW, 18, C.bg2);
-        fillRect(doc, 0, 0, 4, 18, C.cyan);
-        txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.cyan });
+        fillRect(doc, 0, 0, PW, 3, C.primary);
+        txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.primary });
         txt(doc, 'DETALHES DOS SERVIÇOS REALIZADOS', M + 40, 8, { size: 7, style: 'bold', color: C.text });
         accentLine(doc, 0, 18, PW);
         y = 26;
@@ -325,7 +330,7 @@ export const PDFGenerator = {
       txt(doc, r.tipo, M + 8, y + 16, { size: 11, style: 'bold', color: C.text });
       /* Equipamento e local */
       txt(doc, (eq?.nome || '—') + (eq?.local ? '  ·  ' + eq.local : ''),
-        M + 8, y + 23, { size: 8, color: C.cyan });
+        M + 8, y + 23, { size: 8, color: C.text3 });
       accentLine(doc, M + 6, y + 26, PW - M - 4, C.border);
 
       /* O que foi feito — o texto principal para o cliente */
@@ -348,6 +353,29 @@ export const PDFGenerator = {
         txt(doc, `Custo do serviço: R$ ${custo.toFixed(2).replace('.', ',')}`,
           M + 8, cy, { size: 8, style: 'bold', color: C.text });
         cy += 7;
+      }
+
+      if (photos.length) {
+        txt(doc, 'Fotos anexadas', M + 8, cy, { size: 8, style: 'bold', color: C.text3 });
+        cy += 3;
+        const photoW = (PW - M * 2 - 20) / 2;
+        const photoH = 22;
+        photos.forEach((photo, photoIdx) => {
+          const row = Math.floor(photoIdx / 2);
+          const col = photoIdx % 2;
+          const px = M + 8 + col * (photoW + 4);
+          const py = cy + row * (photoH + 4);
+          roundRect(doc, px, py, photoW, photoH, 1.5, [250, 250, 250]);
+          try {
+            doc.addImage(photo, 'JPEG', px + 1, py + 1, photoW - 2, photoH - 2);
+          } catch (imgErr) {
+            txt(doc, 'Foto indisponível', px + photoW / 2, py + photoH / 2 + 1, {
+              size: 7,
+              color: C.text3,
+              align: 'center',
+            });
+          }
+        });
       }
 
       /* Técnico */
@@ -426,7 +454,7 @@ export const PDFGenerator = {
       y += 14;
 
       fillRect(doc, M, y, sigW, sigH, [243, 248, 252]);
-      fillRect(doc, M, y, sigW, 3, C.cyan);
+      fillRect(doc, M, y, sigW, 1.5, C.border);
 
       if (sigPayload) {
         try {
@@ -473,14 +501,11 @@ export const PDFGenerator = {
   /* ── Rodapé ──────────────────────────────────────── */
   _drawFooter(doc, PW, PH, M, profile, pageNum) {
     const fy = PH - 12;
-    fillRect(doc, 0, fy - 2, PW, 14, C.bg2);
+    fillRect(doc, 0, fy - 2, PW, 14, C.white);
     fillRect(doc, 0, fy - 2, PW, 0.4, C.border);
-    const left = profile?.nome
-      ? `${profile.nome}${profile.empresa ? '  ·  ' + profile.empresa : ''}${profile.telefone ? '  ·  ' + profile.telefone : ''}`
-      : 'CoolTrack Pro — Sistema de Gestão de Manutenção';
     doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...C.text3);
-    doc.text(left, M, fy + 4);
-    doc.text(`Pág. ${pageNum}`, PW - M, fy + 4, { align: 'right' });
+    doc.text('Gerado pelo CoolTrack Pro', M, fy + 4);
+    doc.text(`Relatório #${pageNum}`, PW - M, fy + 4, { align: 'right' });
   },
 };
 
