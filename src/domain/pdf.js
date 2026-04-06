@@ -56,6 +56,32 @@ function txt(doc, text, x, y, opts = {}) {
 function roundRect(doc, x, y, w, h, r, c) {
   doc.setFillColor(...c); doc.roundedRect(x, y, w, h, r, r, 'F');
 }
+function drawSignaturePageHeader(doc, PW, M) {
+  fillRect(doc, 0, 0, PW, 18, C.bg2);
+  fillRect(doc, 0, 0, 4, 18, C.cyan);
+  txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.cyan });
+  txt(doc, 'COMPROVANTE DE SERVIÇO', M + 40, 8, { size: 7, style: 'bold', color: C.text });
+  accentLine(doc, 0, 18, PW);
+}
+function getSignatureImagePayload(sigData) {
+  if (!sigData || typeof sigData !== 'string') return null;
+
+  const raw = sigData.trim();
+  if (!raw) return null;
+
+  const dataUrlMatch = raw.match(/^data:image\/(png|jpe?g|webp);base64,/i);
+  if (dataUrlMatch) {
+    const formatRaw = dataUrlMatch[1].toLowerCase();
+    const format = formatRaw === 'jpg' ? 'JPEG' : formatRaw.toUpperCase();
+    return { data: raw, format };
+  }
+
+  if (/^[A-Za-z0-9+/=\s]+$/.test(raw)) {
+    return { data: `data:image/png;base64,${raw.replace(/\s+/g, '')}`, format: 'PNG' };
+  }
+
+  return null;
+}
 
 /* ── Export principal ──────────────────────────────── */
 export const PDFGenerator = {
@@ -339,21 +365,20 @@ export const PDFGenerator = {
      ASSINATURAS
   ──────────────────────────────────────────────────── */
   _drawSignaturePages(doc, PW, PH, M, filtered, equipamentos, profile) {
-    const withSig = filtered.filter(r => !!getSignatureForRecord(r.id));
-    if (!withSig.length) return;
+    const signedRecords = filtered.filter(r => r.assinatura || !!getSignatureForRecord(r.id));
+    if (!signedRecords.length) return;
 
-    withSig.forEach(r => {
+    signedRecords.forEach(r => {
       const sigData = getSignatureForRecord(r.id);
+      const sigPayload = getSignatureImagePayload(sigData);
+      const signatureDate = r.data ? Utils.formatDatetime(r.data) : Utils.formatDatetime(new Date().toISOString());
+      const clienteNome = r.clienteNome || r.cliente || 'Cliente';
       const eq = equipamentos.find(e => e.id === r.equipId);
       const st = STATUS_CLIENTE[r.status] || STATUS_CLIENTE.ok;
 
       doc.addPage();
       fillPage(doc, PW, PH);
-      fillRect(doc, 0, 0, PW, 18, C.bg2);
-      fillRect(doc, 0, 0, 4, 18, C.cyan);
-      txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.cyan });
-      txt(doc, 'COMPROVANTE DE SERVIÇO', M + 40, 8, { size: 7, style: 'bold', color: C.text });
-      accentLine(doc, 0, 18, PW);
+      drawSignaturePageHeader(doc, PW, M);
 
       let y = 28;
       txt(doc, 'CONFIRMAÇÃO DE SERVIÇO REALIZADO', M, y, { size: 11, style: 'bold', color: C.text });
@@ -383,22 +408,63 @@ export const PDFGenerator = {
       y += obsLines.length * 4.5 + 10;
 
       /* Assinatura */
+      const sigW = PW - M * 2;
+      const sigH = 45;
+      const sigMetaH = 16;
+      const sigBlockTotal = 8 + 14 + sigH + sigMetaH + 12;
+      if (y + sigBlockTotal > PH - 18) {
+        doc.addPage();
+        fillPage(doc, PW, PH);
+        drawSignaturePageHeader(doc, PW, M);
+        y = 28;
+      }
+
       accentLine(doc, M, y, PW - M, C.border);
       y += 8;
       txt(doc, 'ASSINATURA DO CLIENTE', M, y, { size: 7.5, style: 'bold', color: C.text3 });
       txt(doc, 'Confirmo que o serviço acima foi realizado conforme descrito.', M, y + 6, { size: 7.5, color: C.text3 });
       y += 14;
 
-      const sigW = PW - M * 2, sigH = 45;
-      fillRect(doc, M, y, sigW, sigH, C.surface);
+      fillRect(doc, M, y, sigW, sigH, [243, 248, 252]);
       fillRect(doc, M, y, sigW, 3, C.cyan);
-      try { doc.addImage(sigData, 'PNG', M + 4, y + 5, sigW - 8, sigH - 10); } catch (_) {}
+
+      if (sigPayload) {
+        try {
+          const imageX = M + 4;
+          const imageY = y + 5;
+          const imageW = sigW - 8;
+          const imageH = sigH - 12;
+          doc.addImage(sigPayload.data, sigPayload.format, imageX, imageY, imageW, imageH);
+        } catch (err) {
+          console.error(`[PDF assinatura] Falha ao renderizar assinatura do registro ${r.id}`, err, {
+            format: sigPayload.format,
+            hasData: !!sigPayload.data,
+          });
+          txt(doc, 'Assinatura não coletada', M + sigW / 2, y + sigH / 2, {
+            size: 10,
+            style: 'bold',
+            color: C.red,
+            align: 'center',
+          });
+        }
+      } else {
+        if (r.assinatura) {
+          console.error(`[PDF assinatura] Assinatura ausente/corrompida para registro ${r.id}`);
+        }
+        txt(doc, 'Assinatura não coletada', M + sigW / 2, y + sigH / 2, {
+          size: 10,
+          style: 'bold',
+          color: C.red,
+          align: 'center',
+        });
+      }
+
       accentLine(doc, M + 8, y + sigH - 5, M + sigW - 8);
       txt(doc, 'Assinatura', M + sigW / 2, y + sigH + 4, { size: 7, color: C.text3, align: 'center' });
 
-      y += sigH + 12;
-      txt(doc, `Assinado digitalmente em ${Utils.formatDatetime(new Date().toISOString())}`,
-        M, y, { size: 7, color: C.green });
+      y += sigH + 10;
+      txt(doc, `Nome do cliente: ${clienteNome}`, M, y, { size: 8, style: 'bold', color: C.text });
+      txt(doc, `Data/Hora da assinatura: ${signatureDate}`, M, y + 6, { size: 7.5, color: C.text2 });
 
       this._drawFooter(doc, PW, PH, M, profile, doc.getCurrentPageInfo().pageNumber);
     });
