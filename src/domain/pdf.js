@@ -339,7 +339,7 @@ export const PDFGenerator = {
      ASSINATURAS
   ──────────────────────────────────────────────────── */
   _drawSignaturePages(doc, PW, PH, M, filtered, equipamentos, profile) {
-    const withSig = filtered.filter(r => r.assinatura && getSignatureForRecord(r.id));
+    const withSig = filtered.filter(r => !!getSignatureForRecord(r.id));
     if (!withSig.length) return;
 
     withSig.forEach(r => {
