@@ -51,9 +51,6 @@ export const Modal = {
       });
     }
 
-    // Imprimir via JS (fix: onclick inline removido do HTML)
-    const btnPrint = Utils.getEl('btn-print');
-    if (btnPrint) btnPrint.addEventListener('click', () => window.print());
   },
 
   _enableTabTrap(modalEl) {
