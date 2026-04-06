@@ -365,11 +365,12 @@ export const PDFGenerator = {
      ASSINATURAS
   ──────────────────────────────────────────────────── */
   _drawSignaturePages(doc, PW, PH, M, filtered, equipamentos, profile) {
-    const signedRecords = filtered.filter(r => r.assinatura || !!getSignatureForRecord(r.id));
+    const sigByRecord = new Map(filtered.map(r => [r.id, getSignatureForRecord(r.id)]));
+    const signedRecords = filtered.filter(r => r.assinatura || !!sigByRecord.get(r.id));
     if (!signedRecords.length) return;
 
     signedRecords.forEach(r => {
-      const sigData = getSignatureForRecord(r.id);
+      const sigData = sigByRecord.get(r.id) || null;
       const sigPayload = getSignatureImagePayload(sigData);
       const signatureDate = r.data ? Utils.formatDatetime(r.data) : Utils.formatDatetime(new Date().toISOString());
       const clienteNome = r.clienteNome || r.cliente || 'Cliente';
