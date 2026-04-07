@@ -54,7 +54,7 @@ export function renderHist() {
         parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0);
       const isFirst = idx === 0;
       const isToday =
-        r.data.slice(0, 10) === new Date().toISOString().slice(0, 10);
+        r.data.slice(0, 10) === Utils.localDateString();
 
       return `<div class="timeline__item${isFirst ? " timeline__item--latest" : ""}" role="listitem" data-reg-id="${r.id}">
       ${isFirst ? `<div class="timeline__recency-badge">Mais recente</div>` : ""}
