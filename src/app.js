@@ -47,8 +47,10 @@ async function bootstrap() {
     initHistory();
     goTo('inicio', {}, { replaceHistory: true });
 
-    const { equipamentos } = getState();
-    setTimeout(() => FirstTimeExperience.show(equipamentos), 300);
+    requestAnimationFrame(() => {
+      const { equipamentos } = getState();
+      FirstTimeExperience.show(equipamentos);
+    });
     Tour.initIfFirstVisit();
   } catch (error) {
     handleError(error, {

@@ -15,26 +15,12 @@ import { Utils, TIPO_ICON }  from '../../core/utils.js';
 import { getState, setState } from '../../core/state.js';
 import { Toast }             from '../../core/toast.js';
 import { goTo }              from '../../core/router.js';
+import { Profile }           from '../../features/profile.js';
 
 /* ─────────────────────────────────────────────────────
    PROFILE — persistência simples do perfil do técnico
 ───────────────────────────────────────────────────── */
-const PROFILE_KEY  = 'cooltrack-profile';
-const LAST_TEC_KEY = 'cooltrack-last-tecnico';
-
-export const Profile = {
-  get() {
-    try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); }
-    catch (_) { return null; }
-  },
-  save(data) { localStorage.setItem(PROFILE_KEY, JSON.stringify(data)); },
-  getDefaultTecnico() {
-    return this.get()?.nome || localStorage.getItem(LAST_TEC_KEY) || '';
-  },
-  saveLastTecnico(nome) {
-    if (nome) localStorage.setItem(LAST_TEC_KEY, nome);
-  },
-};
+export { Profile };
 
 /* ─────────────────────────────────────────────────────
    SAVED HIGHLIGHT — marca o item recém-salvo no histórico

@@ -43,11 +43,7 @@ import {
 
 // components/ — MESMO nível (./), pois components/ está dentro de ui/
 import { Photos } from "./components/photos.js";
-import {
-  ProfileModal,
-  OnboardingBanner,
-  FirstTimeExperience,
-} from "./components/onboarding.js";
+import { ProfileModal } from "./components/onboarding.js";
 
 export function initController() {
   // ── Rotas ───────────────────────────────────────────
@@ -62,9 +58,10 @@ export function initController() {
     updateHeader();
   });
 
-  registerRoute("registro", () => {
+  registerRoute("registro", (params = {}) => {
     populateEquipSelects();
     initRegistro();
+    if (params.editRegistroId) loadRegistroForEdit(params.editRegistroId);
     updateHeader();
   });
 
@@ -161,11 +158,7 @@ export function initController() {
   });
 
   on("edit-reg", (el) => {
-    goTo("registro");
-    setTimeout(() => {
-      populateEquipSelects();
-      loadRegistroForEdit(el.dataset.id);
-    }, 200);
+    goTo("registro", { editRegistroId: el.dataset.id });
   });
 
   on("open-profile", () => {
@@ -192,17 +185,20 @@ export function initController() {
   on("export-pdf", (el) => {
     el.textContent = "Gerando...";
     el.disabled = true;
-    setTimeout(() => {
-      const fileName = PDFGenerator.generateMaintenanceReport({
-        filtEq: document.getElementById("rel-equip")?.value || "",
-        de: document.getElementById("rel-de")?.value || "",
-        ate: document.getElementById("rel-ate")?.value || "",
-      });
-      el.textContent = "Exportar PDF";
-      el.disabled = false;
-      if (fileName) Toast.success(`PDF gerado: ${fileName}`);
-      else Toast.error("Erro ao gerar PDF.");
-    }, 60);
+    requestAnimationFrame(() => {
+      try {
+        const fileName = PDFGenerator.generateMaintenanceReport({
+          filtEq: document.getElementById("rel-equip")?.value || "",
+          de: document.getElementById("rel-de")?.value || "",
+          ate: document.getElementById("rel-ate")?.value || "",
+        });
+        if (fileName) Toast.success(`PDF gerado: ${fileName}`);
+        else Toast.error("Erro ao gerar PDF.");
+      } finally {
+        el.textContent = "Exportar PDF";
+        el.disabled = false;
+      }
+    });
   });
 
   on("whatsapp-export", () => {

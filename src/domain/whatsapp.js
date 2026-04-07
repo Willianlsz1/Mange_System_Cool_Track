@@ -5,11 +5,11 @@
 
 import { getState, findEquip } from '../core/state.js';
 import { Utils }               from '../core/utils.js';
-import { Profile }             from '../ui/components/onboarding.js';
+import { Profile }             from '../features/profile.js';
 export const WhatsAppExport = {
 
   generateText({ filtEq = '', de = '', ate = '' } = {}) {
-    const { registros, equipamentos } = getState();
+    const { registros } = getState();
     const profile = Profile.get();
 
     let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));

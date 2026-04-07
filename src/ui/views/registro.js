@@ -176,8 +176,6 @@ export async function saveRegistro() {
   // Modo criação — continua fluxo normal
   const novoId = Utils.uid();
 
-  Profile.saveLastTecnico(tecnico);
-
   // D1: assinatura digital
   let assinatura = null;
   let SignatureModal;
