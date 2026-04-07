@@ -139,12 +139,11 @@ export function initController() {
     }
     Auth.getUser()
       .then((user) => {
-        console.log("[Profile] user:", user);
         if (user) _showAccountModal(user);
         else ProfileModal.open();
       })
       .catch((err) => {
-        console.error("[Profile] error:", err);
+        console.error("[Controller] Falha ao carregar perfil", err?.message || "Erro desconhecido");
         ProfileModal.open();
       });
   });
@@ -219,6 +218,7 @@ function _showAccountModal(user) {
     .slice(0, 2)
     .join("")
     .toUpperCase();
+  const email = user?.email || "";
 
   const overlay = document.createElement("div");
   overlay.id = "account-modal-overlay";
@@ -241,13 +241,11 @@ function _showAccountModal(user) {
           display:flex;align-items:center;justify-content:center;
           font-size:17px;font-weight:700;color:#00D4FF;
           flex-shrink:0;letter-spacing:.02em
-        ">${iniciais}</div>
+        " id="account-modal-avatar"></div>
         <div style="min-width:0">
-          <div style="font-size:15px;font-weight:600;color:#E8F2FA;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-            ${nome}
+          <div id="account-modal-name" style="font-size:15px;font-weight:600;color:#E8F2FA;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           </div>
-          <div style="font-size:12px;color:#4A6880;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-            ${user.email}
+          <div id="account-modal-email" style="font-size:12px;color:#4A6880;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
           </div>
         </div>
       </div>
@@ -286,7 +284,14 @@ function _showAccountModal(user) {
           Sair da conta
         </button>
       </div>
-    </div>`;
+	    </div>`;
+
+  const avatarEl = overlay.querySelector("#account-modal-avatar");
+  const nameEl = overlay.querySelector("#account-modal-name");
+  const emailEl = overlay.querySelector("#account-modal-email");
+  if (avatarEl) avatarEl.textContent = iniciais;
+  if (nameEl) nameEl.textContent = nome;
+  if (emailEl) emailEl.textContent = email;
 
   document.body.appendChild(overlay);
   overlay.addEventListener("click", (e) => {
