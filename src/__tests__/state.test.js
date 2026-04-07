@@ -89,6 +89,63 @@ describe('state module', () => {
     expect(regsForEquip('missing')).toEqual([]);
   });
 
+  it('lastRegForEquip returns the newest record by datetime string', async () => {
+    const initial = {
+      equipamentos: [{ id: 'eq-1', nome: 'Split', local: 'UTI', status: 'ok' }],
+      registros: [
+        { id: 'r1', equipId: 'eq-1', data: '2026-04-01T08:00', tipo: 'A' },
+        { id: 'r2', equipId: 'eq-1', data: '2026-04-03T08:00', tipo: 'B' },
+        { id: 'r3', equipId: 'eq-1', data: '2026-04-02T08:00', tipo: 'C' },
+      ],
+      tecnicos: [],
+    };
+    const { lastRegForEquip } = await loadStateModule(initial);
+
+    expect(lastRegForEquip('eq-1')?.id).toBe('r2');
+    expect(lastRegForEquip('missing')).toBeUndefined();
+  });
+
+  it('invalidates registros cache after setState updates', async () => {
+    const initial = {
+      equipamentos: [{ id: 'eq-1', nome: 'Split', local: 'UTI', status: 'ok' }],
+      registros: [{ id: 'r1', equipId: 'eq-1', data: '2026-04-01T08:00', tipo: 'A' }],
+      tecnicos: [],
+    };
+    const { regsForEquip, setState } = await loadStateModule(initial);
+
+    expect(regsForEquip('eq-1')).toHaveLength(1);
+
+    setState(
+      (s) => ({
+        ...s,
+        registros: [
+          ...s.registros,
+          { id: 'r2', equipId: 'eq-1', data: '2026-04-02T08:00', tipo: 'B' },
+        ],
+      }),
+      { persist: false, emit: false },
+    );
+
+    expect(regsForEquip('eq-1')).toHaveLength(2);
+  });
+
+  it('getState returns copies to avoid external mutation leaks', async () => {
+    const initial = {
+      equipamentos: [{ id: 'eq-1', nome: 'Split', local: 'UTI', status: 'ok' }],
+      registros: [],
+      tecnicos: ['Ana'],
+    };
+    const { getState } = await loadStateModule(initial);
+
+    const snap = getState();
+    snap.equipamentos.push({ id: 'eq-2', nome: 'X', local: 'Y', status: 'ok' });
+    snap.tecnicos.push('Carlos');
+
+    const current = getState();
+    expect(current.equipamentos).toHaveLength(1);
+    expect(current.tecnicos).toEqual(['Ana']);
+  });
+
   it('seedIfEmpty populates initial data only when equipamentos is empty', async () => {
     const { seedIfEmpty, getState } = await loadStateModule(emptyState);
 

@@ -133,6 +133,44 @@ describe('Storage integration (offline-first)', () => {
     expect(loaded.tecnicos).toEqual(['Carlos']);
   });
 
+  it('drops orphan registros and invalid equipamentos while loading local cache', async () => {
+    const { Storage } = await loadStorageModule();
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        equipamentos: [
+          { id: 'eq-1', nome: 'Split', local: 'UTI', status: 'ok' },
+          { id: 'broken-1', nome: 'Sem local' },
+        ],
+        registros: [
+          {
+            id: 'r-1',
+            equipId: 'eq-1',
+            data: '2026-04-01T08:00',
+            tipo: 'Preventiva',
+            status: 'ok',
+          },
+          { id: 'r-2', equipId: 'missing-eq', data: '2026-04-01T08:00', tipo: 'Orfa' },
+        ],
+        tecnicos: ['Ana'],
+      }),
+    );
+
+    const loaded = Storage._loadLocal();
+    expect(loaded.equipamentos).toHaveLength(1);
+    expect(loaded.equipamentos[0].id).toBe('eq-1');
+    expect(loaded.registros).toHaveLength(1);
+    expect(loaded.registros[0].id).toBe('r-1');
+  });
+
+  it('returns null when local cache json is corrupted', async () => {
+    const { Storage } = await loadStorageModule();
+    localStorage.setItem(STORAGE_KEY, '{invalid-json');
+
+    expect(Storage._loadLocal()).toBeNull();
+  });
+
   it('runs migration from local cache to Supabase and sets migrated marker', async () => {
     const { Storage, supabaseMock, toastMock } = await loadStorageModule({
       supabase: {
@@ -152,6 +190,27 @@ describe('Storage integration (offline-first)', () => {
     expect(localStorage.getItem('cooltrack-migrated-user-77')).toBe('1');
     expect(toastMock.info).toHaveBeenCalled();
     expect(toastMock.success).toHaveBeenCalled();
+  });
+
+  it('skips migration when guest mode is active and still marks user as migrated', async () => {
+    const { Storage, supabaseMock, toastMock } = await loadStorageModule({
+      supabase: {
+        userId: 'user-guest',
+        selectData: { equipamentos: [], registros: [], tecnicos: [] },
+      },
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleState()));
+    localStorage.setItem('cooltrack-guest-mode', '1');
+
+    await Storage.loadFromSupabase();
+
+    expect(localStorage.getItem('cooltrack-migrated-user-guest')).toBe('1');
+    expect(supabaseMock.upsertByTable.equipamentos).not.toHaveBeenCalled();
+    expect(supabaseMock.upsertByTable.registros).not.toHaveBeenCalled();
+    expect(supabaseMock.upsertByTable.tecnicos).not.toHaveBeenCalled();
+    expect(toastMock.info).not.toHaveBeenCalled();
+    expect(toastMock.success).not.toHaveBeenCalled();
   });
 
   it('warns near storage quota and blocks writes at the 5MB limit', async () => {
