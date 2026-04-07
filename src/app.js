@@ -9,6 +9,7 @@ import { Auth }                            from './core/auth.js';
 import { AuthScreen }                      from './ui/components/authscreen.js';
 import { Storage }                         from './core/storage.js';
 import { Tour }                            from './ui/components/tour.js';
+import { ErrorCodes, handleError }         from './core/errors.js';
 
 {
   const p = new URLSearchParams(window.location.search);
@@ -18,36 +19,61 @@ import { Tour }                            from './ui/components/tour.js';
 }
 
 async function bootstrap() {
-  initAppShell();
-  await Auth.tryHandlePasswordRecovery();
+  try {
+    initAppShell();
+    await Auth.tryHandlePasswordRecovery();
 
-  const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
-  const user    = await Auth.getUser();
+    const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
+    const user    = await Auth.getUser();
 
-  if (!user && !isGuest) {
-    AuthScreen.show();
-    return;
-  }
-
-  // Carrega dados do Supabase se logado, localStorage se guest
-  if (!isGuest) {
-    const cloudState = await Storage.loadFromSupabase();
-    if (cloudState) {
-      setState(() => cloudState, { persist: false, emit: false });
+    if (!user && !isGuest) {
+      AuthScreen.show();
+      return;
     }
-  } else {
-    seedIfEmpty();
+
+    // Carrega dados do Supabase se logado, localStorage se guest
+    if (!isGuest) {
+      const cloudState = await Storage.loadFromSupabase();
+      if (cloudState) {
+        setState(() => cloudState, { persist: false, emit: false });
+      }
+    } else {
+      seedIfEmpty();
+    }
+
+    Modal.init();
+    bindEvents();
+    initController();
+    initHistory();
+    goTo('inicio', {}, { replaceHistory: true });
+
+    const { equipamentos } = getState();
+    setTimeout(() => FirstTimeExperience.show(equipamentos), 300);
+    Tour.initIfFirstVisit();
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.NETWORK_ERROR,
+      message: 'Falha ao iniciar o aplicativo. Recarregue a página.',
+      context: { action: 'bootstrap' },
+    });
   }
-
-  Modal.init();
-  bindEvents();
-  initController();
-  initHistory();
-  goTo('inicio', {}, { replaceHistory: true });
-
-  const { equipamentos } = getState();
-  setTimeout(() => FirstTimeExperience.show(equipamentos), 300);
-  Tour.initIfFirstVisit();
 }
+
+window.onerror = (_message, source, lineno, colno, error) => {
+  handleError(error || new Error('Erro global não tratado.'), {
+    code: ErrorCodes.NETWORK_ERROR,
+    message: 'Ocorreu um erro inesperado na aplicação.',
+    context: { source, lineno, colno, channel: 'window.onerror' },
+  });
+  return false;
+};
+
+window.onunhandledrejection = (event) => {
+  handleError(event?.reason || new Error('Promessa rejeitada sem tratamento.'), {
+    code: ErrorCodes.NETWORK_ERROR,
+    message: 'Falha inesperada durante uma operação assíncrona.',
+    context: { channel: 'window.onunhandledrejection' },
+  });
+};
 
 bootstrap();
