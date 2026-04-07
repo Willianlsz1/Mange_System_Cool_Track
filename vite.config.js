@@ -36,5 +36,6 @@ export default defineConfig({
       reporter: ['text', 'lcov'],
       include: ['src/core/**', 'src/domain/**'],
     },
-  },
+  }=======
+
 });
