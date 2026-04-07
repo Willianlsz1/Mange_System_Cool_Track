@@ -1,4 +1,4 @@
-/**
+﻿/**
  * CoolTrack Pro - Storage v5.0
  * localStorage como cache + Supabase como fonte de verdade
  * Offline first: salva local imediatamente, sincroniza com Supabase em background
@@ -12,7 +12,7 @@ import { AppError, ErrorCodes, handleError } from './errors.js';
 const STORAGE_WARN_BYTES  = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
 
-/* ── Normalização (mantida igual) ───────────────────── */
+/* â”€â”€ NormalizaÃ§Ã£o (mantida igual) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function normalizeEquip(e) {
   if (!e || typeof e !== 'object') return null;
   if (!e.id || !e.nome || !e.local) return null;
@@ -49,7 +49,7 @@ function normalizeRegistro(r, equipamentoIds) {
   };
 }
 
-/* ── Supabase helpers ───────────────────────────────── */
+/* â”€â”€ Supabase helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function getUserId() {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -57,7 +57,7 @@ async function getUserId() {
   } catch (error) {
     handleError(error, {
       code: ErrorCodes.AUTH_FAILED,
-      message: 'Não foi possível identificar o usuário logado.',
+      message: 'NÃ£o foi possÃ­vel identificar o usuÃ¡rio logado.',
       context: { action: 'storage.getUserId' },
       showToast: false,
     });
@@ -119,7 +119,7 @@ async function pushTecnicos(tecnicos, userId) {
         .upsert({ user_id: userId, nome }, { onConflict: 'user_id,nome' });
     }
   } catch (error) {
-    throw new AppError('Falha ao sincronizar técnicos.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushTecnicos', quantidade: tecnicos.length, userId, cause: error?.message });
+    throw new AppError('Falha ao sincronizar tÃ©cnicos.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushTecnicos', quantidade: tecnicos.length, userId, cause: error?.message });
   }
 }
 
@@ -171,10 +171,17 @@ async function pullFromSupabase(userId) {
   return { equipamentos, registros, tecnicos };
 }
 
-/* ── Migração automática localStorage → Supabase ────── */
+/* â”€â”€ MigraÃ§Ã£o automÃ¡tica localStorage â†’ Supabase â”€â”€â”€â”€â”€â”€ */
 async function migrateIfNeeded(userId) {
   const MIGRATED_KEY = `cooltrack-migrated-${userId}`;
   if (localStorage.getItem(MIGRATED_KEY)) return;
+
+  // Não migra se o usuário estava no modo guest — dados são do seed
+  const isGuestMode = localStorage.getItem('cooltrack-guest-mode') === '1';
+  if (isGuestMode) {
+    localStorage.setItem(MIGRATED_KEY, '1');
+    return;
+  }
 
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) { localStorage.setItem(MIGRATED_KEY, '1'); return; }
@@ -187,45 +194,17 @@ async function migrateIfNeeded(userId) {
     }
 
     Toast.info('Migrando seus dados para a nuvem...');
-    let migrationFailed = false;
-    for (const equipamento of (parsed.equipamentos || [])) {
-      try {
-        await pushEquipamentos([equipamento], userId);
-      } catch (err) {
-        migrationFailed = true;
-        handleError(err, { code: ErrorCodes.SYNC_FAILED, message: 'Falha ao migrar equipamento para a nuvem.', context: { action: 'migrateIfNeeded.equipamento', equipamentoId: equipamento?.id } });
-      }
-    }
-    for (const registro of (parsed.registros || [])) {
-      try {
-        await pushRegistros([registro], userId);
-      } catch (err) {
-        migrationFailed = true;
-        handleError(err, { code: ErrorCodes.SYNC_FAILED, message: 'Falha ao migrar registro para a nuvem.', context: { action: 'migrateIfNeeded.registro', registroId: registro?.id } });
-      }
-    }
-    for (const tecnico of (parsed.tecnicos || [])) {
-      try {
-        await pushTecnicos([tecnico], userId);
-      } catch (err) {
-        migrationFailed = true;
-        handleError(err, { code: ErrorCodes.SYNC_FAILED, message: 'Falha ao migrar técnico para a nuvem.', context: { action: 'migrateIfNeeded.tecnico', tecnico } });
-      }
-    }
-    if (!migrationFailed) {
-      localStorage.setItem(MIGRATED_KEY, '1');
-      Toast.success('Dados migrados com sucesso.');
-    }
-  } catch (err) {
-    handleError(err, {
-      code: ErrorCodes.DATA_CORRUPT,
-      message: 'Falha ao iniciar migração de dados locais.',
-      context: { action: 'migrateIfNeeded' },
-    });
+    await pushEquipamentos(parsed.equipamentos, userId);
+    await pushRegistros(parsed.registros || [], userId);
+    await pushTecnicos(parsed.tecnicos || [], userId);
+    localStorage.setItem(MIGRATED_KEY, '1');
+    Toast.success('Dados migrados com sucesso.');
+  } catch (_) {
+    // falha silenciosa — tenta na próxima vez
   }
 }
 
-/* ── API pública ─────────────────────────────────────── */
+/* â”€â”€ API pÃºblica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 export const Storage = {
 
   async loadFromSupabase() {
@@ -237,7 +216,7 @@ export const Storage = {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.SYNC_FAILED,
-        message: 'Falha ao preparar migração de dados.',
+        message: 'Falha ao preparar migraÃ§Ã£o de dados.',
         context: { action: 'loadFromSupabase.migrate' },
       });
     }
@@ -251,7 +230,7 @@ export const Storage = {
       handleError(err, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
-        message: 'Sincronização pendente. Seus dados estão salvos localmente.',
+        message: 'SincronizaÃ§Ã£o pendente. Seus dados estÃ£o salvos localmente.',
         context: { action: 'loadFromSupabase.pull' },
       });
       return this._loadLocal();
@@ -306,14 +285,14 @@ export const Storage = {
       return false;
     }
 
-    // 2. Sincroniza com Supabase em background (não bloqueia UI)
+    // 2. Sincroniza com Supabase em background (nÃ£o bloqueia UI)
     this._syncToSupabase(state);
     return true;
   },
 
   async _syncToSupabase(state) {
     const userId = await getUserId();
-    if (!userId) return; // guest mode — não sincroniza
+    if (!userId) return; // guest mode â€” nÃ£o sincroniza
     try {
       await pushEquipamentos(state.equipamentos, userId);
       await pushRegistros(state.registros, userId);
@@ -322,7 +301,7 @@ export const Storage = {
       handleError(err, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
-        message: 'Sincronização pendente. Seus dados estão salvos localmente.',
+        message: 'SincronizaÃ§Ã£o pendente. Seus dados estÃ£o salvos localmente.',
         context: { action: '_syncToSupabase' },
       });
     }
@@ -337,3 +316,4 @@ export const Storage = {
     };
   }
 };
+
