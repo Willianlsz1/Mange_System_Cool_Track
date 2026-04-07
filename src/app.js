@@ -26,8 +26,9 @@ import { ErrorCodes, handleError }         from './core/errors.js';
 }
 
 async function bootstrap() {
-  initAppShell();
-  await Auth.tryHandlePasswordRecovery();
+  try {
+    initAppShell();
+    await Auth.tryHandlePasswordRecovery();
 
     const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
     const user    = await Auth.getUser();
