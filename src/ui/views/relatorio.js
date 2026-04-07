@@ -70,9 +70,3 @@ export function renderRelatorio() {
       </div>`;
     }).join('')}`;
 }
-
-export function highlightText(text, searchTerm) {
-  if (!searchTerm || !text) return Utils.escapeHtml(text);
-  const escaped = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return Utils.escapeHtml(text).replace(new RegExp(`(${escaped})`, 'gi'), '<mark class="mark-highlight">$1</mark>');
-}
