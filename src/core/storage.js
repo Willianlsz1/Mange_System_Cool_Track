@@ -12,7 +12,7 @@ import { AppError, ErrorCodes, handleError } from './errors.js';
 const STORAGE_WARN_BYTES  = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
 
-/* â”€â”€ NormalizaÃ§Ã£o (mantida igual) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* Normalizacao (mantida igual) */
 function normalizeEquip(e) {
   if (!e || typeof e !== 'object') return null;
   if (!e.id || !e.nome || !e.local) return null;
@@ -57,7 +57,7 @@ async function getUserId() {
   } catch (error) {
     handleError(error, {
       code: ErrorCodes.AUTH_FAILED,
-      message: 'NÃ£o foi possÃ­vel identificar o usuÃ¡rio logado.',
+      message: 'Não foi possível identificar o usuário logado.',
       context: { action: 'storage.getUserId' },
       showToast: false,
     });
@@ -119,7 +119,7 @@ async function pushTecnicos(tecnicos, userId) {
         .upsert({ user_id: userId, nome }, { onConflict: 'user_id,nome' });
     }
   } catch (error) {
-    throw new AppError('Falha ao sincronizar tÃ©cnicos.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushTecnicos', quantidade: tecnicos.length, userId, cause: error?.message });
+    throw new AppError('Falha ao sincronizar técnicos.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushTecnicos', quantidade: tecnicos.length, userId, cause: error?.message });
   }
 }
 
@@ -171,7 +171,7 @@ async function pullFromSupabase(userId) {
   return { equipamentos, registros, tecnicos };
 }
 
-/* â”€â”€ MigraÃ§Ã£o automÃ¡tica localStorage â†’ Supabase â”€â”€â”€â”€â”€â”€ */
+/* Migracao automatica localStorage -> Supabase */
 async function migrateIfNeeded(userId) {
   const MIGRATED_KEY = `cooltrack-migrated-${userId}`;
   if (localStorage.getItem(MIGRATED_KEY)) return;
@@ -204,7 +204,7 @@ async function migrateIfNeeded(userId) {
   }
 }
 
-/* â”€â”€ API pÃºblica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* API publica */
 export const Storage = {
 
   async loadFromSupabase() {
@@ -216,7 +216,7 @@ export const Storage = {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.SYNC_FAILED,
-        message: 'Falha ao preparar migraÃ§Ã£o de dados.',
+        message: 'Falha ao preparar migração de dados.',
         context: { action: 'loadFromSupabase.migrate' },
       });
     }
@@ -230,7 +230,7 @@ export const Storage = {
       handleError(err, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
-        message: 'SincronizaÃ§Ã£o pendente. Seus dados estÃ£o salvos localmente.',
+        message: 'Sincronização pendente. Seus dados estão salvos localmente.',
         context: { action: 'loadFromSupabase.pull' },
       });
       return this._loadLocal();
@@ -285,14 +285,14 @@ export const Storage = {
       return false;
     }
 
-    // 2. Sincroniza com Supabase em background (nÃ£o bloqueia UI)
+    // 2. Sincroniza com Supabase em background (não bloqueia UI)
     this._syncToSupabase(state);
     return true;
   },
 
   async _syncToSupabase(state) {
     const userId = await getUserId();
-    if (!userId) return; // guest mode â€” nÃ£o sincroniza
+    if (!userId) return; // guest mode - nao sincroniza
     try {
       await pushEquipamentos(state.equipamentos, userId);
       await pushRegistros(state.registros, userId);
@@ -301,7 +301,7 @@ export const Storage = {
       handleError(err, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
-        message: 'SincronizaÃ§Ã£o pendente. Seus dados estÃ£o salvos localmente.',
+        message: 'Sincronização pendente. Seus dados estão salvos localmente.',
         context: { action: '_syncToSupabase' },
       });
     }
