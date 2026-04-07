@@ -157,13 +157,37 @@ async function migrateIfNeeded(userId) {
     }
 
     Toast.info('Migrando seus dados para a nuvem...');
-    await pushEquipamentos(parsed.equipamentos, userId);
-    await pushRegistros(parsed.registros || [], userId);
-    await pushTecnicos(parsed.tecnicos || [], userId);
-    localStorage.setItem(MIGRATED_KEY, '1');
-    Toast.success('Dados migrados com sucesso.');
-  } catch (_) {
-    // falha silenciosa — tenta na próxima vez
+    let migrationFailed = false;
+    for (const equipamento of (parsed.equipamentos || [])) {
+      try {
+        await pushEquipamentos([equipamento], userId);
+      } catch (err) {
+        migrationFailed = true;
+        console.error('[Storage] Falha ao migrar equipamento', { equipamento, err });
+      }
+    }
+    for (const registro of (parsed.registros || [])) {
+      try {
+        await pushRegistros([registro], userId);
+      } catch (err) {
+        migrationFailed = true;
+        console.error('[Storage] Falha ao migrar registro', { registro, err });
+      }
+    }
+    for (const tecnico of (parsed.tecnicos || [])) {
+      try {
+        await pushTecnicos([tecnico], userId);
+      } catch (err) {
+        migrationFailed = true;
+        console.error('[Storage] Falha ao migrar técnico', { tecnico, err });
+      }
+    }
+    if (!migrationFailed) {
+      localStorage.setItem(MIGRATED_KEY, '1');
+      Toast.success('Dados migrados com sucesso.');
+    }
+  } catch (err) {
+    console.error('[Storage] Falha ao iniciar migração local → Supabase', { raw, err });
   }
 }
 
@@ -181,8 +205,9 @@ export const Storage = {
       // Atualiza cache local
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       return state;
-    } catch (_) {
-      // Offline — usa cache local
+    } catch (err) {
+      console.error('[Storage] Falha ao carregar dados do Supabase; usando cache local', err);
+      Toast.warning('Sincronização pendente. Seus dados estão salvos localmente.');
       return this._loadLocal();
     }
   },
@@ -202,7 +227,10 @@ export const Storage = {
       const registros     = (parsed.registros || []).map(r => normalizeRegistro(r, equipIds)).filter(Boolean);
       const tecnicos      = Array.isArray(parsed.tecnicos) ? parsed.tecnicos.filter(t => typeof t === 'string') : [];
       return { equipamentos, registros, tecnicos };
-    } catch (_) { return null; }
+    } catch (err) {
+      console.error('[Storage] Falha ao carregar cache local', err);
+      return null;
+    }
   },
 
   save(state) {
@@ -235,8 +263,9 @@ export const Storage = {
       await pushEquipamentos(state.equipamentos, userId);
       await pushRegistros(state.registros, userId);
       await pushTecnicos(state.tecnicos, userId);
-    } catch (_) {
-      // falha silenciosa — dados já estão salvos local
+    } catch (err) {
+      console.error('[Storage] Falha ao sincronizar dados com Supabase', err);
+      Toast.warning('Sincronização pendente. Seus dados estão salvos localmente.');
     }
   },
 
