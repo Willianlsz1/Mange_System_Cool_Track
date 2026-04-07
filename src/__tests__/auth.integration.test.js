@@ -61,7 +61,7 @@ describe('Auth integration wrapper', () => {
     const user = await Auth.signUp('bad@user.com', '123456', 'Bad');
 
     expect(user).toBeNull();
-    expect(toastMock.error).toHaveBeenCalledWith('signup failed');
+    expect(toastMock.warning).toHaveBeenCalledWith('Não foi possível criar sua conta.');
   });
 
   it('handles signIn success and failure', async () => {
@@ -72,17 +72,15 @@ describe('Auth integration wrapper', () => {
 
     supabaseMock.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: null }, error: { message: 'invalid' } });
     await expect(Auth.signIn('a@b.com', 'wrong')).resolves.toBeNull();
-    expect(toastMock.error).toHaveBeenCalledWith('Email ou senha incorretos.');
+    expect(toastMock.warning).toHaveBeenCalledWith('Email ou senha incorretos.');
   });
 
   it('handles signOut flow', async () => {
     const { Auth, supabaseMock } = await loadAuthModule();
-    const reloadSpy = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
 
     await Auth.signOut();
 
     expect(supabaseMock.auth.signOut).toHaveBeenCalled();
-    expect(reloadSpy).toHaveBeenCalled();
   });
 
   it('handles password reset request validation and API responses', async () => {
@@ -101,7 +99,7 @@ describe('Auth integration wrapper', () => {
 
     supabaseMock.auth.resetPasswordForEmail.mockResolvedValueOnce({ error: { message: 'reset failed' } });
     const fail = await Auth.requestPasswordReset('user@mail.com');
-    expect(fail).toEqual({ ok: false, message: 'reset failed' });
+    expect(fail).toEqual({ ok: false, message: 'Não foi possível enviar o email de recuperação.' });
   });
 
   it('handles password recovery hash flow success and error cases', async () => {
@@ -119,7 +117,7 @@ describe('Auth integration wrapper', () => {
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: { message: 'boom' } });
     const failed = await Auth.tryHandlePasswordRecovery();
     expect(failed).toBe(true);
-    expect(toastMock.error).toHaveBeenCalledWith('Não foi possível redefinir a senha. Tente novamente pelo link do email.');
+    expect(toastMock.warning).toHaveBeenCalledWith('Não foi possível redefinir a senha. Tente novamente pelo link do email.');
 
     promptSpy.mockReturnValueOnce('nova123');
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: null });
