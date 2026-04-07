@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { Toast }    from './toast.js';
+import { AppError, ErrorCodes, handleError } from './errors.js';
 
 export const Auth = {
 
@@ -8,33 +9,74 @@ export const Auth = {
   },
 
   async getUser() {
-    const { data: { user } } = await supabase.auth.getUser();
-    return user;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.AUTH_FAILED,
+        message: 'Não foi possível validar sua sessão.',
+        context: { action: 'getUser' },
+      });
+      return null;
+    }
   },
 
   async signUp(email, password, nome) {
-    const { data, error } = await supabase.auth.signUp({ email, password });
-    if (error) { Toast.error(error.message); return null; }
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        handleError(new AppError('Não foi possível criar sua conta.', ErrorCodes.AUTH_FAILED, 'warning', { action: 'signUp', detail: error.message }));
+        return null;
+      }
 
-    // Cria o perfil junto
-    if (data.user) {
-      await supabase.from('profiles').insert({
-        id:   data.user.id,
-        nome,
+      // Cria o perfil junto
+      if (data.user) {
+        await supabase.from('profiles').insert({
+          id:   data.user.id,
+          nome,
+        });
+      }
+      return data.user;
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.AUTH_FAILED,
+        message: 'Falha ao cadastrar usuário. Tente novamente.',
+        context: { action: 'signUp' },
       });
+      return null;
     }
-    return data.user;
   },
 
   async signIn(email, password) {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { Toast.error('Email ou senha incorretos.'); return null; }
-    return data.user;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        handleError(new AppError('Email ou senha incorretos.', ErrorCodes.AUTH_FAILED, 'warning', { action: 'signIn', detail: error.message }));
+        return null;
+      }
+      return data.user;
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.AUTH_FAILED,
+        message: 'Falha ao realizar login. Tente novamente.',
+        context: { action: 'signIn' },
+      });
+      return null;
+    }
   },
 
   async signOut() {
-    await supabase.auth.signOut();
-    window.location.reload();
+    try {
+      await supabase.auth.signOut();
+      window.location.reload();
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.AUTH_FAILED,
+        message: 'Não foi possível encerrar sua sessão.',
+        context: { action: 'signOut' },
+      });
+    }
   },
 
   async requestPasswordReset(email) {
@@ -44,11 +86,21 @@ export const Auth = {
     }
 
     const redirectTo = 'https://willianlsz1.github.io/Mange_System_Cool_Track/';
-    const { error } = await supabase.auth.resetPasswordForEmail(normalized, { redirectTo });
-    if (error) {
-      return { ok: false, message: error.message || 'Erro ao enviar email de recuperação.' };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(normalized, { redirectTo });
+      if (error) {
+        handleError(new AppError('Não foi possível enviar o email de recuperação.', ErrorCodes.NETWORK_ERROR, 'warning', { action: 'requestPasswordReset', detail: error.message }));
+        return { ok: false, message: 'Não foi possível enviar o email de recuperação.' };
+      }
+      return { ok: true };
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: 'Falha de conexão ao solicitar recuperação de senha.',
+        context: { action: 'requestPasswordReset' },
+      });
+      return { ok: false, message: 'Falha de conexão ao solicitar recuperação de senha.' };
     }
-    return { ok: true };
   },
 
   async tryHandlePasswordRecovery() {
@@ -63,15 +115,24 @@ export const Auth = {
       return true;
     }
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    if (error) {
-      Toast.error('Não foi possível redefinir a senha. Tente novamente pelo link do email.');
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) {
+        handleError(new AppError('Não foi possível redefinir a senha. Tente novamente pelo link do email.', ErrorCodes.AUTH_FAILED, 'warning', { action: 'tryHandlePasswordRecovery', detail: error.message }));
+        return true;
+      }
+
+      Toast.success('Senha atualizada com sucesso. Faça login com a nova senha.');
+      history.replaceState(history.state, '', window.location.pathname + window.location.search);
+      return true;
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.AUTH_FAILED,
+        message: 'Erro ao atualizar senha. Tente novamente.',
+        context: { action: 'tryHandlePasswordRecovery' },
+      });
       return true;
     }
-
-    Toast.success('Senha atualizada com sucesso. Faça login com a nova senha.');
-    history.replaceState(history.state, '', window.location.pathname + window.location.search);
-    return true;
   },
 
   onAuthChange(callback) {
