@@ -108,34 +108,3 @@ export function deleteReg(id) {
   updateHeader();
   Toast.warning("Registro removido do histórico.");
 }
-export function loadRegistroForEdit(id) {
-  const { registros } = getState();
-  const r = registros.find(r => r.id === id);
-  if (!r) return;
-
-  // Marca que estamos editando
-  sessionStorage.setItem('cooltrack-editing-id', id);
-
-  // Preenche os campos
-  Utils.setVal('r-equip',         r.equipId);
-  Utils.setVal('r-data',          r.data);
-  Utils.setVal('r-tipo',          r.tipo);
-  Utils.setVal('r-obs',           r.obs);
-  Utils.setVal('r-tecnico',       r.tecnico);
-  Utils.setVal('r-pecas',         r.pecas || '');
-  Utils.setVal('r-custo-pecas',   r.custoPecas   || '');
-  Utils.setVal('r-custo-mao-obra',r.custoMaoObra || '');
-  Utils.setVal('r-proxima',       r.proxima || '');
-  Utils.setVal('r-status',        r.status);
-
-  // Atualiza o botão de salvar
-  const btn = document.querySelector('[data-action="save-registro"]');
-  if (btn) {
-    btn.textContent = 'Salvar alterações';
-    btn.style.background = 'var(--warning)';
-  }
-
-  // Atualiza o título
-  const title = document.querySelector('#view-registro .section-title');
-  if (title) title.textContent = 'Editar registro';
-}
