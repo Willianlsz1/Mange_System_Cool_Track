@@ -7,10 +7,12 @@ import { Utils } from "../../core/utils.js";
 import { getState, findEquip, setState } from "../../core/state.js";
 import { Toast } from "../../core/toast.js";
 import { SavedHighlight } from "../components/onboarding.js";
+import { cleanupOrphanSignatures } from "../components/signature.js";
 import { updateHeader } from "./dashboard.js";
 
 export function renderHist() {
   const { registros } = getState();
+  cleanupOrphanSignatures(registros.map((r) => r.id));
   const busca = Utils.getVal("hist-busca").toLowerCase();
   const filtEq = Utils.getVal("hist-equip");
 
