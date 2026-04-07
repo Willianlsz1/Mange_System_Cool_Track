@@ -10,6 +10,7 @@ import { on } from "../core/events.js";
 import { Modal, CustomConfirm } from "../core/modal.js";
 import { Toast } from "../core/toast.js";
 import { Auth } from "../core/auth.js";
+import { ErrorCodes, handleError } from "../core/errors.js";
 
 // domain/ — sobe 1 nível
 import { PDFGenerator } from "../domain/pdf.js";
@@ -88,14 +89,42 @@ export function initController() {
   on("open-modal", (el) => Modal.open(el.dataset.id));
   on("close-modal", (el) => Modal.close(el.dataset.id));
 
-  on("save-equip", () => saveEquip());
-  on("view-equip", (el) => viewEquip(el.dataset.id));
+  on("save-equip", async () => {
+    try {
+      await saveEquip();
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: "Não foi possível salvar o equipamento.",
+        context: { action: "controller.save-equip" },
+      });
+    }
+  });
+  on("view-equip", async (el) => {
+    try {
+      await viewEquip(el.dataset.id);
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: "Não foi possível abrir o equipamento selecionado.",
+        context: { action: "controller.view-equip", id: el.dataset.id },
+      });
+    }
+  });
   on("delete-equip", async (el) => {
-    const ok = await CustomConfirm.show(
-      "Excluir Equipamento",
-      "Todos os registros deste equipamento serão removidos. Confirmar?",
-    );
-    if (ok) deleteEquip(el.dataset.id);
+    try {
+      const ok = await CustomConfirm.show(
+        "Excluir Equipamento",
+        "Todos os registros deste equipamento serão removidos. Confirmar?",
+      );
+      if (ok) await deleteEquip(el.dataset.id);
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: "Não foi possível confirmar a exclusão do equipamento.",
+        context: { action: "controller.delete-equip" },
+      });
+    }
   });
 
   on("go-register-equip", (el) => {
@@ -116,11 +145,19 @@ export function initController() {
   if (title) title.textContent = "O que foi feito hoje?";
 
   on("delete-reg", async (el) => {
-    const ok = await CustomConfirm.show(
-      "Excluir Registro",
-      "Remover este registro do histórico?",
-    );
-    if (ok) deleteReg(el.dataset.id);
+    try {
+      const ok = await CustomConfirm.show(
+        "Excluir Registro",
+        "Remover este registro do histórico?",
+      );
+      if (ok) deleteReg(el.dataset.id);
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: "Não foi possível confirmar a exclusão do registro.",
+        context: { action: "controller.delete-reg" },
+      });
+    }
   });
 
   on("edit-reg", (el) => {
@@ -143,7 +180,11 @@ export function initController() {
         else ProfileModal.open();
       })
       .catch((err) => {
-        console.error("[Controller] Falha ao carregar perfil", err?.message || "Erro desconhecido");
+        handleError(err, {
+          code: ErrorCodes.AUTH_FAILED,
+          message: "Não foi possível carregar o perfil da conta.",
+          context: { action: "controller.open-profile" },
+        });
         ProfileModal.open();
       });
   });

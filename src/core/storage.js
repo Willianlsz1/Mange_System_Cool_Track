@@ -7,6 +7,7 @@
 import { STORAGE_KEY, Utils } from './utils.js';
 import { Toast }              from './toast.js';
 import { supabase }           from './supabase.js';
+import { AppError, ErrorCodes, handleError } from './errors.js';
 
 const STORAGE_WARN_BYTES  = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -50,62 +51,91 @@ function normalizeRegistro(r, equipamentoIds) {
 
 /* ── Supabase helpers ───────────────────────────────── */
 async function getUserId() {
-  const { data: { user } } = await supabase.auth.getUser();
-  return user?.id ?? null;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.AUTH_FAILED,
+      message: 'Não foi possível identificar o usuário logado.',
+      context: { action: 'storage.getUserId' },
+      showToast: false,
+    });
+    return null;
+  }
 }
 
 async function pushEquipamentos(equipamentos, userId) {
   if (!equipamentos.length) return;
-  const rows = equipamentos.map(e => ({
-    id:      e.id,
-    user_id: userId,
-    nome:    e.nome,
-    local:   e.local,
-    status:  e.status,
-    tag:     e.tag,
-    tipo:    e.tipo,
-    modelo:  e.modelo,
-    fluido:  e.fluido,
-  }));
-  await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
+  try {
+    const rows = equipamentos.map(e => ({
+      id:      e.id,
+      user_id: userId,
+      nome:    e.nome,
+      local:   e.local,
+      status:  e.status,
+      tag:     e.tag,
+      tipo:    e.tipo,
+      modelo:  e.modelo,
+      fluido:  e.fluido,
+    }));
+    await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
+  } catch (error) {
+    throw new AppError('Falha ao sincronizar equipamentos.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushEquipamentos', quantidade: equipamentos.length, userId, cause: error?.message });
+  }
 }
 
 async function pushRegistros(registros, userId) {
   if (!registros.length) return;
-  const rows = registros.map(r => ({
-    id:             r.id,
-    user_id:        userId,
-    equip_id:       r.equipId,
-    data:           r.data,
-    tipo:           r.tipo,
-    obs:            r.obs,
-    status:         r.status,
-    pecas:          r.pecas,
-    proxima:        r.proxima,
-    tecnico:        r.tecnico,
-    custo_pecas:    r.custoPecas,
-    custo_mao_obra: r.custoMaoObra,
-    assinatura:     r.assinatura,
-    fotos:          r.fotos,
-  }));
-  await supabase.from('registros').upsert(rows, { onConflict: 'id' });
+  try {
+    const rows = registros.map(r => ({
+      id:             r.id,
+      user_id:        userId,
+      equip_id:       r.equipId,
+      data:           r.data,
+      tipo:           r.tipo,
+      obs:            r.obs,
+      status:         r.status,
+      pecas:          r.pecas,
+      proxima:        r.proxima,
+      tecnico:        r.tecnico,
+      custo_pecas:    r.custoPecas,
+      custo_mao_obra: r.custoMaoObra,
+      assinatura:     r.assinatura,
+      fotos:          r.fotos,
+    }));
+    await supabase.from('registros').upsert(rows, { onConflict: 'id' });
+  } catch (error) {
+    throw new AppError('Falha ao sincronizar registros.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushRegistros', quantidade: registros.length, userId, cause: error?.message });
+  }
 }
 
 async function pushTecnicos(tecnicos, userId) {
   if (!tecnicos.length) return;
-  for (const nome of tecnicos) {
-    await supabase
-      .from('tecnicos')
-      .upsert({ user_id: userId, nome }, { onConflict: 'user_id,nome' });
+  try {
+    for (const nome of tecnicos) {
+      await supabase
+        .from('tecnicos')
+        .upsert({ user_id: userId, nome }, { onConflict: 'user_id,nome' });
+    }
+  } catch (error) {
+    throw new AppError('Falha ao sincronizar técnicos.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushTecnicos', quantidade: tecnicos.length, userId, cause: error?.message });
   }
 }
 
 async function pullFromSupabase(userId) {
-  const [eqRes, regRes, tecRes] = await Promise.all([
-    supabase.from('equipamentos').select('*').eq('user_id', userId),
-    supabase.from('registros').select('*').eq('user_id', userId),
-    supabase.from('tecnicos').select('nome').eq('user_id', userId),
-  ]);
+  let eqRes;
+  let regRes;
+  let tecRes;
+  try {
+    [eqRes, regRes, tecRes] = await Promise.all([
+      supabase.from('equipamentos').select('*').eq('user_id', userId),
+      supabase.from('registros').select('*').eq('user_id', userId),
+      supabase.from('tecnicos').select('nome').eq('user_id', userId),
+    ]);
+  } catch (error) {
+    throw new AppError('Falha ao carregar dados da nuvem.', ErrorCodes.NETWORK_ERROR, 'warning', { action: 'pullFromSupabase', userId, cause: error?.message });
+  }
 
   const equipamentos = (eqRes.data || []).map(e => ({
     id:     e.id,
@@ -163,7 +193,7 @@ async function migrateIfNeeded(userId) {
         await pushEquipamentos([equipamento], userId);
       } catch (err) {
         migrationFailed = true;
-        console.error('[Storage] Falha ao migrar equipamento', { equipamento, err });
+        handleError(err, { code: ErrorCodes.SYNC_FAILED, message: 'Falha ao migrar equipamento para a nuvem.', context: { action: 'migrateIfNeeded.equipamento', equipamentoId: equipamento?.id } });
       }
     }
     for (const registro of (parsed.registros || [])) {
@@ -171,7 +201,7 @@ async function migrateIfNeeded(userId) {
         await pushRegistros([registro], userId);
       } catch (err) {
         migrationFailed = true;
-        console.error('[Storage] Falha ao migrar registro', { registro, err });
+        handleError(err, { code: ErrorCodes.SYNC_FAILED, message: 'Falha ao migrar registro para a nuvem.', context: { action: 'migrateIfNeeded.registro', registroId: registro?.id } });
       }
     }
     for (const tecnico of (parsed.tecnicos || [])) {
@@ -179,7 +209,7 @@ async function migrateIfNeeded(userId) {
         await pushTecnicos([tecnico], userId);
       } catch (err) {
         migrationFailed = true;
-        console.error('[Storage] Falha ao migrar técnico', { tecnico, err });
+        handleError(err, { code: ErrorCodes.SYNC_FAILED, message: 'Falha ao migrar técnico para a nuvem.', context: { action: 'migrateIfNeeded.tecnico', tecnico } });
       }
     }
     if (!migrationFailed) {
@@ -187,7 +217,11 @@ async function migrateIfNeeded(userId) {
       Toast.success('Dados migrados com sucesso.');
     }
   } catch (err) {
-    console.error('[Storage] Falha ao iniciar migração local → Supabase', { raw, err });
+    handleError(err, {
+      code: ErrorCodes.DATA_CORRUPT,
+      message: 'Falha ao iniciar migração de dados locais.',
+      context: { action: 'migrateIfNeeded' },
+    });
   }
 }
 
@@ -198,7 +232,15 @@ export const Storage = {
     const userId = await getUserId();
     if (!userId) return null;
 
-    await migrateIfNeeded(userId);
+    try {
+      await migrateIfNeeded(userId);
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.SYNC_FAILED,
+        message: 'Falha ao preparar migração de dados.',
+        context: { action: 'loadFromSupabase.migrate' },
+      });
+    }
 
     try {
       const state = await pullFromSupabase(userId);
@@ -206,8 +248,12 @@ export const Storage = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       return state;
     } catch (err) {
-      console.error('[Storage] Falha ao carregar dados do Supabase; usando cache local', err);
-      Toast.warning('Sincronização pendente. Seus dados estão salvos localmente.');
+      handleError(err, {
+        code: ErrorCodes.SYNC_FAILED,
+        severity: 'warning',
+        message: 'Sincronização pendente. Seus dados estão salvos localmente.',
+        context: { action: 'loadFromSupabase.pull' },
+      });
       return this._loadLocal();
     }
   },
@@ -228,7 +274,12 @@ export const Storage = {
       const tecnicos      = Array.isArray(parsed.tecnicos) ? parsed.tecnicos.filter(t => typeof t === 'string') : [];
       return { equipamentos, registros, tecnicos };
     } catch (err) {
-      console.error('[Storage] Falha ao carregar cache local', err);
+      handleError(err, {
+        code: ErrorCodes.DATA_CORRUPT,
+        message: 'Falha ao carregar dados locais.',
+        context: { action: '_loadLocal' },
+        showToast: false,
+      });
       return null;
     }
   },
@@ -246,8 +297,12 @@ export const Storage = {
         Toast.warning(`Uso de armazenamento elevado: ${Utils.formatBytes(byteSize)} / 5 MB.`);
       }
       localStorage.setItem(STORAGE_KEY, serialized);
-    } catch (_) {
-      Toast.error('Falha ao salvar localmente.');
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.STORAGE_QUOTA,
+        message: 'Falha ao salvar localmente.',
+        context: { action: 'save' },
+      });
       return false;
     }
 
@@ -264,8 +319,12 @@ export const Storage = {
       await pushRegistros(state.registros, userId);
       await pushTecnicos(state.tecnicos, userId);
     } catch (err) {
-      console.error('[Storage] Falha ao sincronizar dados com Supabase', err);
-      Toast.warning('Sincronização pendente. Seus dados estão salvos localmente.');
+      handleError(err, {
+        code: ErrorCodes.SYNC_FAILED,
+        severity: 'warning',
+        message: 'Sincronização pendente. Seus dados estão salvos localmente.',
+        context: { action: '_syncToSupabase' },
+      });
     }
   },
 

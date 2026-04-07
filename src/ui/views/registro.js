@@ -15,6 +15,7 @@ import { goTo } from "../../core/router.js";
 import { Photos } from "../components/photos.js";
 import { SavedHighlight } from "../components/onboarding.js";
 import { Profile } from "../../features/profile.js";
+import { ErrorCodes, handleError } from "../../core/errors.js";
 
 const CONTAINER_ID = "form-progress-container-v5";
 
@@ -107,8 +108,16 @@ export function initRegistro() {
 export async function saveRegistro() {
   if (localStorage.getItem("cooltrack-guest-mode") === "1") {
     Toast.info("Crie uma conta grátis para salvar seus registros.");
-    const { AuthScreen } = await import("../components/authscreen.js");
-    AuthScreen.show();
+    try {
+      const { AuthScreen } = await import("../components/authscreen.js");
+      AuthScreen.show();
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: "Não foi possível abrir a tela de cadastro no momento.",
+        context: { action: "registro.saveRegistro.authscreen" },
+      });
+    }
     return;
   }
   const equipId = Utils.getVal("r-equip");
@@ -171,11 +180,32 @@ export async function saveRegistro() {
 
   // D1: assinatura digital
   let assinatura = null;
-  const { SignatureModal, saveSignatureForRecord } =
-    await import("../components/signature.js");
+  let SignatureModal;
+  let saveSignatureForRecord;
+  try {
+    ({ SignatureModal, saveSignatureForRecord } = await import("../components/signature.js"));
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.NETWORK_ERROR,
+      severity: "warning",
+      message: "Não foi possível carregar o módulo de assinatura.",
+      context: { action: "registro.saveRegistro.signatureImport" },
+    });
+  }
   const eq = findEquip(equipId);
-  assinatura = await SignatureModal.request(novoId, eq?.nome || "Equipamento");
-  if (assinatura) saveSignatureForRecord(novoId, assinatura);
+  if (SignatureModal?.request) {
+    try {
+      assinatura = await SignatureModal.request(novoId, eq?.nome || "Equipamento");
+      if (assinatura && saveSignatureForRecord) saveSignatureForRecord(novoId, assinatura);
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        severity: "warning",
+        message: "Não foi possível registrar a assinatura digital.",
+        context: { action: "registro.saveRegistro.signatureRequest", registroId: novoId },
+      });
+    }
+  }
 
   setState((prev) => {
     const currentTecs = prev.tecnicos || [];
