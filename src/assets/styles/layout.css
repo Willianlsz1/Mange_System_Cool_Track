@@ -283,6 +283,12 @@ main:focus { outline: none; }
     height: 14px !important;
     font-size: 8px !important;
   }
+
+  .stat-pill { padding: 5px 4px !important; }
+  .stat-pill__value { font-size: 13px !important; }
+  .stat-pill__label { font-size: 6px !important; letter-spacing: 0.02em !important; }
+  .app-header__status span:last-child { display: none; }
+  .app-header__date { display: none !important; }
 }
 
 /* ── TABLET (641px–1024px) ──────────────────────── */

@@ -3,13 +3,22 @@ import { bindEvents }                      from './core/events.js';
 import { Modal }                           from './core/modal.js';
 import { goTo, initHistory }               from './core/router.js';
 import { initController }                  from './ui/controller.js';
+import { initAppShell }                    from './ui/shell.js';
 import { FirstTimeExperience }             from './ui/components/onboarding.js';
 import { Auth }                            from './core/auth.js';
 import { AuthScreen }                      from './ui/components/authscreen.js';
 import { Storage }                         from './core/storage.js';
 import { Tour }                            from './ui/components/tour.js';
 
+{
+  const p = new URLSearchParams(window.location.search);
+  if (p.has('p')) {
+    history.replaceState(null, '', `${window.location.pathname}${window.location.hash || ''}`);
+  }
+}
+
 async function bootstrap() {
+  initAppShell();
   await Auth.tryHandlePasswordRecovery();
 
   const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
