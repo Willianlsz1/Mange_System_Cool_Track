@@ -97,6 +97,16 @@ export const Utils = {
     }[c]));
   },
 
+
+  escapeAttr(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  },
+
   getEl(id)         { return document.getElementById(id); },
   getVal(id)        { return Utils.getEl(id)?.value ?? ''; },
   setVal(id, value) { const el = Utils.getEl(id); if (el) el.value = value; },
