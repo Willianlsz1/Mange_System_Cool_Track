@@ -54,7 +54,7 @@ export function renderHist() {
         parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0);
       const isFirst = idx === 0;
       const isToday =
-        r.data.slice(0, 10) === new Date().toISOString().slice(0, 10);
+        r.data.slice(0, 10) === Utils.localDateString();
 
       return `<div class="timeline__item${isFirst ? " timeline__item--latest" : ""}" role="listitem" data-reg-id="${r.id}">
       ${isFirst ? `<div class="timeline__recency-badge">Mais recente</div>` : ""}
@@ -71,18 +71,15 @@ export function renderHist() {
           ${r.proxima ? `<div class="timeline__next">Próxima: ${Utils.formatDate(r.proxima)}</div>` : ""}
           ${r.assinatura ? `<div class="timeline__signed"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="var(--success)" stroke-width="1"/><path d="M3.5 6l1.5 1.5 3-3" stroke="var(--success)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Assinado pelo cliente</div>` : ""}
         </div>
-      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-        <button class="timeline__delete" data-action="edit-reg" data-id="${r.id}" aria-label="Editar registro" style="color:var(--text-3)">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        </button>
-        <button class="timeline__delete" data-action="delete-reg" data-id="${r.id}" aria-label="Excluir registro de ${Utils.escapeHtml(r.tipo)}">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        </button>
-      </div>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        </button>
-      </div>
-    </div>`;
+	      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+	        <button class="timeline__delete" data-action="edit-reg" data-id="${r.id}" aria-label="Editar registro" style="color:var(--text-3)">
+	          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+	        </button>
+	        <button class="timeline__delete" data-action="delete-reg" data-id="${r.id}" aria-label="Excluir registro de ${Utils.escapeHtml(r.tipo)}">
+	          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+	        </button>
+	      </div>
+	    </div>`;
     })
     .join("")}</div>`;
 
