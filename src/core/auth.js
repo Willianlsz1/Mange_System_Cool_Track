@@ -43,7 +43,7 @@ export const Auth = {
       return { ok: false, message: 'Digite um email válido para recuperar a senha.' };
     }
 
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const redirectTo = 'https://willianlsz1.github.io/Mange_System_Cool_Track/';
     const { error } = await supabase.auth.resetPasswordForEmail(normalized, { redirectTo });
     if (error) {
       return { ok: false, message: error.message || 'Erro ao enviar email de recuperação.' };
