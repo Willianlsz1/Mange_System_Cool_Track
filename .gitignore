@@ -1,6 +1,8 @@
 node_modules/
 dist/
 coverage/
+.eslintcache
+.prettiercache
 .env
 .env.local
 .DS_Store
