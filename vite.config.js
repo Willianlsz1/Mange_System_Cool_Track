@@ -13,10 +13,13 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
-    minify: 'esbuild',  // ✅ MUDADO: 'terser' → 'esbuild'
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks: undefined,
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]',
       },
     },
   },
@@ -24,13 +27,4 @@ export default defineConfig({
   css: {
     devSourcemap: true,
   },
-  build: {
-  rollupOptions: {
-    output: {
-      entryFileNames: 'assets/[name].[hash].js',
-      chunkFileNames: 'assets/[name].[hash].js',
-      assetFileNames: 'assets/[name].[hash].[ext]',
-    }
-  }
-},
 });
