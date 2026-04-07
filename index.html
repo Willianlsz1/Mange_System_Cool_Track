@@ -340,11 +340,12 @@
                 </div>
               </div>
             </div>
-            <div class="btn-group registro-btn-group">
+            <div class="btn-group registro-btn-group" id="tour-signature-anchor">
               <button class="btn btn--outline" data-action="clear-registro"
                 title="Limpa todos os campos">Recomeçar</button>
               <button class="btn btn--primary" data-action="save-registro">Salvar registro</button>
             </div>
+            <div class="tour-signature-hint">✍️ A assinatura do cliente é solicitada logo após salvar o registro.</div>
           </div>
         </div>
 
@@ -573,6 +574,9 @@
   .app-header__date { display: none !important; }
 }
 </style>
+
+  <button id="tour-help-btn" class="tour-help-btn" type="button" aria-label="Reiniciar tour guiado" title="Reiniciar tour">?</button>
+
 </body>
 
 </html>
