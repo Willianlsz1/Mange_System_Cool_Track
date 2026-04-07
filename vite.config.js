@@ -1,4 +1,4 @@
-﻿import { defineConfig } from 'vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
   base: '/Mange_System_Cool_Track/',
@@ -27,4 +27,15 @@ export default defineConfig({
   css: {
     devSourcemap: true,
   },
+
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      include: ['src/core/**', 'src/domain/**'],
+    },
+  }=======
+
 });
