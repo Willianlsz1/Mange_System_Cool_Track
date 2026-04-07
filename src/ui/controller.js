@@ -5,164 +5,161 @@
  */
 
 // core/ — sobe 1 nível (ui/ → src/)
-import { registerRoute, goTo } from "../core/router.js";
-import { on } from "../core/events.js";
-import { Modal, CustomConfirm } from "../core/modal.js";
-import { Toast } from "../core/toast.js";
-import { Auth } from "../core/auth.js";
-import { ErrorCodes, handleError } from "../core/errors.js";
+import { registerRoute, goTo } from '../core/router.js';
+import { on } from '../core/events.js';
+import { Modal, CustomConfirm } from '../core/modal.js';
+import { Toast } from '../core/toast.js';
+import { Auth } from '../core/auth.js';
+import { ErrorCodes, handleError } from '../core/errors.js';
 
 // domain/ — sobe 1 nível
-import { PDFGenerator } from "../domain/pdf.js";
-import { WhatsAppExport } from "../domain/whatsapp.js";
+import { PDFGenerator } from '../domain/pdf.js';
+import { WhatsAppExport } from '../domain/whatsapp.js';
 
 // features/ — sobe 1 nível
-import { Profile } from "../features/profile.js";
+import { Profile } from '../features/profile.js';
 
 // views/ — MESMO nível (./), pois views/ está dentro de ui/
-import { renderDashboard, updateHeader } from "./views/dashboard.js";
+import { renderDashboard, updateHeader } from './views/dashboard.js';
 import {
   renderEquip,
   saveEquip,
   viewEquip,
   deleteEquip,
   populateEquipSelects,
-} from "./views/equipamentos.js";
-import { renderHist, deleteReg } from "./views/historico.js";
-import { renderAlertas } from "./views/alertas.js";
-import {
-  renderRelatorio,
-  populateRelatorioSelects,
-} from "./views/relatorio.js";
+} from './views/equipamentos.js';
+import { renderHist, deleteReg } from './views/historico.js';
+import { renderAlertas } from './views/alertas.js';
+import { renderRelatorio, populateRelatorioSelects } from './views/relatorio.js';
 import {
   initRegistro,
   saveRegistro,
   clearRegistro,
   loadRegistroForEdit,
-} from "./views/registro.js";
+} from './views/registro.js';
 
 // components/ — MESMO nível (./), pois components/ está dentro de ui/
-import { Photos } from "./components/photos.js";
-import { ProfileModal } from "./components/onboarding.js";
+import { Photos } from './components/photos.js';
+import { ProfileModal } from './components/onboarding.js';
 
 export function initController() {
   // ── Rotas ───────────────────────────────────────────
-  registerRoute("inicio", () => {
+  registerRoute('inicio', () => {
     updateHeader();
     renderDashboard();
   });
 
-  registerRoute("equipamentos", () => {
+  registerRoute('equipamentos', () => {
     populateEquipSelects();
     renderEquip();
     updateHeader();
   });
 
-  registerRoute("registro", (params = {}) => {
+  registerRoute('registro', (params = {}) => {
     populateEquipSelects();
     initRegistro();
     if (params.editRegistroId) loadRegistroForEdit(params.editRegistroId);
     updateHeader();
   });
 
-  registerRoute("historico", () => {
+  registerRoute('historico', () => {
     populateEquipSelects();
     renderHist();
     updateHeader();
   });
 
-  registerRoute("alertas", () => {
+  registerRoute('alertas', () => {
     renderAlertas();
     updateHeader();
   });
 
-  registerRoute("relatorio", () => {
+  registerRoute('relatorio', () => {
     populateRelatorioSelects();
     renderRelatorio();
     updateHeader();
   });
 
   // ── Handlers de ação ────────────────────────────────
-  on("open-modal", (el) => Modal.open(el.dataset.id));
-  on("close-modal", (el) => Modal.close(el.dataset.id));
+  on('open-modal', (el) => Modal.open(el.dataset.id));
+  on('close-modal', (el) => Modal.close(el.dataset.id));
 
-  on("save-equip", async () => {
+  on('save-equip', async () => {
     try {
       await saveEquip();
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
-        message: "Não foi possível salvar o equipamento.",
-        context: { action: "controller.save-equip" },
+        message: 'Não foi possível salvar o equipamento.',
+        context: { action: 'controller.save-equip' },
       });
     }
   });
-  on("view-equip", async (el) => {
+  on('view-equip', async (el) => {
     try {
       await viewEquip(el.dataset.id);
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,
-        message: "Não foi possível abrir o equipamento selecionado.",
-        context: { action: "controller.view-equip", id: el.dataset.id },
+        message: 'Não foi possível abrir o equipamento selecionado.',
+        context: { action: 'controller.view-equip', id: el.dataset.id },
       });
     }
   });
-  on("delete-equip", async (el) => {
+  on('delete-equip', async (el) => {
     try {
       const ok = await CustomConfirm.show(
-        "Excluir Equipamento",
-        "Todos os registros deste equipamento serão removidos. Confirmar?",
+        'Excluir Equipamento',
+        'Todos os registros deste equipamento serão removidos. Confirmar?',
       );
       if (ok) await deleteEquip(el.dataset.id);
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
-        message: "Não foi possível confirmar a exclusão do equipamento.",
-        context: { action: "controller.delete-equip" },
+        message: 'Não foi possível confirmar a exclusão do equipamento.',
+        context: { action: 'controller.delete-equip' },
       });
     }
   });
 
-  on("go-register-equip", (el) => {
-    Modal.close("modal-eq-det");
-    goTo("registro", { equipId: el.dataset.id });
+  on('go-register-equip', (el) => {
+    Modal.close('modal-eq-det');
+    goTo('registro', { equipId: el.dataset.id });
   });
 
-  on("save-registro", () => saveRegistro());
-  on("clear-registro", () => clearRegistro());
-  sessionStorage.removeItem("cooltrack-editing-id");
+  on('save-registro', () => saveRegistro());
+  on('clear-registro', () => clearRegistro());
+  sessionStorage.removeItem('cooltrack-editing-id');
   // restaura título e botão
   const btn = document.querySelector('[data-action="save-registro"]');
   if (btn) {
-    btn.textContent = "Salvar registro";
-    btn.style.background = "";
+    btn.textContent = 'Salvar registro';
+    btn.style.background = '';
   }
-  const title = document.querySelector("#view-registro .section-title");
-  if (title) title.textContent = "O que foi feito hoje?";
+  const title = document.querySelector('#view-registro .section-title');
+  if (title) title.textContent = 'O que foi feito hoje?';
 
-  on("delete-reg", async (el) => {
+  on('delete-reg', async (el) => {
     try {
       const ok = await CustomConfirm.show(
-        "Excluir Registro",
-        "Remover este registro do histórico?",
+        'Excluir Registro',
+        'Remover este registro do histórico?',
       );
       if (ok) deleteReg(el.dataset.id);
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
-        message: "Não foi possível confirmar a exclusão do registro.",
-        context: { action: "controller.delete-reg" },
+        message: 'Não foi possível confirmar a exclusão do registro.',
+        context: { action: 'controller.delete-reg' },
       });
     }
   });
 
-  on("edit-reg", (el) => {
-    goTo("registro", { editRegistroId: el.dataset.id });
+  on('edit-reg', (el) => {
+    goTo('registro', { editRegistroId: el.dataset.id });
   });
 
-  on("open-profile", () => {
-    const isGuest = localStorage.getItem("cooltrack-guest-mode") === "1";
+  on('open-profile', () => {
+    const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
     if (isGuest) {
       ProfileModal.open();
       return;
@@ -175,69 +172,68 @@ export function initController() {
       .catch((err) => {
         handleError(err, {
           code: ErrorCodes.AUTH_FAILED,
-          message: "Não foi possível carregar o perfil da conta.",
-          context: { action: "controller.open-profile" },
+          message: 'Não foi possível carregar o perfil da conta.',
+          context: { action: 'controller.open-profile' },
         });
         ProfileModal.open();
       });
   });
 
-  on("export-pdf", (el) => {
-    el.textContent = "Gerando...";
+  on('export-pdf', (el) => {
+    el.textContent = 'Gerando...';
     el.disabled = true;
     requestAnimationFrame(() => {
       try {
         const fileName = PDFGenerator.generateMaintenanceReport({
-          filtEq: document.getElementById("rel-equip")?.value || "",
-          de: document.getElementById("rel-de")?.value || "",
-          ate: document.getElementById("rel-ate")?.value || "",
+          filtEq: document.getElementById('rel-equip')?.value || '',
+          de: document.getElementById('rel-de')?.value || '',
+          ate: document.getElementById('rel-ate')?.value || '',
         });
         if (fileName) Toast.success(`PDF gerado: ${fileName}`);
-        else Toast.error("Erro ao gerar PDF.");
+        else Toast.error('Erro ao gerar PDF.');
       } finally {
-        el.textContent = "Exportar PDF";
+        el.textContent = 'Exportar PDF';
         el.disabled = false;
       }
     });
   });
 
-  on("whatsapp-export", () => {
+  on('whatsapp-export', () => {
     const ok = WhatsAppExport.send({
-      filtEq: document.getElementById("rel-equip")?.value || "",
-      de: document.getElementById("rel-de")?.value || "",
-      ate: document.getElementById("rel-ate")?.value || "",
+      filtEq: document.getElementById('rel-equip')?.value || '',
+      de: document.getElementById('rel-de')?.value || '',
+      ate: document.getElementById('rel-ate')?.value || '',
     });
-    if (!ok) Toast.warning("Nenhum registro para enviar.");
+    if (!ok) Toast.warning('Nenhum registro para enviar.');
   });
 
-  on("print", () => window.print());
+  on('print', () => window.print());
 
   // Lightbox
-  on("close-lightbox", () => Photos.closeLightbox());
+  on('close-lightbox', () => Photos.closeLightbox());
 
   // Expand detalhes técnicos no modal de cadastro
-  const expandBtn = document.getElementById("eq-expand-details");
-  const expandPanel = document.getElementById("eq-step-2");
+  const expandBtn = document.getElementById('eq-expand-details');
+  const expandPanel = document.getElementById('eq-step-2');
 
   if (expandBtn && expandPanel) {
-    expandBtn.addEventListener("click", () => {
-      const isOpen = expandBtn.getAttribute("aria-expanded") === "true";
-      expandBtn.setAttribute("aria-expanded", String(!isOpen));
-      expandPanel.classList.toggle("is-open", !isOpen);
+    expandBtn.addEventListener('click', () => {
+      const isOpen = expandBtn.getAttribute('aria-expanded') === 'true';
+      expandBtn.setAttribute('aria-expanded', String(!isOpen));
+      expandPanel.classList.toggle('is-open', !isOpen);
     });
   }
 
   // Inputs de foto
-  const inputFotos = document.getElementById("input-fotos");
-  if (inputFotos)
-    inputFotos.addEventListener("change", (e) => Photos.add(e.target));
+  const inputFotos = document.getElementById('input-fotos');
+  if (inputFotos) inputFotos.addEventListener('change', (e) => Photos.add(e.target));
 
   // Filtros do histórico (debounce)
   _bindHistFilters();
 
   // Filtros do relatório
-  ["rel-equip", "rel-de", "rel-ate"].forEach((id) => {
-    document.getElementById(id)?.addEventListener("change", renderRelatorio);
+  ['rel-equip', 'rel-de', 'rel-ate'].forEach((id) => {
+    document.getElementById(id)?.addEventListener('change', renderRelatorio);
   });
 
   // Tema
@@ -245,21 +241,21 @@ export function initController() {
 }
 
 function _showAccountModal(user) {
-  document.getElementById("account-modal-overlay")?.remove();
+  document.getElementById('account-modal-overlay')?.remove();
 
   const profile = Profile.get();
-  const nome = profile?.nome || "Técnico";
+  const nome = profile?.nome || 'Técnico';
   const iniciais = nome
-    .split(" ")
+    .split(' ')
     .map((n) => n[0])
     .slice(0, 2)
-    .join("")
+    .join('')
     .toUpperCase();
-  const email = user?.email || "";
+  const email = user?.email || '';
 
-  const overlay = document.createElement("div");
-  overlay.id = "account-modal-overlay";
-  overlay.className = "modal-overlay is-open";
+  const overlay = document.createElement('div');
+  overlay.id = 'account-modal-overlay';
+  overlay.className = 'modal-overlay is-open';
 
   overlay.innerHTML = `
     <div class="modal" style="align-self:center;padding:0;overflow:hidden;max-width:420px;width:100%;border-radius:var(--premier-radius)">
@@ -323,42 +319,38 @@ function _showAccountModal(user) {
       </div>
 	    </div>`;
 
-  const avatarEl = overlay.querySelector("#account-modal-avatar");
-  const nameEl = overlay.querySelector("#account-modal-name");
-  const emailEl = overlay.querySelector("#account-modal-email");
+  const avatarEl = overlay.querySelector('#account-modal-avatar');
+  const nameEl = overlay.querySelector('#account-modal-name');
+  const emailEl = overlay.querySelector('#account-modal-email');
   if (avatarEl) avatarEl.textContent = iniciais;
   if (nameEl) nameEl.textContent = nome;
   if (emailEl) emailEl.textContent = email;
 
   document.body.appendChild(overlay);
-  overlay.addEventListener("click", (e) => {
+  overlay.addEventListener('click', (e) => {
     if (e.target === overlay) overlay.remove();
   });
 
-  overlay
-    .querySelector("#btn-edit-profile")
-    .addEventListener("mouseenter", (e) => {
-      e.target.style.borderColor = "rgba(255,255,255,0.16)";
-      e.target.style.color = "#E8F2FA";
-      e.target.style.background = "rgba(255,255,255,0.04)";
-    });
-  overlay
-    .querySelector("#btn-edit-profile")
-    .addEventListener("mouseleave", (e) => {
-      e.target.style.borderColor = "rgba(255,255,255,0.08)";
-      e.target.style.color = "#8AAAC8";
-      e.target.style.background = "transparent";
-    });
+  overlay.querySelector('#btn-edit-profile').addEventListener('mouseenter', (e) => {
+    e.target.style.borderColor = 'rgba(255,255,255,0.16)';
+    e.target.style.color = '#E8F2FA';
+    e.target.style.background = 'rgba(255,255,255,0.04)';
+  });
+  overlay.querySelector('#btn-edit-profile').addEventListener('mouseleave', (e) => {
+    e.target.style.borderColor = 'rgba(255,255,255,0.08)';
+    e.target.style.color = '#8AAAC8';
+    e.target.style.background = 'transparent';
+  });
 
-  overlay.querySelector("#btn-edit-profile").addEventListener("click", () => {
+  overlay.querySelector('#btn-edit-profile').addEventListener('click', () => {
     overlay.remove();
     ProfileModal.open();
   });
 
-  overlay.querySelector("#btn-signout").addEventListener("click", () => {
+  overlay.querySelector('#btn-signout').addEventListener('click', () => {
     overlay.remove();
-    localStorage.removeItem("cooltrack-guest-mode");
-    localStorage.removeItem("cooltrack-ftx-done");
+    localStorage.removeItem('cooltrack-guest-mode');
+    localStorage.removeItem('cooltrack-ftx-done');
     Auth.signOut();
   });
 }
@@ -371,40 +363,32 @@ function _bindHistFilters() {
       clearTimeout(t);
       t = setTimeout(() => fn(...args), 280);
     };
-  document
-    .getElementById("hist-busca")
-    ?.addEventListener("input", debounce(renderHist));
-  document.getElementById("hist-equip")?.addEventListener("change", renderHist);
+  document.getElementById('hist-busca')?.addEventListener('input', debounce(renderHist));
+  document.getElementById('hist-equip')?.addEventListener('change', renderHist);
 }
 
 function _initTheme() {
-  const btn = document.getElementById("theme-toggle");
-  const icon = document.getElementById("theme-icon");
+  const btn = document.getElementById('theme-toggle');
+  const icon = document.getElementById('theme-icon');
   if (!btn || !icon) return;
 
   const apply = (theme) => {
-    if (theme === "light") {
-      document.documentElement.setAttribute("data-theme", "light");
-      icon.textContent = "☀️";
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+      icon.textContent = '☀️';
     } else {
-      document.documentElement.removeAttribute("data-theme");
-      icon.textContent = "🌙";
+      document.documentElement.removeAttribute('data-theme');
+      icon.textContent = '🌙';
     }
-    localStorage.setItem("cooltrack-theme", theme);
+    localStorage.setItem('cooltrack-theme', theme);
   };
 
   const preferred =
-    localStorage.getItem("cooltrack-theme") ||
-    (window.matchMedia("(prefers-color-scheme: light)").matches
-      ? "light"
-      : "dark");
+    localStorage.getItem('cooltrack-theme') ||
+    (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   apply(preferred);
 
-  btn.addEventListener("click", () => {
-    apply(
-      document.documentElement.getAttribute("data-theme") === "light"
-        ? "dark"
-        : "light",
-    );
+  btn.addEventListener('click', () => {
+    apply(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
   });
 }

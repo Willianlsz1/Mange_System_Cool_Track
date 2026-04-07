@@ -46,8 +46,31 @@ async function loadStorageModule(options = {}) {
 
 function sampleState() {
   return {
-    equipamentos: [{ id: 'eq-1', nome: 'Split', local: 'UTI', status: 'ok', tag: '', tipo: 'Outro', modelo: '', fluido: '' }],
-    registros: [{ id: 'r-1', equipId: 'eq-1', data: '2026-04-07T10:00', tipo: 'Manutenção', status: 'ok', pecas: '', proxima: '2026-04-20', fotos: [], tecnico: '' }],
+    equipamentos: [
+      {
+        id: 'eq-1',
+        nome: 'Split',
+        local: 'UTI',
+        status: 'ok',
+        tag: '',
+        tipo: 'Outro',
+        modelo: '',
+        fluido: '',
+      },
+    ],
+    registros: [
+      {
+        id: 'r-1',
+        equipId: 'eq-1',
+        data: '2026-04-07T10:00',
+        tipo: 'Manutenção',
+        status: 'ok',
+        pecas: '',
+        proxima: '2026-04-20',
+        fotos: [],
+        tecnico: '',
+      },
+    ],
     tecnicos: ['Ana'],
   };
 }
@@ -77,9 +100,19 @@ describe('Storage integration (offline-first)', () => {
       STORAGE_KEY,
       JSON.stringify({
         equipamentos: [{ id: 101, nome: 'Chiller', local: 'Bloco A', status: 'invalid' }],
-        registros: [{ id: 201, equipId: 101, data: '2026-04-01T08:00', tipo: 'Inspeção', status: 'bad', fotos: [1, 'ok'], assinatura: 'yes' }],
+        registros: [
+          {
+            id: 201,
+            equipId: 101,
+            data: '2026-04-01T08:00',
+            tipo: 'Inspeção',
+            status: 'bad',
+            fotos: [1, 'ok'],
+            assinatura: 'yes',
+          },
+        ],
         tecnicos: ['Carlos', 10],
-      })
+      }),
     );
 
     const loaded = Storage.load(null);
@@ -140,7 +173,18 @@ describe('Storage integration (offline-first)', () => {
     local.equipamentos[0].nome = 'LOCAL';
     localStorage.setItem(STORAGE_KEY, JSON.stringify(local));
 
-    const remoteEquip = [{ id: 'eq-1', nome: 'REMOTE', local: 'UTI', status: 'warn', tag: '', tipo: 'Outro', modelo: '', fluido: '' }];
+    const remoteEquip = [
+      {
+        id: 'eq-1',
+        nome: 'REMOTE',
+        local: 'UTI',
+        status: 'warn',
+        tag: '',
+        tipo: 'Outro',
+        modelo: '',
+        fluido: '',
+      },
+    ];
 
     const { Storage } = await loadStorageModule({
       supabase: {

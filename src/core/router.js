@@ -4,8 +4,8 @@
  * Orquestrado pelo ui/controller.js que injeta os handlers de cada view
  */
 
-const _routes   = new Map();  // name → { onEnter, onLeave }
-let _current    = null;
+const _routes = new Map(); // name → { onEnter, onLeave }
+let _current = null;
 let _transitioning = false;
 let _historyBound = false;
 
@@ -64,7 +64,7 @@ export function goTo(name, params = {}, options = {}) {
 function _activateRoute(name, el, params, options = {}) {
   const { fromHistory = false, replaceHistory = false } = options;
   // Atualizar nav
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('is-active'));
+  document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('is-active'));
   document.getElementById(`nav-${name}`)?.classList.add('is-active');
 
   // Ativar view
@@ -73,12 +73,13 @@ function _activateRoute(name, el, params, options = {}) {
   // Chamar onEnter
   _routes.get(name)?.onEnter(params);
 
-  _current       = name;
+  _current = name;
   _transitioning = false;
 
   if (!fromHistory && typeof window !== 'undefined' && window.history) {
     const state = { route: name };
-    if (replaceHistory) window.history.replaceState(state, '', window.location.pathname + window.location.search);
+    if (replaceHistory)
+      window.history.replaceState(state, '', window.location.pathname + window.location.search);
     else window.history.pushState(state, '', window.location.pathname + window.location.search);
   }
 
@@ -87,20 +88,22 @@ function _activateRoute(name, el, params, options = {}) {
   window.scrollTo(0, 0);
 }
 
-export function currentRoute() { return _current; }
+export function currentRoute() {
+  return _current;
+}
 
 export function initHistory() {
   if (_historyBound || typeof window === 'undefined') return;
   _historyBound = true;
 
-  window.addEventListener('popstate', e => {
+  window.addEventListener('popstate', (e) => {
     const route = e.state?.route;
     if (route && _routes.has(route)) {
       goTo(route, {}, { fromHistory: true });
     }
   });
 
-  document.addEventListener('backbutton', e => {
+  document.addEventListener('backbutton', (e) => {
     if (_current && _current !== 'inicio') {
       e.preventDefault?.();
       window.history.back();

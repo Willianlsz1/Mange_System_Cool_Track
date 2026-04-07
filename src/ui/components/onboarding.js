@@ -11,11 +11,11 @@
  *   Profile               — utilitário de perfil (mantido)
  */
 
-import { Utils, TIPO_ICON }  from '../../core/utils.js';
+import { Utils, TIPO_ICON } from '../../core/utils.js';
 import { getState, setState } from '../../core/state.js';
-import { Toast }             from '../../core/toast.js';
-import { goTo }              from '../../core/router.js';
-import { Profile }           from '../../features/profile.js';
+import { Toast } from '../../core/toast.js';
+import { goTo } from '../../core/router.js';
+import { Profile } from '../../features/profile.js';
 
 /* ─────────────────────────────────────────────────────
    PROFILE — persistência simples do perfil do técnico
@@ -28,7 +28,9 @@ export { Profile };
 const HIGHLIGHT_KEY = 'cooltrack-highlight-id';
 
 export const SavedHighlight = {
-  markForHighlight(id) { sessionStorage.setItem(HIGHLIGHT_KEY, id); },
+  markForHighlight(id) {
+    sessionStorage.setItem(HIGHLIGHT_KEY, id);
+  },
   applyIfPending() {
     const id = sessionStorage.getItem(HIGHLIGHT_KEY);
     if (!id) return;
@@ -70,8 +72,12 @@ export const OnboardingBanner = {
     `;
     document.getElementById('lista-equip')?.before(el);
   },
-  dismiss() { localStorage.setItem(BANNER_KEY, '1'); },
-  remove()  { document.getElementById('onboarding-banner')?.remove(); },
+  dismiss() {
+    localStorage.setItem(BANNER_KEY, '1');
+  },
+  remove() {
+    document.getElementById('onboarding-banner')?.remove();
+  },
 };
 
 /* ─────────────────────────────────────────────────────
@@ -123,7 +129,9 @@ export const ProfileModal = {
         </div>`;
 
       document.body.appendChild(guestOverlay);
-      guestOverlay.addEventListener('click', e => { if (e.target === guestOverlay) guestOverlay.remove(); });
+      guestOverlay.addEventListener('click', (e) => {
+        if (e.target === guestOverlay) guestOverlay.remove();
+      });
 
       guestOverlay.querySelector('#guest-signup-btn').addEventListener('click', () => {
         guestOverlay.remove();
@@ -169,7 +177,12 @@ export const ProfileModal = {
         display:flex;align-items:center;justify-content:center;
         font-size:17px;font-weight:700;color:#00D4FF;flex-shrink:0
       ">
-        ${(profile.nome || 'T').split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase()}
+        ${(profile.nome || 'T')
+          .split(' ')
+          .map((n) => n[0])
+          .slice(0, 2)
+          .join('')
+          .toUpperCase()}
       </div>
       <div>
         <div style="font-size:16px;font-weight:600;color:#E8F2FA;margin-bottom:2px">Meu Perfil</div>
@@ -206,15 +219,20 @@ export const ProfileModal = {
 
     document.body.appendChild(overlay);
 
-    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
 
     document.getElementById('prof-cancel')?.addEventListener('click', () => overlay.remove());
     document.getElementById('prof-save')?.addEventListener('click', () => {
       const nome = document.getElementById('prof-nome')?.value.trim();
-      if (!nome) { Toast.warning('Digite seu nome para continuar.'); return; }
+      if (!nome) {
+        Toast.warning('Digite seu nome para continuar.');
+        return;
+      }
       Profile.save({
         nome,
-        empresa:  document.getElementById('prof-empresa')?.value.trim(),
+        empresa: document.getElementById('prof-empresa')?.value.trim(),
         telefone: document.getElementById('prof-telefone')?.value.trim(),
       });
       overlay.remove();
@@ -240,7 +258,6 @@ export const ProfileModal = {
 const FTX_KEY = 'cooltrack-ftx-done';
 
 export const FirstTimeExperience = {
-
   show(equipamentos) {
     /* Já tem equipamento ou já fez onboarding → não mostrar */
     if (equipamentos.length || localStorage.getItem(FTX_KEY)) return;
@@ -426,17 +443,15 @@ export const FirstTimeExperience = {
     document.body.appendChild(overlay);
 
     /* Estado do wizard */
-    let step = 0;
     let techName = Profile.get()?.nome || '';
     let equipData = {};
 
     const contentEl = overlay.querySelector('#ftx-content');
 
     const setDots = (current) => {
-      [0,1,2].forEach(i => {
+      [0, 1, 2].forEach((i) => {
         const dot = overlay.querySelector(`#ftx-dot-${i}`);
-        dot.className = 'ftx-step-dot' +
-          (i === current ? ' active' : i < current ? ' done' : '');
+        dot.className = 'ftx-step-dot' + (i === current ? ' active' : i < current ? ' done' : '');
       });
     };
 
@@ -488,13 +503,15 @@ export const FirstTimeExperience = {
         </div>`;
 
       const input = overlay.querySelector('#ftx-nome');
-      const btn   = overlay.querySelector('#ftx-next-0');
+      const btn = overlay.querySelector('#ftx-next-0');
 
       /* Foco automático */
       setTimeout(() => input?.focus(), 100);
 
       /* Enter avança */
-      input?.addEventListener('keydown', e => { if (e.key === 'Enter') btn.click(); });
+      input?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btn.click();
+      });
 
       btn.addEventListener('click', () => {
         const nome = input.value.trim();
@@ -507,7 +524,6 @@ export const FirstTimeExperience = {
         techName = nome;
         Profile.save({ ...Profile.get(), nome });
         Profile.saveLastTecnico(nome);
-        step = 1;
         renderStep1();
       });
     };
@@ -569,14 +585,14 @@ export const FirstTimeExperience = {
           <div class="ftx-hint">Você edita ou exclui a qualquer momento</div>
         </div>`;
 
-      const nomeInput  = overlay.querySelector('#ftx-eq-nome');
+      const nomeInput = overlay.querySelector('#ftx-eq-nome');
       const localInput = overlay.querySelector('#ftx-eq-local');
-      const btn        = overlay.querySelector('#ftx-next-1');
+      const btn = overlay.querySelector('#ftx-next-1');
 
       setTimeout(() => nomeInput?.focus(), 100);
 
       btn.addEventListener('click', () => {
-        const nome  = nomeInput.value.trim();
+        const nome = nomeInput.value.trim();
         const local = localInput.value.trim();
 
         if (!nome) {
@@ -591,26 +607,23 @@ export const FirstTimeExperience = {
         }
 
         equipData = {
-          id:     Utils.uid(),
+          id: Utils.uid(),
           nome,
           local,
           status: 'ok',
-          tag:    '',
-          tipo:   overlay.querySelector('#ftx-eq-tipo').value,
+          tag: '',
+          tipo: overlay.querySelector('#ftx-eq-tipo').value,
           fluido: overlay.querySelector('#ftx-eq-fluido').value,
           modelo: '',
         };
 
         /* Salva no estado global */
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
           equipamentos: [...prev.equipamentos, equipData],
-          tecnicos: prev.tecnicos.includes(techName)
-            ? prev.tecnicos
-            : [...prev.tecnicos, techName],
+          tecnicos: prev.tecnicos.includes(techName) ? prev.tecnicos : [...prev.tecnicos, techName],
         }));
 
-        step = 2;
         renderStep2();
       });
     };
@@ -681,7 +694,6 @@ export const FirstTimeExperience = {
     /* Render inicial */
     renderStep0();
   },
-
 };
 
 /* ── Fechar overlay ── */

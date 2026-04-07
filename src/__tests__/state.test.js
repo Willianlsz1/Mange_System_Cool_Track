@@ -40,11 +40,11 @@ describe('state module', () => {
     const listener = vi.fn();
 
     const unsubscribe = subscribe(listener);
-    setState(s => ({ ...s, tecnicos: ['Carlos'] }));
+    setState((s) => ({ ...s, tecnicos: ['Carlos'] }));
     expect(listener).toHaveBeenCalledTimes(1);
 
     unsubscribe();
-    setState(s => ({ ...s, tecnicos: ['Camila'] }));
+    setState((s) => ({ ...s, tecnicos: ['Camila'] }));
     expect(listener).toHaveBeenCalledTimes(1);
   });
 
@@ -53,7 +53,7 @@ describe('state module', () => {
     const listener = vi.fn();
     subscribe(listener);
 
-    setState(s => ({ ...s, tecnicos: ['João'] }), { persist: false, emit: false });
+    setState((s) => ({ ...s, tecnicos: ['João'] }), { persist: false, emit: false });
 
     expect(saveSpy).not.toHaveBeenCalled();
     expect(listener).not.toHaveBeenCalled();
@@ -63,8 +63,20 @@ describe('state module', () => {
     const initial = {
       equipamentos: [{ id: 'eq-1', nome: 'Split', local: 'UTI', status: 'warn' }],
       registros: [
-        { id: 'r1', equipId: 'eq-1', data: '2026-04-01T10:00', proxima: '2026-04-15', status: 'ok' },
-        { id: 'r2', equipId: 'eq-1', data: '2026-04-03T10:00', proxima: '2026-04-20', status: 'warn' },
+        {
+          id: 'r1',
+          equipId: 'eq-1',
+          data: '2026-04-01T10:00',
+          proxima: '2026-04-15',
+          status: 'ok',
+        },
+        {
+          id: 'r2',
+          equipId: 'eq-1',
+          data: '2026-04-03T10:00',
+          proxima: '2026-04-20',
+          status: 'warn',
+        },
       ],
       tecnicos: [],
     };

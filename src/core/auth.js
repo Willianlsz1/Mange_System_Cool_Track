@@ -1,16 +1,17 @@
 import { supabase } from './supabase.js';
-import { Toast }    from './toast.js';
+import { Toast } from './toast.js';
 import { AppError, ErrorCodes, handleError } from './errors.js';
 
 export const Auth = {
-
   isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
   },
 
   async getUser() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       return user;
     } catch (error) {
       handleError(error, {
@@ -26,14 +27,19 @@ export const Auth = {
     try {
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) {
-        handleError(new AppError('Não foi possível criar sua conta.', ErrorCodes.AUTH_FAILED, 'warning', { action: 'signUp', detail: error.message }));
+        handleError(
+          new AppError('Não foi possível criar sua conta.', ErrorCodes.AUTH_FAILED, 'warning', {
+            action: 'signUp',
+            detail: error.message,
+          }),
+        );
         return null;
       }
 
       // Cria o perfil junto
       if (data.user) {
         await supabase.from('profiles').insert({
-          id:   data.user.id,
+          id: data.user.id,
           nome,
         });
       }
@@ -52,7 +58,12 @@ export const Auth = {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        handleError(new AppError('Email ou senha incorretos.', ErrorCodes.AUTH_FAILED, 'warning', { action: 'signIn', detail: error.message }));
+        handleError(
+          new AppError('Email ou senha incorretos.', ErrorCodes.AUTH_FAILED, 'warning', {
+            action: 'signIn',
+            detail: error.message,
+          }),
+        );
         return null;
       }
       return data.user;
@@ -80,7 +91,9 @@ export const Auth = {
   },
 
   async requestPasswordReset(email) {
-    const normalized = String(email || '').trim().toLowerCase();
+    const normalized = String(email || '')
+      .trim()
+      .toLowerCase();
     if (!this.isValidEmail(normalized)) {
       return { ok: false, message: 'Digite um email válido para recuperar a senha.' };
     }
@@ -89,7 +102,14 @@ export const Auth = {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(normalized, { redirectTo });
       if (error) {
-        handleError(new AppError('Não foi possível enviar o email de recuperação.', ErrorCodes.NETWORK_ERROR, 'warning', { action: 'requestPasswordReset', detail: error.message }));
+        handleError(
+          new AppError(
+            'Não foi possível enviar o email de recuperação.',
+            ErrorCodes.NETWORK_ERROR,
+            'warning',
+            { action: 'requestPasswordReset', detail: error.message },
+          ),
+        );
         return { ok: false, message: 'Não foi possível enviar o email de recuperação.' };
       }
       return { ok: true };
@@ -118,7 +138,14 @@ export const Auth = {
     try {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
-        handleError(new AppError('Não foi possível redefinir a senha. Tente novamente pelo link do email.', ErrorCodes.AUTH_FAILED, 'warning', { action: 'tryHandlePasswordRecovery', detail: error.message }));
+        handleError(
+          new AppError(
+            'Não foi possível redefinir a senha. Tente novamente pelo link do email.',
+            ErrorCodes.AUTH_FAILED,
+            'warning',
+            { action: 'tryHandlePasswordRecovery', detail: error.message },
+          ),
+        );
         return true;
       }
 

@@ -15,8 +15,12 @@ describe('Utils', () => {
 
   it('escapes HTML and attribute special characters', () => {
     const raw = `<div class="x">Tom & Jerry's</div>`;
-    expect(Utils.escapeHtml(raw)).toBe('&lt;div class=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/div&gt;');
-    expect(Utils.escapeAttr(raw)).toBe('&lt;div class=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/div&gt;');
+    expect(Utils.escapeHtml(raw)).toBe(
+      '&lt;div class=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/div&gt;',
+    );
+    expect(Utils.escapeAttr(raw)).toBe(
+      '&lt;div class=&quot;x&quot;&gt;Tom &amp; Jerry&#39;s&lt;/div&gt;',
+    );
   });
 
   it('works with DOM helpers getEl/getVal/setVal/clearVals', () => {

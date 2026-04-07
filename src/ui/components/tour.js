@@ -6,43 +6,43 @@ const STEPS = [
   {
     selector: '#dash-greeting',
     route: 'inicio',
-    text: '👋 Bem-vindo ao CoolTrack Pro! Aqui você acompanha o resumo dos seus equipamentos e manutenções.'
+    text: '👋 Bem-vindo ao CoolTrack Pro! Aqui você acompanha o resumo dos seus equipamentos e manutenções.',
   },
   {
     selector: '.kpi-row',
     route: 'inicio',
-    text: '🔧 Estes cards mostram a situação atual dos seus equipamentos. Verde = ok, Amarelo = atenção, Vermelho = crítico.'
+    text: '🔧 Estes cards mostram a situação atual dos seus equipamentos. Verde = ok, Amarelo = atenção, Vermelho = crítico.',
   },
   {
     selector: '#nav-registro',
-    text: '📋 Aqui você registra um novo serviço realizado. Preencha equipamento, descrição, peças e colete a assinatura do cliente.'
+    text: '📋 Aqui você registra um novo serviço realizado. Preencha equipamento, descrição, peças e colete a assinatura do cliente.',
   },
   {
     selector: '#photo-drop-zone',
     route: 'registro',
-    text: '📷 Anexe até 5 fotos por registro para documentar o serviço realizado.'
+    text: '📷 Anexe até 5 fotos por registro para documentar o serviço realizado.',
   },
   {
     selector: '#tour-signature-anchor',
     route: 'registro',
-    text: '✍️ Colete a assinatura do cliente diretamente na tela. Ela aparecerá no PDF do relatório como comprovante.'
+    text: '✍️ Colete a assinatura do cliente diretamente na tela. Ela aparecerá no PDF do relatório como comprovante.',
   },
   {
     selector: '#nav-historico',
-    text: '🕒 Consulte todos os serviços realizados. Use os filtros para encontrar registros por equipamento ou período.'
+    text: '🕒 Consulte todos os serviços realizados. Use os filtros para encontrar registros por equipamento ou período.',
   },
   {
     selector: '#nav-relatorio',
-    text: '📄 Gere relatórios em PDF com os registros filtrados. O PDF inclui assinatura do cliente e sai com fundo branco para economizar tinta na impressão.'
+    text: '📄 Gere relatórios em PDF com os registros filtrados. O PDF inclui assinatura do cliente e sai com fundo branco para economizar tinta na impressão.',
   },
   {
     selector: 'button[data-action="open-profile"]',
-    text: '👤 Acesse seu perfil, edite seus dados ou saia da conta por aqui.'
+    text: '👤 Acesse seu perfil, edite seus dados ou saia da conta por aqui.',
   },
   {
     selector: '#tour-help-btn',
-    text: '❓ Clicou aqui por acidente? Este botão reinicia o tour sempre que precisar relembrar alguma função.'
-  }
+    text: '❓ Clicou aqui por acidente? Este botão reinicia o tour sempre que precisar relembrar alguma função.',
+  },
 ];
 
 export const Tour = {
@@ -182,18 +182,19 @@ export const Tour = {
     requestAnimationFrame(() => {
       const ttRect = tooltip.getBoundingClientRect();
 
-      let top = placeBottom
-        ? rect.bottom + spacing
-        : rect.top - ttRect.height - spacing;
+      let top = placeBottom ? rect.bottom + spacing : rect.top - ttRect.height - spacing;
 
-      let left = rect.left + (rect.width / 2) - (ttRect.width / 2);
+      let left = rect.left + rect.width / 2 - ttRect.width / 2;
       left = Math.max(12, Math.min(left, window.innerWidth - ttRect.width - 12));
       top = Math.max(12, Math.min(top, window.innerHeight - ttRect.height - 12));
 
       tooltip.style.left = `${left}px`;
       tooltip.style.top = `${top}px`;
 
-      const arrowLeft = Math.max(18, Math.min(rect.left + (rect.width / 2) - left, ttRect.width - 18));
+      const arrowLeft = Math.max(
+        18,
+        Math.min(rect.left + rect.width / 2 - left, ttRect.width - 18),
+      );
       arrow.style.left = `${arrowLeft}px`;
 
       tooltip.classList.add(placeBottom ? 'tour-tooltip--bottom' : 'tour-tooltip--top');
@@ -224,5 +225,5 @@ export const Tour = {
 
   finish() {
     this.stop();
-  }
+  },
 };

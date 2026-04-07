@@ -3,34 +3,43 @@
  * Movido para core/utils.js
  */
 
-export const STORAGE_KEY           = 'cooltrack_v3';
+export const STORAGE_KEY = 'cooltrack_v3';
 export const MAX_PHOTOS_PER_RECORD = 5;
-export const MAX_PHOTO_WIDTH       = 1200;
-export const PHOTO_QUALITY         = 0.7;
+export const MAX_PHOTO_WIDTH = 1200;
+export const PHOTO_QUALITY = 0.7;
 
 export const TIPO_ICON = {
-  'Split Hi-Wall':   '❄️',
-  'Split Cassette':  '🌀',
+  'Split Hi-Wall': '❄️',
+  'Split Cassette': '🌀',
   'Split Piso Teto': '📐',
-  'Fan Coil':        '💨',
-  'Chiller':         '🧊',
-  'Câmara Fria':     '🏔️',
-  'VRF / VRV':       '🔁',
-  'Self Contained':  '🏭',
-  'Roof Top':        '🏗️',
-  'Outro':           '⚙️',
+  'Fan Coil': '💨',
+  Chiller: '🧊',
+  'Câmara Fria': '🏔️',
+  'VRF / VRV': '🔁',
+  'Self Contained': '🏭',
+  'Roof Top': '🏗️',
+  Outro: '⚙️',
 };
 
 export const STATUS_LABEL = {
-  ok:     'Normal',
-  warn:   'Atenção',
+  ok: 'Normal',
+  warn: 'Atenção',
   danger: 'Crítico',
 };
 
 export const FLUIDOS_VALIDOS = [
-  'R-410A', 'R-22', 'R-32', 'R-407C',
-  'R-134A', 'R-404A', 'R-448A', 'R-449A',
-  'R-507A', 'R-717', 'R-744', 'Outro',
+  'R-410A',
+  'R-22',
+  'R-32',
+  'R-407C',
+  'R-134A',
+  'R-404A',
+  'R-448A',
+  'R-449A',
+  'R-507A',
+  'R-717',
+  'R-744',
+  'Outro',
 ];
 
 export const Utils = {
@@ -70,7 +79,9 @@ export const Utils = {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return '—';
     return `${d.toLocaleDateString('pt-BR', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
     })} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   },
 
@@ -92,11 +103,18 @@ export const Utils = {
   },
 
   escapeHtml(value = '') {
-    return String(value).replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    }[c]));
+    return String(value).replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[c],
+    );
   },
-
 
   escapeAttr(value) {
     return String(value ?? '')
@@ -107,10 +125,19 @@ export const Utils = {
       .replace(/>/g, '&gt;');
   },
 
-  getEl(id)         { return document.getElementById(id); },
-  getVal(id)        { return Utils.getEl(id)?.value ?? ''; },
-  setVal(id, value) { const el = Utils.getEl(id); if (el) el.value = value; },
-  clearVals(...ids) { ids.forEach(id => Utils.setVal(id, '')); },
+  getEl(id) {
+    return document.getElementById(id);
+  },
+  getVal(id) {
+    return Utils.getEl(id)?.value ?? '';
+  },
+  setVal(id, value) {
+    const el = Utils.getEl(id);
+    if (el) el.value = value;
+  },
+  clearVals(...ids) {
+    ids.forEach((id) => Utils.setVal(id, ''));
+  },
 
   getStorageBytes() {
     try {
@@ -119,11 +146,13 @@ export const Utils = {
         total += (localStorage.getItem(key) || '').length * 2;
       }
       return total;
-    } catch (_) { return 0; }
+    } catch (_) {
+      return 0;
+    }
   },
 
   formatBytes(bytes) {
-    if (bytes < 1024)        return `${bytes} B`;
+    if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   },

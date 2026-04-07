@@ -14,7 +14,7 @@ export const Alerts = {
     in7.setDate(in7.getDate() + 7);
 
     const dueByEquip = new Map();
-    registros.forEach(r => {
+    registros.forEach((r) => {
       if (!r.proxima) return;
       const d = new Date(`${r.proxima}T00:00:00`);
       if (Number.isNaN(d.getTime())) return;
@@ -29,9 +29,9 @@ export const Alerts = {
     });
 
     equipamentos
-      .filter(e => e.status === 'danger')
-      .forEach(eq => list.push({ kind: 'critical', eq }));
+      .filter((e) => e.status === 'danger')
+      .forEach((eq) => list.push({ kind: 'critical', eq }));
 
     return list;
-  }
+  },
 };

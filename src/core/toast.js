@@ -5,7 +5,7 @@
 const TOAST_CONFIG = {
   duration: 3000,
   position: 'top-right',
-  maxVisible: 5
+  maxVisible: 5,
 };
 
 let toastContainer = null;
@@ -74,12 +74,24 @@ function escapeHtml(text) {
 }
 
 export const Toast = {
-  success(message) { return createToast(message, 'success'); },
-  error(message)   { return createToast(message, 'error'); },
-  warning(message) { return createToast(message, 'warning'); },
-  info(message)    { return createToast(message, 'info'); },
-  clearAll()       { [...activeToasts].forEach(t => removeToast(t)); },
-  configure(opts)  { Object.assign(TOAST_CONFIG, opts); }
+  success(message) {
+    return createToast(message, 'success');
+  },
+  error(message) {
+    return createToast(message, 'error');
+  },
+  warning(message) {
+    return createToast(message, 'warning');
+  },
+  info(message) {
+    return createToast(message, 'info');
+  },
+  clearAll() {
+    [...activeToasts].forEach((t) => removeToast(t));
+  },
+  configure(opts) {
+    Object.assign(TOAST_CONFIG, opts);
+  },
 };
 
 export default Toast;

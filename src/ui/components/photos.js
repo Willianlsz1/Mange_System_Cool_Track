@@ -22,13 +22,16 @@ function compressImage(file) {
     }, 15000);
 
     const reader = new FileReader();
-    reader.onload = event => {
+    reader.onload = (event) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let w = img.width;
         let h = img.height;
-        if (w > MAX_PHOTO_WIDTH) { h = Math.round((h * MAX_PHOTO_WIDTH) / w); w = MAX_PHOTO_WIDTH; }
+        if (w > MAX_PHOTO_WIDTH) {
+          h = Math.round((h * MAX_PHOTO_WIDTH) / w);
+          w = MAX_PHOTO_WIDTH;
+        }
         canvas.width = w;
         canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
@@ -64,7 +67,9 @@ export const Photos = {
 
     const toProcess = files.slice(0, available);
     if (files.length > available) {
-      Toast.warning(`Apenas ${available} foto(s) adicionada(s). Limite é ${MAX_PHOTOS_PER_RECORD} por registro.`);
+      Toast.warning(
+        `Apenas ${available} foto(s) adicionada(s). Limite é ${MAX_PHOTOS_PER_RECORD} por registro.`,
+      );
     }
 
     const dropText = Utils.getEl('photo-drop-text');
@@ -90,7 +95,9 @@ export const Photos = {
     // Aviso de storage após adicionar fotos
     const { percent } = Storage.usage();
     if (percent >= 70) {
-      Toast.warning(`Armazenamento em ${percent}% do limite. Considere remover registros antigos com fotos.`);
+      Toast.warning(
+        `Armazenamento em ${percent}% do limite. Considere remover registros antigos com fotos.`,
+      );
     }
   },
 
@@ -145,5 +152,5 @@ export const Photos = {
     if (counter) {
       counter.textContent = `${this.pending.length}/${MAX_PHOTOS_PER_RECORD} fotos`;
     }
-  }
+  },
 };
