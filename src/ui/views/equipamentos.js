@@ -15,6 +15,7 @@ import { Toast } from "../../core/toast.js";
 import { OnboardingBanner } from "../components/onboarding.js";
 import { Profile } from "../../features/profile.js";
 import { calcHealthScore, getHealthClass, updateHeader } from "./dashboard.js";
+import { ErrorCodes, handleError } from "../../core/errors.js";
 
 const STATUS_TECH = { ok: "OPERANDO", warn: "ATENÇÃO", danger: "FALHA" };
 
@@ -143,12 +144,19 @@ export function renderEquip(filtro = "") {
       );
 }
 
-export function saveEquip() {
+export async function saveEquip() {
   if (localStorage.getItem("cooltrack-guest-mode") === "1") {
     Toast.info("Crie uma conta grátis para salvar equipamentos.");
-    import("../components/authscreen.js").then(({ AuthScreen }) =>
-      AuthScreen.show(),
-    );
+    try {
+      const { AuthScreen } = await import("../components/authscreen.js");
+      AuthScreen.show();
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: "Não foi possível abrir a tela de login agora.",
+        context: { action: "equipamentos.saveEquip.authscreen" },
+      });
+    }
     return;
   }
   const nome = Utils.getVal("eq-nome").trim();
@@ -183,19 +191,37 @@ export function saveEquip() {
       },
     ],
   }));
-  import("../../core/modal.js").then(({ Modal: M }) => M.close("modal-add-eq"));
+  try {
+    const { Modal: M } = await import("../../core/modal.js");
+    M.close("modal-add-eq");
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.NETWORK_ERROR,
+      message: "Não foi possível fechar o modal de cadastro.",
+      context: { action: "equipamentos.saveEquip.closeModal" },
+      severity: "warning",
+    });
+  }
   Utils.clearVals("eq-nome", "eq-tag", "eq-local", "eq-modelo");
   OnboardingBanner.dismiss();
   OnboardingBanner.remove();
-  import('./dashboard.js').then(({ renderDashboard }) => {
+  try {
+    const { renderDashboard } = await import("./dashboard.js");
     renderDashboard();
-  });
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.NETWORK_ERROR,
+      message: "Equipamento salvo, mas houve falha ao atualizar o painel.",
+      context: { action: "equipamentos.saveEquip.renderDashboard" },
+      severity: "warning",
+    });
+  }
   renderEquip();
   updateHeader();
   Toast.success("Equipamento cadastrado.");
 }
 
-export function viewEquip(id) {
+export async function viewEquip(id) {
   const eq = findEquip(id);
   if (!eq) return;
   const regs = regsForEquip(id).sort((a, b) => b.data.localeCompare(a.data));
@@ -234,16 +260,35 @@ export function viewEquip(id) {
       </button>
     </div>`;
 
-  import("../../core/modal.js").then(({ Modal: M }) => M.open("modal-eq-det"));
+  try {
+    const { Modal: M } = await import("../../core/modal.js");
+    M.open("modal-eq-det");
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.NETWORK_ERROR,
+      message: "Não foi possível abrir os detalhes do equipamento.",
+      context: { action: "equipamentos.viewEquip.openModal", id },
+    });
+  }
 }
 
-export function deleteEquip(id) {
+export async function deleteEquip(id) {
   setState((prev) => ({
     ...prev,
     equipamentos: prev.equipamentos.filter((e) => e.id !== id),
     registros: prev.registros.filter((r) => r.equipId !== id),
   }));
-  import("../../core/modal.js").then(({ Modal: M }) => M.close("modal-eq-det"));
+  try {
+    const { Modal: M } = await import("../../core/modal.js");
+    M.close("modal-eq-det");
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.NETWORK_ERROR,
+      message: "Equipamento removido, mas não foi possível fechar o modal.",
+      context: { action: "equipamentos.deleteEquip.closeModal", id },
+      severity: "warning",
+    });
+  }
   renderEquip();
   updateHeader();
   Toast.info("Equipamento removido.");
