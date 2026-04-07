@@ -12,7 +12,7 @@ import { jsPDF }    from 'jspdf';
 import autoTable    from 'jspdf-autotable';
 import { getState }               from '../core/state.js';
 import { Utils }                  from '../core/utils.js';
-import { Profile }                from '../ui/components/onboarding.js';
+import { Profile }                from '../features/profile.js';
 import { getSignatureForRecord }  from '../ui/components/signature.js';
 
 /* ── Paleta ─────────────────────────────────────────── */

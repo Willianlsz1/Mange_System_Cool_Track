@@ -3,13 +3,12 @@
  * Funções: updateHeader, renderDashboard (renderInicio)
  */
 
-import { Utils }                                    from '../../core/utils.js';
+import { Utils, TIPO_ICON }                         from '../../core/utils.js';
 import { getState, findEquip, lastRegForEquip }     from '../../core/state.js';
 import { Storage }                                  from '../../core/storage.js';
 import { Alerts }                                   from '../../domain/alerts.js';
 import { Charts }                                   from '../components/charts.js';
 import { OnboardingBanner }                         from '../components/onboarding.js';
-import { TIPO_ICON }                                from '../../core/utils.js';
 
 // ── Labels internos ────────────────────────────────────
 const STATUS_TECH = { ok: 'OPERANDO', warn: 'ATENÇÃO', danger: 'FALHA' };
@@ -310,7 +309,9 @@ function _renderStatusChart() {
   const hash = `${equipamentos.length}:${registros.length}:${equipamentos.map(e => e.status).join('')}`;
   if (hash === _lastChartHash) return;
   _lastChartHash = hash;
-  setTimeout(() => Charts.refreshAll(), 50);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => Charts.refreshAll());
+  });
 }
 
 // ═══════════════════════════════════════════════════════
