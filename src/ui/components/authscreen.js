@@ -1,10 +1,10 @@
-import { Auth } from "../../core/auth.js";
-import { Toast } from "../../core/toast.js";
+import { Auth } from '../../core/auth.js';
+import { Toast } from '../../core/toast.js';
 
 export const AuthScreen = {
   show() {
-    const overlay = document.createElement("div");
-    overlay.id = "auth-overlay";
+    const overlay = document.createElement('div');
+    overlay.id = 'auth-overlay';
     overlay.style.cssText = `
       position:fixed;inset:0;z-index:300;
       background:#07111F;
@@ -162,18 +162,18 @@ export const AuthScreen = {
     document.body.appendChild(overlay);
 
     // Tabs
-    overlay.querySelector("#tab-signin").addEventListener("click", () => {
-      overlay.querySelector("#tab-signin").classList.add("active");
-      overlay.querySelector("#tab-signup").classList.remove("active");
-      overlay.querySelector("#auth-form-signin").style.display = "block";
-      overlay.querySelector("#auth-form-signup").style.display = "none";
+    overlay.querySelector('#tab-signin').addEventListener('click', () => {
+      overlay.querySelector('#tab-signin').classList.add('active');
+      overlay.querySelector('#tab-signup').classList.remove('active');
+      overlay.querySelector('#auth-form-signin').style.display = 'block';
+      overlay.querySelector('#auth-form-signup').style.display = 'none';
     });
 
-    overlay.querySelector("#tab-signup").addEventListener("click", () => {
-      overlay.querySelector("#tab-signup").classList.add("active");
-      overlay.querySelector("#tab-signin").classList.remove("active");
-      overlay.querySelector("#auth-form-signup").style.display = "block";
-      overlay.querySelector("#auth-form-signin").style.display = "none";
+    overlay.querySelector('#tab-signup').addEventListener('click', () => {
+      overlay.querySelector('#tab-signup').classList.add('active');
+      overlay.querySelector('#tab-signin').classList.remove('active');
+      overlay.querySelector('#auth-form-signup').style.display = 'block';
+      overlay.querySelector('#auth-form-signin').style.display = 'none';
     });
 
     // Sign in
@@ -213,30 +213,30 @@ export const AuthScreen = {
     });
 
     // Sign up
-    overlay.querySelector("#btn-signup").addEventListener("click", async () => {
-      const btn = overlay.querySelector("#btn-signup");
-      const nome = overlay.querySelector("#signup-nome").value.trim();
-      const email = overlay.querySelector("#signup-email").value.trim();
-      const password = overlay.querySelector("#signup-password").value;
+    overlay.querySelector('#btn-signup').addEventListener('click', async () => {
+      const btn = overlay.querySelector('#btn-signup');
+      const nome = overlay.querySelector('#signup-nome').value.trim();
+      const email = overlay.querySelector('#signup-email').value.trim();
+      const password = overlay.querySelector('#signup-password').value;
       if (!nome || !email || !password) return;
       if (password.length < 6) {
-        Toast.error("Senha deve ter no mínimo 6 caracteres.");
+        Toast.error('Senha deve ter no mínimo 6 caracteres.');
         return;
       }
       btn.disabled = true;
-      btn.textContent = "Criando conta...";
+      btn.textContent = 'Criando conta...';
       const user = await Auth.signUp(email, password, nome);
       if (user) {
         overlay.remove();
         window.location.reload();
       } else {
         btn.disabled = false;
-        btn.textContent = "Criar conta grátis →";
+        btn.textContent = 'Criar conta grátis →';
       }
     });
 
-    overlay.querySelector("#btn-guest").addEventListener("click", () => {
-      localStorage.setItem("cooltrack-guest-mode", "1");
+    overlay.querySelector('#btn-guest').addEventListener('click', () => {
+      localStorage.setItem('cooltrack-guest-mode', '1');
       overlay.remove();
       window.location.reload();
     });

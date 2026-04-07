@@ -5,9 +5,7 @@
  */
 
 import { Utils } from '../../core/utils.js';
-import { Toast }  from '../../core/toast.js';
-
-const SIG_KEY = 'cooltrack-pending-signature';
+import { Toast } from '../../core/toast.js';
 
 export const SignatureModal = {
   _resolve: null,
@@ -17,7 +15,7 @@ export const SignatureModal = {
    * string = dataURL da assinatura | null = cancelado
    */
   request(registroId, equipNome) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       this._resolve = resolve;
       this._open(registroId, equipNome);
     });
@@ -64,30 +62,30 @@ export const SignatureModal = {
 
     document.body.appendChild(overlay);
 
-    const canvas  = document.getElementById('sig-canvas');
-    const ctx     = canvas.getContext('2d');
-    let drawing   = false;
-    let hasSig    = false;
+    const canvas = document.getElementById('sig-canvas');
+    const ctx = canvas.getContext('2d');
+    let drawing = false;
+    let hasSig = false;
 
     // Escala para DPR
     const dpr = window.devicePixelRatio || 1;
-    canvas.width  = 480 * dpr;
+    canvas.width = 480 * dpr;
     canvas.height = 180 * dpr;
-    canvas.style.width  = '100%';
+    canvas.style.width = '100%';
     canvas.style.height = '180px';
     ctx.scale(dpr, dpr);
 
     ctx.strokeStyle = '#E8F2FA';
-    ctx.lineWidth   = 2.5;
-    ctx.lineCap     = 'round';
-    ctx.lineJoin    = 'round';
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
     const getPos = (e) => {
       const r = canvas.getBoundingClientRect();
       const src = e.touches ? e.touches[0] : e;
       return {
         x: (src.clientX - r.left) * (480 / r.width),
-        y: (src.clientY - r.top)  * (180 / r.height),
+        y: (src.clientY - r.top) * (180 / r.height),
       };
     };
 
@@ -111,18 +109,20 @@ export const SignatureModal = {
       ctx.stroke();
     };
 
-    const stopDraw = () => { drawing = false; };
+    const stopDraw = () => {
+      drawing = false;
+    };
 
     // Mouse
     canvas.addEventListener('mousedown', startDraw);
     canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup',   stopDraw);
+    canvas.addEventListener('mouseup', stopDraw);
     canvas.addEventListener('mouseleave', stopDraw);
 
     // Touch
     canvas.addEventListener('touchstart', startDraw, { passive: false });
-    canvas.addEventListener('touchmove',  draw,      { passive: false });
-    canvas.addEventListener('touchend',   stopDraw);
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', stopDraw);
 
     // Limpar
     document.getElementById('sig-clear')?.addEventListener('click', () => {
@@ -146,7 +146,7 @@ export const SignatureModal = {
 
       // Gerar dataURL em resolução 2x
       const exportCanvas = document.createElement('canvas');
-      exportCanvas.width  = 480;
+      exportCanvas.width = 480;
       exportCanvas.height = 180;
       const exportCtx = exportCanvas.getContext('2d');
       exportCtx.fillStyle = '#0C1929';
@@ -166,9 +166,9 @@ export const SignatureModal = {
 export function saveSignatureForRecord(registroId, dataUrl) {
   if (!dataUrl) return;
   try {
-    const key  = `cooltrack-sig-${registroId}`;
+    const key = `cooltrack-sig-${registroId}`;
     localStorage.setItem(key, dataUrl);
-  } catch (_) {
+  } catch (_error) {
     Toast.warning('Assinatura não pôde ser salva localmente (armazenamento cheio).');
   }
 }

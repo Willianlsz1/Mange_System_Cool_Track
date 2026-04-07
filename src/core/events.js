@@ -21,7 +21,7 @@ export function on(action, fn) {
 
 export function bindEvents() {
   // Delegação de clique principal
-  document.addEventListener('click', async e => {
+  document.addEventListener('click', async (e) => {
     // data-nav
     const navBtn = e.target.closest('[data-nav]');
     if (navBtn) {
@@ -44,7 +44,7 @@ export function bindEvents() {
   });
 
   // Escape → fecha lightbox
-  document.addEventListener('keydown', e => {
+  document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const lb = Utils.getEl('lightbox');
       if (lb?.classList.contains('is-open')) lb.classList.remove('is-open');
@@ -52,7 +52,7 @@ export function bindEvents() {
   });
 
   // Enter/Space em equip-card (acessibilidade)
-  document.addEventListener('keydown', e => {
+  document.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const card = e.target.closest('[data-action="view-equip"]');
     if (card) {

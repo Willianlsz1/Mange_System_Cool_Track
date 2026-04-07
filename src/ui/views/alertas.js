@@ -3,9 +3,9 @@
  * Funções: renderAlertas
  */
 
-import { Utils }          from '../../core/utils.js';
-import { findEquip }      from '../../core/state.js';
-import { Alerts }         from '../../domain/alerts.js';
+import { Utils } from '../../core/utils.js';
+import { findEquip } from '../../core/state.js';
+import { Alerts } from '../../domain/alerts.js';
 
 function _alertCardHtml({ kind, reg, eq }) {
   if (kind === 'critical') {
@@ -41,7 +41,7 @@ function _alertCardHtml({ kind, reg, eq }) {
 
 export function renderAlertas() {
   const list = Alerts.getAll();
-  const el   = Utils.getEl('lista-alertas');
+  const el = Utils.getEl('lista-alertas');
   if (!el) return;
   el.innerHTML = list.length
     ? list.map(_alertCardHtml).join('')

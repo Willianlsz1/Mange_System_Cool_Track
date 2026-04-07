@@ -4,13 +4,16 @@
  * O modal de perfil permanece em ui/components/onboarding.js
  */
 
-const PROFILE_KEY   = 'cooltrack-profile';
-const LAST_TEC_KEY  = 'cooltrack-last-tecnico';
+const PROFILE_KEY = 'cooltrack-profile';
+const LAST_TEC_KEY = 'cooltrack-last-tecnico';
 
 export const Profile = {
   get() {
-    try { return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); }
-    catch (_) { return null; }
+    try {
+      return JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
+    } catch (_) {
+      return null;
+    }
   },
 
   save(data) {

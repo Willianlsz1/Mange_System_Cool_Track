@@ -5,11 +5,11 @@
  */
 
 import { STORAGE_KEY, Utils } from './utils.js';
-import { Toast }              from './toast.js';
-import { supabase }           from './supabase.js';
+import { Toast } from './toast.js';
+import { supabase } from './supabase.js';
 import { AppError, ErrorCodes, handleError } from './errors.js';
 
-const STORAGE_WARN_BYTES  = 4 * 1024 * 1024;
+const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
 
 /* Normalizacao (mantida igual) */
@@ -17,12 +17,12 @@ function normalizeEquip(e) {
   if (!e || typeof e !== 'object') return null;
   if (!e.id || !e.nome || !e.local) return null;
   return {
-    id:     String(e.id),
-    nome:   String(e.nome),
-    local:  String(e.local),
+    id: String(e.id),
+    nome: String(e.nome),
+    local: String(e.local),
     status: ['ok', 'warn', 'danger'].includes(e.status) ? e.status : 'ok',
-    tag:    String(e.tag    || ''),
-    tipo:   String(e.tipo   || 'Outro'),
+    tag: String(e.tag || ''),
+    tipo: String(e.tipo || 'Outro'),
     modelo: String(e.modelo || ''),
     fluido: String(e.fluido || ''),
   };
@@ -33,26 +33,28 @@ function normalizeRegistro(r, equipamentoIds) {
   if (!r.id || !r.equipId || !equipamentoIds.has(String(r.equipId))) return null;
   if (!r.data || !r.tipo) return null;
   return {
-    id:           String(r.id),
-    equipId:      String(r.equipId),
-    data:         String(r.data),
-    tipo:         String(r.tipo),
-    obs:          String(r.obs   || ''),
-    status:       ['ok', 'warn', 'danger'].includes(r.status) ? r.status : 'ok',
-    pecas:        String(r.pecas   || ''),
-    proxima:      String(r.proxima || ''),
-    fotos:        Array.isArray(r.fotos) ? r.fotos.filter(f => typeof f === 'string') : [],
-    tecnico:      String(r.tecnico || ''),
-    custoPecas:   parseFloat(r.custoPecas   || 0) || 0,
+    id: String(r.id),
+    equipId: String(r.equipId),
+    data: String(r.data),
+    tipo: String(r.tipo),
+    obs: String(r.obs || ''),
+    status: ['ok', 'warn', 'danger'].includes(r.status) ? r.status : 'ok',
+    pecas: String(r.pecas || ''),
+    proxima: String(r.proxima || ''),
+    fotos: Array.isArray(r.fotos) ? r.fotos.filter((f) => typeof f === 'string') : [],
+    tecnico: String(r.tecnico || ''),
+    custoPecas: parseFloat(r.custoPecas || 0) || 0,
     custoMaoObra: parseFloat(r.custoMaoObra || 0) || 0,
-    assinatura:   Boolean(r.assinatura),
+    assinatura: Boolean(r.assinatura),
   };
 }
 
 /* â”€â”€ Supabase helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function getUserId() {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     return user?.id ?? null;
   } catch (error) {
     handleError(error, {
@@ -68,45 +70,55 @@ async function getUserId() {
 async function pushEquipamentos(equipamentos, userId) {
   if (!equipamentos.length) return;
   try {
-    const rows = equipamentos.map(e => ({
-      id:      e.id,
+    const rows = equipamentos.map((e) => ({
+      id: e.id,
       user_id: userId,
-      nome:    e.nome,
-      local:   e.local,
-      status:  e.status,
-      tag:     e.tag,
-      tipo:    e.tipo,
-      modelo:  e.modelo,
-      fluido:  e.fluido,
+      nome: e.nome,
+      local: e.local,
+      status: e.status,
+      tag: e.tag,
+      tipo: e.tipo,
+      modelo: e.modelo,
+      fluido: e.fluido,
     }));
     await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
   } catch (error) {
-    throw new AppError('Falha ao sincronizar equipamentos.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushEquipamentos', quantidade: equipamentos.length, userId, cause: error?.message });
+    throw new AppError('Falha ao sincronizar equipamentos.', ErrorCodes.SYNC_FAILED, 'warning', {
+      action: 'pushEquipamentos',
+      quantidade: equipamentos.length,
+      userId,
+      cause: error?.message,
+    });
   }
 }
 
 async function pushRegistros(registros, userId) {
   if (!registros.length) return;
   try {
-    const rows = registros.map(r => ({
-      id:             r.id,
-      user_id:        userId,
-      equip_id:       r.equipId,
-      data:           r.data,
-      tipo:           r.tipo,
-      obs:            r.obs,
-      status:         r.status,
-      pecas:          r.pecas,
-      proxima:        r.proxima,
-      tecnico:        r.tecnico,
-      custo_pecas:    r.custoPecas,
+    const rows = registros.map((r) => ({
+      id: r.id,
+      user_id: userId,
+      equip_id: r.equipId,
+      data: r.data,
+      tipo: r.tipo,
+      obs: r.obs,
+      status: r.status,
+      pecas: r.pecas,
+      proxima: r.proxima,
+      tecnico: r.tecnico,
+      custo_pecas: r.custoPecas,
       custo_mao_obra: r.custoMaoObra,
-      assinatura:     r.assinatura,
-      fotos:          r.fotos,
+      assinatura: r.assinatura,
+      fotos: r.fotos,
     }));
     await supabase.from('registros').upsert(rows, { onConflict: 'id' });
   } catch (error) {
-    throw new AppError('Falha ao sincronizar registros.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushRegistros', quantidade: registros.length, userId, cause: error?.message });
+    throw new AppError('Falha ao sincronizar registros.', ErrorCodes.SYNC_FAILED, 'warning', {
+      action: 'pushRegistros',
+      quantidade: registros.length,
+      userId,
+      cause: error?.message,
+    });
   }
 }
 
@@ -119,7 +131,12 @@ async function pushTecnicos(tecnicos, userId) {
         .upsert({ user_id: userId, nome }, { onConflict: 'user_id,nome' });
     }
   } catch (error) {
-    throw new AppError('Falha ao sincronizar técnicos.', ErrorCodes.SYNC_FAILED, 'warning', { action: 'pushTecnicos', quantidade: tecnicos.length, userId, cause: error?.message });
+    throw new AppError('Falha ao sincronizar técnicos.', ErrorCodes.SYNC_FAILED, 'warning', {
+      action: 'pushTecnicos',
+      quantidade: tecnicos.length,
+      userId,
+      cause: error?.message,
+    });
   }
 }
 
@@ -134,39 +151,45 @@ async function pullFromSupabase(userId) {
       supabase.from('tecnicos').select('nome').eq('user_id', userId),
     ]);
   } catch (error) {
-    throw new AppError('Falha ao carregar dados da nuvem.', ErrorCodes.NETWORK_ERROR, 'warning', { action: 'pullFromSupabase', userId, cause: error?.message });
+    throw new AppError('Falha ao carregar dados da nuvem.', ErrorCodes.NETWORK_ERROR, 'warning', {
+      action: 'pullFromSupabase',
+      userId,
+      cause: error?.message,
+    });
   }
 
-  const equipamentos = (eqRes.data || []).map(e => ({
-    id:     e.id,
-    nome:   e.nome,
-    local:  e.local,
+  const equipamentos = (eqRes.data || []).map((e) => ({
+    id: e.id,
+    nome: e.nome,
+    local: e.local,
     status: e.status,
-    tag:    e.tag     || '',
-    tipo:   e.tipo    || 'Outro',
-    modelo: e.modelo  || '',
-    fluido: e.fluido  || '',
+    tag: e.tag || '',
+    tipo: e.tipo || 'Outro',
+    modelo: e.modelo || '',
+    fluido: e.fluido || '',
   }));
 
-  const equipIds = new Set(equipamentos.map(e => e.id));
+  const equipIds = new Set(equipamentos.map((e) => e.id));
 
-  const registros = (regRes.data || []).map(r => ({
-    id:           r.id,
-    equipId:      r.equip_id,
-    data:         r.data,
-    tipo:         r.tipo,
-    obs:          r.obs          || '',
-    status:       r.status       || 'ok',
-    pecas:        r.pecas        || '',
-    proxima:      r.proxima      || '',
-    tecnico:      r.tecnico      || '',
-    custoPecas:   parseFloat(r.custo_pecas    || 0),
-    custoMaoObra: parseFloat(r.custo_mao_obra || 0),
-    assinatura:   Boolean(r.assinatura),
-    fotos:        Array.isArray(r.fotos) ? r.fotos : [],
-  })).filter(r => equipIds.has(r.equipId));
+  const registros = (regRes.data || [])
+    .map((r) => ({
+      id: r.id,
+      equipId: r.equip_id,
+      data: r.data,
+      tipo: r.tipo,
+      obs: r.obs || '',
+      status: r.status || 'ok',
+      pecas: r.pecas || '',
+      proxima: r.proxima || '',
+      tecnico: r.tecnico || '',
+      custoPecas: parseFloat(r.custo_pecas || 0),
+      custoMaoObra: parseFloat(r.custo_mao_obra || 0),
+      assinatura: Boolean(r.assinatura),
+      fotos: Array.isArray(r.fotos) ? r.fotos : [],
+    }))
+    .filter((r) => equipIds.has(r.equipId));
 
-  const tecnicos = (tecRes.data || []).map(t => t.nome);
+  const tecnicos = (tecRes.data || []).map((t) => t.nome);
 
   return { equipamentos, registros, tecnicos };
 }
@@ -184,7 +207,10 @@ async function migrateIfNeeded(userId) {
   }
 
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) { localStorage.setItem(MIGRATED_KEY, '1'); return; }
+  if (!raw) {
+    localStorage.setItem(MIGRATED_KEY, '1');
+    return;
+  }
 
   try {
     const parsed = JSON.parse(raw);
@@ -206,7 +232,6 @@ async function migrateIfNeeded(userId) {
 
 /* API publica */
 export const Storage = {
-
   async loadFromSupabase() {
     const userId = await getUserId();
     if (!userId) return null;
@@ -247,10 +272,14 @@ export const Storage = {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.equipamentos)) return null;
-      const equipamentos  = parsed.equipamentos.map(normalizeEquip).filter(Boolean);
-      const equipIds      = new Set(equipamentos.map(e => e.id));
-      const registros     = (parsed.registros || []).map(r => normalizeRegistro(r, equipIds)).filter(Boolean);
-      const tecnicos      = Array.isArray(parsed.tecnicos) ? parsed.tecnicos.filter(t => typeof t === 'string') : [];
+      const equipamentos = parsed.equipamentos.map(normalizeEquip).filter(Boolean);
+      const equipIds = new Set(equipamentos.map((e) => e.id));
+      const registros = (parsed.registros || [])
+        .map((r) => normalizeRegistro(r, equipIds))
+        .filter(Boolean);
+      const tecnicos = Array.isArray(parsed.tecnicos)
+        ? parsed.tecnicos.filter((t) => typeof t === 'string')
+        : [];
       return { equipamentos, registros, tecnicos };
     } catch (err) {
       handleError(err, {
@@ -267,7 +296,7 @@ export const Storage = {
     // 1. Salva local imediatamente (offline first)
     try {
       const serialized = JSON.stringify(state);
-      const byteSize   = serialized.length * 2;
+      const byteSize = serialized.length * 2;
       if (byteSize >= STORAGE_LIMIT_BYTES) {
         Toast.error(`Armazenamento cheio. Remova registros antigos com fotos.`);
         return false;
@@ -311,9 +340,8 @@ export const Storage = {
     const used = Utils.getStorageBytes();
     return {
       used,
-      total:   STORAGE_LIMIT_BYTES,
-      percent: Math.min(100, Math.round((used / STORAGE_LIMIT_BYTES) * 100))
+      total: STORAGE_LIMIT_BYTES,
+      percent: Math.min(100, Math.round((used / STORAGE_LIMIT_BYTES) * 100)),
     };
-  }
+  },
 };
-

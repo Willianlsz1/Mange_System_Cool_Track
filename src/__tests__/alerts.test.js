@@ -18,7 +18,10 @@ describe('Alerts.getAll', () => {
 
   it('returns overdue and upcoming alerts using earliest due date per equipment', () => {
     vi.mocked(getState).mockReturnValue({
-      equipamentos: [{ id: 'eq-1', status: 'ok' }, { id: 'eq-2', status: 'ok' }],
+      equipamentos: [
+        { id: 'eq-1', status: 'ok' },
+        { id: 'eq-2', status: 'ok' },
+      ],
       registros: [
         { id: 'r-old', equipId: 'eq-1', proxima: '2026-04-05' },
         { id: 'r-new', equipId: 'eq-1', proxima: '2026-04-10' },
@@ -32,10 +35,10 @@ describe('Alerts.getAll', () => {
       expect.arrayContaining([
         { kind: 'overdue', reg: expect.objectContaining({ id: 'r-old' }) },
         { kind: 'upcoming', reg: expect.objectContaining({ id: 'r-upcoming' }) },
-      ])
+      ]),
     );
 
-    const eq1Alerts = alerts.filter(a => a.reg?.equipId === 'eq-1');
+    const eq1Alerts = alerts.filter((a) => a.reg?.equipId === 'eq-1');
     expect(eq1Alerts).toHaveLength(1);
   });
 
@@ -58,7 +61,11 @@ describe('Alerts.getAll', () => {
 
   it('includes due-today and due-in-7-days as upcoming edge cases', () => {
     vi.mocked(getState).mockReturnValue({
-      equipamentos: [{ id: 'eq-1', status: 'ok' }, { id: 'eq-2', status: 'ok' }, { id: 'eq-3', status: 'ok' }],
+      equipamentos: [
+        { id: 'eq-1', status: 'ok' },
+        { id: 'eq-2', status: 'ok' },
+        { id: 'eq-3', status: 'ok' },
+      ],
       registros: [
         { id: 'today', equipId: 'eq-1', proxima: '2026-04-07' },
         { id: 'in7', equipId: 'eq-2', proxima: '2026-04-14' },
@@ -67,7 +74,7 @@ describe('Alerts.getAll', () => {
     });
 
     const alerts = Alerts.getAll();
-    const upcomingIds = alerts.filter(a => a.kind === 'upcoming').map(a => a.reg.id);
+    const upcomingIds = alerts.filter((a) => a.kind === 'upcoming').map((a) => a.reg.id);
 
     expect(upcomingIds).toEqual(expect.arrayContaining(['today', 'in7']));
     expect(upcomingIds).not.toContain('in8');

@@ -43,7 +43,10 @@ describe('Auth integration wrapper', () => {
     const user = await Auth.signUp('new@user.com', 'secret123', 'Novo Usuário');
 
     expect(user).toEqual({ id: 'new-1' });
-    expect(supabaseMock.auth.signUp).toHaveBeenCalledWith({ email: 'new@user.com', password: 'secret123' });
+    expect(supabaseMock.auth.signUp).toHaveBeenCalledWith({
+      email: 'new@user.com',
+      password: 'secret123',
+    });
     expect(supabaseMock.from).toHaveBeenCalledWith('profiles');
     expect(supabaseMock.profilesInsert).toHaveBeenCalledWith({ id: 'new-1', nome: 'Novo Usuário' });
   });
@@ -56,7 +59,10 @@ describe('Auth integration wrapper', () => {
 
   it('handles signUp errors', async () => {
     const { Auth, supabaseMock, toastMock } = await loadAuthModule();
-    supabaseMock.auth.signUp.mockResolvedValue({ data: { user: null }, error: { message: 'signup failed' } });
+    supabaseMock.auth.signUp.mockResolvedValue({
+      data: { user: null },
+      error: { message: 'signup failed' },
+    });
 
     const user = await Auth.signUp('bad@user.com', '123456', 'Bad');
 
@@ -67,10 +73,16 @@ describe('Auth integration wrapper', () => {
   it('handles signIn success and failure', async () => {
     const { Auth, supabaseMock, toastMock } = await loadAuthModule();
 
-    supabaseMock.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: { id: 'u-7' } }, error: null });
+    supabaseMock.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: { id: 'u-7' } },
+      error: null,
+    });
     await expect(Auth.signIn('a@b.com', '123456')).resolves.toEqual({ id: 'u-7' });
 
-    supabaseMock.auth.signInWithPassword.mockResolvedValueOnce({ data: { user: null }, error: { message: 'invalid' } });
+    supabaseMock.auth.signInWithPassword.mockResolvedValueOnce({
+      data: { user: null },
+      error: { message: 'invalid' },
+    });
     await expect(Auth.signIn('a@b.com', 'wrong')).resolves.toBeNull();
     expect(toastMock.warning).toHaveBeenCalledWith('Email ou senha incorretos.');
   });
@@ -94,10 +106,12 @@ describe('Auth integration wrapper', () => {
     expect(ok).toEqual({ ok: true });
     expect(supabaseMock.auth.resetPasswordForEmail).toHaveBeenCalledWith(
       'user@mail.com',
-      expect.objectContaining({ redirectTo: expect.stringContaining('Mange_System_Cool_Track') })
+      expect.objectContaining({ redirectTo: expect.stringContaining('Mange_System_Cool_Track') }),
     );
 
-    supabaseMock.auth.resetPasswordForEmail.mockResolvedValueOnce({ error: { message: 'reset failed' } });
+    supabaseMock.auth.resetPasswordForEmail.mockResolvedValueOnce({
+      error: { message: 'reset failed' },
+    });
     const fail = await Auth.requestPasswordReset('user@mail.com');
     expect(fail).toEqual({ ok: false, message: 'Não foi possível enviar o email de recuperação.' });
   });
@@ -108,7 +122,10 @@ describe('Auth integration wrapper', () => {
 
     window.location.hash = '#type=recovery';
 
-    const promptSpy = vi.spyOn(window, 'prompt').mockReturnValueOnce('123').mockReturnValueOnce('123456');
+    const promptSpy = vi
+      .spyOn(window, 'prompt')
+      .mockReturnValueOnce('123')
+      .mockReturnValueOnce('123456');
 
     const shortPwd = await Auth.tryHandlePasswordRecovery();
     expect(shortPwd).toBe(true);
@@ -117,7 +134,9 @@ describe('Auth integration wrapper', () => {
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: { message: 'boom' } });
     const failed = await Auth.tryHandlePasswordRecovery();
     expect(failed).toBe(true);
-    expect(toastMock.warning).toHaveBeenCalledWith('Não foi possível redefinir a senha. Tente novamente pelo link do email.');
+    expect(toastMock.warning).toHaveBeenCalledWith(
+      'Não foi possível redefinir a senha. Tente novamente pelo link do email.',
+    );
 
     promptSpy.mockReturnValueOnce('nova123');
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: null });

@@ -8,44 +8,49 @@
  *   Página 3+: Assinaturas (quando houver)
  */
 
-import { jsPDF }    from 'jspdf';
-import autoTable    from 'jspdf-autotable';
-import { getState }               from '../core/state.js';
-import { Utils }                  from '../core/utils.js';
-import { Profile }                from '../features/profile.js';
-import { getSignatureForRecord }  from '../ui/components/signature.js';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
+import { getState } from '../core/state.js';
+import { Utils } from '../core/utils.js';
+import { Profile } from '../features/profile.js';
+import { getSignatureForRecord } from '../ui/components/signature.js';
 
 /* ── Paleta ─────────────────────────────────────────── */
 const C = {
-  bg:      [255, 255, 255],
-  bg2:     [255, 255, 255],
-  bg3:     [245, 245, 245],
+  bg: [255, 255, 255],
+  bg2: [255, 255, 255],
+  bg3: [245, 245, 245],
   surface: [255, 255, 255],
-  border:  [204, 204, 204],
-  primary: [0,   200, 232],
-  green:   [46,  125, 50],
-  amber:   [245, 127, 23],
-  red:     [198, 40,  40],
-  text:    [0,   0,   0],
-  text2:   [26,  26,  26],
-  text3:   [85,  85,  85],
-  white:   [255, 255, 255],
+  border: [204, 204, 204],
+  primary: [0, 200, 232],
+  green: [46, 125, 50],
+  amber: [245, 127, 23],
+  red: [198, 40, 40],
+  text: [0, 0, 0],
+  text2: [26, 26, 26],
+  text3: [85, 85, 85],
+  white: [255, 255, 255],
 };
 
 /* Status em linguagem do cliente */
 const STATUS_CLIENTE = {
-  ok:     { label: 'Funcionando normalmente', color: C.green, icon: '✓' },
-  warn:   { label: 'Requer atenção em breve',  color: C.amber, icon: '!' },
-  danger: { label: 'Fora de operação',          color: C.red,   icon: '✗' },
+  ok: { label: 'Funcionando normalmente', color: C.green, icon: '✓' },
+  warn: { label: 'Requer atenção em breve', color: C.amber, icon: '!' },
+  danger: { label: 'Fora de operação', color: C.red, icon: '✗' },
 };
 
 /* ── Helpers ─────────────────────────────────────────── */
 function fillRect(doc, x, y, w, h, c) {
-  doc.setFillColor(...c); doc.rect(x, y, w, h, 'F');
+  doc.setFillColor(...c);
+  doc.rect(x, y, w, h, 'F');
 }
-function fillPage(doc, PW, PH) { fillRect(doc, 0, 0, PW, PH, C.bg); }
+function fillPage(doc, PW, PH) {
+  fillRect(doc, 0, 0, PW, PH, C.bg);
+}
 function accentLine(doc, x1, y, x2, color = C.primary) {
-  doc.setDrawColor(...color); doc.setLineWidth(0.35); doc.line(x1, y, x2, y);
+  doc.setDrawColor(...color);
+  doc.setLineWidth(0.35);
+  doc.line(x1, y, x2, y);
 }
 function txt(doc, text, x, y, opts = {}) {
   doc.setFont('helvetica', opts.style || 'normal');
@@ -87,7 +92,6 @@ function getSignatureImagePayload(sigData) {
 
 /* ── Export principal ──────────────────────────────── */
 export const PDFGenerator = {
-
   generateMaintenanceReport(options = {}) {
     try {
       const { registros, equipamentos } = getState();
@@ -95,14 +99,14 @@ export const PDFGenerator = {
       const profile = Profile.get();
 
       let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));
-      if (filtEq) filtered = filtered.filter(r => r.equipId === filtEq);
-      if (de)     filtered = filtered.filter(r => r.data >= de);
-      if (ate)    filtered = filtered.filter(r => r.data <= `${ate}T23:59`);
+      if (filtEq) filtered = filtered.filter((r) => r.equipId === filtEq);
+      if (de) filtered = filtered.filter((r) => r.data >= de);
+      if (ate) filtered = filtered.filter((r) => r.data <= `${ate}T23:59`);
 
       const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const PW  = doc.internal.pageSize.getWidth();   // 210mm
-      const PH  = doc.internal.pageSize.getHeight();  // 297mm
-      const M   = 18;
+      const PW = doc.internal.pageSize.getWidth(); // 210mm
+      const PH = doc.internal.pageSize.getHeight(); // 297mm
+      const M = 18;
 
       /* ① Capa */
       this._drawCover(doc, PW, PH, M, profile, filtEq, de, ate, filtered, equipamentos);
@@ -116,7 +120,7 @@ export const PDFGenerator = {
       }
 
       const empresa = (profile?.empresa || 'Relatorio').replace(/\s+/g, '_');
-      const data    = new Date().toISOString().slice(0, 10);
+      const data = new Date().toISOString().slice(0, 10);
       const fileName = `CoolTrack_${empresa}_${data}.pdf`;
       doc.save(fileName);
       return fileName;
@@ -141,30 +145,45 @@ export const PDFGenerator = {
 
     /* Logo */
     txt(doc, 'COOLTRACK', M + 2, 28, { size: 28, style: 'bold', color: C.text });
-    doc.setFontSize(28); doc.setFont('helvetica', 'bold'); doc.setTextColor(...C.primary);
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...C.primary);
     const cw = doc.getTextWidth('COOLTRACK');
     doc.text('PRO', M + 2 + cw + 3, 28);
 
     txt(doc, 'Sistema de Gestão de Manutenção', M + 2, 37, { size: 9, color: C.text3 });
 
     /* Título do documento */
-    txt(doc, 'RELATÓRIO DE SERVIÇOS REALIZADOS', M + 2, 48, { size: 14, style: 'bold', color: C.text });
+    txt(doc, 'RELATÓRIO DE SERVIÇOS REALIZADOS', M + 2, 48, {
+      size: 14,
+      style: 'bold',
+      color: C.text,
+    });
 
     /* Período */
-    const periodo = (de || ate)
-      ? `Período: ${de ? Utils.formatDate(de) : 'início'} a ${ate ? Utils.formatDate(ate) : 'atual'}`
-      : `Gerado em: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
+    const periodo =
+      de || ate
+        ? `Período: ${de ? Utils.formatDate(de) : 'início'} a ${ate ? Utils.formatDate(ate) : 'atual'}`
+        : `Gerado em: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
     txt(doc, periodo, M + 2, 56, { size: 9, color: C.text3 });
 
     /* ── Card do técnico responsável ── */
-    const cardY = 64, cardW = PW - M * 2, cardH = 42;
+    const cardY = 64,
+      cardW = PW - M * 2,
+      cardH = 42;
     roundRect(doc, M, cardY, cardW, cardH, 2, C.surface);
     fillRect(doc, M, cardY, 4, cardH, C.primary);
 
     txt(doc, 'TÉCNICO RESPONSÁVEL', M + 10, cardY + 9, { size: 7, style: 'bold', color: C.text3 });
-    txt(doc, profile?.nome || 'Técnico', M + 10, cardY + 19, { size: 14, style: 'bold', color: C.text });
-    if (profile?.empresa)  txt(doc, profile.empresa,  M + 10, cardY + 28, { size: 9, color: C.text2 });
-    if (profile?.telefone) txt(doc, profile.telefone, M + 10, cardY + 36, { size: 9, color: C.text2 });
+    txt(doc, profile?.nome || 'Técnico', M + 10, cardY + 19, {
+      size: 14,
+      style: 'bold',
+      color: C.text,
+    });
+    if (profile?.empresa)
+      txt(doc, profile.empresa, M + 10, cardY + 28, { size: 9, color: C.text2 });
+    if (profile?.telefone)
+      txt(doc, profile.telefone, M + 10, cardY + 36, { size: 9, color: C.text2 });
 
     /* ── Resumo em linguagem simples ── */
     const resumoY = cardY + cardH + 16;
@@ -172,18 +191,20 @@ export const PDFGenerator = {
     accentLine(doc, M, resumoY + 3, PW - M);
 
     /* Contar status */
-    const ok     = filtered.filter(r => r.status === 'ok').length;
-    const warn   = filtered.filter(r => r.status === 'warn').length;
-    const danger = filtered.filter(r => r.status === 'danger').length;
-    const totalCusto = filtered.reduce((acc, r) =>
-      acc + parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0), 0);
+    const ok = filtered.filter((r) => r.status === 'ok').length;
+    const warn = filtered.filter((r) => r.status === 'warn').length;
+    const danger = filtered.filter((r) => r.status === 'danger').length;
+    const totalCusto = filtered.reduce(
+      (acc, r) => acc + parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0),
+      0,
+    );
 
     /* Tiles de resumo — 4 por linha */
     const tiles = [
-      { label: 'Serviços',    value: String(filtered.length), color: C.text2 },
-      { label: 'Operando',    value: String(ok),              color: C.green },
-      { label: 'Atenção',     value: String(warn),            color: C.amber },
-      { label: 'Fora de op.', value: String(danger),          color: C.red },
+      { label: 'Serviços', value: String(filtered.length), color: C.text2 },
+      { label: 'Operando', value: String(ok), color: C.green },
+      { label: 'Atenção', value: String(warn), color: C.amber },
+      { label: 'Fora de op.', value: String(danger), color: C.red },
     ];
 
     const tileW = (PW - M * 2 - 12) / 4;
@@ -193,13 +214,23 @@ export const PDFGenerator = {
       const x = M + i * (tileW + 4);
       roundRect(doc, x, tileY, tileW, 26, 1.5, C.surface);
       fillRect(doc, x, tileY, tileW, 3, t.color);
-      txt(doc, t.value, x + tileW / 2, tileY + 15, { size: 18, style: 'bold', color: t.color, align: 'center' });
+      txt(doc, t.value, x + tileW / 2, tileY + 15, {
+        size: 18,
+        style: 'bold',
+        color: t.color,
+        align: 'center',
+      });
       txt(doc, t.label, x + tileW / 2, tileY + 22, { size: 7, color: C.text3, align: 'center' });
     });
 
     if (totalCusto > 0) {
-      txt(doc, `Custo total dos serviços: R$ ${totalCusto.toFixed(2).replace('.', ',')}`,
-        M, tileY + 36, { size: 9, style: 'bold', color: C.text2 });
+      txt(
+        doc,
+        `Custo total dos serviços: R$ ${totalCusto.toFixed(2).replace('.', ',')}`,
+        M,
+        tileY + 36,
+        { size: 9, style: 'bold', color: C.text2 },
+      );
     }
 
     /* ── Situação atual dos equipamentos ── */
@@ -208,10 +239,14 @@ export const PDFGenerator = {
     accentLine(doc, M, eqY + 3, PW - M);
 
     /* Listar equipamentos com status */
-    const eqUnicos = [...new Map(filtered.map(r => {
-      const eq = equipamentos.find(e => e.id === r.equipId);
-      return [r.equipId, { eq, status: r.status }];
-    })).values()].filter(e => e.eq);
+    const eqUnicos = [
+      ...new Map(
+        filtered.map((r) => {
+          const eq = equipamentos.find((e) => e.id === r.equipId);
+          return [r.equipId, { eq, status: r.status }];
+        }),
+      ).values(),
+    ].filter((e) => e.eq);
 
     let ey = eqY + 10;
     eqUnicos.forEach(({ eq, status }) => {
@@ -223,13 +258,18 @@ export const PDFGenerator = {
       txt(doc, eq.nome, M + 8, ey + 6, { size: 10, style: 'bold', color: C.text });
       txt(doc, eq.local, M + 8, ey + 11, { size: 8, color: C.text3 });
       // Status em linguagem simples
-      txt(doc, st.label, PW - M - 4, ey + 9, { size: 9, style: 'bold', color: st.color, align: 'right' });
+      txt(doc, st.label, PW - M - 4, ey + 9, {
+        size: 9,
+        style: 'bold',
+        color: st.color,
+        align: 'right',
+      });
       ey += 18;
     });
 
     /* ── O que precisa ser feito ── */
     const pendentesY = ey + 6;
-    const pendentes = filtered.filter(r => {
+    const pendentes = filtered.filter((r) => {
       if (r.status === 'danger') return true;
       if (r.proxima && Utils.daysDiff(r.proxima) <= 30) return true;
       return false;
@@ -240,8 +280,8 @@ export const PDFGenerator = {
       accentLine(doc, M, pendentesY + 3, PW - M, C.amber);
 
       let py = pendentesY + 10;
-      pendentes.forEach(r => {
-        const eq = equipamentos.find(e => e.id === r.equipId);
+      pendentes.forEach((r) => {
+        const eq = equipamentos.find((e) => e.id === r.equipId);
         const isUrgent = r.status === 'danger';
         const cor = isUrgent ? C.red : C.amber;
         roundRect(doc, M, py, PW - M * 2, 16, 1.5, C.surface);
@@ -256,8 +296,18 @@ export const PDFGenerator = {
     } else if (pendentesY < PH - 40) {
       roundRect(doc, M, pendentesY, PW - M * 2, 16, 1.5, C.surface);
       fillRect(doc, M, pendentesY, 4, 16, C.green);
-      txt(doc, 'Nenhuma ação necessária no momento.', M + 8, pendentesY + 7, { size: 10, style: 'bold', color: C.green });
-      txt(doc, 'Todos os equipamentos estão dentro do prazo de manutenção.', M + 8, pendentesY + 13, { size: 8, color: C.text2 });
+      txt(doc, 'Nenhuma ação necessária no momento.', M + 8, pendentesY + 7, {
+        size: 10,
+        style: 'bold',
+        color: C.green,
+      });
+      txt(
+        doc,
+        'Todos os equipamentos estão dentro do prazo de manutenção.',
+        M + 8,
+        pendentesY + 13,
+        { size: 8, color: C.text2 },
+      );
     }
 
     /* Rodapé */
@@ -272,7 +322,11 @@ export const PDFGenerator = {
     fillRect(doc, 0, 0, PW, 18, C.bg2);
     fillRect(doc, 0, 0, PW, 3, C.primary);
     txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.primary });
-    txt(doc, 'DETALHES DOS SERVIÇOS REALIZADOS', M + 40, 8, { size: 7, style: 'bold', color: C.text });
+    txt(doc, 'DETALHES DOS SERVIÇOS REALIZADOS', M + 40, 8, {
+      size: 7,
+      style: 'bold',
+      color: C.text,
+    });
     if (profile?.empresa) {
       txt(doc, profile.empresa, PW - M, 8, { size: 7, color: C.text3, align: 'right' });
     }
@@ -281,18 +335,18 @@ export const PDFGenerator = {
     let y = 26;
     const pageBottom = PH - 20;
 
-    filtered.forEach((r, idx) => {
-      const eq  = equipamentos.find(e => e.id === r.equipId);
-      const st  = STATUS_CLIENTE[r.status] || STATUS_CLIENTE.ok;
+    filtered.forEach((r) => {
+      const eq = equipamentos.find((e) => e.id === r.equipId);
+      const st = STATUS_CLIENTE[r.status] || STATUS_CLIENTE.ok;
       const custo = parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0);
 
       /* Calcular altura necessária para este card */
       doc.setFontSize(8);
       const obsLines = doc.splitTextToSize(r.obs || '', PW - M * 2 - 16);
-      const obsH  = Math.max(obsLines.length, 1) * 4.5;
+      const obsH = Math.max(obsLines.length, 1) * 4.5;
       const photos = Array.isArray(r.fotos) ? r.fotos.filter(Boolean).slice(0, 4) : [];
       const photoRows = Math.ceil(photos.length / 2);
-      const photosH = photos.length ? (photoRows * 26) + 10 : 0;
+      const photosH = photos.length ? photoRows * 26 + 10 : 0;
       const cardH = Math.max(34, 28 + obsH + (r.pecas ? 8 : 0) + (custo > 0 ? 8 : 0) + photosH);
 
       /* Nova página se necessário */
@@ -302,7 +356,11 @@ export const PDFGenerator = {
         fillRect(doc, 0, 0, PW, 18, C.bg2);
         fillRect(doc, 0, 0, PW, 3, C.primary);
         txt(doc, 'COOLTRACK PRO', M + 2, 8, { size: 7, style: 'bold', color: C.primary });
-        txt(doc, 'DETALHES DOS SERVIÇOS REALIZADOS', M + 40, 8, { size: 7, style: 'bold', color: C.text });
+        txt(doc, 'DETALHES DOS SERVIÇOS REALIZADOS', M + 40, 8, {
+          size: 7,
+          style: 'bold',
+          color: C.text,
+        });
         accentLine(doc, 0, 18, PW);
         y = 26;
         this._drawFooter(doc, PW, PH, M, profile, doc.getCurrentPageInfo().pageNumber);
@@ -322,15 +380,23 @@ export const PDFGenerator = {
       txt(doc, Utils.formatDatetime(r.data), M + 8, y + 7, { size: 7, color: C.text3 });
       /* Status badge — no topo direito, dentro do card */
       const stLabel = st.label;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(...st.color);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...st.color);
       const stW = doc.getTextWidth(stLabel) + 8;
-      fillRect(doc, PW - M - stW - 2, y + 2, stW + 2, 8, [st.color[0]*0.15, st.color[1]*0.15, st.color[2]*0.15]);
+      fillRect(doc, PW - M - stW - 2, y + 2, stW + 2, 8, [
+        st.color[0] * 0.15,
+        st.color[1] * 0.15,
+        st.color[2] * 0.15,
+      ]);
       doc.text(stLabel, PW - M - stW / 2 - 1, y + 7.5, { align: 'center' });
       /* Tipo do serviço */
       txt(doc, r.tipo, M + 8, y + 16, { size: 11, style: 'bold', color: C.text });
       /* Equipamento e local */
-      txt(doc, (eq?.nome || '—') + (eq?.local ? '  ·  ' + eq.local : ''),
-        M + 8, y + 23, { size: 8, color: C.text3 });
+      txt(doc, (eq?.nome || '—') + (eq?.local ? '  ·  ' + eq.local : ''), M + 8, y + 23, {
+        size: 8,
+        color: C.text3,
+      });
       accentLine(doc, M + 6, y + 26, PW - M - 4, C.border);
 
       /* O que foi feito — o texto principal para o cliente */
@@ -350,8 +416,11 @@ export const PDFGenerator = {
 
       /* Custo — visível para o cliente */
       if (custo > 0) {
-        txt(doc, `Custo do serviço: R$ ${custo.toFixed(2).replace('.', ',')}`,
-          M + 8, cy, { size: 8, style: 'bold', color: C.text });
+        txt(doc, `Custo do serviço: R$ ${custo.toFixed(2).replace('.', ',')}`, M + 8, cy, {
+          size: 8,
+          style: 'bold',
+          color: C.text,
+        });
         cy += 7;
       }
 
@@ -368,7 +437,7 @@ export const PDFGenerator = {
           roundRect(doc, px, py, photoW, photoH, 1.5, [250, 250, 250]);
           try {
             doc.addImage(photo, 'JPEG', px + 1, py + 1, photoW - 2, photoH - 2);
-          } catch (imgErr) {
+          } catch (_imgErr) {
             txt(doc, 'Foto indisponível', px + photoW / 2, py + photoH / 2 + 1, {
               size: 7,
               color: C.text3,
@@ -380,7 +449,11 @@ export const PDFGenerator = {
 
       /* Técnico */
       if (r.tecnico) {
-        txt(doc, 'Técnico: ' + r.tecnico, PW - M - 4, y + cardH - 5, { size: 7, color: C.text3, align: 'right' });
+        txt(doc, 'Técnico: ' + r.tecnico, PW - M - 4, y + cardH - 5, {
+          size: 7,
+          color: C.text3,
+          align: 'right',
+        });
       }
 
       y += cardH + 6;
@@ -393,15 +466,17 @@ export const PDFGenerator = {
      ASSINATURAS
   ──────────────────────────────────────────────────── */
   _drawSignaturePages(doc, PW, PH, M, filtered, equipamentos, profile) {
-    const signedRecords = filtered.filter(r => r.assinatura || !!getSignatureForRecord(r.id));
+    const signedRecords = filtered.filter((r) => r.assinatura || !!getSignatureForRecord(r.id));
     if (!signedRecords.length) return;
 
-    signedRecords.forEach(r => {
+    signedRecords.forEach((r) => {
       const sigData = getSignatureForRecord(r.id);
       const sigPayload = getSignatureImagePayload(sigData);
-      const signatureDate = r.data ? Utils.formatDatetime(r.data) : Utils.formatDatetime(new Date().toISOString());
+      const signatureDate = r.data
+        ? Utils.formatDatetime(r.data)
+        : Utils.formatDatetime(new Date().toISOString());
       const clienteNome = r.clienteNome || r.cliente || 'Cliente';
-      const eq = equipamentos.find(e => e.id === r.equipId);
+      const eq = equipamentos.find((e) => e.id === r.equipId);
       const st = STATUS_CLIENTE[r.status] || STATUS_CLIENTE.ok;
 
       doc.addPage();
@@ -409,7 +484,11 @@ export const PDFGenerator = {
       drawSignaturePageHeader(doc, PW, M);
 
       let y = 28;
-      txt(doc, 'CONFIRMAÇÃO DE SERVIÇO REALIZADO', M, y, { size: 11, style: 'bold', color: C.text });
+      txt(doc, 'CONFIRMAÇÃO DE SERVIÇO REALIZADO', M, y, {
+        size: 11,
+        style: 'bold',
+        color: C.text,
+      });
       y += 10;
 
       const campos = [
@@ -423,14 +502,20 @@ export const PDFGenerator = {
 
       campos.forEach(([label, val]) => {
         txt(doc, label, M, y, { size: 7.5, color: C.text3 });
-        txt(doc, val, M + 55, y, { size: 8.5, color: label === 'Situação após o serviço' ? st.color : C.text, style: label === 'Situação após o serviço' ? 'bold' : 'normal' });
+        txt(doc, val, M + 55, y, {
+          size: 8.5,
+          color: label === 'Situação após o serviço' ? st.color : C.text,
+          style: label === 'Situação após o serviço' ? 'bold' : 'normal',
+        });
         y += 9;
       });
 
       y += 4;
       txt(doc, 'Descrição do serviço realizado:', M, y, { size: 7.5, color: C.text3 });
       y += 6;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(...C.text2);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(...C.text2);
       const obsLines = doc.splitTextToSize(r.obs || '—', PW - M * 2);
       doc.text(obsLines, M, y);
       y += obsLines.length * 4.5 + 10;
@@ -450,7 +535,10 @@ export const PDFGenerator = {
       accentLine(doc, M, y, PW - M, C.border);
       y += 8;
       txt(doc, 'ASSINATURA DO CLIENTE', M, y, { size: 7.5, style: 'bold', color: C.text3 });
-      txt(doc, 'Confirmo que o serviço acima foi realizado conforme descrito.', M, y + 6, { size: 7.5, color: C.text3 });
+      txt(doc, 'Confirmo que o serviço acima foi realizado conforme descrito.', M, y + 6, {
+        size: 7.5,
+        color: C.text3,
+      });
       y += 14;
 
       fillRect(doc, M, y, sigW, sigH, [243, 248, 252]);
@@ -464,10 +552,14 @@ export const PDFGenerator = {
           const imageH = sigH - 12;
           doc.addImage(sigPayload.data, sigPayload.format, imageX, imageY, imageW, imageH);
         } catch (err) {
-          console.error(`[PDF assinatura] Falha ao renderizar assinatura do registro ${r.id}`, err, {
-            format: sigPayload.format,
-            hasData: !!sigPayload.data,
-          });
+          console.error(
+            `[PDF assinatura] Falha ao renderizar assinatura do registro ${r.id}`,
+            err,
+            {
+              format: sigPayload.format,
+              hasData: !!sigPayload.data,
+            },
+          );
           txt(doc, 'Assinatura não coletada', M + sigW / 2, y + sigH / 2, {
             size: 10,
             style: 'bold',
@@ -488,11 +580,18 @@ export const PDFGenerator = {
       }
 
       accentLine(doc, M + 8, y + sigH - 5, M + sigW - 8);
-      txt(doc, 'Assinatura', M + sigW / 2, y + sigH + 4, { size: 7, color: C.text3, align: 'center' });
+      txt(doc, 'Assinatura', M + sigW / 2, y + sigH + 4, {
+        size: 7,
+        color: C.text3,
+        align: 'center',
+      });
 
       y += sigH + 10;
       txt(doc, `Nome do cliente: ${clienteNome}`, M, y, { size: 8, style: 'bold', color: C.text });
-      txt(doc, `Data/Hora da assinatura: ${signatureDate}`, M, y + 6, { size: 7.5, color: C.text2 });
+      txt(doc, `Data/Hora da assinatura: ${signatureDate}`, M, y + 6, {
+        size: 7.5,
+        color: C.text2,
+      });
 
       this._drawFooter(doc, PW, PH, M, profile, doc.getCurrentPageInfo().pageNumber);
     });
@@ -503,7 +602,9 @@ export const PDFGenerator = {
     const fy = PH - 12;
     fillRect(doc, 0, fy - 2, PW, 14, C.white);
     fillRect(doc, 0, fy - 2, PW, 0.4, C.border);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5); doc.setTextColor(...C.text3);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...C.text3);
     doc.text('Gerado pelo CoolTrack Pro', M, fy + 4);
     doc.text(`Relatório #${pageNum}`, PW - M, fy + 4, { align: 'right' });
   },
