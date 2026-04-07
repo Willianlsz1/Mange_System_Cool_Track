@@ -18,10 +18,16 @@ import { ErrorCodes, handleError }         from './core/errors.js';
   }
 }
 
+{
+  const p = new URLSearchParams(window.location.search);
+  if (p.has('p')) {
+    history.replaceState(null, '', `${window.location.pathname}${window.location.hash || ''}`);
+  }
+}
+
 async function bootstrap() {
-  try {
-    initAppShell();
-    await Auth.tryHandlePasswordRecovery();
+  initAppShell();
+  await Auth.tryHandlePasswordRecovery();
 
     const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
     const user    = await Auth.getUser();
