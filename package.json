@@ -6,6 +6,11 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run lint && npm run format:check && npm run test && npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
@@ -17,9 +22,14 @@
     "jspdf-autotable": "^3.8.2"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.4.0",
     "jsdom": "^25.0.1",
-    "vitest": "^2.1.8",
-    "vite": "^5.4.21"
+    "prettier": "^3.8.1",
+    "vite": "^5.4.21",
+    "vitest": "^2.1.8"
   }
 }
