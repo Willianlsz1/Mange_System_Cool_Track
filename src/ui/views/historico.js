@@ -56,7 +56,7 @@ export function renderHist() {
       const isToday =
         r.data.slice(0, 10) === Utils.localDateString();
 
-      return `<div class="timeline__item${isFirst ? " timeline__item--latest" : ""}" role="listitem" data-reg-id="${r.id}">
+      return `<div class="timeline__item${isFirst ? " timeline__item--latest" : ""}" role="listitem" data-reg-id="${Utils.escapeAttr(r.id)}">
       ${isFirst ? `<div class="timeline__recency-badge">Mais recente</div>` : ""}
       <div class="timeline__dot ${dotMod}"></div>
       <div class="timeline__item-inner">
@@ -72,10 +72,10 @@ export function renderHist() {
           ${r.assinatura ? `<div class="timeline__signed"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="var(--success)" stroke-width="1"/><path d="M3.5 6l1.5 1.5 3-3" stroke="var(--success)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Assinado pelo cliente</div>` : ""}
         </div>
 	      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-	        <button class="timeline__delete" data-action="edit-reg" data-id="${r.id}" aria-label="Editar registro" style="color:var(--text-3)">
+	        <button class="timeline__delete" data-action="edit-reg" data-id="${Utils.escapeAttr(r.id)}" aria-label="Editar registro" style="color:var(--text-3)">
 	          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 	        </button>
-	        <button class="timeline__delete" data-action="delete-reg" data-id="${r.id}" aria-label="Excluir registro de ${Utils.escapeHtml(r.tipo)}">
+	        <button class="timeline__delete" data-action="delete-reg" data-id="${Utils.escapeAttr(r.id)}" aria-label="Excluir registro de ${Utils.escapeHtml(r.tipo)}">
 	          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
 	        </button>
 	      </div>
@@ -107,35 +107,4 @@ export function deleteReg(id) {
   renderHist();
   updateHeader();
   Toast.warning("Registro removido do histórico.");
-}
-export function loadRegistroForEdit(id) {
-  const { registros } = getState();
-  const r = registros.find(r => r.id === id);
-  if (!r) return;
-
-  // Marca que estamos editando
-  sessionStorage.setItem('cooltrack-editing-id', id);
-
-  // Preenche os campos
-  Utils.setVal('r-equip',         r.equipId);
-  Utils.setVal('r-data',          r.data);
-  Utils.setVal('r-tipo',          r.tipo);
-  Utils.setVal('r-obs',           r.obs);
-  Utils.setVal('r-tecnico',       r.tecnico);
-  Utils.setVal('r-pecas',         r.pecas || '');
-  Utils.setVal('r-custo-pecas',   r.custoPecas   || '');
-  Utils.setVal('r-custo-mao-obra',r.custoMaoObra || '');
-  Utils.setVal('r-proxima',       r.proxima || '');
-  Utils.setVal('r-status',        r.status);
-
-  // Atualiza o botão de salvar
-  const btn = document.querySelector('[data-action="save-registro"]');
-  if (btn) {
-    btn.textContent = 'Salvar alterações';
-    btn.style.background = 'var(--warning)';
-  }
-
-  // Atualiza o título
-  const title = document.querySelector('#view-registro .section-title');
-  if (title) title.textContent = 'Editar registro';
 }
