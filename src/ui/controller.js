@@ -139,12 +139,11 @@ export function initController() {
     }
     Auth.getUser()
       .then((user) => {
-        console.log("[Profile] user:", user);
         if (user) _showAccountModal(user);
         else ProfileModal.open();
       })
       .catch((err) => {
-        console.error("[Profile] error:", err);
+        console.error("[Controller] Falha ao carregar perfil", err?.message || "Erro desconhecido");
         ProfileModal.open();
       });
   });
