@@ -7,6 +7,7 @@ import { FirstTimeExperience }             from './ui/components/onboarding.js';
 import { Auth }                            from './core/auth.js';
 import { AuthScreen }                      from './ui/components/authscreen.js';
 import { Storage }                         from './core/storage.js';
+import { Tour }                            from './ui/components/tour.js';
 
 async function bootstrap() {
   await Auth.tryHandlePasswordRecovery();
@@ -37,6 +38,7 @@ async function bootstrap() {
 
   const { equipamentos } = getState();
   setTimeout(() => FirstTimeExperience.show(equipamentos), 300);
+  Tour.initIfFirstVisit();
 }
 
 bootstrap();
