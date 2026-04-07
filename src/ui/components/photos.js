@@ -8,7 +8,19 @@ import { Toast } from '../../core/toast.js';
 import { Storage } from '../../core/storage.js';
 
 function compressImage(file) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (fn, payload) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutId);
+      fn(payload);
+    };
+    const timeoutId = setTimeout(() => {
+      Toast.error('Tempo esgotado ao processar foto. Tente novamente.');
+      finish(reject, new Error('Tempo esgotado ao processar foto.'));
+    }, 15000);
+
     const reader = new FileReader();
     reader.onload = event => {
       const img = new Image();
@@ -20,9 +32,17 @@ function compressImage(file) {
         canvas.width = w;
         canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
+        finish(resolve, canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
+      };
+      img.onerror = () => {
+        Toast.error('Arquivo de imagem inválido ou corrompido.');
+        finish(reject, new Error('Arquivo de imagem inválido ou corrompido.'));
       };
       img.src = event.target.result;
+    };
+    reader.onerror = () => {
+      Toast.error('Não foi possível ler o arquivo. Tente outro.');
+      finish(reject, new Error('Falha ao ler arquivo de imagem.'));
     };
     reader.readAsDataURL(file);
   });
@@ -52,18 +72,20 @@ export const Photos = {
     if (dropZone) dropZone.style.pointerEvents = 'none';
     if (dropText) dropText.textContent = `Processando ${toProcess.length} foto(s)...`;
 
-    for (const file of toProcess) {
-      try {
-        this.pending.push(await compressImage(file));
-        this.render();
-      } catch (_) {
-        Toast.error('Erro ao processar foto.');
+    try {
+      for (const file of toProcess) {
+        try {
+          this.pending.push(await compressImage(file));
+          this.render();
+        } catch (err) {
+          console.error('[Photos] Erro ao processar foto', err);
+        }
       }
+    } finally {
+      if (dropText) dropText.textContent = 'Toque para adicionar fotos';
+      if (dropZone) dropZone.style.pointerEvents = 'auto';
+      input.value = '';
     }
-
-    if (dropText) dropText.textContent = 'Toque para adicionar fotos';
-    if (dropZone) dropZone.style.pointerEvents = 'auto';
-    input.value = '';
 
     // Aviso de storage após adicionar fotos
     const { percent } = Storage.usage();

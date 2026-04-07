@@ -80,15 +80,18 @@ export function initRegistro() {
   if (!formView) return;
 
   _ensureProgressBar(formView);
-  _fields.forEach((f) => {
-    const i = Utils.getEl(f.id);
-    if (i) {
-      i.addEventListener("input", _updateProgressBar);
-      i.addEventListener("change", _updateProgressBar);
-    }
-  });
+  if (!formView.dataset.bound) {
+    _fields.forEach((f) => {
+      const i = Utils.getEl(f.id);
+      if (i) {
+        i.addEventListener("input", _updateProgressBar);
+        i.addEventListener("change", _updateProgressBar);
+      }
+    });
+    _bindEquipChangeWarning();
+    formView.dataset.bound = "1";
+  }
   _updateProgressBar();
-  _bindEquipChangeWarning();
 
   // Data padrão
   if (!Utils.getVal("r-data")) Utils.setVal("r-data", Utils.nowDatetime());
@@ -269,4 +272,3 @@ export function loadRegistroForEdit(id) {
   const title = document.querySelector('#view-registro .section-title');
   if (title) title.textContent = 'Editar registro';
 }
-
