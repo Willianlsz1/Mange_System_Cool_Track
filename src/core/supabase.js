@@ -1,6 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
 
-export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_KEY,
-);
+function getEnvOrThrow(name) {
+  const value = import.meta.env[name];
+
+  if (typeof value !== 'string' || value.trim() === '') {
+    throw new Error(
+      `[Supabase] Missing required environment variable: ${name}. ` +
+        'Configure it in .env for local development.',
+    );
+  }
+
+  return value;
+}
+
+const supabaseUrl = getEnvOrThrow('VITE_SUPABASE_URL');
+const supabaseKey = getEnvOrThrow('VITE_SUPABASE_KEY');
+
+export const supabase = createClient(supabaseUrl, supabaseKey);
