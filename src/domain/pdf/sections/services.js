@@ -1,4 +1,5 @@
 import { Utils } from '../../../core/utils.js';
+import { resolvePhotoDataUrlForPdf } from '../../../core/photoStorage.js';
 import { PDF_COLORS as C, STATUS_CLIENTE } from '../constants.js';
 import { accentLine, fillPage, fillRect, roundRect, txt } from '../primitives.js';
 
@@ -54,11 +55,19 @@ function drawStatusBadge(doc, pageWidth, margin, y, st) {
   doc.text(statusLabel, pageWidth - margin - statusWidth / 2 - 1, y + 7.5, { align: 'center' });
 }
 
-function drawPhotosGrid(doc, pageWidth, margin, startY, photos) {
+function getImageFormat(dataUrl) {
+  const formatRaw = dataUrl?.match(/^data:image\/(png|jpe?g|webp);/i)?.[1]?.toLowerCase();
+  if (!formatRaw) return 'JPEG';
+  if (formatRaw === 'jpg') return 'JPEG';
+  return formatRaw.toUpperCase();
+}
+
+async function drawPhotosGrid(doc, pageWidth, margin, startY, photos) {
   const photoW = (pageWidth - margin * 2 - 20) / 2;
   const photoH = 22;
 
-  photos.forEach((photo, index) => {
+  for (let index = 0; index < photos.length; index += 1) {
+    const photo = photos[index];
     const row = Math.floor(index / 2);
     const col = index % 2;
     const px = margin + 8 + col * (photoW + 4);
@@ -66,7 +75,11 @@ function drawPhotosGrid(doc, pageWidth, margin, startY, photos) {
     roundRect(doc, px, py, photoW, photoH, 1.5, [250, 250, 250]);
 
     try {
-      doc.addImage(photo, 'JPEG', px + 1, py + 1, photoW - 2, photoH - 2);
+      const imageData = await resolvePhotoDataUrlForPdf(photo);
+      if (!imageData) throw new Error('Foto indisponível para o PDF.');
+
+      const format = getImageFormat(imageData);
+      doc.addImage(imageData, format, px + 1, py + 1, photoW - 2, photoH - 2);
     } catch (_imgErr) {
       txt(doc, 'Foto indisponível', px + photoW / 2, py + photoH / 2 + 1, {
         size: 7,
@@ -74,10 +87,10 @@ function drawPhotosGrid(doc, pageWidth, margin, startY, photos) {
         align: 'center',
       });
     }
-  });
+  }
 }
 
-function drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, layout) {
+async function drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, layout) {
   const cardWidth = pageWidth - margin * 2;
   const { cardHeight, custo, photos } = layout;
 
@@ -131,7 +144,7 @@ function drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, l
   if (photos.length) {
     txt(doc, 'Fotos anexadas', margin + 8, contentY, { size: 8, style: 'bold', color: C.text3 });
     contentY += 3;
-    drawPhotosGrid(doc, pageWidth, margin, contentY, photos);
+    await drawPhotosGrid(doc, pageWidth, margin, contentY, photos);
   }
 
   if (registro.tecnico) {
@@ -143,7 +156,7 @@ function drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, l
   }
 }
 
-export function drawServices(
+export async function drawServices(
   doc,
   pageWidth,
   pageHeight,
@@ -158,7 +171,7 @@ export function drawServices(
   let y = 26;
   const pageBottom = pageHeight - 20;
 
-  filtered.forEach((registro) => {
+  for (const registro of filtered) {
     const equipamento = equipamentos.find((item) => item.id === registro.equipId);
     const st = STATUS_CLIENTE[registro.status] || STATUS_CLIENTE.ok;
     const layout = calculateCardLayout(doc, pageWidth, margin, registro);
@@ -181,9 +194,9 @@ export function drawServices(
       }
     }
 
-    drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, layout);
+    await drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, layout);
     y += layout.cardHeight + 6;
-  });
+  }
 
   if (typeof drawFooter === 'function') {
     drawFooter(doc, pageWidth, pageHeight, margin, profile, doc.getCurrentPageInfo().pageNumber);

@@ -7,6 +7,7 @@
 import { STORAGE_KEY, Utils } from './utils.js';
 import { Toast } from './toast.js';
 import { supabase } from './supabase.js';
+import { migrateLegacyPhotosForRegistros, normalizePhotoList } from './photoStorage.js';
 import { AppError, ErrorCodes, handleError } from './errors.js';
 
 const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
@@ -41,11 +42,35 @@ function normalizeRegistro(r, equipamentoIds) {
     status: ['ok', 'warn', 'danger'].includes(r.status) ? r.status : 'ok',
     pecas: String(r.pecas || ''),
     proxima: String(r.proxima || ''),
-    fotos: Array.isArray(r.fotos) ? r.fotos.filter((f) => typeof f === 'string') : [],
+    fotos: normalizePhotoList(r.fotos),
     tecnico: String(r.tecnico || ''),
     custoPecas: parseFloat(r.custoPecas || 0) || 0,
     custoMaoObra: parseFloat(r.custoMaoObra || 0) || 0,
     assinatura: Boolean(r.assinatura),
+  };
+}
+
+async function migrateLegacyPhotosInState(state, userId) {
+  if (!state?.registros?.length) {
+    return { state, migratedCount: 0, failedCount: 0 };
+  }
+
+  const migration = await migrateLegacyPhotosForRegistros(state.registros, { userId });
+  if (!migration.migratedCount && !migration.failedCount) {
+    return { state, migratedCount: 0, failedCount: 0 };
+  }
+
+  const migratedState = { ...state, registros: migration.registros };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedState));
+  } catch (_err) {
+    // cache local é opcional nessa etapa
+  }
+
+  return {
+    state: migratedState,
+    migratedCount: migration.migratedCount,
+    failedCount: migration.failedCount,
   };
 }
 
@@ -109,7 +134,7 @@ async function pushRegistros(registros, userId) {
       custo_pecas: r.custoPecas,
       custo_mao_obra: r.custoMaoObra,
       assinatura: r.assinatura,
-      fotos: r.fotos,
+      fotos: normalizePhotoList(r.fotos),
     }));
     await supabase.from('registros').upsert(rows, { onConflict: 'id' });
   } catch (error) {
@@ -185,7 +210,7 @@ async function pullFromSupabase(userId) {
       custoPecas: parseFloat(r.custo_pecas || 0),
       custoMaoObra: parseFloat(r.custo_mao_obra || 0),
       assinatura: Boolean(r.assinatura),
-      fotos: Array.isArray(r.fotos) ? r.fotos : [],
+      fotos: normalizePhotoList(r.fotos),
     }))
     .filter((r) => equipIds.has(r.equipId));
 
@@ -250,6 +275,9 @@ export const Storage = {
       const state = await pullFromSupabase(userId);
       // Atualiza cache local
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+      // Migração gradual de fotos legadas (base64) para Storage sem bloquear o bootstrap
+      this._migrateLegacyPhotosAsync(state, userId);
       return state;
     } catch (err) {
       handleError(err, {
@@ -323,15 +351,44 @@ export const Storage = {
     const userId = await getUserId();
     if (!userId) return; // guest mode - nao sincroniza
     try {
-      await pushEquipamentos(state.equipamentos, userId);
-      await pushRegistros(state.registros, userId);
-      await pushTecnicos(state.tecnicos, userId);
+      const migration = await migrateLegacyPhotosInState(state, userId);
+      const syncState = migration.state;
+
+      await pushEquipamentos(syncState.equipamentos, userId);
+      await pushRegistros(syncState.registros, userId);
+      await pushTecnicos(syncState.tecnicos, userId);
+
+      if (migration.failedCount > 0) {
+        Toast.warning(
+          'Algumas fotos não foram enviadas para a nuvem e permaneceram salvas localmente.',
+        );
+      }
     } catch (err) {
       handleError(err, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
         message: 'Sincronização pendente. Seus dados estão salvos localmente.',
         context: { action: '_syncToSupabase' },
+      });
+    }
+  },
+
+  async _migrateLegacyPhotosAsync(state, userId) {
+    try {
+      const migration = await migrateLegacyPhotosInState(state, userId);
+      if (!migration.migratedCount) return;
+
+      await pushRegistros(migration.state.registros, userId);
+      if (migration.failedCount > 0) {
+        Toast.warning('Algumas fotos antigas não puderam ser migradas e seguem salvas localmente.');
+      }
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.SYNC_FAILED,
+        severity: 'warning',
+        message: 'Migração de fotos pendente. Tentaremos novamente automaticamente.',
+        context: { action: 'storage._migrateLegacyPhotosAsync' },
+        showToast: false,
       });
     }
   },
