@@ -410,6 +410,28 @@ export function updateHeader() {
     }
   }
 
+  const syncStatusEl = Utils.getEl('sync-status');
+  const syncStatusTxt = Utils.getEl('sync-status-txt');
+  if (syncStatusEl && syncStatusTxt) {
+    const syncStatus = Storage.getSyncStatus();
+    const dot = syncStatusEl.querySelector('.status-indicator__dot');
+    if (syncStatus.state === 'syncing') {
+      syncStatusEl.style.display = 'flex';
+      if (dot) dot.className = 'status-indicator__dot status-indicator__dot--ok';
+      syncStatusTxt.textContent =
+        syncStatus.pendingOps > 1 ? 'Sincronizando alterações...' : 'Sincronizando...';
+    } else if (syncStatus.state === 'pending') {
+      syncStatusEl.style.display = 'flex';
+      if (dot) dot.className = 'status-indicator__dot status-indicator__dot--warn';
+      syncStatusTxt.textContent =
+        syncStatus.pendingOps > 0
+          ? `Sincronização pendente (${syncStatus.pendingOps})`
+          : 'Sincronização pendente';
+    } else {
+      syncStatusEl.style.display = 'none';
+    }
+  }
+
   // KPIs
   const bentAlert = Utils.getEl('hst-alert-bento');
   if (bentAlert) {

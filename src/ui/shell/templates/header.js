@@ -27,6 +27,10 @@ export function renderShellHeader() {
               <span class="status-indicator__dot status-indicator__dot--danger"></span>
               <span id="status-falhas-txt">0 falhas</span>
             </div>
+            <div class="status-indicator" id="sync-status" style="display:none">
+              <span class="status-indicator__dot status-indicator__dot--warn"></span>
+              <span id="sync-status-txt">Sincronização pendente</span>
+            </div>
           </div>
           <div class="app-header__date" id="hdr-date"></div>
 

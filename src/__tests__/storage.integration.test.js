@@ -1,10 +1,19 @@
 import { STORAGE_KEY } from '../core/utils.js';
 
-function createSupabaseMock({ userId = 'user-1', selectData = {}, failSelectTables = [] } = {}) {
+function createSupabaseMock({
+  userId = 'user-1',
+  selectData = {},
+  failSelectTables = [],
+  failDeleteTables = [],
+} = {}) {
   const upsertByTable = {
     equipamentos: vi.fn().mockResolvedValue({ data: null, error: null }),
     registros: vi.fn().mockResolvedValue({ data: null, error: null }),
     tecnicos: vi.fn().mockResolvedValue({ data: null, error: null }),
+  };
+  const deleteByTable = {
+    equipamentos: vi.fn().mockResolvedValue({ data: null, error: null }),
+    registros: vi.fn().mockResolvedValue({ data: null, error: null }),
   };
 
   const from = vi.fn((table) => ({
@@ -12,8 +21,20 @@ function createSupabaseMock({ userId = 'user-1', selectData = {}, failSelectTabl
     select: vi.fn(() => ({
       eq: vi.fn(async () => {
         if (failSelectTables.includes(table)) throw new Error(`select failed: ${table}`);
-        return { data: selectData[table] ?? [] };
+        return { data: selectData[table] ?? [], error: null };
       }),
+    })),
+    delete: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        in: vi.fn(async () => {
+          if (failDeleteTables.includes(table)) {
+            return { data: null, error: { message: `delete failed: ${table}` } };
+          }
+          const handler = deleteByTable[table];
+          if (!handler) return { data: null, error: null };
+          return handler();
+        }),
+      })),
     })),
   }));
 
@@ -23,6 +44,7 @@ function createSupabaseMock({ userId = 'user-1', selectData = {}, failSelectTabl
     },
     from,
     upsertByTable,
+    deleteByTable,
   };
 }
 
@@ -83,14 +105,14 @@ describe('Storage integration (offline-first)', () => {
 
   it('saves to localStorage immediately and triggers background sync', async () => {
     const { Storage } = await loadStorageModule();
-    const syncSpy = vi.spyOn(Storage, '_syncToSupabase').mockResolvedValue(undefined);
+    const scheduleSpy = vi.spyOn(Storage, '_scheduleSync').mockImplementation(() => {});
     const state = sampleState();
 
     const ok = Storage.save(state);
 
     expect(ok).toBe(true);
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY))).toEqual(state);
-    expect(syncSpy).toHaveBeenCalledWith(state);
+    expect(scheduleSpy).toHaveBeenCalledWith(state);
   });
 
   it('normalizes loaded local data to expected schema', async () => {
@@ -215,7 +237,7 @@ describe('Storage integration (offline-first)', () => {
 
   it('warns near storage quota and blocks writes at the 5MB limit', async () => {
     const { Storage, toastMock } = await loadStorageModule();
-    const syncSpy = vi.spyOn(Storage, '_syncToSupabase').mockResolvedValue(undefined);
+    const scheduleSpy = vi.spyOn(Storage, '_scheduleSync').mockImplementation(() => {});
 
     const warnState = { ...sampleState(), tecnicos: ['x'.repeat(2_100_000)] };
     expect(Storage.save(warnState)).toBe(true);
@@ -224,7 +246,7 @@ describe('Storage integration (offline-first)', () => {
     const fullState = { ...sampleState(), tecnicos: ['x'.repeat(2_700_000)] };
     expect(Storage.save(fullState)).toBe(false);
     expect(toastMock.error).toHaveBeenCalled();
-    expect(syncSpy).toHaveBeenCalledTimes(1);
+    expect(scheduleSpy).toHaveBeenCalledTimes(1);
   });
 
   it('resolves local/remote conflicts by preferring remote on successful loadFromSupabase', async () => {
@@ -280,13 +302,65 @@ describe('Storage integration (offline-first)', () => {
     const { Storage, supabaseMock, toastMock } = await loadStorageModule();
     const state = sampleState();
 
-    await Storage._syncToSupabase(state);
+    await Storage._syncToSupabase(state, { silent: false });
     expect(supabaseMock.upsertByTable.equipamentos).toHaveBeenCalled();
     expect(supabaseMock.upsertByTable.registros).toHaveBeenCalled();
     expect(supabaseMock.upsertByTable.tecnicos).toHaveBeenCalled();
 
     supabaseMock.upsertByTable.registros.mockRejectedValueOnce(new Error('sync err'));
-    await Storage._syncToSupabase(state);
+    await Storage._syncToSupabase(state, { silent: false });
     expect(toastMock.warning).toHaveBeenCalled();
+  });
+
+  it('applies pending deletions before upsert and clears deletion queue on success', async () => {
+    const { Storage, supabaseMock } = await loadStorageModule();
+    Storage.markRegistroDeleted('reg-1');
+    Storage.markEquipDeleted('eq-2', ['reg-2', 'reg-3']);
+
+    const emptyState = { equipamentos: [], registros: [], tecnicos: [] };
+    const ok = await Storage._syncToSupabase(emptyState, { silent: true });
+
+    expect(ok).toBe(true);
+    expect(supabaseMock.deleteByTable.registros).toHaveBeenCalled();
+    expect(supabaseMock.deleteByTable.equipamentos).toHaveBeenCalled();
+    expect(localStorage.getItem('cooltrack-sync-deletions-v1')).toBeNull();
+  });
+
+  it('ignores local dirty queue when cache owner is from another user account', async () => {
+    const local = sampleState();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(local));
+    localStorage.setItem('cooltrack-cache-owner-v1', 'old-user');
+    localStorage.setItem('cooltrack-sync-dirty-v1', '1');
+    localStorage.setItem(
+      'cooltrack-sync-deletions-v1',
+      JSON.stringify({ equipamentos: ['eq-old'], registros: ['reg-old'] }),
+    );
+
+    const remoteEquip = [
+      {
+        id: 'eq-r',
+        nome: 'REMOTE',
+        local: 'Nuvem',
+        status: 'ok',
+        tag: '',
+        tipo: 'Outro',
+        modelo: '',
+        fluido: '',
+      },
+    ];
+
+    const { Storage, supabaseMock } = await loadStorageModule({
+      supabase: {
+        userId: 'new-user',
+        selectData: { equipamentos: remoteEquip, registros: [], tecnicos: [] },
+      },
+    });
+
+    const result = await Storage.loadFromSupabase();
+
+    expect(result.equipamentos[0].id).toBe('eq-r');
+    expect(supabaseMock.upsertByTable.equipamentos).not.toHaveBeenCalled();
+    expect(localStorage.getItem('cooltrack-sync-dirty-v1')).toBeNull();
+    expect(localStorage.getItem('cooltrack-sync-deletions-v1')).toBeNull();
   });
 });
