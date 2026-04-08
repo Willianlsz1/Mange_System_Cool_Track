@@ -106,7 +106,7 @@ describe('Auth integration wrapper', () => {
     expect(ok).toEqual({ ok: true });
     expect(supabaseMock.auth.resetPasswordForEmail).toHaveBeenCalledWith(
       'user@mail.com',
-      expect.objectContaining({ redirectTo: expect.stringContaining('Mange_System_Cool_Track') }),
+      expect.objectContaining({ redirectTo: expect.stringContaining(window.location.origin) }),
     );
 
     supabaseMock.auth.resetPasswordForEmail.mockResolvedValueOnce({
@@ -122,25 +122,19 @@ describe('Auth integration wrapper', () => {
 
     window.location.hash = '#type=recovery';
 
-    const promptSpy = vi
-      .spyOn(window, 'prompt')
-      .mockReturnValueOnce('123')
-      .mockReturnValueOnce('123456');
-
-    const shortPwd = await Auth.tryHandlePasswordRecovery();
+    const shortPwd = await Auth.tryHandlePasswordRecovery(async () => '123');
     expect(shortPwd).toBe(true);
     expect(toastMock.error).toHaveBeenCalledWith('Senha deve ter no mínimo 6 caracteres.');
 
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: { message: 'boom' } });
-    const failed = await Auth.tryHandlePasswordRecovery();
+    const failed = await Auth.tryHandlePasswordRecovery(async () => '123456');
     expect(failed).toBe(true);
-    expect(toastMock.warning).toHaveBeenCalledWith(
+    expect(toastMock.error).toHaveBeenCalledWith(
       'Não foi possível redefinir a senha. Tente novamente pelo link do email.',
     );
 
-    promptSpy.mockReturnValueOnce('nova123');
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: null });
-    const success = await Auth.tryHandlePasswordRecovery();
+    const success = await Auth.tryHandlePasswordRecovery(async () => 'nova123');
     expect(success).toBe(true);
     expect(toastMock.success).toHaveBeenCalled();
     expect(replaceSpy).toHaveBeenCalled();

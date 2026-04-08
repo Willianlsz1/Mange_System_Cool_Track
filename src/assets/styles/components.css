@@ -85,60 +85,107 @@
 
 /* ─── ALERTA STRIP (topo do dashboard) ─── */
 .alert-strip {
-  background: var(--danger-dim);
-  border: 1px solid rgba(224, 48, 64, 0.2);
-  border-left: 3px solid var(--danger);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.2), rgba(224, 48, 64, 0.06));
+  border: 1px solid rgba(224, 48, 64, 0.38);
+  border-left: 5px solid var(--danger);
+  border-radius: var(--radius-sm);
   padding: var(--space-3) var(--space-4);
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
+  box-shadow: 0 10px 24px rgba(4, 8, 16, 0.35);
 }
 
 .alert-strip__icon {
   color: var(--danger);
   flex-shrink: 0;
   line-height: 1;
+  font-size: 18px;
+}
+.alert-strip__content {
+  min-width: 0;
+  flex: 1;
 }
 .alert-strip__title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--danger);
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffd9dd;
 }
 .alert-strip__desc {
   font-size: 11px;
-  color: var(--text-2);
+  color: #f7c6cd;
   margin-top: 2px;
 }
 .alert-strip__time {
-  margin-left: auto;
+  margin-top: 4px;
   font-size: 11px;
-  color: var(--text-3);
+  color: rgba(255, 233, 236, 0.72);
   font-family: var(--font-mono);
-  white-space: nowrap;
+}
+.alert-strip__cta {
+  margin-left: auto;
+  align-self: center;
+}
+
+.alert-strip--critical {
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.26), rgba(224, 48, 64, 0.07));
+}
+
+.alert-strip--warn {
+  background: linear-gradient(90deg, rgba(232, 160, 32, 0.26), rgba(232, 160, 32, 0.06));
+  border-color: rgba(232, 160, 32, 0.35);
+  border-left-color: var(--warning);
+}
+.alert-strip--warn .alert-strip__icon,
+.alert-strip--warn .alert-strip__title {
+  color: #ffd787;
+}
+.alert-strip--warn .alert-strip__desc {
+  color: #f3dfb2;
+}
+.alert-strip--warn .alert-strip__time {
+  color: rgba(255, 230, 181, 0.72);
+}
+
+.alert-strip--info {
+  background: linear-gradient(90deg, rgba(0, 200, 232, 0.2), rgba(0, 200, 232, 0.05));
+  border-color: rgba(0, 200, 232, 0.32);
+  border-left-color: var(--primary);
+}
+.alert-strip--info .alert-strip__icon,
+.alert-strip--info .alert-strip__title {
+  color: #9eeeff;
+}
+.alert-strip--info .alert-strip__desc {
+  color: rgba(213, 245, 252, 0.86);
 }
 
 /* Strip sem alertas */
 .alert-strip--none {
-  background: var(--success-dim);
-  border-color: rgba(0, 200, 112, 0.15);
+  background: linear-gradient(90deg, rgba(0, 200, 112, 0.2), rgba(0, 200, 112, 0.06));
+  border-color: rgba(0, 200, 112, 0.32);
   border-left-color: var(--success);
 }
 .alert-strip--none .alert-strip__title {
-  color: var(--success);
+  color: #9cffc5;
+}
+.alert-strip--none .alert-strip__desc {
+  color: rgba(201, 245, 221, 0.82);
 }
 
 /* ─── KPI CARDS (bento) ─── */
 .bento-kpi {
   background: var(--card);
   border: 1px solid var(--border);
-  border-top: 2px solid var(--border-2);
+  border-top: 3px solid var(--border-2);
   border-radius: var(--radius-sm);
-  padding: 14px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  box-shadow: 0 8px 20px rgba(3, 8, 16, 0.2);
 }
 
 .bento-kpi--alert {
@@ -163,18 +210,19 @@
 .bento-kpi__label {
   font-size: 9px;
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--text-2);
   letter-spacing: 0.1em;
-  margin-bottom: var(--space-1);
+  margin-bottom: 6px;
 }
 
 .bento-kpi__value {
   font-family: var(--font-mono);
-  font-size: 32px;
-  font-weight: 500;
+  font-size: 40px;
+  font-weight: 700;
   color: var(--text);
   letter-spacing: -0.04em;
-  line-height: 1;
+  line-height: 0.95;
+  text-shadow: 0 0 20px rgba(0, 0, 0, 0.16);
 }
 
 .bento-kpi__value--ok {
@@ -191,10 +239,10 @@
 }
 
 .bento-kpi__sub {
-  margin-top: var(--space-1);
+  margin-top: 6px;
   font-size: 10px;
-  color: var(--text-3);
-  font-weight: 400;
+  color: var(--text-2);
+  font-weight: 500;
 }
 
 /* Health bar — agora é barra de eficiência */
@@ -225,20 +273,24 @@
 .equip-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-left: 3px solid var(--border-2);
+  border-left: 4px solid var(--border-2);
   border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: pointer;
   transition:
     border-color 0.15s ease,
-    background 0.15s ease;
+    background 0.15s ease,
+    box-shadow 0.15s ease;
   display: block;
+  position: relative;
+  box-shadow: 0 6px 18px rgba(3, 8, 16, 0.18);
 }
 
 .equip-card:hover,
 .equip-card:focus {
   background: var(--card-hover);
   border-color: var(--border-2);
+  box-shadow: 0 10px 24px rgba(3, 8, 16, 0.28);
   outline: none;
 }
 
@@ -269,7 +321,25 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.equip-card__status-band {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+}
+
+.equip-card__status-band--ok {
+  background: linear-gradient(180deg, #0ecf82, #0aa56a);
+}
+.equip-card__status-band--warn {
+  background: linear-gradient(180deg, #ffcb55, #e8a020);
+}
+.equip-card__status-band--danger {
+  background: linear-gradient(180deg, #ff6679, #e03040);
 }
 
 .equip-card__type-icon {
@@ -298,8 +368,8 @@
   min-width: 0;
 }
 .equip-card__name {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -310,7 +380,7 @@
 }
 .equip-card__tag {
   font-size: 10px;
-  color: var(--text-3);
+  color: var(--text-2);
   font-family: var(--font-mono);
   margin-top: 1px;
   letter-spacing: 0.03em;
@@ -319,7 +389,7 @@
 /* Status badge no header */
 .equip-card__status {
   flex-shrink: 0;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   padding: 3px 7px;
@@ -539,14 +609,14 @@
 
 /* ─── ALERT CARD ─── */
 .alert-card {
-  background: var(--warning-dim);
+  background: linear-gradient(90deg, rgba(232, 160, 32, 0.2), rgba(232, 160, 32, 0.07));
   border: 1px solid rgba(232, 160, 32, 0.18);
-  border-left: 2px solid var(--warning);
+  border-left: 4px solid var(--warning);
   border-radius: var(--radius-sm);
-  padding: var(--space-3) var(--space-3);
+  padding: 10px 12px;
   display: flex;
   gap: var(--space-2);
-  align-items: flex-start;
+  align-items: center;
   cursor: pointer;
   transition:
     background 0.15s ease,
@@ -557,7 +627,7 @@
   border-color: rgba(232, 160, 32, 0.3);
 }
 .alert-card--critical {
-  background: var(--danger-dim);
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.22), rgba(224, 48, 64, 0.08));
   border-color: rgba(224, 48, 64, 0.2);
   border-left-color: var(--danger);
 }
@@ -566,27 +636,39 @@
 }
 
 .alert-card__icon {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
   flex-shrink: 0;
-  margin-top: 1px;
+}
+
+.alert-card__body {
+  min-width: 0;
+  flex: 1;
 }
 .alert-card__title {
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text);
 }
 .alert-card__sub {
-  margin-top: 2px;
-  color: var(--text-3);
-  font-size: 11px;
+  margin-top: 1px;
+  color: var(--text-2);
+  font-size: 10px;
 }
 .alert-card__equip {
-  margin-top: var(--space-1);
-  color: var(--primary);
+  margin-bottom: 2px;
+  color: var(--text);
   font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.alert-card__action {
+  color: var(--primary);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 /* ─── RECENT CARD ─── */
@@ -3576,4 +3658,29 @@ mark,
 
 .auth-btn-forgot:hover {
   color: #8aaac8;
+}
+
+.auth-recovery-modal-overlay {
+  z-index: 320;
+}
+
+.auth-recovery-modal {
+  width: min(420px, calc(100vw - 32px));
+  background: #0c1929;
+  border: 1px solid rgba(0, 200, 232, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.auth-recovery-modal__title {
+  margin: 0 0 16px;
+  color: #e8f2fa;
+  font-size: 18px;
+}
+
+.auth-recovery-modal__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
 }

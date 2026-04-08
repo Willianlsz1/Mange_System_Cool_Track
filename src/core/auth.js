@@ -2,6 +2,13 @@ import { supabase } from './supabase.js';
 import { Toast } from './toast.js';
 import { AppError, ErrorCodes, handleError } from './errors.js';
 
+function getPasswordResetRedirectUrl() {
+  const envRedirect = import.meta.env?.VITE_AUTH_REDIRECT_URL;
+  if (typeof envRedirect === 'string' && envRedirect.trim()) return envRedirect.trim();
+
+  return new URL(window.location.pathname, window.location.origin).toString();
+}
+
 export const Auth = {
   isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
@@ -98,7 +105,7 @@ export const Auth = {
       return { ok: false, message: 'Digite um email válido para recuperar a senha.' };
     }
 
-    const redirectTo = 'https://willianlsz1.github.io/Mange_System_Cool_Track/';
+    const redirectTo = getPasswordResetRedirectUrl();
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(normalized, { redirectTo });
       if (error) {
@@ -123,16 +130,15 @@ export const Auth = {
     }
   },
 
-  async tryHandlePasswordRecovery() {
+  isPasswordRecoveryLink() {
     const hash = window.location.hash || '';
-    const isRecovery = /(?:^|[&#])type=recovery(?:&|$)/.test(hash);
-    if (!isRecovery) return false;
+    return /(?:^|[&#])type=recovery(?:&|$)/.test(hash);
+  },
 
-    const newPassword = window.prompt('Digite sua nova senha (mínimo 6 caracteres):');
-    if (!newPassword) return true;
+  async updatePassword(newPassword) {
+    if (!newPassword) return { ok: false, cancelled: true };
     if (newPassword.length < 6) {
-      Toast.error('Senha deve ter no mínimo 6 caracteres.');
-      return true;
+      return { ok: false, message: 'Senha deve ter no mínimo 6 caracteres.' };
     }
 
     try {
@@ -143,23 +149,39 @@ export const Auth = {
             'Não foi possível redefinir a senha. Tente novamente pelo link do email.',
             ErrorCodes.AUTH_FAILED,
             'warning',
-            { action: 'tryHandlePasswordRecovery', detail: error.message },
+            { action: 'updatePassword', detail: error.message },
           ),
         );
-        return true;
+        return {
+          ok: false,
+          message: 'Não foi possível redefinir a senha. Tente novamente pelo link do email.',
+        };
       }
 
-      Toast.success('Senha atualizada com sucesso. Faça login com a nova senha.');
       history.replaceState(history.state, '', window.location.pathname + window.location.search);
-      return true;
+      return { ok: true };
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.AUTH_FAILED,
         message: 'Erro ao atualizar senha. Tente novamente.',
-        context: { action: 'tryHandlePasswordRecovery' },
+        context: { action: 'updatePassword' },
       });
-      return true;
+      return { ok: false, message: 'Erro ao atualizar senha. Tente novamente.' };
     }
+  },
+
+  async tryHandlePasswordRecovery(getNewPassword) {
+    if (!this.isPasswordRecoveryLink()) return false;
+    if (!(getNewPassword instanceof Function)) return true;
+
+    const newPassword = await getNewPassword();
+    const result = await this.updatePassword(newPassword);
+
+    if (result.cancelled) return true;
+    if (!result.ok && result.message) Toast.error(result.message);
+    if (result.ok) Toast.success('Senha atualizada com sucesso. Faça login com a nova senha.');
+
+    return true;
   },
 
   onAuthChange(callback) {
