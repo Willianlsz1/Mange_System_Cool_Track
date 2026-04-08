@@ -1,4 +1,4 @@
-﻿/**
+/**
  * CoolTrack Pro - Storage v5.0
  * localStorage como cache + Supabase como fonte de verdade
  * Offline first: salva local imediatamente, sincroniza com Supabase em background

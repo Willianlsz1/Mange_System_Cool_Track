@@ -8,8 +8,8 @@ export function renderShellModals() {
       <div class="modal__body modal__body--scroll">
         <div class="modal-progress-header">
           <div>
-            <div class="modal__title" id="modal-add-eq-title">Qual equipamento vocÃª quer monitorar?</div>
-            <div class="modal__subtitle">SÃ³ 2 campos obrigatÃ³rios para comeÃ§ar</div>
+            <div class="modal__title" id="modal-add-eq-title">Qual equipamento você quer monitorar?</div>
+            <div class="modal__subtitle">Só 2 campos obrigatórios para começar</div>
           </div>
           <div class="modal-steps" aria-label="Etapas">
             <span class="modal-step modal-step--active" id="step-dot-1">1</span>
@@ -20,15 +20,15 @@ export function renderShellModals() {
 
         <div id="eq-step-1">
           <div class="form-group">
-            <label class="form-label" for="eq-nome">Como vocÃª chama esse equipamento? *</label>
+            <label class="form-label" for="eq-nome">Como você chama esse equipamento? *</label>
             <input id="eq-nome" class="form-control" type="text"
-              placeholder="Ex: Split da recepÃ§Ã£o, CÃ¢mara do estoque..." required autocomplete="off" />
-            <div class="form-hint">Use um nome que vocÃª reconheÃ§a rapidamente no campo</div>
+              placeholder="Ex: Split da recepção, Câmara do estoque..." required autocomplete="off" />
+            <div class="form-hint">Use um nome que você reconheça rapidamente no campo</div>
           </div>
           <div class="form-group">
             <label class="form-label" for="eq-local">Onde ele fica? *</label>
             <input id="eq-local" class="form-control" type="text"
-              placeholder="Ex: Sala dos fundos, GalpÃ£o A, 2Âº andar..." required autocomplete="off" />
+              placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..." required autocomplete="off" />
           </div>
           <button class="eq-expand-btn" id="eq-expand-details" type="button" aria-expanded="false"
             aria-controls="eq-step-2">
@@ -36,17 +36,17 @@ export function renderShellModals() {
               <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"
                 stroke-linejoin="round" />
             </svg>
-            Adicionar detalhes tÃ©cnicos
-            <span class="eq-expand-hint">(TAG, fluido, modelo â€” opcional)</span>
+            Adicionar detalhes técnicos
+            <span class="eq-expand-hint">(TAG, fluido, modelo — opcional)</span>
           </button>
         </div>
 
         <div id="eq-step-2" class="eq-details-panel" aria-hidden="true">
-          <div class="eq-details-divider">Detalhes tÃ©cnicos <span>(opcional â€” pode preencher depois)</span></div>
+          <div class="eq-details-divider">Detalhes técnicos <span>(opcional — pode preencher depois)</span></div>
           <div class="form-group">
-            <label class="form-label" for="eq-tag">TAG / CÃ³digo de identificaÃ§Ã£o</label>
+            <label class="form-label" for="eq-tag">TAG / Código de identificação</label>
             <input id="eq-tag" class="form-control form-control--mono" type="text" placeholder="Ex: AC-01, CF-FARM, VRF-A" />
-            <div class="form-hint">CÃ³digo que vocÃª usa na etiqueta ou plaqueta do equipamento</div>
+            <div class="form-hint">Código que você usa na etiqueta ou plaqueta do equipamento</div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -60,7 +60,7 @@ export function renderShellModals() {
                 <option>Fan Coil</option>
                 <option>Self Contained</option>
                 <option>Roof Top</option>
-                <option>CÃ¢mara Fria</option>
+                <option>Câmara Fria</option>
                 <option>Outro</option>
               </select>
             </div>
@@ -111,9 +111,9 @@ export function renderShellModals() {
 
       <div class="btn-group modal__footer">
         <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button>
-        <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento â†’</button>
+        <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento →</button>
       </div>
-      <p class="modal-trust-note modal-trust-note--footer">âœ“ VocÃª pode editar ou excluir a qualquer momento
+      <p class="modal-trust-note modal-trust-note--footer">✓ Você pode editar ou excluir a qualquer momento
       </p>
     </div>
   </div>
@@ -126,11 +126,11 @@ export function renderShellModals() {
     </div>
   </div>
 
-  <!-- MODAL: ConfirmaÃ§Ã£o -->
+  <!-- MODAL: Confirmação -->
   <div class="modal-overlay" id="modal-confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
     aria-describedby="confirm-msg">
     <div class="modal modal--sm">
-      <div class="modal__title" id="confirm-title">Confirmar AÃ§Ã£o</div>
+      <div class="modal__title" id="confirm-title">Confirmar Ação</div>
       <div class="modal__text" id="confirm-msg">Tem certeza?</div>
       <div class="btn-group btn-group--tight">
         <button class="btn btn--outline" id="confirm-no">Cancelar</button>
@@ -141,8 +141,8 @@ export function renderShellModals() {
 
   <!-- LIGHTBOX -->
   <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Visualizar foto">
-    <button class="lightbox__close" aria-label="Fechar">âœ•</button>
-    <img class="lightbox__img" id="lightbox-img" src="" alt="Registro fotogrÃ¡fico" />
+    <button class="lightbox__close" aria-label="Fechar">✕</button>
+    <img class="lightbox__img" id="lightbox-img" src="" alt="Registro fotográfico" />
   </div>
 
   <button id="tour-help-btn" class="tour-help-btn" type="button" aria-label="Reiniciar tour guiado" title="Reiniciar tour">?</button>

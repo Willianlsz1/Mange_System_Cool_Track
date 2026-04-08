@@ -35,7 +35,7 @@ export const PERIODICIDADE_PREVENTIVA_POR_TIPO = {
   'Fan Coil': PERIODICIDADE_PREVENTIVA_BASE.fan_coil,
   'Self Contained': PERIODICIDADE_PREVENTIVA_BASE.self_contained,
   'Roof Top': PERIODICIDADE_PREVENTIVA_BASE.roof_top,
-  'CÃ¢mara Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
+  'Câmara Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
   'Camara Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
   'Camera Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
   Outro: PERIODICIDADE_PREVENTIVA_BASE.outro,
@@ -92,7 +92,7 @@ function getTipoKey(tipo) {
     (raw.includes('Camara') ||
       raw.includes('Camera') ||
       raw.includes('Câmara') ||
-      raw.includes('CÃ¢mara'))
+      raw.includes('Câmara'))
   ) {
     return 'camara_fria';
   }
