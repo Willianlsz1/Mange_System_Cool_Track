@@ -11,7 +11,7 @@ export function populateRelatorioSelects() {
   const opts = equipamentos
     .map(
       (e) =>
-        `<option value="${e.id}">${Utils.escapeHtml(e.nome)} — ${Utils.escapeHtml(e.local)}</option>`,
+        `<option value="${Utils.escapeAttr(e.id)}">${Utils.escapeHtml(e.nome)} — ${Utils.escapeHtml(e.local)}</option>`,
     )
     .join('');
   const el = Utils.getEl('rel-equip');
@@ -52,26 +52,27 @@ export function renderRelatorio() {
       .map((r) => {
         const eq = findEquip(r.equipId);
         const custoTotal = parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0);
+        const safeStatus = Utils.safeStatus(r.status);
         return `<div class="card report-record">
         <div class="report-record__head">
           <div>
             <div class="report-record__title">${Utils.escapeHtml(r.tipo)}</div>
             <div class="report-record__date">${Utils.formatDatetime(r.data)}</div>
           </div>
-          <span class="badge badge--${r.status}"><span class="status-dot status-dot--${r.status}"></span>${STATUS_LABEL[r.status]}</span>
+          <span class="badge badge--${safeStatus}"><span class="status-dot status-dot--${safeStatus}"></span>${STATUS_LABEL[safeStatus]}</span>
         </div>
         <div class="info-list">
           <div class="info-row"><span class="info-row__label">Equipamento</span><span class="info-row__value">${Utils.escapeHtml(eq?.nome ?? '—')}</span></div>
-          <div class="info-row"><span class="info-row__label">TAG</span><span class="info-row__value" style="font-family:var(--font-mono)">${Utils.escapeHtml(eq?.tag ?? '—')}</span></div>
+          <div class="info-row"><span class="info-row__label">TAG</span><span class="info-row__value info-row__value--mono">${Utils.escapeHtml(eq?.tag ?? '—')}</span></div>
           <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq?.local ?? '—')}</span></div>
           <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq?.fluido ?? '—')}</span></div>
           <div class="info-row"><span class="info-row__label">Técnico</span><span class="info-row__value">${Utils.escapeHtml(r.tecnico ?? '—')}</span></div>
           ${r.pecas ? `<div class="info-row"><span class="info-row__label">Peças / Materiais</span><span class="info-row__value">${Utils.escapeHtml(r.pecas)}</span></div>` : ''}
           ${r.custoPecas > 0 ? `<div class="info-row"><span class="info-row__label">Custo de Peças</span><span class="info-row__value">R$ ${parseFloat(r.custoPecas).toFixed(2).replace('.', ',')}</span></div>` : ''}
           ${r.custoMaoObra > 0 ? `<div class="info-row"><span class="info-row__label">Mão de Obra</span><span class="info-row__value">R$ ${parseFloat(r.custoMaoObra).toFixed(2).replace('.', ',')}</span></div>` : ''}
-          ${custoTotal > 0 ? `<div class="info-row" style="border-top:1px solid var(--border-2);font-weight:700"><span class="info-row__label" style="color:var(--text)">Total do Serviço</span><span class="info-row__value" style="color:var(--primary)">R$ ${custoTotal.toFixed(2).replace('.', ',')}</span></div>` : ''}
+          ${custoTotal > 0 ? `<div class="info-row info-row--total"><span class="info-row__label info-row__label--strong">Total do Serviço</span><span class="info-row__value info-row__value--primary">R$ ${custoTotal.toFixed(2).replace('.', ',')}</span></div>` : ''}
           ${r.proxima ? `<div class="info-row"><span class="info-row__label">Próxima Manutenção</span><span class="info-row__value">${Utils.formatDate(r.proxima)}</span></div>` : ''}
-          ${r.assinatura ? `<div class="info-row"><span class="info-row__label">Assinatura</span><span class="info-row__value" style="color:var(--success)">✓ Assinado pelo cliente</span></div>` : ''}
+          ${r.assinatura ? `<div class="info-row"><span class="info-row__label">Assinatura</span><span class="info-row__value info-row__value--success">✓ Assinado pelo cliente</span></div>` : ''}
         </div>
         <div class="report-record__obs">${Utils.escapeHtml(r.obs)}</div>
       </div>`;

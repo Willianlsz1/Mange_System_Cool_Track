@@ -30,7 +30,7 @@ function _ensureProgressBar(formView) {
   c.id = CONTAINER_ID;
   c.className = 'form-progress';
   c.innerHTML = `<div class="form-progress__text"><span>Campos preenchidos</span><span id="form-progress-count">0/${_fields.length}</span></div>
-    <div class="form-progress__bar"><div class="form-progress__fill" id="form-progress-fill" style="width:0%"></div></div>`;
+    <div class="form-progress__bar"><div class="form-progress__fill" id="form-progress-fill"></div></div>`;
   formView.querySelector('.card')?.insertBefore(c, formView.querySelector('.card').firstChild);
 }
 
@@ -57,8 +57,7 @@ function _bindEquipChangeWarning() {
     if (lastReg && Utils.daysDiff(lastReg.proxima) >= 0) {
       const w = document.createElement('div');
       w.id = 'reg-pending-warning';
-      w.style.cssText =
-        'color:var(--warning);margin-bottom:12px;font-size:12px;line-height:1.4;padding:8px 10px;background:var(--warning-dim);border:1px solid rgba(232,160,32,0.2);border-radius:var(--radius-xs);';
+      w.className = 'reg-pending-warning';
       w.textContent = '⚠ Manutenção preventiva agendada. Registre apenas em emergência.';
       sel.parentNode.parentNode.insertBefore(w, sel.parentNode.nextSibling);
     }
@@ -291,6 +290,14 @@ export function clearRegistro(preserveEquip = false) {
 
   const rTecnico = Utils.getEl('r-tecnico');
   if (rTecnico) rTecnico.value = Profile.getDefaultTecnico();
+
+  const saveBtn = document.querySelector('[data-action="save-registro"]');
+  if (saveBtn) {
+    saveBtn.textContent = 'Salvar registro';
+    saveBtn.classList.remove('btn--editing');
+  }
+  const title = document.querySelector('#view-registro .section-title');
+  if (title) title.textContent = 'O que foi feito hoje?';
 }
 export function loadRegistroForEdit(id) {
   const { registros } = getState();
@@ -313,8 +320,7 @@ export function loadRegistroForEdit(id) {
   const btn = document.querySelector('[data-action="save-registro"]');
   if (btn) {
     btn.textContent = 'Salvar alterações';
-    btn.style.background = 'var(--warning)';
-    btn.style.color = '#07111F';
+    btn.classList.add('btn--editing');
   }
 
   const title = document.querySelector('#view-registro .section-title');

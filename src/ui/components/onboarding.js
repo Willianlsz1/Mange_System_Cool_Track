@@ -36,7 +36,9 @@ export const SavedHighlight = {
     if (!id) return;
     sessionStorage.removeItem(HIGHLIGHT_KEY);
     requestAnimationFrame(() => {
-      const el = document.querySelector(`[data-reg-id="${id}"]`);
+      const el = Array.from(document.querySelectorAll('[data-reg-id]')).find(
+        (node) => node.getAttribute('data-reg-id') === id,
+      );
       if (!el) return;
       el.classList.add('timeline__item--saved');
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -177,12 +179,14 @@ export const ProfileModal = {
         display:flex;align-items:center;justify-content:center;
         font-size:17px;font-weight:700;color:#00D4FF;flex-shrink:0
       ">
-        ${(profile.nome || 'T')
-          .split(' ')
-          .map((n) => n[0])
-          .slice(0, 2)
-          .join('')
-          .toUpperCase()}
+        ${Utils.escapeHtml(
+          (profile.nome || 'T')
+            .split(' ')
+            .map((n) => n[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase(),
+        )}
       </div>
       <div>
         <div style="font-size:16px;font-weight:600;color:#E8F2FA;margin-bottom:2px">Meu Perfil</div>
@@ -195,19 +199,19 @@ export const ProfileModal = {
       <div class="form-group">
         <label class="form-label" for="prof-nome">Seu nome *</label>
         <input id="prof-nome" class="form-control" type="text"
-          value="${Utils.escapeHtml(profile.nome || '')}"
+          value="${Utils.escapeAttr(profile.nome || '')}"
           placeholder="Ex: Carlos Figueiredo" />
       </div>
       <div class="form-group">
         <label class="form-label" for="prof-empresa">Empresa / CNPJ</label>
         <input id="prof-empresa" class="form-control" type="text"
-          value="${Utils.escapeHtml(profile.empresa || '')}"
+          value="${Utils.escapeAttr(profile.empresa || '')}"
           placeholder="Ex: Frio Total Refrigeração" />
       </div>
       <div class="form-group">
         <label class="form-label" for="prof-telefone">Telefone / WhatsApp</label>
         <input id="prof-telefone" class="form-control" type="text"
-          value="${Utils.escapeHtml(profile.telefone || '')}"
+          value="${Utils.escapeAttr(profile.telefone || '')}"
           placeholder="(31) 99999-0000" />
       </div>
       <div class="btn-group" style="margin-top:8px">
@@ -493,7 +497,7 @@ export const FirstTimeExperience = {
           <label class="ftx-form-label">COMO VOCÊ SE CHAMA?</label>
           <input class="ftx-input" id="ftx-nome" type="text"
             placeholder="Seu nome completo..."
-            value="${Utils.escapeHtml(techName)}"
+            value="${Utils.escapeAttr(techName)}"
             autocomplete="name" />
 
           <button class="ftx-btn-primary" id="ftx-next-0">

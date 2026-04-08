@@ -14,7 +14,7 @@ function _alertCardHtml({ kind, reg, eq }) {
       <div>
         <div class="alert-card__title">Equipamento fora de operação</div>
         <div class="alert-card__sub">Requer intervenção imediata</div>
-        <div class="alert-card__equip">${Utils.escapeHtml(eq.nome)}</div>
+        <div class="alert-card__equip">${Utils.escapeHtml(eq?.nome ?? '—')}</div>
       </div>
     </div>`;
   }

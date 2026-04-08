@@ -51,7 +51,8 @@ export function renderHist() {
   el.innerHTML = `<div class="timeline">${list
     .map((r, idx) => {
       const eq = findEquip(r.equipId);
-      const dotMod = r.status !== 'ok' ? `timeline__dot--${r.status}` : '';
+      const safeStatus = Utils.safeStatus(r.status);
+      const dotMod = safeStatus !== 'ok' ? `timeline__dot--${safeStatus}` : '';
       const custoTotal = parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0);
       const isFirst = idx === 0;
       const isToday = r.data.slice(0, 10) === Utils.localDateString();
@@ -71,8 +72,8 @@ export function renderHist() {
           ${r.proxima ? `<div class="timeline__next">Próxima: ${Utils.formatDate(r.proxima)}</div>` : ''}
           ${r.assinatura ? `<div class="timeline__signed"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="var(--success)" stroke-width="1"/><path d="M3.5 6l1.5 1.5 3-3" stroke="var(--success)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg> Assinado pelo cliente</div>` : ''}
         </div>
-	      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
-	        <button class="timeline__delete" data-action="edit-reg" data-id="${Utils.escapeAttr(r.id)}" aria-label="Editar registro" style="color:var(--text-3)">
+	      <div class="timeline__actions">
+	        <button class="timeline__delete" data-action="edit-reg" data-id="${Utils.escapeAttr(r.id)}" aria-label="Editar registro">
 	          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 	        </button>
 	        <button class="timeline__delete" data-action="delete-reg" data-id="${Utils.escapeAttr(r.id)}" aria-label="Excluir registro de ${Utils.escapeHtml(r.tipo)}">
