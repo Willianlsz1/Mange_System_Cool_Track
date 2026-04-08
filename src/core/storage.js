@@ -12,6 +12,19 @@ import { AppError, ErrorCodes, handleError } from './errors.js';
 
 const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
+const STORAGE_SYNC_DIRTY_KEY = 'cooltrack-sync-dirty-v1';
+const STORAGE_SYNC_DELETIONS_KEY = 'cooltrack-sync-deletions-v1';
+const STORAGE_CACHE_OWNER_KEY = 'cooltrack-cache-owner-v1';
+const SYNC_STATUS_EVENT = 'cooltrack:sync-status';
+
+let _syncRunning = false;
+let _queuedState = null;
+let _syncStatus = {
+  state: 'idle',
+  message: '',
+  pendingOps: 0,
+  updatedAt: new Date().toISOString(),
+};
 
 /* Normalizacao (mantida igual) */
 function normalizeEquip(e) {
@@ -74,6 +87,107 @@ async function migrateLegacyPhotosInState(state, userId) {
   };
 }
 
+function getCacheOwner() {
+  return localStorage.getItem(STORAGE_CACHE_OWNER_KEY);
+}
+
+function setCacheOwner(userId) {
+  if (!userId) return;
+  localStorage.setItem(STORAGE_CACHE_OWNER_KEY, String(userId));
+}
+
+function markDirty() {
+  localStorage.setItem(STORAGE_SYNC_DIRTY_KEY, '1');
+}
+
+function clearDirty() {
+  localStorage.removeItem(STORAGE_SYNC_DIRTY_KEY);
+}
+
+function isDirty() {
+  return localStorage.getItem(STORAGE_SYNC_DIRTY_KEY) === '1';
+}
+
+function parseDeletionQueue() {
+  try {
+    const raw = localStorage.getItem(STORAGE_SYNC_DELETIONS_KEY);
+    if (!raw) return { equipamentos: [], registros: [] };
+    const parsed = JSON.parse(raw);
+    const equipamentos = Array.isArray(parsed?.equipamentos)
+      ? [...new Set(parsed.equipamentos.map(String).filter(Boolean))]
+      : [];
+    const registros = Array.isArray(parsed?.registros)
+      ? [...new Set(parsed.registros.map(String).filter(Boolean))]
+      : [];
+    return { equipamentos, registros };
+  } catch (_error) {
+    return { equipamentos: [], registros: [] };
+  }
+}
+
+function saveDeletionQueue(queue) {
+  const sanitized = {
+    equipamentos: [...new Set((queue?.equipamentos || []).map(String).filter(Boolean))],
+    registros: [...new Set((queue?.registros || []).map(String).filter(Boolean))],
+  };
+  if (!sanitized.equipamentos.length && !sanitized.registros.length) {
+    localStorage.removeItem(STORAGE_SYNC_DELETIONS_KEY);
+    return sanitized;
+  }
+  localStorage.setItem(STORAGE_SYNC_DELETIONS_KEY, JSON.stringify(sanitized));
+  return sanitized;
+}
+
+function queueDeletions({ equipamentos = [], registros = [] } = {}) {
+  const current = parseDeletionQueue();
+  const next = {
+    equipamentos: [...current.equipamentos, ...equipamentos.map(String).filter(Boolean)],
+    registros: [...current.registros, ...registros.map(String).filter(Boolean)],
+  };
+  const saved = saveDeletionQueue(next);
+  updateSyncStatus();
+  return saved;
+}
+
+function clearSyncMetadata() {
+  clearDirty();
+  localStorage.removeItem(STORAGE_SYNC_DELETIONS_KEY);
+  _queuedState = null;
+  updateSyncStatus({ state: 'idle', message: '' });
+}
+
+function getPendingOpsCount() {
+  const queue = parseDeletionQueue();
+  let count = queue.equipamentos.length + queue.registros.length;
+  if (isDirty()) count += 1;
+  if (_queuedState) count += 1;
+  return count;
+}
+
+function emitSyncStatus() {
+  if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return;
+  window.dispatchEvent(new CustomEvent(SYNC_STATUS_EVENT, { detail: { ..._syncStatus } }));
+}
+
+function updateSyncStatus(patch = {}) {
+  _syncStatus = {
+    ..._syncStatus,
+    ...patch,
+    pendingOps: getPendingOpsCount(),
+    updatedAt: new Date().toISOString(),
+  };
+  emitSyncStatus();
+}
+
+function splitIntoChunks(values, chunkSize = 100) {
+  const list = Array.isArray(values) ? values : [];
+  const chunks = [];
+  for (let i = 0; i < list.length; i += chunkSize) {
+    chunks.push(list.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
 /* â”€â”€ Supabase helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function getUserId() {
   try {
@@ -106,7 +220,8 @@ async function pushEquipamentos(equipamentos, userId) {
       modelo: e.modelo,
       fluido: e.fluido,
     }));
-    await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
+    const { error } = await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
+    if (error) throw error;
   } catch (error) {
     throw new AppError('Falha ao sincronizar equipamentos.', ErrorCodes.SYNC_FAILED, 'warning', {
       action: 'pushEquipamentos',
@@ -136,7 +251,8 @@ async function pushRegistros(registros, userId) {
       assinatura: r.assinatura,
       fotos: normalizePhotoList(r.fotos),
     }));
-    await supabase.from('registros').upsert(rows, { onConflict: 'id' });
+    const { error } = await supabase.from('registros').upsert(rows, { onConflict: 'id' });
+    if (error) throw error;
   } catch (error) {
     throw new AppError('Falha ao sincronizar registros.', ErrorCodes.SYNC_FAILED, 'warning', {
       action: 'pushRegistros',
@@ -150,11 +266,13 @@ async function pushRegistros(registros, userId) {
 async function pushTecnicos(tecnicos, userId) {
   if (!tecnicos.length) return;
   try {
-    for (const nome of tecnicos) {
-      await supabase
-        .from('tecnicos')
-        .upsert({ user_id: userId, nome }, { onConflict: 'user_id,nome' });
-    }
+    const rows = [...new Set(tecnicos.map(String).filter(Boolean))].map((nome) => ({
+      user_id: userId,
+      nome,
+    }));
+    if (!rows.length) return;
+    const { error } = await supabase.from('tecnicos').upsert(rows, { onConflict: 'user_id,nome' });
+    if (error) throw error;
   } catch (error) {
     throw new AppError('Falha ao sincronizar técnicos.', ErrorCodes.SYNC_FAILED, 'warning', {
       action: 'pushTecnicos',
@@ -163,6 +281,54 @@ async function pushTecnicos(tecnicos, userId) {
       cause: error?.message,
     });
   }
+}
+
+async function deleteRemoteRegistros(ids, userId) {
+  const uniqueIds = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!uniqueIds.length) return;
+  for (const chunk of splitIntoChunks(uniqueIds, 100)) {
+    const { error } = await supabase
+      .from('registros')
+      .delete()
+      .eq('user_id', userId)
+      .in('id', chunk);
+    if (error) throw error;
+  }
+}
+
+async function deleteRemoteEquipamentos(ids, userId) {
+  const uniqueIds = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!uniqueIds.length) return;
+  for (const chunk of splitIntoChunks(uniqueIds, 100)) {
+    const { error } = await supabase
+      .from('equipamentos')
+      .delete()
+      .eq('user_id', userId)
+      .in('id', chunk);
+    if (error) throw error;
+  }
+}
+
+async function flushPendingDeletions(userId) {
+  const queue = parseDeletionQueue();
+  if (!queue.equipamentos.length && !queue.registros.length) return;
+
+  const remaining = {
+    ...queue,
+    equipamentos: [...queue.equipamentos],
+    registros: [...queue.registros],
+  };
+
+  if (queue.registros.length) {
+    await deleteRemoteRegistros(queue.registros, userId);
+    remaining.registros = [];
+  }
+  if (queue.equipamentos.length) {
+    await deleteRemoteEquipamentos(queue.equipamentos, userId);
+    remaining.equipamentos = [];
+  }
+
+  saveDeletionQueue(remaining);
 }
 
 async function pullFromSupabase(userId) {
@@ -175,6 +341,11 @@ async function pullFromSupabase(userId) {
       supabase.from('registros').select('*').eq('user_id', userId),
       supabase.from('tecnicos').select('nome').eq('user_id', userId),
     ]);
+    if (eqRes.error || regRes.error || tecRes.error) {
+      throw new Error(
+        eqRes.error?.message || regRes.error?.message || tecRes.error?.message || 'select failed',
+      );
+    }
   } catch (error) {
     throw new AppError('Falha ao carregar dados da nuvem.', ErrorCodes.NETWORK_ERROR, 'warning', {
       action: 'pullFromSupabase',
@@ -224,6 +395,12 @@ async function migrateIfNeeded(userId) {
   const MIGRATED_KEY = `cooltrack-migrated-${userId}`;
   if (localStorage.getItem(MIGRATED_KEY)) return;
 
+  const cacheOwner = getCacheOwner();
+  if (cacheOwner && cacheOwner !== userId) {
+    localStorage.setItem(MIGRATED_KEY, '1');
+    return;
+  }
+
   // Não migra se o usuário estava no modo guest — dados são do seed
   const isGuestMode = localStorage.getItem('cooltrack-guest-mode') === '1';
   if (isGuestMode) {
@@ -261,6 +438,28 @@ export const Storage = {
     const userId = await getUserId();
     if (!userId) return null;
 
+    const cacheOwner = getCacheOwner();
+    const sameOwner = !cacheOwner || cacheOwner === userId;
+    const localSnapshot = this._loadLocal();
+
+    if (!sameOwner) {
+      clearSyncMetadata();
+    }
+
+    if (sameOwner && localSnapshot && this.hasPendingSync()) {
+      const synced = await this._syncToSupabase(localSnapshot, {
+        silent: true,
+        context: 'loadFromSupabase.pendingFlush',
+      });
+      if (!synced) {
+        updateSyncStatus({
+          state: 'pending',
+          message: 'Sem conexão com a nuvem. Exibindo dados locais.',
+        });
+        return localSnapshot;
+      }
+    }
+
     try {
       await migrateIfNeeded(userId);
     } catch (error) {
@@ -275,6 +474,9 @@ export const Storage = {
       const state = await pullFromSupabase(userId);
       // Atualiza cache local
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setCacheOwner(userId);
+      clearDirty();
+      updateSyncStatus({ state: 'synced', message: 'Dados sincronizados.' });
 
       // Migração gradual de fotos legadas (base64) para Storage sem bloquear o bootstrap
       this._migrateLegacyPhotosAsync(state, userId);
@@ -286,7 +488,11 @@ export const Storage = {
         message: 'Sincronização pendente. Seus dados estão salvos localmente.',
         context: { action: 'loadFromSupabase.pull' },
       });
-      return this._loadLocal();
+      updateSyncStatus({
+        state: 'pending',
+        message: 'Sincronização pendente. Seus dados estão salvos localmente.',
+      });
+      return sameOwner ? localSnapshot : null;
     }
   },
 
@@ -299,14 +505,18 @@ export const Storage = {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.equipamentos)) return null;
-      const equipamentos = parsed.equipamentos.map(normalizeEquip).filter(Boolean);
+      if (!parsed || typeof parsed !== 'object') return null;
+      const equipamentos = (Array.isArray(parsed.equipamentos) ? parsed.equipamentos : [])
+        .map(normalizeEquip)
+        .filter(Boolean);
       const equipIds = new Set(equipamentos.map((e) => e.id));
-      const registros = (parsed.registros || [])
+      const registros = (Array.isArray(parsed.registros) ? parsed.registros : [])
         .map((r) => normalizeRegistro(r, equipIds))
         .filter(Boolean);
       const tecnicos = Array.isArray(parsed.tecnicos)
-        ? parsed.tecnicos.filter((t) => typeof t === 'string')
+        ? [
+            ...new Set(parsed.tecnicos.filter((t) => typeof t === 'string').map((t) => t.trim())),
+          ].filter(Boolean)
         : [];
       return { equipamentos, registros, tecnicos };
     } catch (err) {
@@ -321,6 +531,7 @@ export const Storage = {
   },
 
   save(state) {
+    const isGuestMode = localStorage.getItem('cooltrack-guest-mode') === '1';
     // 1. Salva local imediatamente (offline first)
     try {
       const serialized = JSON.stringify(state);
@@ -333,6 +544,9 @@ export const Storage = {
         Toast.warning(`Uso de armazenamento elevado: ${Utils.formatBytes(byteSize)} / 5 MB.`);
       }
       localStorage.setItem(STORAGE_KEY, serialized);
+      if (!isGuestMode) {
+        markDirty();
+      }
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.STORAGE_QUOTA,
@@ -343,14 +557,62 @@ export const Storage = {
     }
 
     // 2. Sincroniza com Supabase em background (não bloqueia UI)
-    this._syncToSupabase(state);
+    if (!isGuestMode) {
+      this._scheduleSync(state);
+    }
     return true;
   },
 
-  async _syncToSupabase(state) {
-    const userId = await getUserId();
-    if (!userId) return; // guest mode - nao sincroniza
+  _scheduleSync(state) {
+    _queuedState = state;
+    if (_syncRunning) {
+      updateSyncStatus({ state: 'pending', message: 'Sincronização em fila.' });
+      return;
+    }
+    _syncRunning = true;
+    updateSyncStatus({ state: 'syncing', message: 'Sincronizando alterações...' });
+    void this._drainSyncQueue();
+  },
+
+  async _drainSyncQueue() {
     try {
+      while (_queuedState) {
+        const snapshot = _queuedState;
+        _queuedState = null;
+        const ok = await this._syncToSupabase(snapshot, {
+          silent: false,
+          context: 'storage._drainSyncQueue',
+        });
+        if (!ok) break;
+      }
+    } finally {
+      _syncRunning = false;
+      if (!this.hasPendingSync()) {
+        updateSyncStatus({ state: 'synced', message: 'Dados sincronizados.' });
+      }
+    }
+  },
+
+  async _syncToSupabase(state, { silent = false, context = '_syncToSupabase' } = {}) {
+    if (localStorage.getItem('cooltrack-guest-mode') === '1') {
+      clearSyncMetadata();
+      return false;
+    }
+
+    const userId = await getUserId();
+    if (!userId) {
+      updateSyncStatus({
+        state: 'pending',
+        message: 'Faça login para sincronizar os dados.',
+      });
+      return false;
+    }
+
+    updateSyncStatus({ state: 'syncing', message: 'Sincronizando alterações...' });
+
+    try {
+      await flushPendingDeletions(userId);
+
       const migration = await migrateLegacyPhotosInState(state, userId);
       const syncState = migration.state;
 
@@ -363,13 +625,23 @@ export const Storage = {
           'Algumas fotos não foram enviadas para a nuvem e permaneceram salvas localmente.',
         );
       }
+      clearDirty();
+      setCacheOwner(userId);
+      updateSyncStatus({ state: 'synced', message: 'Dados sincronizados.' });
+      return true;
     } catch (err) {
       handleError(err, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
         message: 'Sincronização pendente. Seus dados estão salvos localmente.',
-        context: { action: '_syncToSupabase' },
+        context: { action: context },
+        showToast: !silent,
       });
+      updateSyncStatus({
+        state: 'pending',
+        message: 'Sincronização pendente. Tentaremos novamente automaticamente.',
+      });
+      return false;
     }
   },
 
@@ -391,6 +663,33 @@ export const Storage = {
         showToast: false,
       });
     }
+  },
+
+  markRegistroDeleted(id) {
+    if (localStorage.getItem('cooltrack-guest-mode') === '1') return;
+    queueDeletions({ registros: [id] });
+    markDirty();
+  },
+
+  markEquipDeleted(equipId, registroIds = []) {
+    if (localStorage.getItem('cooltrack-guest-mode') === '1') return;
+    queueDeletions({ equipamentos: [equipId], registros: registroIds });
+    markDirty();
+  },
+
+  hasPendingSync() {
+    const queue = parseDeletionQueue();
+    return Boolean(
+      isDirty() ||
+      _queuedState ||
+      queue.equipamentos.length ||
+      queue.registros.length ||
+      _syncRunning,
+    );
+  },
+
+  getSyncStatus() {
+    return { ..._syncStatus, pendingOps: getPendingOpsCount() };
   },
 
   usage() {

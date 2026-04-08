@@ -1,5 +1,6 @@
 import { renderHist } from '../../views/historico.js';
 import { renderRelatorio } from '../../views/relatorio.js';
+import { updateHeader } from '../../views/dashboard.js';
 import { Photos } from '../../components/photos.js';
 
 function resetRegistroEditingState() {
@@ -79,6 +80,14 @@ function initTheme() {
   });
 }
 
+function bindSyncStatusUpdates() {
+  if (window.__cooltrackSyncStatusBound) return;
+  window.__cooltrackSyncStatusBound = '1';
+  window.addEventListener('cooltrack:sync-status', () => {
+    updateHeader();
+  });
+}
+
 export function initControllerHelpers() {
   resetRegistroEditingState();
   bindEquipDetailsToggle();
@@ -86,4 +95,5 @@ export function initControllerHelpers() {
   bindHistFilters();
   bindReportFilters();
   initTheme();
+  bindSyncStatusUpdates();
 }

@@ -5,6 +5,7 @@
 
 import { Utils, TIPO_ICON } from '../../core/utils.js';
 import { getState, findEquip, setState, lastRegForEquip, regsForEquip } from '../../core/state.js';
+import { Storage } from '../../core/storage.js';
 import { Toast } from '../../core/toast.js';
 import { OnboardingBanner } from '../components/onboarding.js';
 import { Profile } from '../../features/profile.js';
@@ -259,6 +260,10 @@ export async function viewEquip(id) {
 }
 
 export async function deleteEquip(id) {
+  const { registros } = getState();
+  const linkedRegistros = registros.filter((r) => r.equipId === id).map((r) => r.id);
+  Storage.markEquipDeleted(id, linkedRegistros);
+
   setState((prev) => ({
     ...prev,
     equipamentos: prev.equipamentos.filter((e) => e.id !== id),

@@ -36,6 +36,11 @@ async function bootstrap() {
       const cloudState = await Storage.loadFromSupabase();
       if (cloudState) {
         setState(() => cloudState, { persist: false, emit: false });
+      } else {
+        setState(() => ({ equipamentos: [], registros: [], tecnicos: [] }), {
+          persist: false,
+          emit: false,
+        });
       }
     } else {
       seedIfEmpty();

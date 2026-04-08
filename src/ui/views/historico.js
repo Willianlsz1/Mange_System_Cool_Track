@@ -5,6 +5,7 @@
 
 import { Utils } from '../../core/utils.js';
 import { getState, findEquip, setState } from '../../core/state.js';
+import { Storage } from '../../core/storage.js';
 import { Toast } from '../../core/toast.js';
 import { SavedHighlight } from '../components/onboarding.js';
 import { cleanupOrphanSignatures } from '../components/signature.js';
@@ -91,6 +92,7 @@ export function renderHist() {
 }
 
 export function deleteReg(id) {
+  Storage.markRegistroDeleted(id);
   setState((prev) => {
     const reg = prev.registros.find((r) => r.id === id);
     const regs = prev.registros.filter((r) => r.id !== id);
