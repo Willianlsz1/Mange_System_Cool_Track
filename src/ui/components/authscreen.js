@@ -1,6 +1,7 @@
 import { Auth } from '../../core/auth.js';
 import { Toast } from '../../core/toast.js';
 import { runAsyncAction } from './actionFeedback.js';
+import { PasswordRecoveryModal } from './passwordRecoveryModal.js';
 
 function focusFirstField(container, selector) {
   container.querySelector(selector)?.focus();
@@ -124,20 +125,9 @@ export const AuthScreen = {
       });
     });
 
-    overlay.querySelector('#btn-forgot').addEventListener('click', async () => {
-      const btn = overlay.querySelector('#btn-forgot');
+    overlay.querySelector('#btn-forgot').addEventListener('click', () => {
       const email = overlay.querySelector('#signin-email').value.trim();
-
-      if (!email) return Toast.warning('Digite seu email primeiro.');
-
-      await runAsyncAction(btn, { loadingLabel: 'Enviando...' }, async () => {
-        const result = await Auth.requestPasswordReset(email);
-        if (result.ok) {
-          Toast.success('Email de recuperacao enviado. Abra o link para definir uma nova senha.');
-        } else {
-          Toast.error(result.message || 'Erro ao enviar email. Verifique o endereco digitado.');
-        }
-      });
+      PasswordRecoveryModal.openPasswordResetEmailModal(email);
     });
 
     overlay.querySelector('#btn-signup').addEventListener('click', async () => {
