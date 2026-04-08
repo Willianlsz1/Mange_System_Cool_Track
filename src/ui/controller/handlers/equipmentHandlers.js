@@ -2,11 +2,12 @@ import { on } from '../../../core/events.js';
 import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
 import { saveEquip, viewEquip, deleteEquip } from '../../views/equipamentos.js';
+import { runAsyncAction } from '../../components/actionFeedback.js';
 
 export function bindEquipmentHandlers() {
-  on('save-equip', async () => {
+  on('save-equip', async (el) => {
     try {
-      await saveEquip();
+      await runAsyncAction(el, { loadingLabel: 'Salvando...' }, () => saveEquip());
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
@@ -32,7 +33,12 @@ export function bindEquipmentHandlers() {
     try {
       const ok = await CustomConfirm.show(
         'Excluir Equipamento',
-        'Todos os registros deste equipamento serao removidos. Confirmar?',
+        'Isso remove o equipamento e todo o historico vinculado. Essa acao nao pode ser desfeita.',
+        {
+          confirmLabel: 'Excluir equipamento',
+          cancelLabel: 'Manter equipamento',
+          tone: 'danger',
+        },
       );
       if (ok) await deleteEquip(el.dataset.id);
     } catch (error) {

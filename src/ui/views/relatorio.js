@@ -5,6 +5,7 @@
 
 import { Utils, STATUS_LABEL } from '../../core/utils.js';
 import { getState, findEquip } from '../../core/state.js';
+import { emptyStateHtml } from '../components/emptyState.js';
 import { CRITICIDADE_LABEL, PRIORIDADE_OPERACIONAL_LABEL } from '../../domain/maintenance.js';
 
 export function populateRelatorioSelects() {
@@ -34,7 +35,13 @@ export function renderRelatorio() {
   if (!el) return;
 
   if (!list.length) {
-    el.innerHTML = `<div class="empty-state"><div class="empty-state__icon">📋</div><div class="empty-state__title">Sem registros no período selecionado</div></div>`;
+    el.innerHTML = emptyStateHtml({
+      icon: '📋',
+      title: 'Sem registros no período selecionado',
+      description: 'Ajuste os filtros ou registre um novo serviço para gerar o relatório.',
+      ctaHtml:
+        '<button class="btn btn--outline btn--sm btn--auto" data-nav="historico">Ver histórico</button>',
+    });
     return;
   }
 

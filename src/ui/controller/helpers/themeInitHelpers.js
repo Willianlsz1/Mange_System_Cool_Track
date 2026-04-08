@@ -101,6 +101,7 @@ function initTheme() {
     localStorage.getItem('cooltrack-theme') ||
     (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   applyTheme(preferred);
+  btn.hidden = false;
 
   btn.addEventListener('click', () => {
     const currentTheme = document.documentElement.getAttribute('data-theme');

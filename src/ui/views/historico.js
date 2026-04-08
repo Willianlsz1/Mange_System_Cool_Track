@@ -7,6 +7,7 @@ import { Utils } from '../../core/utils.js';
 import { getState, findEquip, setState } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Toast } from '../../core/toast.js';
+import { emptyStateHtml } from '../components/emptyState.js';
 import { SavedHighlight } from '../components/onboarding.js';
 import { cleanupOrphanSignatures } from '../components/signature.js';
 import { updateHeader } from './dashboard.js';
@@ -42,8 +43,18 @@ export function renderHist() {
   if (!list.length) {
     el.innerHTML =
       busca || filtEq
-        ? `<div class="empty-state"><div class="empty-state__icon">🔍</div><div class="empty-state__title">Nenhum resultado para esse filtro</div><div class="empty-state__sub">Tente outro termo ou remova o filtro</div></div>`
-        : `<div class="empty-state"><div class="empty-state__icon">📋</div><div class="empty-state__title">Nenhum registro ainda</div><div class="empty-state__sub">Registre o primeiro serviço na aba Registrar</div></div>`;
+        ? emptyStateHtml({
+            icon: '🔍',
+            title: 'Nenhum resultado para esse filtro',
+            description: 'Tente outro termo ou remova o filtro.',
+          })
+        : emptyStateHtml({
+            icon: '📋',
+            title: 'Nenhum registro ainda',
+            description: 'Registre o primeiro serviço para formar o histórico.',
+            ctaHtml:
+              '<button class="btn btn--primary btn--sm btn--auto" data-nav="registro">Registrar serviço</button>',
+          });
     return;
   }
 

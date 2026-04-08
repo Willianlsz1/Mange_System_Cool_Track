@@ -8,6 +8,7 @@ import { getState, findEquip, regsForEquip } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Alerts } from '../../domain/alerts.js';
 import { Charts } from '../components/charts.js';
+import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner } from '../components/onboarding.js';
 import {
   calculateHealthScore,
@@ -119,10 +120,10 @@ function _updateStorageIndicator() {
   if (!indicator) return;
   const { used, total, percent } = Storage.usage();
   if (percent < 50) {
-    indicator.style.display = 'none';
+    indicator.hidden = true;
     return;
   }
-  indicator.style.display = 'block';
+  indicator.hidden = false;
   const cls = percent >= 85 ? 'danger' : 'warn';
   indicator.className = `storage-indicator storage-indicator--${cls}`;
   indicator.innerHTML = `<div class="storage-indicator__label"><span>Armazenamento local</span><span>${Utils.formatBytes(used)} / ${Utils.formatBytes(total)}</span></div><div class="storage-indicator__bar"><div class="storage-indicator__fill storage-indicator__fill--${cls}" style="width:${percent}%"></div></div>`;
@@ -376,18 +377,18 @@ export function updateHeader() {
   const statusFalhasTxt = Utils.getEl('status-falhas-txt');
   if (statusSistema && statusFalhas) {
     if (faultCount > 0) {
-      statusSistema.style.display = 'none';
-      statusFalhas.style.display = 'flex';
+      statusSistema.hidden = true;
+      statusFalhas.hidden = false;
       if (statusFalhasTxt)
         statusFalhasTxt.textContent = `${faultCount} falha${faultCount > 1 ? 's' : ''} ativa${faultCount > 1 ? 's' : ''}`;
     } else if (alertCount > 0) {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>Atenção requerida</span>`;
-      statusSistema.style.display = 'flex';
-      statusFalhas.style.display = 'none';
+      statusSistema.hidden = false;
+      statusFalhas.hidden = true;
     } else {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--ok"></span><span>Sistema operacional</span>`;
-      statusSistema.style.display = 'flex';
-      statusFalhas.style.display = 'none';
+      statusSistema.hidden = false;
+      statusFalhas.hidden = true;
     }
   }
 
@@ -397,19 +398,19 @@ export function updateHeader() {
     const syncStatus = Storage.getSyncStatus();
     const dot = syncStatusEl.querySelector('.status-indicator__dot');
     if (syncStatus.state === 'syncing') {
-      syncStatusEl.style.display = 'flex';
+      syncStatusEl.hidden = false;
       if (dot) dot.className = 'status-indicator__dot status-indicator__dot--ok';
       syncStatusTxt.textContent =
         syncStatus.pendingOps > 1 ? 'Sincronizando alterações...' : 'Sincronizando...';
     } else if (syncStatus.state === 'pending') {
-      syncStatusEl.style.display = 'flex';
+      syncStatusEl.hidden = false;
       if (dot) dot.className = 'status-indicator__dot status-indicator__dot--warn';
       syncStatusTxt.textContent =
         syncStatus.pendingOps > 0
           ? `Sincronização pendente (${syncStatus.pendingOps})`
           : 'Sincronização pendente';
     } else {
-      syncStatusEl.style.display = 'none';
+      syncStatusEl.hidden = true;
     }
   }
 
@@ -477,13 +478,14 @@ export function renderDashboard() {
   if (!bento) return;
 
   if (!equipamentos.length) {
-    bento.innerHTML = `<div class="dash-empty-shell">
-      <div class="empty-state">
-        <div class="empty-state__icon">🔧</div>
-        <div class="empty-state__title">Seu painel está pronto</div>
-        <div class="empty-state__sub">Cadastre o primeiro equipamento para ver eficiência, alertas e histórico em tempo real.</div>
-        <div class="dash-empty-shell__actions"><button class="btn btn--primary btn--auto btn--centered" data-action="open-modal" data-id="modal-add-eq">+ Cadastrar meu primeiro equipamento →</button></div>
-      </div></div>`;
+    bento.innerHTML = `<div class="dash-empty-shell">${emptyStateHtml({
+      icon: '🔧',
+      title: 'Seu painel está pronto',
+      description:
+        'Cadastre o primeiro equipamento para ver eficiência, alertas e histórico em tempo real.',
+      ctaHtml:
+        '<button class="btn btn--primary btn--auto btn--centered" data-action="open-modal" data-id="modal-add-eq">+ Cadastrar meu primeiro equipamento &rarr;</button>',
+    })}</div>`;
     return;
   }
 
@@ -520,7 +522,13 @@ export function renderDashboard() {
           </article>`;
           })
           .join('')}</div>`
-      : `<div class="empty-state"><div class="empty-state__icon">📋</div><div class="empty-state__title">Nenhum serviço registrado</div><div class="empty-state__sub">Registre o primeiro serviço</div></div>`;
+      : emptyStateHtml({
+          icon: '📋',
+          title: 'Nenhum serviço registrado',
+          description: 'Registre o primeiro serviço para acompanhar a operação.',
+          ctaHtml:
+            '<button class="btn btn--outline btn--sm btn--auto" data-nav="registro">Registrar serviço</button>',
+        });
   }
 
   _renderStatusChart();

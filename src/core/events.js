@@ -33,6 +33,10 @@ export function bindEvents() {
     // data-action
     const actionEl = e.target.closest('[data-action]');
     if (!actionEl) return;
+    if (actionEl.dataset.busy === '1' || actionEl.matches(':disabled, [aria-disabled="true"]')) {
+      e.preventDefault();
+      return;
+    }
 
     const action = actionEl.dataset.action;
     const handler = _handlers.get(action);
