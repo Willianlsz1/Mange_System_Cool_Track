@@ -284,7 +284,7 @@ main:focus {
 .dashboard-bento {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   width: 100%;
 }
 .kpi-row {
@@ -296,7 +296,7 @@ main:focus {
 .dash-center-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 16px;
+  gap: 18px;
   align-items: start;
   width: 100%;
 }
@@ -332,18 +332,23 @@ main:focus {
   flex-direction: column;
   gap: 10px;
   width: 100%;
+  background: linear-gradient(180deg, rgba(14, 24, 38, 0.82), rgba(10, 18, 30, 0.88));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  box-shadow: 0 8px 20px rgba(2, 6, 12, 0.18);
 }
 .dash-section-header {
   display: flex;
   align-items: center;
   gap: 10px;
   padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .dash-section-header__label {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--text-2);
   letter-spacing: 0.1em;
   white-space: nowrap;
 }
