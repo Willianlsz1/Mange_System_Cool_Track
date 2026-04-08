@@ -1,0 +1,440 @@
+import { Utils, TIPO_ICON } from '../../../core/utils.js';
+import { setState } from '../../../core/state.js';
+import { goTo } from '../../../core/router.js';
+import { Profile } from '../../../features/profile.js';
+
+const FTX_KEY = 'cooltrack-ftx-done';
+
+function dismiss(overlay) {
+  localStorage.setItem(FTX_KEY, '1');
+  overlay.style.animation = 'ftx-fade-in .2s ease reverse';
+  setTimeout(() => overlay.remove(), 200);
+}
+
+export const FirstTimeExperience = {
+  show(equipamentos) {
+    if (equipamentos.length || localStorage.getItem(FTX_KEY)) return;
+
+    document.getElementById('ftx-overlay')?.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'ftx-overlay';
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:200;
+      background:rgba(7,17,31,0.92);
+      display:flex;align-items:center;justify-content:center;
+      padding:16px;
+      animation:ftx-fade-in .25s ease;
+    `;
+
+    overlay.innerHTML = `
+      <style>
+        @keyframes ftx-fade-in{from{opacity:0}to{opacity:1}}
+        @keyframes ftx-slide-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes ftx-step-in{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
+
+        #ftx-card{
+          background:#0C1929;
+          border:1px solid rgba(0,200,232,0.15);
+          border-radius:16px;
+          width:100%;max-width:480px;
+          padding:32px;
+          animation:ftx-slide-up .3s ease;
+          position:relative;
+        }
+
+        .ftx-skip{
+          position:absolute;top:16px;right:16px;
+          background:none;border:none;cursor:pointer;
+          font-size:12px;color:rgba(138,170,200,0.5);
+          font-family:inherit;padding:4px 8px;
+          transition:color .15s;
+        }
+        .ftx-skip:hover{color:rgba(138,170,200,0.9)}
+
+        .ftx-steps{
+          display:flex;align-items:center;gap:6px;
+          margin-bottom:28px;
+        }
+        .ftx-step-dot{
+          width:6px;height:6px;border-radius:50%;
+          background:rgba(0,200,232,0.2);
+          transition:all .2s;
+        }
+        .ftx-step-dot.active{
+          background:#00C8E8;width:20px;border-radius:3px;
+        }
+        .ftx-step-dot.done{background:rgba(0,200,112,0.6)}
+
+        .ftx-step{animation:ftx-step-in .25s ease}
+
+        .ftx-logo{
+          display:flex;align-items:center;gap:10px;
+          margin-bottom:24px;
+        }
+        .ftx-logo-icon{
+          width:40px;height:40px;
+          background:rgba(0,200,232,0.1);
+          border:1px solid rgba(0,200,232,0.2);
+          border-radius:10px;
+          display:flex;align-items:center;justify-content:center;
+        }
+        .ftx-logo-text{font-size:18px;font-weight:600;color:#E8F2FA;letter-spacing:.02em}
+        .ftx-logo-sub{
+          font-size:9px;font-weight:600;letter-spacing:.1em;
+          color:#00C8E8;background:rgba(0,200,232,0.1);
+          border:1px solid rgba(0,200,232,0.2);
+          padding:2px 6px;border-radius:4px;
+        }
+
+        .ftx-eyebrow{
+          font-size:11px;font-weight:600;letter-spacing:.1em;
+          color:#00C8E8;margin-bottom:8px;
+        }
+        .ftx-title{
+          font-size:22px;font-weight:700;color:#E8F2FA;
+          line-height:1.25;margin-bottom:10px;
+        }
+        .ftx-desc{
+          font-size:14px;color:#8AAAC8;line-height:1.6;
+          margin-bottom:24px;
+        }
+
+        .ftx-form-label{
+          font-size:11px;font-weight:600;color:#6A8BA8;
+          letter-spacing:.06em;margin-bottom:6px;display:block;
+        }
+        .ftx-input{
+          width:100%;background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,255,255,0.1);
+          border-radius:8px;padding:12px 14px;
+          font-size:15px;color:#E8F2FA;
+          font-family:inherit;outline:none;
+          transition:border-color .15s;
+          margin-bottom:14px;
+        }
+        .ftx-input:focus{border-color:rgba(0,200,232,0.5)}
+        .ftx-input::placeholder{color:rgba(138,170,200,0.4)}
+        .ftx-select{
+          width:100%;background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,255,255,0.1);
+          border-radius:8px;padding:12px 14px;
+          font-size:15px;color:#E8F2FA;
+          font-family:inherit;outline:none;
+          transition:border-color .15s;
+          margin-bottom:14px;
+          cursor:pointer;
+        }
+        .ftx-select:focus{border-color:rgba(0,200,232,0.5)}
+        .ftx-select option{background:#0C1929;color:#E8F2FA}
+
+        .ftx-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+        .ftx-btn-primary{
+          width:100%;background:#00C8E8;color:#07111F;
+          border:none;border-radius:10px;
+          padding:14px;font-size:15px;font-weight:600;
+          font-family:inherit;cursor:pointer;
+          transition:opacity .15s,transform .1s;
+        }
+        .ftx-btn-primary:hover{opacity:.92}
+        .ftx-btn-primary:active{transform:scale(.99)}
+        .ftx-btn-primary:disabled{opacity:.4;cursor:not-allowed}
+
+        .ftx-hint{
+          font-size:12px;color:rgba(138,170,200,0.5);
+          text-align:center;margin-top:12px;
+        }
+
+        .ftx-success-icon{
+          width:56px;height:56px;border-radius:50%;
+          background:rgba(0,200,112,0.15);
+          border:1px solid rgba(0,200,112,0.3);
+          display:flex;align-items:center;justify-content:center;
+          margin:0 auto 20px;
+          font-size:24px;
+        }
+        .ftx-actions{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+        .ftx-btn-sec{
+          width:100%;background:transparent;
+          border:1px solid rgba(255,255,255,0.1);
+          border-radius:10px;padding:13px;
+          font-size:14px;color:#8AAAC8;
+          font-family:inherit;cursor:pointer;
+          transition:border-color .15s,color .15s;
+        }
+        .ftx-btn-sec:hover{border-color:rgba(255,255,255,0.2);color:#E8F2FA}
+
+        .ftx-value-props{
+          display:flex;flex-direction:column;gap:8px;
+          margin-bottom:24px;
+        }
+        .ftx-prop{
+          display:flex;align-items:center;gap:10px;
+          font-size:13px;color:#8AAAC8;
+        }
+        .ftx-prop-icon{
+          width:28px;height:28px;border-radius:6px;
+          background:rgba(0,200,232,0.08);
+          border:1px solid rgba(0,200,232,0.15);
+          display:flex;align-items:center;justify-content:center;
+          font-size:13px;flex-shrink:0;
+        }
+      </style>
+
+      <div id="ftx-card">
+        <button class="ftx-skip" id="ftx-skip-btn">Pular →</button>
+        <div class="ftx-steps">
+          <div class="ftx-step-dot active" id="ftx-dot-0"></div>
+          <div class="ftx-step-dot" id="ftx-dot-1"></div>
+          <div class="ftx-step-dot" id="ftx-dot-2"></div>
+        </div>
+        <div id="ftx-content"></div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    let techName = Profile.get()?.nome || '';
+    let equipData = {};
+
+    const contentEl = overlay.querySelector('#ftx-content');
+
+    const setDots = (current) => {
+      [0, 1, 2].forEach((i) => {
+        const dot = overlay.querySelector(`#ftx-dot-${i}`);
+        dot.className = 'ftx-step-dot' + (i === current ? ' active' : i < current ? ' done' : '');
+      });
+    };
+
+    const renderStep0 = () => {
+      setDots(0);
+      contentEl.innerHTML = `
+        <div class="ftx-step">
+          <div class="ftx-logo">
+            <div class="ftx-logo-icon">
+              <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="1" width="14" height="14" rx="2" stroke="#00C8E8" stroke-width="1.2"/>
+                <circle cx="8" cy="8" r="2.5" stroke="#00C8E8" stroke-width="1.2"/>
+                <path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="ftx-logo-text">CoolTrack</span>
+            <span class="ftx-logo-sub">PRO</span>
+          </div>
+
+          <div class="ftx-eyebrow">BEM-VINDO</div>
+          <div class="ftx-title">Gestão de manutenção para quem trabalha de verdade.</div>
+
+          <div class="ftx-value-props">
+            <div class="ftx-prop">
+              <div class="ftx-prop-icon">📄</div>
+              Gere relatórios PDF com assinatura do cliente em segundos
+            </div>
+            <div class="ftx-prop">
+              <div class="ftx-prop-icon">🔔</div>
+              Nunca mais perca uma preventiva — alertas automáticos
+            </div>
+            <div class="ftx-prop">
+              <div class="ftx-prop-icon">📱</div>
+              Registre serviços em campo, funciona sem internet
+            </div>
+          </div>
+
+          <label class="ftx-form-label">COMO VOCÊ SE CHAMA?</label>
+          <input class="ftx-input" id="ftx-nome" type="text"
+            placeholder="Seu nome completo..."
+            value="${Utils.escapeAttr(techName)}"
+            autocomplete="name" />
+
+          <button class="ftx-btn-primary" id="ftx-next-0">
+            Continuar →
+          </button>
+          <div class="ftx-hint">2 minutos para configurar · Sem cartão de crédito</div>
+        </div>`;
+
+      const input = overlay.querySelector('#ftx-nome');
+      const btn = overlay.querySelector('#ftx-next-0');
+
+      setTimeout(() => input?.focus(), 100);
+
+      input?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btn.click();
+      });
+
+      btn.addEventListener('click', () => {
+        const nome = input.value.trim();
+        if (!nome) {
+          input.style.borderColor = 'rgba(224,48,64,0.6)';
+          input.placeholder = 'Digite seu nome para continuar';
+          input.focus();
+          return;
+        }
+        techName = nome;
+        Profile.save({ ...Profile.get(), nome });
+        Profile.saveLastTecnico(nome);
+        renderStep1();
+      });
+    };
+
+    const renderStep1 = () => {
+      setDots(1);
+      const firstName = techName.split(' ')[0];
+
+      contentEl.innerHTML = `
+        <div class="ftx-step">
+          <div class="ftx-eyebrow">PASSO 1 DE 2</div>
+          <div class="ftx-title">Qual equipamento você quer monitorar, ${Utils.escapeHtml(firstName)}?</div>
+          <div class="ftx-desc">Comece com o mais importante — você pode adicionar mais depois.</div>
+
+          <label class="ftx-form-label">NOME DO EQUIPAMENTO *</label>
+          <input class="ftx-input" id="ftx-eq-nome" type="text"
+            placeholder="Ex: Split da recepção, Câmara do estoque..."
+            autocomplete="off" />
+
+          <label class="ftx-form-label">ONDE ELE FICA? *</label>
+          <input class="ftx-input" id="ftx-eq-local" type="text"
+            placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..."
+            autocomplete="off" />
+
+          <div class="ftx-row">
+            <div>
+              <label class="ftx-form-label">TIPO</label>
+              <select class="ftx-select" id="ftx-eq-tipo">
+                <option>Split Hi-Wall</option>
+                <option>Split Cassette</option>
+                <option>Split Piso Teto</option>
+                <option>VRF / VRV</option>
+                <option>Chiller</option>
+                <option>Fan Coil</option>
+                <option>Self Contained</option>
+                <option>Roof Top</option>
+                <option>Câmara Fria</option>
+                <option>Outro</option>
+              </select>
+            </div>
+            <div>
+              <label class="ftx-form-label">FLUIDO</label>
+              <select class="ftx-select" id="ftx-eq-fluido">
+                <option>R-410A</option>
+                <option>R-22</option>
+                <option>R-32</option>
+                <option>R-407C</option>
+                <option>R-134A</option>
+                <option>R-404A</option>
+                <option>Outro</option>
+              </select>
+            </div>
+          </div>
+
+          <button class="ftx-btn-primary" id="ftx-next-1">
+            Cadastrar equipamento →
+          </button>
+          <div class="ftx-hint">Você edita ou exclui a qualquer momento</div>
+        </div>`;
+
+      const nomeInput = overlay.querySelector('#ftx-eq-nome');
+      const localInput = overlay.querySelector('#ftx-eq-local');
+      const btn = overlay.querySelector('#ftx-next-1');
+
+      setTimeout(() => nomeInput?.focus(), 100);
+
+      btn.addEventListener('click', () => {
+        const nome = nomeInput.value.trim();
+        const local = localInput.value.trim();
+
+        if (!nome) {
+          nomeInput.style.borderColor = 'rgba(224,48,64,0.6)';
+          nomeInput.focus();
+          return;
+        }
+        if (!local) {
+          localInput.style.borderColor = 'rgba(224,48,64,0.6)';
+          localInput.focus();
+          return;
+        }
+
+        equipData = {
+          id: Utils.uid(),
+          nome,
+          local,
+          status: 'ok',
+          tag: '',
+          tipo: overlay.querySelector('#ftx-eq-tipo').value,
+          fluido: overlay.querySelector('#ftx-eq-fluido').value,
+          modelo: '',
+        };
+
+        setState((prev) => ({
+          ...prev,
+          equipamentos: [...prev.equipamentos, equipData],
+          tecnicos: prev.tecnicos.includes(techName) ? prev.tecnicos : [...prev.tecnicos, techName],
+        }));
+
+        renderStep2();
+      });
+    };
+
+    const renderStep2 = () => {
+      setDots(2);
+      const icon = TIPO_ICON[equipData.tipo] ?? '⚙️';
+      const firstName = techName.split(' ')[0];
+
+      contentEl.innerHTML = `
+        <div class="ftx-step">
+          <div class="ftx-success-icon">✅</div>
+          <div class="ftx-eyebrow" style="text-align:center;color:#00C870">TUDO PRONTO</div>
+          <div class="ftx-title" style="text-align:center">
+            ${icon} ${Utils.escapeHtml(equipData.nome)} cadastrado!
+          </div>
+          <div class="ftx-desc" style="text-align:center">
+            Agora registre o primeiro serviço, ${Utils.escapeHtml(firstName)}.<br>
+            O histórico começa aqui.
+          </div>
+
+          <div class="ftx-actions">
+            <button class="ftx-btn-primary" id="ftx-go-registro">
+              Registrar primeiro serviço →
+            </button>
+            <button class="ftx-btn-sec" id="ftx-go-dashboard">
+              Ver o painel primeiro
+            </button>
+          </div>
+
+          <div class="ftx-hint" style="margin-top:16px">
+            Dica: quanto mais você registra, mais preciso fica o score de eficiência
+          </div>
+        </div>`;
+
+      overlay.querySelector('#ftx-go-registro').addEventListener('click', () => {
+        dismiss(overlay);
+        requestAnimationFrame(() => {
+          goTo('registro');
+          setTimeout(() => {
+            const sel = document.getElementById('r-equip');
+            if (sel) sel.value = equipData.id;
+            const tecInput = document.getElementById('r-tecnico');
+            if (tecInput && !tecInput.value) tecInput.value = techName;
+          }, 150);
+        });
+      });
+
+      overlay.querySelector('#ftx-go-dashboard').addEventListener('click', () => {
+        dismiss(overlay);
+        goTo('inicio');
+        setTimeout(() => {
+          import('../../views/dashboard.js').then(({ renderDashboard, updateHeader }) => {
+            updateHeader();
+            renderDashboard();
+          });
+        }, 250);
+      });
+    };
+
+    overlay.querySelector('#ftx-skip-btn').addEventListener('click', () => {
+      dismiss(overlay);
+    });
+
+    renderStep0();
+  },
+};
