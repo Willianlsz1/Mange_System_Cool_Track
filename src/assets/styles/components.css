@@ -3577,3 +3577,28 @@ mark,
 .auth-btn-forgot:hover {
   color: #8aaac8;
 }
+
+.auth-recovery-modal-overlay {
+  z-index: 320;
+}
+
+.auth-recovery-modal {
+  width: min(420px, calc(100vw - 32px));
+  background: #0c1929;
+  border: 1px solid rgba(0, 200, 232, 0.15);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.auth-recovery-modal__title {
+  margin: 0 0 16px;
+  color: #e8f2fa;
+  font-size: 18px;
+}
+
+.auth-recovery-modal__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
