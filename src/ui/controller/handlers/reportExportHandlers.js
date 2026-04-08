@@ -16,9 +16,9 @@ function bindPdfExport() {
     el.textContent = 'Gerando...';
     el.disabled = true;
 
-    requestAnimationFrame(() => {
+    requestAnimationFrame(async () => {
       try {
-        const fileName = PDFGenerator.generateMaintenanceReport(getReportFilters());
+        const fileName = await PDFGenerator.generateMaintenanceReport(getReportFilters());
         if (fileName) Toast.success(`PDF gerado: ${fileName}`);
         else Toast.error('Erro ao gerar PDF.');
       } finally {

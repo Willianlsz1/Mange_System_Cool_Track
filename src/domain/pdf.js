@@ -29,7 +29,7 @@ function getPdfDimensions(doc) {
 }
 
 export const PDFGenerator = {
-  generateMaintenanceReport(options = {}) {
+  async generateMaintenanceReport(options = {}) {
     try {
       const { registros, equipamentos } = getState();
       const { filtEq = '', de = '', ate = '' } = options;
@@ -55,7 +55,7 @@ export const PDFGenerator = {
       if (filtered.length > 0) {
         doc.addPage();
         fillPage(doc, pageWidth, pageHeight);
-        this._drawServicos(
+        await this._drawServicos(
           doc,
           pageWidth,
           pageHeight,
@@ -100,8 +100,8 @@ export const PDFGenerator = {
     );
   },
 
-  _drawServicos(doc, pageWidth, pageHeight, margin, filtered, equipamentos, profile) {
-    drawServices(
+  async _drawServicos(doc, pageWidth, pageHeight, margin, filtered, equipamentos, profile) {
+    await drawServices(
       doc,
       pageWidth,
       pageHeight,

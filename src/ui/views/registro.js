@@ -11,6 +11,7 @@ import { Photos } from '../components/photos.js';
 import { SavedHighlight } from '../components/onboarding.js';
 import { Profile } from '../../features/profile.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
+import { uploadPendingPhotos } from '../../core/photoStorage.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
 
@@ -174,6 +175,7 @@ export async function saveRegistro() {
 
   // Modo criação — continua fluxo normal
   const novoId = Utils.uid();
+  let fotosRegistro = [...Photos.pending];
 
   // D1: assinatura digital
   let assinatura = null;
@@ -204,6 +206,25 @@ export async function saveRegistro() {
     }
   }
 
+  if (fotosRegistro.length > 0) {
+    try {
+      const uploadResult = await uploadPendingPhotos(fotosRegistro, { recordId: novoId });
+      fotosRegistro = uploadResult.photos;
+      if (uploadResult.failedCount > 0) {
+        Toast.warning(
+          'Algumas fotos não puderam ser enviadas para a nuvem e ficaram salvas localmente.',
+        );
+      }
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.SYNC_FAILED,
+        severity: 'warning',
+        message: 'Falha no upload das fotos. O registro será salvo com fallback local.',
+        context: { action: 'registro.saveRegistro.photoUpload', registroId: novoId },
+      });
+    }
+  }
+
   setState((prev) => {
     const currentTecs = prev.tecnicos || [];
     const updatedTecs =
@@ -222,7 +243,7 @@ export async function saveRegistro() {
           status,
           pecas: Utils.getVal('r-pecas').trim(),
           proxima,
-          fotos: [...Photos.pending],
+          fotos: fotosRegistro,
           tecnico,
           custoPecas,
           custoMaoObra,
