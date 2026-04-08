@@ -4,13 +4,21 @@
  */
 
 import { Utils, TIPO_ICON } from '../../core/utils.js';
-import { getState, findEquip, setState, lastRegForEquip, regsForEquip } from '../../core/state.js';
+import { getState, findEquip, setState, regsForEquip } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Toast } from '../../core/toast.js';
 import { OnboardingBanner } from '../components/onboarding.js';
 import { Profile } from '../../features/profile.js';
 import { calcHealthScore, getHealthClass, updateHeader } from './dashboard.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
+import {
+  CRITICIDADE_LABEL,
+  PRIORIDADE_OPERACIONAL_LABEL,
+  evaluateEquipmentHealth,
+  getEquipmentMaintenanceContext,
+  getSuggestedPreventiveDays,
+  normalizePeriodicidadePreventivaDias,
+} from '../../domain/maintenance.js';
 
 const STATUS_TECH = { ok: 'OPERANDO', warn: 'ATENÇÃO', danger: 'FALHA' };
 
@@ -25,11 +33,13 @@ function _empty(icon, msg, sub = '', cta = '') {
 
 export function equipCardHtml(eq, { showLocal = true } = {}) {
   const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
-  const last = lastRegForEquip(eq.id);
+  const context = getEquipmentMaintenanceContext(eq, regsForEquip(eq.id));
+  const last = context.ultimoRegistro;
   const score = calcHealthScore(eq.id);
   const hcls = getHealthClass(score);
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
+  const criticidadeLabel = CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media;
 
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
@@ -40,11 +50,11 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
     return `Há ${Math.floor(diff / 30)} meses`;
   }
 
-  let proximaLabel = '—',
-    proximaCls = 'equip-card__metric-value--muted',
-    proximaIcon = '';
-  if (last?.proxima) {
-    const diff = Utils.daysDiff(last.proxima);
+  let proximaLabel = '—';
+  let proximaCls = 'equip-card__metric-value--muted';
+  let proximaIcon = '';
+  if (context.proximaPreventiva) {
+    const diff = Utils.daysDiff(context.proximaPreventiva);
     if (diff < 0) {
       proximaLabel = `Vencida há ${Math.abs(diff)}d`;
       proximaCls = 'equip-card__metric-value--danger';
@@ -64,7 +74,8 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
 
   let ctaLabel = 'Registrar serviço →';
   if (scls === 'danger') ctaLabel = 'Registrar corretiva →';
-  else if (last?.proxima && Utils.daysDiff(last.proxima) <= 7) ctaLabel = 'Registrar preventiva →';
+  else if (context.proximaPreventiva && Utils.daysDiff(context.proximaPreventiva) <= 7)
+    ctaLabel = 'Registrar preventiva →';
   else if (!last) ctaLabel = 'Primeiro registro →';
 
   return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq.nome)} — ${STATUS_TECH[scls]}">
@@ -72,7 +83,7 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
       <div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq.nome)}</div>
-        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)}</div>
+        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · Crit. ${Utils.escapeHtml(criticidadeLabel)}</div>
       </div>
       <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_TECH[scls]}</span>
       <div class="equip-card__actions">
@@ -154,13 +165,23 @@ export async function saveEquip() {
     Toast.warning('Preencha nome e localização.');
     return;
   }
+
+  const tipo = Utils.getVal('eq-tipo');
+  const criticidade = Utils.getVal('eq-criticidade') || 'media';
+  const prioridadeOperacional = Utils.getVal('eq-prioridade') || 'normal';
   const rawTag = Utils.getVal('eq-tag').trim();
   const normalizedTag = rawTag.toUpperCase();
+  const periodicidadePreventivaDias = normalizePeriodicidadePreventivaDias(
+    Utils.getVal('eq-periodicidade'),
+    tipo,
+    criticidade,
+  );
   const { equipamentos } = getState();
   if (normalizedTag && equipamentos.some((e) => (e.tag || '').toUpperCase() === normalizedTag)) {
     Toast.error('Já existe equipamento com esta TAG.');
     return;
   }
+
   setState((prev) => ({
     ...prev,
     equipamentos: [
@@ -171,9 +192,12 @@ export async function saveEquip() {
         local,
         status: 'ok',
         tag: normalizedTag,
-        tipo: Utils.getVal('eq-tipo'),
+        tipo,
         modelo: Utils.getVal('eq-modelo').trim(),
         fluido: Utils.getVal('eq-fluido'),
+        criticidade,
+        prioridadeOperacional,
+        periodicidadePreventivaDias,
       },
     ],
   }));
@@ -188,7 +212,16 @@ export async function saveEquip() {
       severity: 'warning',
     });
   }
-  Utils.clearVals('eq-nome', 'eq-tag', 'eq-local', 'eq-modelo');
+
+  Utils.clearVals('eq-nome', 'eq-tag', 'eq-local', 'eq-modelo', 'eq-periodicidade');
+  Utils.setVal('eq-tipo', 'Split Hi-Wall');
+  Utils.setVal('eq-fluido', 'R-410A');
+  Utils.setVal('eq-criticidade', 'media');
+  Utils.setVal('eq-prioridade', 'normal');
+  Utils.setVal('eq-periodicidade', String(getSuggestedPreventiveDays('Split Hi-Wall', 'media')));
+  const periodicidadeInput = Utils.getEl('eq-periodicidade');
+  if (periodicidadeInput) periodicidadeInput.dataset.manual = '0';
+
   OnboardingBanner.dismiss();
   OnboardingBanner.remove();
   try {
@@ -211,9 +244,20 @@ export async function viewEquip(id) {
   const eq = findEquip(id);
   if (!eq) return;
   const regs = regsForEquip(id).sort((a, b) => b.data.localeCompare(a.data));
-  const score = calcHealthScore(id);
+  const health = evaluateEquipmentHealth(eq, regs);
+  const score = health.score;
   const cls = getHealthClass(score);
   const safeId = Utils.escapeAttr(id);
+  const context = health.context;
+  const criticidadeLabel = CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media;
+  const prioridadeLabel =
+    PRIORIDADE_OPERACIONAL_LABEL[eq.prioridadeOperacional] || PRIORIDADE_OPERACIONAL_LABEL.normal;
+  const proximaPreventiva = context?.proximaPreventiva
+    ? Utils.formatDate(context.proximaPreventiva)
+    : 'Sem agenda';
+  const healthSummary = health.reasons.length
+    ? Utils.escapeHtml(health.reasons.slice(0, 2).join(' | '))
+    : 'Historico dentro da rotina prevista';
 
   Utils.getEl('eq-det-corpo').innerHTML = `
     <div class="modal__title" id="eq-det-title">${Utils.escapeHtml(eq.nome)}</div>
@@ -224,12 +268,17 @@ export async function viewEquip(id) {
         <div class="eq-modal-health__status">${cls === 'ok' ? 'Operando bem' : cls === 'warn' ? 'Atenção requerida' : 'Falha detectada'}</div>
       </div>
     </div>
+    <div class="eq-modal-summary">${healthSummary}</div>
     <div class="info-list info-list--spaced">
       <div class="info-row"><span class="info-row__label">TAG</span><span class="info-row__value info-row__value--mono">${Utils.escapeHtml(eq.tag || '—')}</span></div>
       <div class="info-row"><span class="info-row__label">Tipo</span><span class="info-row__value">${Utils.escapeHtml(eq.tipo)}</span></div>
       <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq.fluido || '—')}</span></div>
       <div class="info-row"><span class="info-row__label">Modelo</span><span class="info-row__value">${Utils.escapeHtml(eq.modelo || '—')}</span></div>
       <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq.local)}</span></div>
+      <div class="info-row"><span class="info-row__label">Criticidade</span><span class="info-row__value">${Utils.escapeHtml(criticidadeLabel)}</span></div>
+      <div class="info-row"><span class="info-row__label">Prioridade operacional</span><span class="info-row__value">${Utils.escapeHtml(prioridadeLabel)}</span></div>
+      <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias</span></div>
+      <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
     </div>
     <button class="btn btn--primary btn--spaced-bottom" data-action="go-register-equip" data-id="${safeId}">+ Registrar Serviço</button>
     <div class="eq-modal-summary">${regs.length} serviço(s) registrado(s)</div>

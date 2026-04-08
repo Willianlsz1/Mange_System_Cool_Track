@@ -2,6 +2,7 @@ import { renderHist } from '../../views/historico.js';
 import { renderRelatorio } from '../../views/relatorio.js';
 import { updateHeader } from '../../views/dashboard.js';
 import { Photos } from '../../components/photos.js';
+import { getSuggestedPreventiveDays } from '../../../domain/maintenance.js';
 
 function resetRegistroEditingState() {
   sessionStorage.removeItem('cooltrack-editing-id');
@@ -25,7 +26,34 @@ function bindEquipDetailsToggle() {
     const isOpen = expandBtn.getAttribute('aria-expanded') === 'true';
     expandBtn.setAttribute('aria-expanded', String(!isOpen));
     expandPanel.classList.toggle('is-open', !isOpen);
+    expandPanel.setAttribute('aria-hidden', String(isOpen));
   });
+}
+
+function bindPreventiveSuggestion() {
+  const tipo = document.getElementById('eq-tipo');
+  const criticidade = document.getElementById('eq-criticidade');
+  const periodicidade = document.getElementById('eq-periodicidade');
+  const hint = document.getElementById('eq-periodicidade-hint');
+  if (!tipo || !criticidade || !periodicidade) return;
+
+  const updateHint = () => {
+    const suggested = getSuggestedPreventiveDays(tipo.value, criticidade.value);
+    if (hint) hint.textContent = `Sugestao para ${tipo.value}: ${suggested} dias.`;
+    if (!periodicidade.value || periodicidade.dataset.manual !== '1') {
+      periodicidade.value = String(suggested);
+      periodicidade.dataset.manual = '0';
+    }
+  };
+
+  periodicidade.addEventListener('input', () => {
+    periodicidade.dataset.manual = periodicidade.value ? '1' : '0';
+    if (!periodicidade.value) updateHint();
+  });
+
+  tipo.addEventListener('change', updateHint);
+  criticidade.addEventListener('change', updateHint);
+  updateHint();
 }
 
 function bindPhotoInput() {
@@ -91,6 +119,7 @@ function bindSyncStatusUpdates() {
 export function initControllerHelpers() {
   resetRegistroEditingState();
   bindEquipDetailsToggle();
+  bindPreventiveSuggestion();
   bindPhotoInput();
   bindHistFilters();
   bindReportFilters();

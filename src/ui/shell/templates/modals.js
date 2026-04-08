@@ -83,6 +83,30 @@ export function renderShellModals() {
             <input id="eq-modelo" class="form-control" type="text"
               placeholder="Ex: Carrier 18.000 BTU, York 30 TR..." />
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="eq-criticidade">Criticidade do ativo</label>
+              <select id="eq-criticidade" class="form-control">
+                <option value="baixa">Baixa</option>
+                <option value="media" selected>Media</option>
+                <option value="alta">Alta</option>
+                <option value="critica">Critica</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-prioridade">Prioridade operacional</label>
+              <select id="eq-prioridade" class="form-control">
+                <option value="baixa">Baixa</option>
+                <option value="normal" selected>Normal</option>
+                <option value="alta">Alta</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="eq-periodicidade">Periodicidade preventiva (dias)</label>
+            <input id="eq-periodicidade" class="form-control" type="number" min="15" max="365" step="5" value="90" />
+            <div class="form-hint" id="eq-periodicidade-hint">Sugestao automatica conforme tipo e criticidade.</div>
+          </div>
         </div>
       </div>
 
