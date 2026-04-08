@@ -15,7 +15,7 @@ export function renderShellHeader() {
           CoolTrack <span class="app-logo__sub">PRO</span>
         </div>
 
-        <div class="app-header__tagline">GestÃ£o de manutenÃ§Ã£o para tÃ©cnicos de climatizaÃ§Ã£o</div>
+        <div class="app-header__tagline">Gestão de manutenção para técnicos de climatização</div>
 
         <div class="app-header__actions">
           <div class="app-header__status">
@@ -29,13 +29,13 @@ export function renderShellHeader() {
             </div>
             <div class="status-indicator" id="sync-status" hidden>
               <span class="status-indicator__dot status-indicator__dot--warn"></span>
-              <span id="sync-status-txt">SincronizaÃ§Ã£o pendente</span>
+              <span id="sync-status-txt">Sincronização pendente</span>
             </div>
           </div>
           <div class="app-header__date" id="hdr-date"></div>
 
         <button class="header-icon-btn" data-action="open-profile" aria-label="Meu perfil"
-          title="Meu perfil â€” prÃ©-preenche seu nome nos registros">
+          title="Meu perfil — pré-preenche seu nome nos registros">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <circle cx="8" cy="5.5" r="3" stroke="currentColor" stroke-width="1.2" />
             <path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
@@ -43,22 +43,22 @@ export function renderShellHeader() {
 
         </button>
         <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Alternar tema" hidden>
-          <span class="theme-toggle__icon" id="theme-icon">ðŸŒ™</span>
+          <span class="theme-toggle__icon" id="theme-icon">🌙</span>
         </button>
 
         <div class="header-stats-bar">
           <div class="header-stats-bar__inner" id="stats-bar-inner">
             <div class="stat-pill">
-              <div class="stat-pill__value" id="hst-total">â€”</div>
+              <div class="stat-pill__value" id="hst-total">—</div>
               <div class="stat-pill__label">EQUIPAMENTOS ATIVOS</div>
             </div>
             <div class="stat-pill">
-              <div class="stat-pill__value" id="hst-mes">â€”</div>
-              <div class="stat-pill__label">SERVIÃ‡OS ESTE MÃŠS</div>
+              <div class="stat-pill__value" id="hst-mes">—</div>
+              <div class="stat-pill__label">SERVIÇOS ESTE MÊS</div>
             </div>
             <div class="stat-pill">
-              <div class="stat-pill__value stat-pill__value--danger" id="hst-alert">â€”</div>
-              <div class="stat-pill__label">ALERTAS CRÃTICOS</div>
+              <div class="stat-pill__value stat-pill__value--danger" id="hst-alert">—</div>
+              <div class="stat-pill__label">ALERTAS CRÍTICOS</div>
             </div>
           </div>
         </div>
