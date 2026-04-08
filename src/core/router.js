@@ -9,6 +9,28 @@ let _current = null;
 let _transitioning = false;
 let _historyBound = false;
 
+function afterAnimation(element, fallbackMs, callback) {
+  if (!element) {
+    callback();
+    return;
+  }
+
+  let settled = false;
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    element.removeEventListener('animationend', onAnimationEnd);
+    window.clearTimeout(timeoutId);
+    callback();
+  };
+  const onAnimationEnd = (event) => {
+    if (event.target === element) finish();
+  };
+  const timeoutId = window.setTimeout(finish, fallbackMs);
+
+  element.addEventListener('animationend', onAnimationEnd);
+}
+
 /**
  * Registra uma rota com seus hooks de ciclo de vida.
  * Chamado pelo controller no bootstrap.
@@ -52,10 +74,10 @@ export function goTo(name, params = {}, options = {}) {
   // Animação de saída
   if (prevEl) {
     prevEl.classList.add('is-exiting');
-    setTimeout(() => {
+    afterAnimation(prevEl, 150, () => {
       prevEl.classList.remove('active', 'is-exiting');
       _activateRoute(name, nextEl, params, { fromHistory, replaceHistory });
-    }, 150);
+    });
   } else {
     _activateRoute(name, nextEl, params, { fromHistory, replaceHistory });
   }

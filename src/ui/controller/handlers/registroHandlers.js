@@ -3,18 +3,34 @@ import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
 import { saveRegistro, clearRegistro } from '../../views/registro.js';
 import { deleteReg } from '../../views/historico.js';
+import { runAsyncAction } from '../../components/actionFeedback.js';
 
 export function bindRegistroHandlers() {
-  on('save-registro', () => saveRegistro());
+  on('save-registro', async (el) => {
+    try {
+      await runAsyncAction(el, { loadingLabel: 'Salvando...' }, () => saveRegistro());
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: 'Nao foi possivel salvar o registro.',
+        context: { action: 'controller.save-registro' },
+      });
+    }
+  });
   on('clear-registro', () => clearRegistro());
 
   on('delete-reg', async (el) => {
     try {
       const ok = await CustomConfirm.show(
         'Excluir Registro',
-        'Remover este registro do historico?',
+        'Este registro sera removido do historico e pode alterar o status atual do equipamento.',
+        {
+          confirmLabel: 'Excluir registro',
+          cancelLabel: 'Cancelar',
+          tone: 'danger',
+        },
       );
-      if (ok) deleteReg(el.dataset.id);
+      if (ok) await Promise.resolve(deleteReg(el.dataset.id));
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,

@@ -5,17 +5,45 @@
 
 import { Utils } from './utils.js';
 
+function afterAnimation(element, fallbackMs, callback) {
+  if (!element) {
+    callback();
+    return;
+  }
+
+  let settled = false;
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    element.removeEventListener('animationend', onAnimationEnd);
+    window.clearTimeout(timeoutId);
+    callback();
+  };
+  const onAnimationEnd = (event) => {
+    if (event.target === element) finish();
+  };
+  const timeoutId = window.setTimeout(finish, fallbackMs);
+
+  element.addEventListener('animationend', onAnimationEnd);
+}
+
 export const Modal = {
   open(id) {
     const modalEl = Utils.getEl(id);
     if (!modalEl) return;
+    modalEl._returnFocusEl =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     modalEl.classList.add('is-open');
     const modalContent = modalEl.querySelector('.modal');
     if (modalContent) modalContent.classList.remove('is-closing');
-    setTimeout(() => {
-      const firstInput = modalEl.querySelector('.form-control');
-      if (firstInput) firstInput.focus();
-    }, 100);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const firstInput = modalEl.querySelector(
+          '[autofocus], .form-control, button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        );
+        if (firstInput instanceof HTMLElement) firstInput.focus();
+      });
+    });
     this._enableTabTrap(modalEl);
   },
 
@@ -23,15 +51,24 @@ export const Modal = {
     const modalEl = Utils.getEl(id);
     if (!modalEl) return;
     const modalContent = modalEl.querySelector('.modal');
+    const restoreFocus = () => {
+      this._disableTabTrap(modalEl);
+      const returnFocusEl = modalEl._returnFocusEl;
+      modalEl._returnFocusEl = null;
+      if (returnFocusEl instanceof HTMLElement && document.contains(returnFocusEl)) {
+        returnFocusEl.focus();
+      }
+    };
     if (modalContent) {
       modalContent.classList.add('is-closing');
-      setTimeout(() => {
+      afterAnimation(modalContent, 220, () => {
         modalEl.classList.remove('is-open');
         modalContent.classList.remove('is-closing');
-        this._disableTabTrap(modalEl);
-      }, 200);
+        restoreFocus();
+      });
     } else {
       modalEl.classList.remove('is-open');
+      restoreFocus();
     }
   },
 
@@ -61,7 +98,7 @@ export const Modal = {
     if (!focusable.length) return;
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
-    this._tabTrapHandler = (e) => {
+    modalEl._tabTrapHandler = (e) => {
       if (e.key !== 'Tab') return;
       if (e.shiftKey) {
         if (document.activeElement === first) {
@@ -75,40 +112,78 @@ export const Modal = {
         }
       }
     };
-    modalEl.addEventListener('keydown', this._tabTrapHandler);
+    modalEl.addEventListener('keydown', modalEl._tabTrapHandler);
   },
 
   _disableTabTrap(modalEl) {
-    if (this._tabTrapHandler) {
-      modalEl.removeEventListener('keydown', this._tabTrapHandler);
-      this._tabTrapHandler = null;
+    if (modalEl?._tabTrapHandler) {
+      modalEl.removeEventListener('keydown', modalEl._tabTrapHandler);
+      modalEl._tabTrapHandler = null;
     }
   },
 };
 
 export const CustomConfirm = {
-  show(title, msg) {
+  show(title, msg, options = {}) {
     return new Promise((resolve) => {
       const modal = Utils.getEl('modal-confirm');
+      if (!modal) {
+        resolve(window.confirm(`${title}\n\n${msg}`));
+        return;
+      }
+
+      const config = {
+        confirmLabel: 'Confirmar',
+        cancelLabel: 'Cancelar',
+        tone: 'danger',
+        focus: 'cancel',
+        ...options,
+      };
+
       Utils.getEl('confirm-title').textContent = title;
       Utils.getEl('confirm-msg').textContent = msg;
-      modal.classList.add('is-open');
-
       const yesBtn = Utils.getEl('confirm-yes');
       const noBtn = Utils.getEl('confirm-no');
+      yesBtn.textContent = config.confirmLabel;
+      noBtn.textContent = config.cancelLabel;
+      yesBtn.className = `btn ${config.tone === 'danger' ? 'btn--danger' : 'btn--primary'}`;
+      noBtn.className = 'btn btn--outline';
 
       const cleanup = (val) => {
-        modal.classList.remove('is-open');
         yesBtn.removeEventListener('click', onYes);
         noBtn.removeEventListener('click', onNo);
+        modal.removeEventListener('click', onOverlayClick, true);
+        modal.removeEventListener('keydown', onKeyDown, true);
+        Modal.close('modal-confirm');
         resolve(val);
       };
 
       const onYes = () => cleanup(true);
       const onNo = () => cleanup(false);
+      const onOverlayClick = (event) => {
+        if (event.target !== modal) return;
+        event.preventDefault();
+        event.stopPropagation();
+        cleanup(false);
+      };
+      const onKeyDown = (event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          cleanup(false);
+        }
+      };
 
       yesBtn.addEventListener('click', onYes);
       noBtn.addEventListener('click', onNo);
+      modal.addEventListener('click', onOverlayClick, true);
+      modal.addEventListener('keydown', onKeyDown, true);
+
+      Modal.open('modal-confirm');
+      requestAnimationFrame(() => {
+        const target = config.focus === 'confirm' ? yesBtn : noBtn;
+        if (target instanceof HTMLElement) target.focus();
+      });
     });
   },
 };

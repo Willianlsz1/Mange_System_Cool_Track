@@ -5,6 +5,7 @@
 
 import { Utils } from '../../core/utils.js';
 import { Alerts } from '../../domain/alerts.js';
+import { emptyStateHtml } from '../components/emptyState.js';
 
 function getAlertActionMeta(alert) {
   const id = Utils.escapeAttr(alert.eq?.id || '');
@@ -41,5 +42,9 @@ export function renderAlertas() {
   if (!el) return;
   el.innerHTML = list.length
     ? list.map(_alertCardHtml).join('')
-    : `<div class="empty-state"><div class="empty-state__icon">OK</div><div class="empty-state__title">Sem alertas ativos</div><div class="empty-state__sub">Todos os equipamentos dentro da rotina prevista</div></div>`;
+    : emptyStateHtml({
+        icon: 'OK',
+        title: 'Sem alertas ativos',
+        description: 'Todos os equipamentos estão dentro da rotina prevista.',
+      });
 }
