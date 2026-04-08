@@ -7,6 +7,7 @@ import { initAppShell } from './ui/shell.js';
 import { FirstTimeExperience } from './ui/components/onboarding.js';
 import { Auth } from './core/auth.js';
 import { AuthScreen } from './ui/components/authscreen.js';
+import { PasswordRecoveryModal } from './ui/components/passwordRecoveryModal.js';
 import { Storage } from './core/storage.js';
 import { Tour } from './ui/components/tour.js';
 import { ErrorCodes, handleError } from './core/errors.js';
@@ -21,7 +22,7 @@ import { ErrorCodes, handleError } from './core/errors.js';
 async function bootstrap() {
   try {
     initAppShell();
-    await Auth.tryHandlePasswordRecovery();
+    await Auth.tryHandlePasswordRecovery(() => PasswordRecoveryModal.openPasswordRecoveryModal());
 
     const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
     const user = await Auth.getUser();
