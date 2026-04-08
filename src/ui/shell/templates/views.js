@@ -42,7 +42,7 @@ export function renderShellViews() {
               </div>
               <div class="dash-section">
                 <div class="dash-section-header">
-                  <span class="dash-section-header__label">ALERTAS ATIVOS</span>
+                  <span class="dash-section-header__label">ALERTAS ATIVOS — AÇÃO IMEDIATA</span>
                   <span class="dash-section-header__line"></span>
                 </div>
                 <div id="dash-alertas-mini"></div>

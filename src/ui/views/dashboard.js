@@ -151,11 +151,22 @@ function _renderAlertStrip(alerts) {
     : primary.nextDueDate
       ? `Próxima preventiva: ${Utils.formatDate(primary.nextDueDate)}`
       : '';
+  const actionMeta = _getAlertActionMeta(primary);
+  const toneClass =
+    primary.severity === 'danger'
+      ? 'alert-strip--critical'
+      : primary.severity === 'warn'
+        ? 'alert-strip--warn'
+        : 'alert-strip--info';
 
-  el.innerHTML = `<div class="alert-strip" role="alert" aria-live="assertive">
+  el.innerHTML = `<div class="alert-strip ${toneClass}" role="alert" aria-live="assertive">
     <div class="alert-strip__icon" aria-hidden="true">${Utils.escapeHtml(primary.icon || '!')}</div>
-    <div><div class="alert-strip__title">${Utils.escapeHtml(primary.title)}</div><div class="alert-strip__desc">${detail}</div></div>
-    ${meta ? `<div class="alert-strip__time">${Utils.escapeHtml(meta)}</div>` : ''}
+    <div class="alert-strip__content">
+      <div class="alert-strip__title">${Utils.escapeHtml(primary.title)}</div>
+      <div class="alert-strip__desc">${detail}</div>
+      ${meta ? `<div class="alert-strip__time">${Utils.escapeHtml(meta)}</div>` : ''}
+    </div>
+    <button class="btn ${primary.severity === 'danger' ? 'btn--danger' : 'btn--primary'} btn--sm btn--fit-content alert-strip__cta" data-action="${actionMeta.action}" data-id="${actionMeta.id}">${actionMeta.label}</button>
   </div>`;
 }
 
@@ -179,13 +190,15 @@ function _getAlertActionMeta(alert) {
 function _alertCardHtml(alert) {
   const actionMeta = _getAlertActionMeta(alert);
   const toneClass = alert.severity === 'danger' ? ' alert-card--critical' : '';
+  const sub = Utils.truncate(alert.subtitle || '', 56);
   return `<div class="alert-card${toneClass}" data-action="${actionMeta.action}" data-id="${actionMeta.id}" role="listitem" tabindex="0">
     <span class="alert-card__icon">${Utils.escapeHtml(alert.icon || '!')}</span>
-    <div>
-      <div class="alert-card__title">${Utils.escapeHtml(alert.title)}</div>
-      <div class="alert-card__sub">${Utils.escapeHtml(alert.subtitle || '')}</div>
+    <div class="alert-card__body">
       <div class="alert-card__equip">${Utils.escapeHtml(alert.eq?.nome ?? alert.equipmentName ?? '—')}</div>
+      <div class="alert-card__title">${Utils.escapeHtml(alert.title)}</div>
+      ${sub ? `<div class="alert-card__sub">${Utils.escapeHtml(sub)}</div>` : ''}
     </div>
+    <span class="alert-card__action">Agir →</span>
   </div>`;
 }
 
@@ -283,11 +296,12 @@ function _equipCardMini(eq) {
   }
 
   return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_TECH[scls]}">
+    <div class="equip-card__status-band equip-card__status-band--${scls}"></div>
     <div class="equip-card__header">
       <div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq?.nome ?? '—')}</div>
-        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · Crit. ${criticidadeLabel}</div>
+        <div class="equip-card__tag">${Utils.escapeHtml(eq.fluido || eq.tipo)} · Crit. ${criticidadeLabel}</div>
       </div>
       <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_TECH[scls]}</span>
       <div class="equip-card__actions">
@@ -302,7 +316,7 @@ function _equipCardMini(eq) {
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
-        <div class="equip-card__metric-label">Último serviço</div>
+        <div class="equip-card__metric-label">Última manutenção</div>
         <div class="equip-card__metric-value">${last ? Utils.escapeHtml(recencia(last.data)) : '<span class="equip-card__metric-empty">Nenhum registro</span>'}</div>
         ${last ? `<div class="equip-card__metric-sub">${Utils.escapeHtml(Utils.truncate(last.tipo, 22))}</div>` : ''}
       </div>
