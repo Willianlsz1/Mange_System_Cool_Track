@@ -159,7 +159,7 @@ function _renderAlertStrip(equipamentos) {
 // ── Alert card ─────────────────────────────────────────
 function _alertCardHtml({ kind, reg, eq }) {
   if (kind === 'critical')
-    return `<div class="alert-card alert-card--critical" data-nav="alertas" role="listitem"><span class="alert-card__icon">🔴</span><div><div class="alert-card__title">Equipamento fora de operação</div><div class="alert-card__sub">Requer intervenção imediata</div><div class="alert-card__equip">${Utils.escapeHtml(eq.nome)}</div></div></div>`;
+    return `<div class="alert-card alert-card--critical" data-nav="alertas" role="listitem"><span class="alert-card__icon">🔴</span><div><div class="alert-card__title">Equipamento fora de operação</div><div class="alert-card__sub">Requer intervenção imediata</div><div class="alert-card__equip">${Utils.escapeHtml(eq?.nome ?? '—')}</div></div></div>`;
   const equip = findEquip(reg.equipId);
   if (kind === 'overdue')
     return `<div class="alert-card alert-card--critical" data-nav="alertas" role="listitem"><span class="alert-card__icon">⚠️</span><div><div class="alert-card__title">Manutenção preventiva vencida</div><div class="alert-card__sub">${Utils.escapeHtml(reg.tipo)}</div><div class="alert-card__equip">${Utils.escapeHtml(equip?.nome ?? '—')}</div></div></div>`;
@@ -185,14 +185,14 @@ function _renderNextAction(equipamentos, registros) {
   if (vencida) {
     const eq = findEquip(vencida.equipId);
     const dias = Math.abs(Utils.daysDiff(vencida.proxima));
-    el.innerHTML = `<div class="next-action-card next-action-card--urgent" data-action="go-register-equip" data-id="${eq?.id || ''}">
+    el.innerHTML = `<div class="next-action-card next-action-card--urgent" data-action="go-register-equip" data-id="${Utils.escapeAttr(eq?.id || '')}">
       <div class="next-action-card__icon">🔴</div>
       <div class="next-action-card__body">
         <div class="next-action-card__label">MANUTENÇÃO VENCIDA HÁ ${dias} DIA${dias !== 1 ? 'S' : ''}</div>
         <div class="next-action-card__title">${Utils.escapeHtml(eq?.nome || '—')}</div>
         <div class="next-action-card__sub">${Utils.escapeHtml(vencida.tipo)} · prevista para ${Utils.formatDate(vencida.proxima)}</div>
       </div>
-      <button class="btn btn--danger btn--sm" style="white-space:nowrap;flex-shrink:0" data-action="go-register-equip" data-id="${eq?.id || ''}">Registrar agora</button>
+      <button class="btn btn--danger btn--sm btn--fit-content" data-action="go-register-equip" data-id="${Utils.escapeAttr(eq?.id || '')}">Registrar agora</button>
     </div>`;
     return;
   }
@@ -212,14 +212,14 @@ function _renderNextAction(equipamentos, registros) {
     const eq = findEquip(urgente.equipId);
     const label =
       urgenteDiff === 0 ? 'HOJE' : `EM ${urgenteDiff} DIA${urgenteDiff !== 1 ? 'S' : ''}`;
-    el.innerHTML = `<div class="next-action-card" data-action="go-register-equip" data-id="${eq?.id || ''}">
+    el.innerHTML = `<div class="next-action-card" data-action="go-register-equip" data-id="${Utils.escapeAttr(eq?.id || '')}">
       <div class="next-action-card__icon">📅</div>
       <div class="next-action-card__body">
         <div class="next-action-card__label">PREVENTIVA ${label}</div>
         <div class="next-action-card__title">${Utils.escapeHtml(eq?.nome || '—')}</div>
         <div class="next-action-card__sub">${Utils.escapeHtml(urgente.tipo)}</div>
       </div>
-      <button class="btn btn--primary btn--sm" style="white-space:nowrap;flex-shrink:0" data-action="go-register-equip" data-id="${eq?.id || ''}">Agendar registro</button>
+      <button class="btn btn--primary btn--sm btn--fit-content" data-action="go-register-equip" data-id="${Utils.escapeAttr(eq?.id || '')}">Agendar registro</button>
     </div>`;
     return;
   }
@@ -227,14 +227,14 @@ function _renderNextAction(equipamentos, registros) {
   // 3. Equipamento sem nenhum registro
   const semRegistro = equipamentos.find((eq) => !registros.find((r) => r.equipId === eq.id));
   if (semRegistro) {
-    el.innerHTML = `<div class="next-action-card next-action-card--invite" data-action="go-register-equip" data-id="${semRegistro.id}">
+    el.innerHTML = `<div class="next-action-card next-action-card--invite" data-action="go-register-equip" data-id="${Utils.escapeAttr(semRegistro.id)}">
       <div class="next-action-card__icon">🚀</div>
       <div class="next-action-card__body">
         <div class="next-action-card__label">COMECE O HISTÓRICO DE ${Utils.escapeHtml(semRegistro.nome.toUpperCase())}</div>
         <div class="next-action-card__title">Registre a primeira manutenção deste equipamento</div>
         <div class="next-action-card__hint">💡 Cada registro ajuda a prever falhas e otimizar o desempenho</div>
       </div>
-      <button class="btn btn--primary btn--sm" style="white-space:nowrap;flex-shrink:0" data-action="go-register-equip" data-id="${semRegistro.id}">Registrar agora →</button>
+      <button class="btn btn--primary btn--sm btn--fit-content" data-action="go-register-equip" data-id="${Utils.escapeAttr(semRegistro.id)}">Registrar agora →</button>
     </div>`;
     return;
   }
@@ -262,10 +262,8 @@ function _equipCardMini(eq) {
   const last = lastRegForEquip(eq.id);
   const score = calcHealthScore(eq.id);
   const hcls = getHealthClass(score);
-  const scls = eq.status;
-  const barColor =
-    hcls === 'ok' ? 'var(--success)' : hcls === 'warn' ? 'var(--warning)' : 'var(--danger)';
-
+  const scls = Utils.safeStatus(eq.status);
+  const safeId = Utils.escapeAttr(eq.id);
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
     if (diff === 0) return 'Hoje';
@@ -302,28 +300,28 @@ function _equipCardMini(eq) {
   else if (last?.proxima && Utils.daysDiff(last.proxima) <= 7) ctaLabel = 'Registrar preventiva →';
   else if (!last) ctaLabel = 'Primeiro registro →';
 
-  return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${eq.id}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq.nome)} — ${STATUS_TECH[scls]}">
+  return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_TECH[scls]}">
     <div class="equip-card__header">
       <div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>
       <div class="equip-card__meta">
-        <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq.nome)}</div>
+        <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq?.nome ?? '—')}</div>
         <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)}</div>
       </div>
       <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_TECH[scls]}</span>
       <div class="equip-card__actions">
-        <button class="equip-card__delete" data-action="delete-equip" data-id="${eq.id}" aria-label="Excluir ${Utils.escapeHtml(eq.nome)}">
+        <button class="equip-card__delete" data-action="delete-equip" data-id="${safeId}" aria-label="Excluir ${Utils.escapeHtml(eq?.nome ?? '—')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
         </button>
       </div>
     </div>
     <div class="equip-card__health">
-      <div class="equip-card__health-bar"><div class="equip-card__health-fill" style="width:${score}%;background:${barColor}"></div></div>
-      <div class="equip-card__health-meta"><span class="equip-card__health-label">Eficiência</span><span class="equip-card__health-value" style="color:${barColor}">${score}%</span></div>
+      <div class="equip-card__health-bar"><div class="equip-card__health-fill equip-card__health-fill--${hcls}" style="width:${score}%"></div></div>
+      <div class="equip-card__health-meta"><span class="equip-card__health-label">Eficiência</span><span class="equip-card__health-value equip-card__health-value--${hcls}">${score}%</span></div>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
         <div class="equip-card__metric-label">Último serviço</div>
-        <div class="equip-card__metric-value">${last ? Utils.escapeHtml(recencia(last.data)) : '<span style="color:var(--text-3)">Nenhum registro</span>'}</div>
+        <div class="equip-card__metric-value">${last ? Utils.escapeHtml(recencia(last.data)) : '<span class="equip-card__metric-empty">Nenhum registro</span>'}</div>
         ${last ? `<div class="equip-card__metric-sub">${Utils.escapeHtml(Utils.truncate(last.tipo, 22))}</div>` : ''}
       </div>
       <div class="equip-card__metric">
@@ -337,7 +335,7 @@ function _equipCardMini(eq) {
     </div>
     <div class="equip-card__footer">
       <span class="equip-card__footer-tecnico">${last?.tecnico ? `👷 ${Utils.escapeHtml(last.tecnico)}` : ''}</span>
-      <button class="equip-card__cta" data-action="go-register-equip" data-id="${eq.id}">${ctaLabel}</button>
+      <button class="equip-card__cta" data-action="go-register-equip" data-id="${safeId}">${ctaLabel}</button>
     </div>
   </div>`;
 }
@@ -464,12 +462,12 @@ export function renderDashboard() {
   if (!bento) return;
 
   if (!equipamentos.length) {
-    bento.innerHTML = `<div style="padding:var(--space-6) var(--space-4)">
+    bento.innerHTML = `<div class="dash-empty-shell">
       <div class="empty-state">
         <div class="empty-state__icon">🔧</div>
         <div class="empty-state__title">Seu painel está pronto</div>
         <div class="empty-state__sub">Cadastre o primeiro equipamento para ver eficiência, alertas e histórico em tempo real.</div>
-        <div style="margin-top:16px"><button class="btn btn--primary" data-action="open-modal" data-id="modal-add-eq" style="width:auto;max-width:260px;margin:0 auto">+ Cadastrar meu primeiro equipamento →</button></div>
+        <div class="dash-empty-shell__actions"><button class="btn btn--primary btn--auto btn--centered" data-action="open-modal" data-id="modal-add-eq">+ Cadastrar meu primeiro equipamento →</button></div>
       </div></div>`;
     return;
   }
@@ -482,14 +480,14 @@ export function renderDashboard() {
   if (criticosEl) {
     criticosEl.innerHTML = critical.length
       ? `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`
-      : `<div style="padding:var(--space-4);font-size:13px;color:var(--text-2);text-align:center;background:var(--success-dim);border:1px solid rgba(0,200,112,0.15);border-radius:var(--radius-sm);">✅ Todos os equipamentos operando normalmente</div>`;
+      : `<div class="dash-state-box dash-state-box--success">✅ Todos os equipamentos operando normalmente</div>`;
   }
 
   const alertsMini = Utils.getEl('dash-alertas-mini');
   if (alertsMini) {
     alertsMini.innerHTML = alerts.length
       ? `<div class="dash-alertas-list">${alerts.slice(0, 4).map(_alertCardHtml).join('')}</div>`
-      : `<div style="padding:var(--space-4);font-size:12px;color:var(--text-3);text-align:center;">Nenhum alerta ativo</div>`;
+      : `<div class="dash-state-box dash-state-box--muted">Nenhum alerta ativo</div>`;
   }
 
   const recentEl = Utils.getEl('dash-recentes');

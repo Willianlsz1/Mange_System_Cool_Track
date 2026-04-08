@@ -8,8 +8,7 @@ function resetRegistroEditingState() {
   const saveBtn = document.querySelector('[data-action="save-registro"]');
   if (saveBtn) {
     saveBtn.textContent = 'Salvar registro';
-    saveBtn.style.background = '';
-    saveBtn.style.color = '';
+    saveBtn.classList.remove('btn--editing');
   }
 
   const title = document.querySelector('#view-registro .section-title');

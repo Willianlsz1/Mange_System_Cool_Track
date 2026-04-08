@@ -28,7 +28,7 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
   overlay.innerHTML = `
     <div class="modal account-modal">
       <div class="account-modal__header">
-        <div class="account-modal__avatar">${getInitials(name)}</div>
+        <div class="account-modal__avatar"></div>
         <div class="account-modal__identity">
           <div class="account-modal__name"></div>
           <div class="account-modal__email"></div>
@@ -54,8 +54,10 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
     </div>
   `;
 
+  const avatarEl = overlay.querySelector('.account-modal__avatar');
   const nameEl = overlay.querySelector('.account-modal__name');
   const emailEl = overlay.querySelector('.account-modal__email');
+  if (avatarEl) avatarEl.textContent = getInitials(name);
   if (nameEl) nameEl.textContent = name;
   if (emailEl) emailEl.textContent = email;
 

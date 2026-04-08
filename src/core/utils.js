@@ -125,6 +125,10 @@ export const Utils = {
       .replace(/>/g, '&gt;');
   },
 
+  safeStatus(value, fallback = 'ok') {
+    return ['ok', 'warn', 'danger'].includes(value) ? value : fallback;
+  },
+
   getEl(id) {
     return document.getElementById(id);
   },
