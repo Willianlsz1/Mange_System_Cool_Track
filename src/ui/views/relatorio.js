@@ -5,6 +5,7 @@
 
 import { Utils, STATUS_LABEL } from '../../core/utils.js';
 import { getState, findEquip } from '../../core/state.js';
+import { CRITICIDADE_LABEL, PRIORIDADE_OPERACIONAL_LABEL } from '../../domain/maintenance.js';
 
 export function populateRelatorioSelects() {
   const { equipamentos } = getState();
@@ -66,6 +67,9 @@ export function renderRelatorio() {
           <div class="info-row"><span class="info-row__label">TAG</span><span class="info-row__value info-row__value--mono">${Utils.escapeHtml(eq?.tag ?? '—')}</span></div>
           <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq?.local ?? '—')}</span></div>
           <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq?.fluido ?? '—')}</span></div>
+          <div class="info-row"><span class="info-row__label">Criticidade</span><span class="info-row__value">${Utils.escapeHtml(CRITICIDADE_LABEL[eq?.criticidade] || CRITICIDADE_LABEL.media)}</span></div>
+          <div class="info-row"><span class="info-row__label">Prioridade operacional</span><span class="info-row__value">${Utils.escapeHtml(PRIORIDADE_OPERACIONAL_LABEL[eq?.prioridadeOperacional] || PRIORIDADE_OPERACIONAL_LABEL.normal)}</span></div>
+          <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${eq?.periodicidadePreventivaDias ? `${eq.periodicidadePreventivaDias} dias` : '—'}</span></div>
           <div class="info-row"><span class="info-row__label">Técnico</span><span class="info-row__value">${Utils.escapeHtml(r.tecnico ?? '—')}</span></div>
           ${r.pecas ? `<div class="info-row"><span class="info-row__label">Peças / Materiais</span><span class="info-row__value">${Utils.escapeHtml(r.pecas)}</span></div>` : ''}
           ${r.custoPecas > 0 ? `<div class="info-row"><span class="info-row__label">Custo de Peças</span><span class="info-row__value">R$ ${parseFloat(r.custoPecas).toFixed(2).replace('.', ',')}</span></div>` : ''}

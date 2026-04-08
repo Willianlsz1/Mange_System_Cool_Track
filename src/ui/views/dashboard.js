@@ -4,11 +4,17 @@
  */
 
 import { Utils, TIPO_ICON } from '../../core/utils.js';
-import { getState, findEquip, lastRegForEquip } from '../../core/state.js';
+import { getState, findEquip, regsForEquip } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Alerts } from '../../domain/alerts.js';
 import { Charts } from '../components/charts.js';
 import { OnboardingBanner } from '../components/onboarding.js';
+import {
+  calculateHealthScore,
+  CRITICIDADE_LABEL,
+  getEquipmentMaintenanceContext,
+  getHealthClass as getMaintenanceHealthClass,
+} from '../../domain/maintenance.js';
 
 // ── Labels internos ────────────────────────────────────
 const STATUS_TECH = { ok: 'OPERANDO', warn: 'ATENÇÃO', danger: 'FALHA' };
@@ -67,24 +73,11 @@ function _alertContextText(count) {
 export function calcHealthScore(eqId) {
   const eq = findEquip(eqId);
   if (!eq) return 0;
-  let score = 100;
-  const lastReg = lastRegForEquip(eqId);
-  if (eq.status === 'warn') score -= 20;
-  if (eq.status === 'danger') score -= 50;
-  if (lastReg) {
-    const days = Utils.daysDiff(lastReg.data.slice(0, 10)) * -1;
-    if (days > 90) score -= 25;
-    else if (days > 60) score -= 15;
-    else if (days > 30) score -= 10;
-  } else {
-    score -= 30;
-  }
-  if (lastReg?.proxima && Utils.daysDiff(lastReg.proxima) < 0) score -= 20;
-  return Math.max(0, Math.min(100, score));
+  return calculateHealthScore(eq, regsForEquip(eqId));
 }
 
 export function getHealthClass(score) {
-  return score >= 80 ? 'ok' : score >= 50 ? 'warn' : 'danger';
+  return getMaintenanceHealthClass(score);
 }
 
 function _renderGlobalEfficiency(equipamentos) {
@@ -136,38 +129,67 @@ function _updateStorageIndicator() {
 }
 
 // ── Alert strip ────────────────────────────────────────
-function _renderAlertStrip(equipamentos) {
+function _renderAlertStrip(alerts) {
   const el = Utils.getEl('dash-alert-strip');
   if (!el) return;
-  const faults = equipamentos.filter((e) => e.status === 'danger');
-  if (!faults.length) {
+  const primary = alerts[0];
+  if (!primary) {
     el.innerHTML = `<div class="alert-strip alert-strip--none">
       <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Nenhuma falha crítica detectada</div></div>
     </div>`;
     return;
   }
-  const primary = faults[0];
-  const lastReg = lastRegForEquip(primary.id);
+
+  const detail = [primary.eq?.nome, primary.subtitle]
+    .filter(Boolean)
+    .map((value) => Utils.escapeHtml(value))
+    .join(' · ');
+  const meta = primary.reg?.data
+    ? `Ult. serviço: ${Utils.formatDatetime(primary.reg.data)}`
+    : primary.nextDueDate
+      ? `Próxima preventiva: ${Utils.formatDate(primary.nextDueDate)}`
+      : '';
+
   el.innerHTML = `<div class="alert-strip" role="alert" aria-live="assertive">
-    <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2L1.5 13.5h13L8 2Z" stroke="var(--danger)" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6.5v3.5M8 11.5v.5" stroke="var(--danger)" stroke-width="1.3" stroke-linecap="round"/></svg></div>
-    <div><div class="alert-strip__title">${Utils.escapeHtml(primary.nome)} — Falha detectada</div><div class="alert-strip__desc">${Utils.escapeHtml(primary.tag || primary.tipo)} · ${Utils.escapeHtml(primary.local)}${faults.length > 1 ? ` · +${faults.length - 1} outro(s)` : ''}</div></div>
-    ${lastReg ? `<div class="alert-strip__time">Últ. serviço: ${Utils.formatDatetime(lastReg.data)}</div>` : ''}
+    <div class="alert-strip__icon" aria-hidden="true">${Utils.escapeHtml(primary.icon || '!')}</div>
+    <div><div class="alert-strip__title">${Utils.escapeHtml(primary.title)}</div><div class="alert-strip__desc">${detail}</div></div>
+    ${meta ? `<div class="alert-strip__time">${Utils.escapeHtml(meta)}</div>` : ''}
   </div>`;
 }
 
 // ── Alert card ─────────────────────────────────────────
-function _alertCardHtml({ kind, reg, eq }) {
-  if (kind === 'critical')
-    return `<div class="alert-card alert-card--critical" data-nav="alertas" role="listitem"><span class="alert-card__icon">🔴</span><div><div class="alert-card__title">Equipamento fora de operação</div><div class="alert-card__sub">Requer intervenção imediata</div><div class="alert-card__equip">${Utils.escapeHtml(eq?.nome ?? '—')}</div></div></div>`;
-  const equip = findEquip(reg.equipId);
-  if (kind === 'overdue')
-    return `<div class="alert-card alert-card--critical" data-nav="alertas" role="listitem"><span class="alert-card__icon">⚠️</span><div><div class="alert-card__title">Manutenção preventiva vencida</div><div class="alert-card__sub">${Utils.escapeHtml(reg.tipo)}</div><div class="alert-card__equip">${Utils.escapeHtml(equip?.nome ?? '—')}</div></div></div>`;
-  return `<div class="alert-card" data-nav="alertas" role="listitem"><span class="alert-card__icon">🔔</span><div><div class="alert-card__title">Manutenção em ${Utils.daysDiff(reg.proxima)} dia(s)</div><div class="alert-card__sub">${Utils.escapeHtml(reg.tipo)}</div><div class="alert-card__equip">${Utils.escapeHtml(equip?.nome ?? '—')}</div></div></div>`;
+function _getAlertActionMeta(alert) {
+  const id = Utils.escapeAttr(alert.eq?.id || '');
+  switch (alert.recommendedAction) {
+    case 'register-now':
+      return { action: 'go-register-equip', id, label: 'Registrar agora' };
+    case 'schedule':
+      return { action: 'go-register-equip', id, label: 'Registrar preventiva' };
+    case 'start-history':
+      return { action: 'go-register-equip', id, label: 'Iniciar historico' };
+    case 'inspect':
+      return { action: 'view-equip', id, label: 'Abrir equipamento' };
+    default:
+      return { action: 'view-equip', id, label: 'Ver equipamento' };
+  }
+}
+
+function _alertCardHtml(alert) {
+  const actionMeta = _getAlertActionMeta(alert);
+  const toneClass = alert.severity === 'danger' ? ' alert-card--critical' : '';
+  return `<div class="alert-card${toneClass}" data-action="${actionMeta.action}" data-id="${actionMeta.id}" role="listitem" tabindex="0">
+    <span class="alert-card__icon">${Utils.escapeHtml(alert.icon || '!')}</span>
+    <div>
+      <div class="alert-card__title">${Utils.escapeHtml(alert.title)}</div>
+      <div class="alert-card__sub">${Utils.escapeHtml(alert.subtitle || '')}</div>
+      <div class="alert-card__equip">${Utils.escapeHtml(alert.eq?.nome ?? alert.equipmentName ?? '—')}</div>
+    </div>
+  </div>`;
 }
 
 // ── Próxima ação (D3) ──────────────────────────────────
-function _renderNextAction(equipamentos, registros) {
+function _renderNextAction(equipamentos, alerts) {
   const el = Utils.getEl('dash-next-action');
   if (!el) return;
   if (!equipamentos.length) {
@@ -175,95 +197,51 @@ function _renderNextAction(equipamentos, registros) {
     return;
   }
 
-  // 1. Manutenção vencida
-  let vencida = null;
-  registros.forEach((r) => {
-    if (!r.proxima) return;
-    const diff = Utils.daysDiff(r.proxima);
-    if (diff < 0 && (!vencida || diff < Utils.daysDiff(vencida.proxima))) vencida = r;
-  });
-  if (vencida) {
-    const eq = findEquip(vencida.equipId);
-    const dias = Math.abs(Utils.daysDiff(vencida.proxima));
-    el.innerHTML = `<div class="next-action-card next-action-card--urgent" data-action="go-register-equip" data-id="${Utils.escapeAttr(eq?.id || '')}">
-      <div class="next-action-card__icon">🔴</div>
+  const primaryAlert = alerts[0];
+  if (primaryAlert) {
+    const actionMeta = _getAlertActionMeta(primaryAlert);
+    const cardClass =
+      primaryAlert.severity === 'danger'
+        ? 'next-action-card next-action-card--urgent'
+        : primaryAlert.kind === 'no-history'
+          ? 'next-action-card next-action-card--invite'
+          : 'next-action-card';
+
+    el.innerHTML = `<div class="${cardClass}" data-action="${actionMeta.action}" data-id="${actionMeta.id}">
+      <div class="next-action-card__icon">${Utils.escapeHtml(primaryAlert.icon || '!')}</div>
       <div class="next-action-card__body">
-        <div class="next-action-card__label">MANUTENÇÃO VENCIDA HÁ ${dias} DIA${dias !== 1 ? 'S' : ''}</div>
-        <div class="next-action-card__title">${Utils.escapeHtml(eq?.nome || '—')}</div>
-        <div class="next-action-card__sub">${Utils.escapeHtml(vencida.tipo)} · prevista para ${Utils.formatDate(vencida.proxima)}</div>
+        <div class="next-action-card__label">${Utils.escapeHtml(primaryAlert.title.toUpperCase())}</div>
+        <div class="next-action-card__title">${Utils.escapeHtml(primaryAlert.eq?.nome || '—')}</div>
+        <div class="next-action-card__sub">${Utils.escapeHtml(primaryAlert.subtitle || '')}</div>
       </div>
-      <button class="btn btn--danger btn--sm btn--fit-content" data-action="go-register-equip" data-id="${Utils.escapeAttr(eq?.id || '')}">Registrar agora</button>
+      <button class="btn ${primaryAlert.severity === 'danger' ? 'btn--danger' : 'btn--primary'} btn--sm btn--fit-content" data-action="${actionMeta.action}" data-id="${actionMeta.id}">${actionMeta.label}</button>
     </div>`;
     return;
   }
 
-  // 2. Manutenção próxima (≤ 7 dias)
-  let urgente = null,
-    urgenteDiff = Infinity;
-  registros.forEach((r) => {
-    if (!r.proxima) return;
-    const diff = Utils.daysDiff(r.proxima);
-    if (diff >= 0 && diff <= 7 && diff < urgenteDiff) {
-      urgenteDiff = diff;
-      urgente = r;
-    }
-  });
-  if (urgente) {
-    const eq = findEquip(urgente.equipId);
-    const label =
-      urgenteDiff === 0 ? 'HOJE' : `EM ${urgenteDiff} DIA${urgenteDiff !== 1 ? 'S' : ''}`;
-    el.innerHTML = `<div class="next-action-card" data-action="go-register-equip" data-id="${Utils.escapeAttr(eq?.id || '')}">
-      <div class="next-action-card__icon">📅</div>
-      <div class="next-action-card__body">
-        <div class="next-action-card__label">PREVENTIVA ${label}</div>
-        <div class="next-action-card__title">${Utils.escapeHtml(eq?.nome || '—')}</div>
-        <div class="next-action-card__sub">${Utils.escapeHtml(urgente.tipo)}</div>
-      </div>
-      <button class="btn btn--primary btn--sm btn--fit-content" data-action="go-register-equip" data-id="${Utils.escapeAttr(eq?.id || '')}">Agendar registro</button>
-    </div>`;
-    return;
-  }
-
-  // 3. Equipamento sem nenhum registro
-  const semRegistro = equipamentos.find((eq) => !registros.find((r) => r.equipId === eq.id));
-  if (semRegistro) {
-    el.innerHTML = `<div class="next-action-card next-action-card--invite" data-action="go-register-equip" data-id="${Utils.escapeAttr(semRegistro.id)}">
-      <div class="next-action-card__icon">🚀</div>
-      <div class="next-action-card__body">
-        <div class="next-action-card__label">COMECE O HISTÓRICO DE ${Utils.escapeHtml(semRegistro.nome.toUpperCase())}</div>
-        <div class="next-action-card__title">Registre a primeira manutenção deste equipamento</div>
-        <div class="next-action-card__hint">💡 Cada registro ajuda a prever falhas e otimizar o desempenho</div>
-      </div>
-      <button class="btn btn--primary btn--sm btn--fit-content" data-action="go-register-equip" data-id="${Utils.escapeAttr(semRegistro.id)}">Registrar agora →</button>
-    </div>`;
-    return;
-  }
-
-  // 4. Tudo em dia
-  const temProxima = registros.some((r) => r.proxima && Utils.daysDiff(r.proxima) >= 0);
-  if (temProxima) {
-    el.innerHTML = `<div class="next-action-card next-action-card--ok">
-      <div class="next-action-card__icon">✅</div>
-      <div class="next-action-card__body">
-        <div class="next-action-card__label">NENHUMA AÇÃO URGENTE</div>
-        <div class="next-action-card__title">Todas as manutenções estão dentro do prazo</div>
-        <div class="next-action-card__sub">Continue registrando os serviços para manter o histórico atualizado</div>
-      </div>
-    </div>`;
-    return;
-  }
-
-  el.innerHTML = '';
+  el.innerHTML = `<div class="next-action-card next-action-card--ok">
+    <div class="next-action-card__icon">OK</div>
+    <div class="next-action-card__body">
+      <div class="next-action-card__label">NENHUMA AÇÃO URGENTE</div>
+      <div class="next-action-card__title">Todas as rotinas estão dentro do prazo</div>
+      <div class="next-action-card__sub">Continue registrando os serviços para manter o histórico atualizado</div>
+    </div>
+  </div>`;
 }
 
 // ── equip card (miniatura para o dashboard) ────────────
 function _equipCardMini(eq) {
   const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
-  const last = lastRegForEquip(eq.id);
+  const context = getEquipmentMaintenanceContext(eq, regsForEquip(eq.id));
+  const last = context.ultimoRegistro;
   const score = calcHealthScore(eq.id);
   const hcls = getHealthClass(score);
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
+  const criticidadeLabel = Utils.escapeHtml(
+    CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media,
+  );
+
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
     if (diff === 0) return 'Hoje';
@@ -273,23 +251,23 @@ function _equipCardMini(eq) {
     return `Há ${Math.floor(diff / 30)} meses`;
   }
 
-  let proximaLabel = '—',
-    proximaCls = 'equip-card__metric-value--muted',
-    proximaIcon = '';
-  if (last?.proxima) {
-    const diff = Utils.daysDiff(last.proxima);
+  let proximaLabel = '—';
+  let proximaCls = 'equip-card__metric-value--muted';
+  let proximaIcon = '';
+  if (context.proximaPreventiva) {
+    const diff = Utils.daysDiff(context.proximaPreventiva);
     if (diff < 0) {
       proximaLabel = `Vencida há ${Math.abs(diff)}d`;
       proximaCls = 'equip-card__metric-value--danger';
-      proximaIcon = '🔴';
+      proximaIcon = '!!';
     } else if (diff === 0) {
       proximaLabel = 'Hoje';
       proximaCls = 'equip-card__metric-value--danger';
-      proximaIcon = '🔴';
+      proximaIcon = '!!';
     } else if (diff <= 7) {
       proximaLabel = `Em ${diff} dia${diff > 1 ? 's' : ''}`;
       proximaCls = 'equip-card__metric-value--warn';
-      proximaIcon = '⚠️';
+      proximaIcon = '!';
     } else {
       proximaLabel = `Em ${diff} dias`;
     }
@@ -297,15 +275,18 @@ function _equipCardMini(eq) {
 
   let ctaLabel = 'Registrar serviço →';
   if (scls === 'danger') ctaLabel = 'Registrar corretiva →';
-  else if (last?.proxima && Utils.daysDiff(last.proxima) <= 7) ctaLabel = 'Registrar preventiva →';
-  else if (!last) ctaLabel = 'Primeiro registro →';
+  else if (context.proximaPreventiva && Utils.daysDiff(context.proximaPreventiva) <= 7) {
+    ctaLabel = 'Registrar preventiva →';
+  } else if (!last) {
+    ctaLabel = 'Primeiro registro →';
+  }
 
   return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_TECH[scls]}">
     <div class="equip-card__header">
       <div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq?.nome ?? '—')}</div>
-        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)}</div>
+        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · Crit. ${criticidadeLabel}</div>
       </div>
       <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_TECH[scls]}</span>
       <div class="equip-card__actions">
@@ -470,15 +451,27 @@ export function updateHeader() {
 export function renderDashboard() {
   const { equipamentos, registros } = getState();
   const faults = equipamentos.filter((e) => e.status === 'danger').length;
-  const critical = equipamentos.filter((e) => e.status !== 'ok');
   const alerts = Alerts.getAll();
+  const critical = equipamentos
+    .map((eq) => ({
+      eq,
+      score: calcHealthScore(eq.id),
+      hasAlert: alerts.some((alert) => alert.eq?.id === eq.id),
+    }))
+    .filter(({ eq, score, hasAlert }) => hasAlert || eq.status !== 'ok' || score < 80)
+    .sort((a, b) => a.score - b.score || Number(b.hasAlert) - Number(a.hasAlert))
+    .map(({ eq }) => eq)
+    .slice(0, 4);
 
   const greetEl = Utils.getEl('dash-greeting');
-  if (greetEl)
+  if (greetEl) {
     greetEl.textContent =
       faults > 0
         ? `${faults} Falha${faults > 1 ? 's' : ''} Detectada${faults > 1 ? 's' : ''}`
-        : 'Sistema Operacional';
+        : alerts.length > 0
+          ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
+          : 'Sistema Operacional';
+  }
 
   const bento = document.querySelector('.dashboard-bento');
   if (!bento) return;
@@ -495,8 +488,8 @@ export function renderDashboard() {
   }
 
   OnboardingBanner.render();
-  _renderAlertStrip(equipamentos);
-  _renderNextAction(equipamentos, registros);
+  _renderAlertStrip(alerts);
+  _renderNextAction(equipamentos, alerts);
 
   const criticosEl = Utils.getEl('dash-criticos');
   if (criticosEl) {

@@ -7,26 +7,28 @@ function isoDateOffset(days) {
   return `${y}-${m}-${day}`;
 }
 
-async function loadDashboardRulesModule({ equip, lastReg } = {}) {
+async function loadDashboardRulesModule({ equip, registros } = {}) {
   vi.resetModules();
 
+  const registrosForEquip = Array.isArray(registros) ? registros : [];
   const stateMock = {
     getState: vi.fn(() => ({
       equipamentos: equip ? [equip] : [],
-      registros: lastReg ? [lastReg] : [],
+      registros: registrosForEquip,
     })),
     findEquip: vi.fn((id) => (equip?.id === id ? equip : undefined)),
-    lastRegForEquip: vi.fn((id) => (equip?.id === id ? lastReg : undefined)),
+    regsForEquip: vi.fn((id) => (equip?.id === id ? registrosForEquip : [])),
   };
 
   vi.doMock('../core/state.js', () => ({
     getState: stateMock.getState,
     findEquip: stateMock.findEquip,
-    lastRegForEquip: stateMock.lastRegForEquip,
+    regsForEquip: stateMock.regsForEquip,
   }));
   vi.doMock('../core/storage.js', () => ({
     Storage: {
       usage: vi.fn(() => ({ used: 0, total: 5 * 1024 * 1024, percent: 0 })),
+      getSyncStatus: vi.fn(() => ({ state: 'idle', pendingOps: 0 })),
     },
   }));
   vi.doMock('../domain/alerts.js', () => ({
@@ -52,41 +54,66 @@ describe('dashboard rule functions', () => {
     expect(calcHealthScore('eq-missing')).toBe(0);
   });
 
-  it('applies no-history penalty when there is no last record', async () => {
+  it('applies no-history penalty for low criticality assets without registros', async () => {
     const { calcHealthScore } = await loadDashboardRulesModule({
-      equip: { id: 'eq-1', status: 'ok' },
-      lastReg: null,
+      equip: {
+        id: 'eq-1',
+        status: 'ok',
+        criticidade: 'baixa',
+        prioridadeOperacional: 'baixa',
+      },
+      registros: [],
     });
-    expect(calcHealthScore('eq-1')).toBe(70);
+
+    expect(calcHealthScore('eq-1')).toBe(78);
   });
 
-  it('combines status, staleness and overdue penalties', async () => {
+  it('combines status, overdue routine and recent issue penalties', async () => {
     const { calcHealthScore } = await loadDashboardRulesModule({
-      equip: { id: 'eq-1', status: 'warn' },
-      lastReg: {
-        id: 'r-1',
-        equipId: 'eq-1',
-        data: `${isoDateOffset(-40)}T08:00`,
-        proxima: isoDateOffset(-1),
+      equip: {
+        id: 'eq-1',
+        status: 'warn',
+        criticidade: 'baixa',
+        prioridadeOperacional: 'baixa',
+        periodicidadePreventivaDias: 30,
       },
+      registros: [
+        {
+          id: 'r-1',
+          equipId: 'eq-1',
+          data: `${isoDateOffset(-40)}T08:00`,
+          status: 'warn',
+          tipo: 'Inspecao Geral',
+          proxima: isoDateOffset(-1),
+        },
+      ],
     });
 
-    // 100 - 20 (warn) - 10 (older than 30d) - 20 (overdue next date)
-    expect(calcHealthScore('eq-1')).toBe(50);
+    expect(calcHealthScore('eq-1')).toBe(56);
   });
 
-  it('keeps score clamped in low scenarios (danger + stale + overdue)', async () => {
+  it('keeps score low in severe scenarios', async () => {
     const { calcHealthScore } = await loadDashboardRulesModule({
-      equip: { id: 'eq-1', status: 'danger' },
-      lastReg: {
-        id: 'r-1',
-        equipId: 'eq-1',
-        data: `${isoDateOffset(-120)}T08:00`,
-        proxima: isoDateOffset(-10),
+      equip: {
+        id: 'eq-1',
+        status: 'danger',
+        criticidade: 'baixa',
+        prioridadeOperacional: 'baixa',
+        periodicidadePreventivaDias: 30,
       },
+      registros: [
+        {
+          id: 'r-1',
+          equipId: 'eq-1',
+          data: `${isoDateOffset(-120)}T08:00`,
+          status: 'danger',
+          tipo: 'Inspecao Geral',
+          proxima: isoDateOffset(-10),
+        },
+      ],
     });
 
-    expect(calcHealthScore('eq-1')).toBe(5);
+    expect(calcHealthScore('eq-1')).toBe(20);
   });
 
   it('classifies score boundaries correctly', async () => {
@@ -94,7 +121,7 @@ describe('dashboard rule functions', () => {
 
     expect(getHealthClass(80)).toBe('ok');
     expect(getHealthClass(79)).toBe('warn');
-    expect(getHealthClass(50)).toBe('warn');
-    expect(getHealthClass(49)).toBe('danger');
+    expect(getHealthClass(55)).toBe('warn');
+    expect(getHealthClass(54)).toBe('danger');
   });
 });

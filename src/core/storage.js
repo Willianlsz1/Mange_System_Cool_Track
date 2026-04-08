@@ -9,6 +9,11 @@ import { Toast } from './toast.js';
 import { supabase } from './supabase.js';
 import { migrateLegacyPhotosForRegistros, normalizePhotoList } from './photoStorage.js';
 import { AppError, ErrorCodes, handleError } from './errors.js';
+import {
+  normalizeCriticidade,
+  normalizePrioridadeOperacional,
+  normalizePeriodicidadePreventivaDias,
+} from '../domain/maintenance.js';
 
 const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -39,6 +44,48 @@ function normalizeEquip(e) {
     tipo: String(e.tipo || 'Outro'),
     modelo: String(e.modelo || ''),
     fluido: String(e.fluido || ''),
+    criticidade: normalizeCriticidade(e.criticidade),
+    prioridadeOperacional: normalizePrioridadeOperacional(e.prioridadeOperacional || e.prioridade),
+    periodicidadePreventivaDias: normalizePeriodicidadePreventivaDias(
+      e.periodicidadePreventivaDias,
+      e.tipo,
+      e.criticidade,
+    ),
+  };
+}
+
+function isLegacyEquipmentSchemaError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('column') &&
+    (message.includes('criticidade') ||
+      message.includes('prioridade_operacional') ||
+      message.includes('periodicidade_preventiva_dias'))
+  );
+}
+
+function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
+  const row = {
+    id: equipamento.id,
+    user_id: userId,
+    nome: equipamento.nome,
+    local: equipamento.local,
+    status: equipamento.status,
+    tag: equipamento.tag,
+    tipo: equipamento.tipo,
+    modelo: equipamento.modelo,
+    fluido: equipamento.fluido,
+  };
+  if (legacy) return row;
+  return {
+    ...row,
+    criticidade: normalizeCriticidade(equipamento.criticidade),
+    prioridade_operacional: normalizePrioridadeOperacional(equipamento.prioridadeOperacional),
+    periodicidade_preventiva_dias: normalizePeriodicidadePreventivaDias(
+      equipamento.periodicidadePreventivaDias,
+      equipamento.tipo,
+      equipamento.criticidade,
+    ),
   };
 }
 
@@ -209,18 +256,14 @@ async function getUserId() {
 async function pushEquipamentos(equipamentos, userId) {
   if (!equipamentos.length) return;
   try {
-    const rows = equipamentos.map((e) => ({
-      id: e.id,
-      user_id: userId,
-      nome: e.nome,
-      local: e.local,
-      status: e.status,
-      tag: e.tag,
-      tipo: e.tipo,
-      modelo: e.modelo,
-      fluido: e.fluido,
-    }));
-    const { error } = await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
+    const rows = equipamentos.map((equipamento) => mapEquipamentoRow(equipamento, userId));
+    let { error } = await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
+    if (error && isLegacyEquipmentSchemaError(error)) {
+      const legacyRows = equipamentos.map((equipamento) =>
+        mapEquipamentoRow(equipamento, userId, { legacy: true }),
+      );
+      ({ error } = await supabase.from('equipamentos').upsert(legacyRows, { onConflict: 'id' }));
+    }
     if (error) throw error;
   } catch (error) {
     throw new AppError('Falha ao sincronizar equipamentos.', ErrorCodes.SYNC_FAILED, 'warning', {
@@ -363,6 +406,15 @@ async function pullFromSupabase(userId) {
     tipo: e.tipo || 'Outro',
     modelo: e.modelo || '',
     fluido: e.fluido || '',
+    criticidade: normalizeCriticidade(e.criticidade),
+    prioridadeOperacional: normalizePrioridadeOperacional(
+      e.prioridade_operacional || e.prioridadeOperacional,
+    ),
+    periodicidadePreventivaDias: normalizePeriodicidadePreventivaDias(
+      e.periodicidade_preventiva_dias,
+      e.tipo,
+      e.criticidade,
+    ),
   }));
 
   const equipIds = new Set(equipamentos.map((e) => e.id));

@@ -137,6 +137,23 @@ export function seedIfEmpty() {
     },
   ];
 
+  const equipamentos = eq.map((equipamento, index) => {
+    const profiles = [
+      { criticidade: 'critica', prioridadeOperacional: 'alta', periodicidadePreventivaDias: 30 },
+      { criticidade: 'critica', prioridadeOperacional: 'alta', periodicidadePreventivaDias: 30 },
+      { criticidade: 'media', prioridadeOperacional: 'normal', periodicidadePreventivaDias: 60 },
+      { criticidade: 'critica', prioridadeOperacional: 'alta', periodicidadePreventivaDias: 30 },
+      { criticidade: 'alta', prioridadeOperacional: 'alta', periodicidadePreventivaDias: 30 },
+      { criticidade: 'media', prioridadeOperacional: 'normal', periodicidadePreventivaDias: 45 },
+      { criticidade: 'critica', prioridadeOperacional: 'alta', periodicidadePreventivaDias: 30 },
+    ];
+
+    return {
+      ...equipamento,
+      ...profiles[index],
+    };
+  });
+
   const tecnicos = [
     'Carlos Figueiredo',
     'Camila Souza',
@@ -256,5 +273,5 @@ export function seedIfEmpty() {
     },
   ];
 
-  setState(() => ({ equipamentos: eq, registros, tecnicos }));
+  setState(() => ({ equipamentos, registros, tecnicos }));
 }

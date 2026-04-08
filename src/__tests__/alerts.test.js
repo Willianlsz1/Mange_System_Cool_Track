@@ -16,67 +16,152 @@ describe('Alerts.getAll', () => {
     vi.useRealTimers();
   });
 
-  it('returns overdue and upcoming alerts using earliest due date per equipment', () => {
+  it('prioritizes critical and overdue assets in maintenance order', () => {
     vi.mocked(getState).mockReturnValue({
       equipamentos: [
-        { id: 'eq-1', status: 'ok' },
-        { id: 'eq-2', status: 'ok' },
+        { id: 'eq-danger', nome: 'Chiller A', status: 'danger', criticidade: 'critica' },
+        {
+          id: 'eq-overdue',
+          nome: 'Split Centro Cirurgico',
+          status: 'ok',
+          criticidade: 'alta',
+          prioridadeOperacional: 'alta',
+          periodicidadePreventivaDias: 30,
+        },
       ],
       registros: [
-        { id: 'r-old', equipId: 'eq-1', proxima: '2026-04-05' },
-        { id: 'r-new', equipId: 'eq-1', proxima: '2026-04-10' },
-        { id: 'r-upcoming', equipId: 'eq-2', proxima: '2026-04-14' },
+        {
+          id: 'r-overdue',
+          equipId: 'eq-overdue',
+          data: '2026-03-10T08:00',
+          tipo: 'Manutencao Preventiva',
+          status: 'ok',
+          proxima: '2026-04-01',
+        },
       ],
     });
 
     const alerts = Alerts.getAll();
 
-    expect(alerts).toEqual(
-      expect.arrayContaining([
-        { kind: 'overdue', reg: expect.objectContaining({ id: 'r-old' }) },
-        { kind: 'upcoming', reg: expect.objectContaining({ id: 'r-upcoming' }) },
-      ]),
+    expect(alerts.map((alert) => alert.kind)).toEqual(['critical', 'overdue']);
+    expect(alerts[0]).toEqual(
+      expect.objectContaining({
+        kind: 'critical',
+        recommendedAction: 'register-now',
+        eq: expect.objectContaining({ id: 'eq-danger' }),
+      }),
     );
-
-    const eq1Alerts = alerts.filter((a) => a.reg?.equipId === 'eq-1');
-    expect(eq1Alerts).toHaveLength(1);
+    expect(alerts[1]).toEqual(
+      expect.objectContaining({
+        kind: 'overdue',
+        recommendedAction: 'register-now',
+        eq: expect.objectContaining({ id: 'eq-overdue' }),
+      }),
+    );
   });
 
-  it('ignores invalid or missing proxima dates and includes critical equipment', () => {
-    const dangerEq = { id: 'eq-danger', status: 'danger' };
-
+  it('creates no-history alerts for high criticality assets without registros', () => {
     vi.mocked(getState).mockReturnValue({
-      equipamentos: [dangerEq, { id: 'eq-ok', status: 'ok' }],
+      equipamentos: [
+        {
+          id: 'eq-1',
+          nome: 'Camara Fria Farmacia',
+          status: 'ok',
+          criticidade: 'critica',
+          prioridadeOperacional: 'alta',
+          periodicidadePreventivaDias: 30,
+        },
+      ],
+      registros: [],
+    });
+
+    const alerts = Alerts.getAll();
+
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toEqual(
+      expect.objectContaining({
+        kind: 'no-history',
+        recommendedAction: 'start-history',
+        title: 'Equipamento sem historico preventivo',
+      }),
+    );
+  });
+
+  it('opens planning window earlier for critical assets', () => {
+    vi.mocked(getState).mockReturnValue({
+      equipamentos: [
+        {
+          id: 'eq-1',
+          nome: 'Split UTI',
+          status: 'ok',
+          criticidade: 'critica',
+          prioridadeOperacional: 'alta',
+          periodicidadePreventivaDias: 30,
+        },
+      ],
       registros: [
-        { id: 'r-missing', equipId: 'eq-ok' },
-        { id: 'r-invalid', equipId: 'eq-ok', proxima: 'not-a-date' },
+        {
+          id: 'r-1',
+          equipId: 'eq-1',
+          data: '2026-04-01T08:00',
+          tipo: 'Manutencao Preventiva',
+          status: 'ok',
+          proxima: '2026-04-15',
+        },
       ],
     });
 
     const alerts = Alerts.getAll();
 
     expect(alerts).toHaveLength(1);
-    expect(alerts[0]).toEqual({ kind: 'critical', eq: dangerEq });
+    expect(alerts[0]).toEqual(
+      expect.objectContaining({
+        kind: 'upcoming',
+        recommendedAction: 'schedule',
+      }),
+    );
   });
 
-  it('includes due-today and due-in-7-days as upcoming edge cases', () => {
+  it('flags repeated corrective history as attention risk', () => {
     vi.mocked(getState).mockReturnValue({
       equipamentos: [
-        { id: 'eq-1', status: 'ok' },
-        { id: 'eq-2', status: 'ok' },
-        { id: 'eq-3', status: 'ok' },
+        {
+          id: 'eq-1',
+          nome: 'VRF Torre',
+          status: 'warn',
+          criticidade: 'alta',
+          prioridadeOperacional: 'alta',
+          periodicidadePreventivaDias: 45,
+        },
       ],
       registros: [
-        { id: 'today', equipId: 'eq-1', proxima: '2026-04-07' },
-        { id: 'in7', equipId: 'eq-2', proxima: '2026-04-14' },
-        { id: 'in8', equipId: 'eq-3', proxima: '2026-04-15' },
+        {
+          id: 'r-2',
+          equipId: 'eq-1',
+          data: '2026-04-05T08:00',
+          tipo: 'Manutencao Corretiva',
+          status: 'warn',
+          proxima: '2026-05-15',
+        },
+        {
+          id: 'r-1',
+          equipId: 'eq-1',
+          data: '2026-03-20T08:00',
+          tipo: 'Troca de capacitor',
+          status: 'warn',
+          proxima: '2026-04-25',
+        },
       ],
     });
 
     const alerts = Alerts.getAll();
-    const upcomingIds = alerts.filter((a) => a.kind === 'upcoming').map((a) => a.reg.id);
 
-    expect(upcomingIds).toEqual(expect.arrayContaining(['today', 'in7']));
-    expect(upcomingIds).not.toContain('in8');
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toEqual(
+      expect.objectContaining({
+        kind: 'attention',
+        recommendedAction: 'inspect',
+      }),
+    );
   });
 });
