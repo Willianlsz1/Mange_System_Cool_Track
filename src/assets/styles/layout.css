@@ -4,16 +4,20 @@
    ============================================================ */
 
 #app {
+  --app-header-offset: 96px;
   width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding-top: var(--app-header-offset);
 }
 
 /* HEADER */
 .app-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 80;
   background: var(--surface);
   border-bottom: 1px solid var(--border-2);
@@ -389,6 +393,10 @@ main:focus {
 
 /* ── MOBILE (≤640px) ────────────────────────────── */
 @media (max-width: 640px) {
+  #app {
+    --app-header-offset: 86px;
+  }
+
   html,
   body,
   #app,
@@ -655,6 +663,7 @@ main:focus {
   }
   #app {
     width: 100%;
+    padding-top: 0;
   }
   .app-content {
     display: block;
