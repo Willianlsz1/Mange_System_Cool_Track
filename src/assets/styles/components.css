@@ -179,6 +179,8 @@
 .critical-incident {
   background: linear-gradient(90deg, rgba(224, 48, 64, 0.34), rgba(224, 48, 64, 0.14));
   border: 1px solid rgba(224, 48, 64, 0.56);
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.22), rgba(224, 48, 64, 0.08));
+  border: 1px solid rgba(224, 48, 64, 0.45);
   border-left: 6px solid var(--danger);
   border-radius: var(--radius-sm);
   padding: var(--space-3) var(--space-4);
