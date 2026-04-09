@@ -259,9 +259,14 @@ body::before {
 
 .bento-kpi__value {
   text-shadow: 0 0 15px rgba(0, 212, 255, 0.1);
+  letter-spacing: -0.05em;
 }
 
 /* Health bar neon */
+.health-bar {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.08);
+}
 .health-bar__fill--ok {
   background: linear-gradient(90deg, var(--neon-green), #00cc6a);
   box-shadow: 0 0 8px var(--neon-green-glow);
@@ -406,6 +411,33 @@ body::before {
   background: linear-gradient(135deg, var(--neon-green-soft), rgba(0, 255, 136, 0.03));
 }
 
+/* Incidente crítico dominante */
+.critical-incident {
+  background: linear-gradient(135deg, rgba(255, 68, 102, 0.3), rgba(255, 68, 102, 0.12));
+  border: 1px solid rgba(255, 68, 102, 0.48);
+  border-left: 6px solid var(--neon-red);
+  border-radius: var(--premier-radius-sm);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(255, 68, 102, 0.2);
+}
+.critical-incident__label {
+  color: #ffb5c4;
+}
+.critical-incident__title {
+  color: #ffe6ec;
+  text-shadow: 0 0 14px rgba(255, 68, 102, 0.28);
+}
+.critical-incident__desc {
+  color: rgba(255, 211, 221, 0.9);
+}
+.critical-incident__meta {
+  color: rgba(255, 214, 223, 0.9);
+}
+.critical-incident__cta {
+  box-shadow: 0 0 18px rgba(255, 68, 102, 0.22);
+}
+
 /* ════════════════════════════════════════════════════════
    ALERT CARDS — Neon style
    ════════════════════════════════════════════════════════ */
@@ -421,7 +453,7 @@ body::before {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 .alert-card--critical {
-  background: linear-gradient(135deg, var(--neon-red-soft), var(--surface-card));
+  background: linear-gradient(135deg, rgba(255, 68, 102, 0.18), var(--surface-card));
   border-color: rgba(255, 68, 102, 0.15);
   border-left-color: var(--neon-red);
 }
@@ -1083,4 +1115,21 @@ mark,
   background: var(--neon-green-soft);
   border-color: rgba(0, 255, 136, 0.35);
   box-shadow: 0 0 12px rgba(0, 255, 136, 0.08);
+}
+
+@media (max-width: 640px) {
+  .dash-section,
+  .alert-strip,
+  .critical-incident,
+  .alert-card,
+  .next-action-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    background-image: none;
+  }
+
+  .dash-section {
+    background: var(--surface-card);
+  }
 }
