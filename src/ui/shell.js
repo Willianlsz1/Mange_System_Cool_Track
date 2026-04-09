@@ -16,7 +16,6 @@ ${renderShellViews()}
 
       </main>
     </div>
-  </div>
 `;
 }
 
