@@ -256,7 +256,8 @@ body.is-routing .view.active {
 
 @media (max-width: 640px) {
   .toast-container {
-    top: calc(var(--app-header-height) + 8px);
+    top: auto;
+    bottom: calc(80px + env(safe-area-inset-bottom));
     right: 8px;
     width: calc(100% - 16px);
   }
@@ -281,6 +282,8 @@ body.is-routing .view.active {
   body.is-routing .app-header::after,
   .status-indicator--live .status-indicator__dot,
   .status-indicator--syncing .status-indicator__dot,
+  .status-dot--danger,
+  .timeline__dot--danger,
   .ui-skeleton-card::after {
     animation: none;
   }

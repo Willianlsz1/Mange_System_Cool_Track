@@ -470,7 +470,6 @@ main:focus {
 
   /* Espaço para navbar fixo no fundo */
   .app-content {
-    padding-bottom: 70px !important;
     padding-top: 0 !important;
     margin-top: var(--app-header-height) !important;
     width: calc(100% - 16px);
@@ -522,15 +521,15 @@ main:focus {
   }
 
   /* Análise do parque: acessível, porém menos dominante no mobile */
-  #view-inicio .dash-section:last-child {
+  #view-inicio .dash-section--analysis {
     opacity: 0.92;
     border-color: rgba(255, 255, 255, 0.04);
   }
-  #view-inicio .dash-section:last-child .dash-section-header__label {
+  #view-inicio .dash-section--analysis .dash-section-header__label {
     color: var(--text-3);
     font-size: 9px;
   }
-  #view-inicio .dash-section:last-child .charts-grid {
+  #view-inicio .dash-section--analysis .charts-grid {
     max-height: 240px;
     overflow-y: auto;
     padding-right: 2px;
@@ -567,17 +566,6 @@ main:focus {
     min-width: 14px !important;
     height: 14px !important;
     font-size: 8px !important;
-  }
-
-  .stat-pill {
-    padding: 5px 4px !important;
-  }
-  .stat-pill__value {
-    font-size: 13px !important;
-  }
-  .stat-pill__label {
-    font-size: 6px !important;
-    letter-spacing: 0.02em !important;
   }
   .app-header__status span:last-child {
     display: none;
@@ -616,6 +604,45 @@ main:focus {
 
 /* ── DESKTOP (≥1025px) ─────────────────────────── */
 @media (min-width: 1025px) {
+  .stat-pill {
+    padding: 10px 20px;
+  }
+  .stat-pill__value {
+    font-size: 26px;
+  }
+  .stat-pill__label {
+    font-size: 11px;
+    margin-top: 4px;
+  }
+
+  .nav-btn {
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-left: none;
+    border-radius: var(--radius-sm);
+    position: relative;
+  }
+
+  .nav-btn.is-active::after {
+    display: none;
+  }
+
+  .nav-btn__badge {
+    top: 2px;
+    right: 4px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    z-index: 10;
+    line-height: 1;
+  }
+
   .modal-overlay {
     align-items: center;
     padding: 20px;
