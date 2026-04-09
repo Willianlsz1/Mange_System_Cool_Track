@@ -175,6 +175,37 @@
   color: rgba(201, 245, 221, 0.82);
 }
 
+/* ─── INCIDENTE CRÍTICO (topo dominante) ─── */
+.critical-incident {
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.22), rgba(224, 48, 64, 0.08));
+  border: 1px solid rgba(224, 48, 64, 0.45);
+  border-left: 6px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  box-shadow: 0 10px 26px rgba(4, 8, 16, 0.38);
+}
+.critical-incident__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #ffc7ce;
+}
+.critical-incident__title {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffe3e7;
+}
+.critical-incident__desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #f8ccd3;
+}
+.critical-incident__cta {
+  margin-top: var(--space-3);
+}
+
 /* ─── KPI CARDS (bento) ─── */
 .bento-kpi {
   background: var(--card);
@@ -627,7 +658,7 @@
   border-color: rgba(232, 160, 32, 0.3);
 }
 .alert-card--critical {
-  background: linear-gradient(90deg, rgba(224, 48, 64, 0.22), rgba(224, 48, 64, 0.08));
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.25), rgba(224, 48, 64, 0.1));
   border-color: rgba(224, 48, 64, 0.2);
   border-left-color: var(--danger);
 }
