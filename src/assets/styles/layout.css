@@ -389,6 +389,16 @@ main:focus {
 
 /* ── MOBILE (≤640px) ────────────────────────────── */
 @media (max-width: 640px) {
+  html,
+  body,
+  #app,
+  .app-content,
+  .view,
+  .dashboard-bento {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   /* Header */
   .app-header {
     position: sticky !important;
@@ -399,8 +409,8 @@ main:focus {
   .app-header__top {
     height: auto !important;
     flex-wrap: wrap !important;
-    gap: 6px !important;
-    padding: 8px 12px !important;
+    gap: 4px !important;
+    padding: 6px 10px !important;
   }
 
   .app-header__tagline {
@@ -410,6 +420,14 @@ main:focus {
   .app-header__actions {
     gap: 4px !important;
     margin-left: auto !important;
+  }
+
+  .app-logo {
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+  .app-logo__sub {
+    display: none;
   }
 
   .header-icon-btn {
@@ -425,7 +443,7 @@ main:focus {
   }
 
   .stat-pill {
-    padding: 6px 8px !important;
+    padding: 6px 6px !important;
   }
 
   .stat-pill__value {
@@ -433,8 +451,7 @@ main:focus {
   }
 
   .stat-pill__label {
-    font-size: 7px !important;
-    letter-spacing: 0.04em !important;
+    display: none;
   }
 
   /* Espaço para navbar fixo no fundo */
@@ -442,11 +459,12 @@ main:focus {
     padding-bottom: 70px !important;
     padding-top: 8px !important;
     margin-top: 0 !important;
+    width: calc(100% - 16px);
   }
 
   /* Grids */
   .kpi-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
   .dash-center-grid {
     grid-template-columns: 1fr;
@@ -459,6 +477,49 @@ main:focus {
   }
   .dash-criticos-list {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-bento,
+  .dash-section,
+  .dash-recentes-grid,
+  .dash-alertas-list,
+  .dash-criticos-list,
+  #dash-alertas-mini,
+  #dash-criticos,
+  #dash-recentes {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .dashboard-bento {
+    gap: 12px;
+  }
+
+  .dash-section {
+    padding: 10px;
+    background: var(--card);
+    box-shadow: none;
+  }
+
+  .dash-section-header__label {
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  /* Análise do parque: acessível, porém menos dominante no mobile */
+  #view-inicio .dash-section:last-child {
+    opacity: 0.92;
+    border-color: rgba(255, 255, 255, 0.04);
+  }
+  #view-inicio .dash-section:last-child .dash-section-header__label {
+    color: var(--text-3);
+    font-size: 9px;
+  }
+  #view-inicio .dash-section:last-child .charts-grid {
+    max-height: 240px;
+    overflow-y: auto;
+    padding-right: 2px;
   }
 
   /* Report toolbar mobile */
