@@ -8,6 +8,7 @@ import { getState, findEquip, setState, regsForEquip } from '../../core/state.js
 import { Storage } from '../../core/storage.js';
 import { Toast } from '../../core/toast.js';
 import { OnboardingBanner } from '../components/onboarding.js';
+import { withSkeleton } from '../components/skeleton.js';
 import { Profile } from '../../features/profile.js';
 import { calcHealthScore, getHealthClass, updateHeader } from './dashboard.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
@@ -134,14 +135,21 @@ export function renderEquip(filtro = '') {
   );
   const el = Utils.getEl('lista-equip');
   if (!el) return;
-  el.innerHTML = list.length
-    ? list.map((eq) => equipCardHtml(eq)).join('')
-    : _empty(
-        '🔧',
-        'Nenhum equipamento encontrado',
-        'Tente outro termo ou cadastre um novo.',
-        `<button class="btn btn--primary btn--sm btn--auto" data-action="open-modal" data-id="modal-add-eq">+ Novo equipamento</button>`,
-      );
+
+  withSkeleton(
+    el,
+    { enabled: list.length >= 9, variant: 'equipment', count: Math.min(list.length, 5) },
+    () => {
+      el.innerHTML = list.length
+        ? list.map((eq) => equipCardHtml(eq)).join('')
+        : _empty(
+            '🔧',
+            'Nenhum equipamento encontrado',
+            'Tente outro termo ou cadastre um novo.',
+            `<button class="btn btn--primary btn--sm btn--auto" data-action="open-modal" data-id="modal-add-eq">+ Novo equipamento</button>`,
+          );
+    },
+  );
 }
 
 export async function saveEquip() {

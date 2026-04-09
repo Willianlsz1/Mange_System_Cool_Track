@@ -1,6 +1,7 @@
 import { renderHist } from '../../views/historico.js';
 import { renderRelatorio } from '../../views/relatorio.js';
 import { updateHeader } from '../../views/dashboard.js';
+import { renderEquip } from '../../views/equipamentos.js';
 import { Photos } from '../../components/photos.js';
 import { getSuggestedPreventiveDays } from '../../../domain/maintenance.js';
 
@@ -75,6 +76,23 @@ function bindHistFilters() {
   document.getElementById('hist-equip')?.addEventListener('change', renderHist);
 }
 
+function bindEquipFilters() {
+  const input = document.getElementById('equip-busca');
+  if (!input) return;
+
+  let timeoutId;
+  const applyFilter = () => {
+    const value = (input.value || '').trim();
+    renderEquip(value);
+  };
+  const debounceFilter = () => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(applyFilter, 220);
+  };
+
+  input.addEventListener('input', debounceFilter);
+}
+
 function bindReportFilters() {
   ['rel-equip', 'rel-de', 'rel-ate'].forEach((id) => {
     document.getElementById(id)?.addEventListener('change', renderRelatorio);
@@ -122,6 +140,7 @@ export function initControllerHelpers() {
   bindEquipDetailsToggle();
   bindPreventiveSuggestion();
   bindPhotoInput();
+  bindEquipFilters();
   bindHistFilters();
   bindReportFilters();
   initTheme();
