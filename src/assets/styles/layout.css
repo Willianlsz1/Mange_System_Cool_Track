@@ -8,12 +8,10 @@
 }
 
 #app {
-  --app-header-offset: 96px;
   width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding-top: var(--app-header-offset);
 }
 
 /* HEADER */
@@ -397,9 +395,8 @@ main:focus {
 
 /* ── MOBILE (≤640px) ────────────────────────────── */
 @media (max-width: 640px) {
-<<<<<<< HEAD
-  #app {
-    --app-header-offset: 86px;
+  :root {
+    --app-header-height: 82px;
   }
 
   html,
@@ -410,10 +407,6 @@ main:focus {
   .dashboard-bento {
     max-width: 100%;
     overflow-x: hidden;
-=======
-  :root {
-    --app-header-height: 82px;
->>>>>>> a416a1d (Fix header to stay fixed and align history sticky offsets)
   }
 
   /* Header */
@@ -475,12 +468,8 @@ main:focus {
   .app-content {
     padding-bottom: 70px !important;
     padding-top: 8px !important;
-<<<<<<< HEAD
-    margin-top: 0 !important;
-    width: calc(100% - 16px);
-=======
     margin-top: var(--app-header-height) !important;
->>>>>>> a416a1d (Fix header to stay fixed and align history sticky offsets)
+    width: calc(100% - 16px);
   }
 
   /* Grids */

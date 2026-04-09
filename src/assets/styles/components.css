@@ -3102,7 +3102,7 @@ mark,
 /* Sticky header do histórico */
 .hist-sticky-header {
   position: sticky;
-  top: calc(var(--app-header-offset, 96px) + 4px);
+  top: calc(var(--app-header-height, 96px) + 4px);
   z-index: 40;
   background: transparent;
   padding: 6px 0;
@@ -3200,7 +3200,7 @@ mark,
 /* Mobile: sticky header compacto */
 @media (max-width: 639px) {
   .hist-sticky-header {
-    top: calc(var(--app-header-offset, 86px) + 2px);
+    top: calc(var(--app-header-height, 82px) + 2px);
   }
   .hist-equip-select {
     min-width: 96px;
@@ -3227,7 +3227,7 @@ mark,
 /* Desktop: sticky 60px (altura do header fixo) */
 @media (min-width: 1025px) {
   .hist-sticky-header {
-    top: calc(var(--app-header-offset, 96px) + 4px);
+    top: calc(var(--app-header-height, 96px) + 4px);
   }
 }
 /* ─── TOUR GUIADO ─── */
