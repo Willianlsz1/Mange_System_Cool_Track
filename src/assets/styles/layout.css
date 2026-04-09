@@ -389,6 +389,16 @@ main:focus {
 
 /* ── MOBILE (≤640px) ────────────────────────────── */
 @media (max-width: 640px) {
+  html,
+  body,
+  #app,
+  .app-content,
+  .view,
+  .dashboard-bento {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   /* Header */
   .app-header {
     position: sticky !important;
@@ -442,11 +452,12 @@ main:focus {
     padding-bottom: 70px !important;
     padding-top: 8px !important;
     margin-top: 0 !important;
+    width: calc(100% - 16px);
   }
 
   /* Grids */
   .kpi-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
   .dash-center-grid {
     grid-template-columns: 1fr;
@@ -459,6 +470,34 @@ main:focus {
   }
   .dash-criticos-list {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-bento,
+  .dash-section,
+  .dash-recentes-grid,
+  .dash-alertas-list,
+  .dash-criticos-list,
+  #dash-alertas-mini,
+  #dash-criticos,
+  #dash-recentes {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .dashboard-bento {
+    gap: 12px;
+  }
+
+  .dash-section {
+    padding: 10px;
+    background: var(--card);
+    box-shadow: none;
+  }
+
+  .dash-section-header__label {
+    white-space: normal;
+    line-height: 1.25;
   }
 
   /* Report toolbar mobile */

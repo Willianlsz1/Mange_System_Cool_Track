@@ -66,9 +66,9 @@ function _sparklineHtml(data, color = 'var(--primary)') {
 }
 
 function _alertContextText(count) {
-  if (count === 0) return { text: '✅ Excelente — nenhum alerta', cls: 'ok' };
-  if (count === 1) return { text: '⚠️ 1 alerta requer atenção', cls: 'warn' };
-  return { text: `🔴 ${count} alertas críticos`, cls: 'danger' };
+  if (count === 0) return { text: 'Sem alertas', cls: 'ok' };
+  if (count === 1) return { text: '1 alerta ativo', cls: 'warn' };
+  return { text: `${count} alertas ativos`, cls: 'danger' };
 }
 
 export function calcHealthScore(eqId) {
@@ -130,14 +130,33 @@ function _updateStorageIndicator() {
 }
 
 // ── Alert strip ────────────────────────────────────────
-function _renderAlertStrip(alerts) {
+function _renderAlertStrip(alerts, hasCritical = false) {
   const el = Utils.getEl('dash-alert-strip');
   if (!el) return;
   const primary = alerts[0];
-  if (!primary) {
+  if (!hasCritical && !primary) {
     el.innerHTML = `<div class="alert-strip alert-strip--none">
       <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Nenhuma falha crítica detectada</div></div>
+    </div>`;
+    return;
+  }
+  if (!primary) {
+    el.innerHTML = '';
+    return;
+  }
+
+  if (hasCritical) {
+    const actionMeta = _getAlertActionMeta(primary);
+    const preventiveText = primary.nextDueDate
+      ? `🛠 Prev.: ${Utils.formatDate(primary.nextDueDate)}`
+      : '🛠 Preventiva em atraso';
+    el.innerHTML = `<div class="critical-incident" role="alert" aria-live="assertive">
+      <div class="critical-incident__label">FALHA CRÍTICA</div>
+      <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento não identificado')}</div>
+      <div class="critical-incident__desc">⚠ ${Utils.escapeHtml(Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92))}</div>
+      <div class="critical-incident__meta">${Utils.escapeHtml(preventiveText)} · ↗ Ação imediata</div>
+      <button class="btn btn--danger btn--sm btn--fit-content critical-incident__cta" data-action="${actionMeta.action}" data-id="${actionMeta.id}">Registrar agora</button>
     </div>`;
     return;
   }
@@ -198,7 +217,7 @@ function _alertCardHtml(alert) {
       <div class="alert-card__title">${Utils.escapeHtml(alert.title)}</div>
       ${sub ? `<div class="alert-card__sub">${Utils.escapeHtml(sub)}</div>` : ''}
     </div>
-    <span class="alert-card__action">Agir →</span>
+    <span class="alert-card__action">↗ Agir</span>
   </div>`;
 }
 
@@ -432,17 +451,20 @@ export function updateHeader() {
   const bentAlert = Utils.getEl('hst-alert-bento');
   if (bentAlert) {
     bentAlert.textContent = String(activeCount);
-    bentAlert.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'warn' : 'ok'}`;
+    bentAlert.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'danger' : 'ok'}`;
   }
   const bentAlertSub = Utils.getEl('hst-alert-bento-sub');
   if (bentAlertSub)
     bentAlertSub.innerHTML =
       faultCount > 0
-        ? `<span class="kpi-trend kpi-trend--down">${faultCount} fora de operação</span>`
-        : `<span class="kpi-trend kpi-trend--ok">todos operando</span>`;
+        ? `<span class="kpi-trend kpi-trend--down">${faultCount} fora</span>`
+        : `<span class="kpi-trend kpi-trend--ok">estável</span>`;
 
   const failEl = Utils.getEl('hst-fail-bento');
-  if (failEl) failEl.textContent = String(faultCount);
+  if (failEl) {
+    failEl.textContent = String(faultCount);
+    failEl.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'danger' : 'ok'}`;
+  }
   const failSub = Utils.getEl('hst-fail-bento-sub');
   if (failSub) {
     const ctx = _alertContextText(alertCount);
@@ -467,6 +489,7 @@ export function renderDashboard() {
   const { equipamentos, registros } = getState();
   const faults = equipamentos.filter((e) => e.status === 'danger').length;
   const alerts = Alerts.getAll();
+  const hasCritical = alerts.some((alert) => alert.severity === 'danger');
   const critical = equipamentos
     .map((eq) => ({
       eq,
@@ -504,8 +527,13 @@ export function renderDashboard() {
   }
 
   OnboardingBanner.render();
-  _renderAlertStrip(alerts);
-  _renderNextAction(equipamentos, alerts);
+  _renderAlertStrip(alerts, hasCritical);
+  if (hasCritical) {
+    const nextActionEl = Utils.getEl('dash-next-action');
+    if (nextActionEl) nextActionEl.innerHTML = '';
+  } else {
+    _renderNextAction(equipamentos, alerts);
+  }
 
   const criticosEl = Utils.getEl('dash-criticos');
   if (criticosEl) {

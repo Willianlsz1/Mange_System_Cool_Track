@@ -175,6 +175,55 @@
   color: rgba(201, 245, 221, 0.82);
 }
 
+/* ─── INCIDENTE CRÍTICO (topo dominante) ─── */
+.critical-incident {
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.34), rgba(224, 48, 64, 0.14));
+  border: 1px solid rgba(224, 48, 64, 0.56);
+  border-left: 6px solid var(--danger);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-3);
+  box-shadow:
+    0 12px 28px rgba(4, 8, 16, 0.42),
+    inset 0 0 0 1px rgba(255, 229, 233, 0.06);
+}
+.critical-incident__label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #ffd8de;
+}
+.critical-incident__title {
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff1f3;
+  letter-spacing: -0.01em;
+}
+.critical-incident__desc {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #ffd8de;
+}
+.critical-incident__meta {
+  margin-top: 6px;
+  font-size: 10px;
+  color: rgba(255, 230, 235, 0.86);
+  font-family: var(--font-mono);
+}
+.critical-incident__cta {
+  margin-top: var(--space-3);
+  font-weight: 700;
+  min-height: 34px;
+  transition:
+    transform 0.12s ease,
+    filter 0.12s ease;
+}
+.critical-incident__cta:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
 /* ─── KPI CARDS (bento) ─── */
 .bento-kpi {
   background: var(--card);
@@ -217,7 +266,7 @@
 
 .bento-kpi__value {
   font-family: var(--font-mono);
-  font-size: 40px;
+  font-size: 46px;
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.04em;
@@ -239,16 +288,17 @@
 }
 
 .bento-kpi__sub {
-  margin-top: 6px;
-  font-size: 10px;
+  margin-top: 5px;
+  font-size: 9px;
   color: var(--text-2);
   font-weight: 500;
 }
 
 /* Health bar — agora é barra de eficiência */
 .health-bar {
-  height: 3px;
-  background: var(--surface-3);
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 2px;
   margin-top: var(--space-2);
   overflow: hidden;
@@ -258,6 +308,7 @@
   border-radius: 2px;
   width: 0%;
   transition: width 0.6s ease;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.22);
 }
 .health-bar__fill--ok {
   background: var(--success);
@@ -590,6 +641,13 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   white-space: nowrap;
+  transition:
+    transform 0.12s ease,
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+.badge:hover {
+  transform: translateY(-1px);
 }
 .badge--ok {
   background: var(--success-dim);
@@ -620,14 +678,16 @@
   cursor: pointer;
   transition:
     background 0.15s ease,
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 .alert-card:hover {
   background: rgba(232, 160, 32, 0.1);
   border-color: rgba(232, 160, 32, 0.3);
+  transform: translateY(-1px);
 }
 .alert-card--critical {
-  background: linear-gradient(90deg, rgba(224, 48, 64, 0.22), rgba(224, 48, 64, 0.08));
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.25), rgba(224, 48, 64, 0.1));
   border-color: rgba(224, 48, 64, 0.2);
   border-left-color: var(--danger);
 }
@@ -669,6 +729,10 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   white-space: nowrap;
+  transition: color 0.12s ease;
+}
+.alert-card:hover .alert-card__action {
+  color: var(--text);
 }
 
 /* ─── RECENT CARD ─── */
@@ -3683,4 +3747,57 @@ mark,
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .alert-strip,
+  .critical-incident,
+  .next-action-card,
+  .bento-kpi,
+  .alert-card,
+  .equip-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .critical-incident,
+  .alert-strip,
+  .alert-card,
+  .next-action-card {
+    background-image: none;
+  }
+
+  .critical-incident__title,
+  .critical-incident__desc,
+  .critical-incident__meta,
+  .alert-strip__title,
+  .alert-strip__desc,
+  .alert-strip__time,
+  .alert-card__equip,
+  .alert-card__title,
+  .alert-card__sub,
+  .alert-card__action,
+  .equip-card__name,
+  .equip-card__tag,
+  .kpi-trend,
+  .bento-kpi__sub {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .alert-strip__content,
+  .alert-card__body,
+  .critical-incident__meta,
+  .next-action-card__body {
+    min-width: 0;
+  }
+
+  .critical-incident__title {
+    font-size: 18px;
+  }
+
+  .bento-kpi {
+    padding: 14px;
+  }
 }
