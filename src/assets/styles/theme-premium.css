@@ -1116,3 +1116,20 @@ mark,
   border-color: rgba(0, 255, 136, 0.35);
   box-shadow: 0 0 12px rgba(0, 255, 136, 0.08);
 }
+
+@media (max-width: 640px) {
+  .dash-section,
+  .alert-strip,
+  .critical-incident,
+  .alert-card,
+  .next-action-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    background-image: none;
+  }
+
+  .dash-section {
+    background: var(--surface-card);
+  }
+}

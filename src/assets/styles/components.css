@@ -179,8 +179,6 @@
 .critical-incident {
   background: linear-gradient(90deg, rgba(224, 48, 64, 0.34), rgba(224, 48, 64, 0.14));
   border: 1px solid rgba(224, 48, 64, 0.56);
-  background: linear-gradient(90deg, rgba(224, 48, 64, 0.22), rgba(224, 48, 64, 0.08));
-  border: 1px solid rgba(224, 48, 64, 0.45);
   border-left: 6px solid var(--danger);
   border-radius: var(--radius-sm);
   padding: var(--space-3) var(--space-4);
@@ -3749,4 +3747,57 @@ mark,
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 8px;
+}
+
+@media (max-width: 640px) {
+  .alert-strip,
+  .critical-incident,
+  .next-action-card,
+  .bento-kpi,
+  .alert-card,
+  .equip-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .critical-incident,
+  .alert-strip,
+  .alert-card,
+  .next-action-card {
+    background-image: none;
+  }
+
+  .critical-incident__title,
+  .critical-incident__desc,
+  .critical-incident__meta,
+  .alert-strip__title,
+  .alert-strip__desc,
+  .alert-strip__time,
+  .alert-card__equip,
+  .alert-card__title,
+  .alert-card__sub,
+  .alert-card__action,
+  .equip-card__name,
+  .equip-card__tag,
+  .kpi-trend,
+  .bento-kpi__sub {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .alert-strip__content,
+  .alert-card__body,
+  .critical-incident__meta,
+  .next-action-card__body {
+    min-width: 0;
+  }
+
+  .critical-incident__title {
+    font-size: 18px;
+  }
+
+  .bento-kpi {
+    padding: 14px;
+  }
 }
