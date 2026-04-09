@@ -3815,4 +3815,54 @@ mark,
   .bento-kpi {
     padding: 14px;
   }
+
+  /* Ocorrências: card operacional compacto para uso em campo */
+  .equip-card__header {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+  .equip-card__type-icon--lg {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+  }
+  .equip-card__name {
+    font-size: 13px;
+    line-height: 1.2;
+  }
+  .equip-card__tag {
+    display: none;
+  }
+  .equip-card__status {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  .equip-card__health {
+    display: none;
+  }
+  .equip-card__metrics {
+    grid-template-columns: 1fr;
+  }
+  .equip-card__metric {
+    display: none;
+  }
+  .equip-card__metric:nth-child(2) {
+    display: block;
+    border-right: none;
+    padding: 7px 10px;
+  }
+  .equip-card__metric-value {
+    font-size: 11px;
+  }
+  .equip-card__footer {
+    padding: 7px 10px;
+    background: transparent;
+  }
+  .equip-card__footer-tecnico {
+    display: none;
+  }
+  .equip-card__cta {
+    font-size: 12px;
+    font-weight: 700;
+  }
 }
