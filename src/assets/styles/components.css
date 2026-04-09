@@ -59,30 +59,6 @@
   margin-bottom: var(--space-3);
 }
 
-/* ─── STAT PILL (header) ─── */
-.stat-pill {
-  padding: var(--space-2) var(--space-4);
-  border-right: 1px solid var(--border);
-}
-.stat-pill:last-child {
-  border-right: none;
-}
-.stat-pill__value {
-  font-family: var(--font-mono);
-  font-size: 20px;
-  font-weight: 500;
-  color: var(--text);
-  letter-spacing: -0.02em;
-  line-height: 1;
-}
-.stat-pill__label {
-  margin-top: 2px;
-  color: var(--text-3);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.07em;
-}
-
 /* ─── ALERTA STRIP (topo do dashboard) ─── */
 .alert-strip {
   background: linear-gradient(90deg, rgba(224, 48, 64, 0.2), rgba(224, 48, 64, 0.06));
@@ -789,6 +765,7 @@
   bottom: 0;
   width: 1px;
   background: rgba(255, 255, 255, 0.18);
+  transform: translateX(0.5px);
 }
 
 .timeline__item {
@@ -905,6 +882,16 @@
 .timeline__delete:hover {
   color: var(--danger);
   background: var(--danger-dim);
+}
+
+@media (hover: none), (pointer: coarse) {
+  .timeline__delete {
+    opacity: 1;
+    color: var(--danger);
+    background: var(--danger-dim);
+    border: 1px solid rgba(224, 48, 64, 0.24);
+    padding: var(--space-1) var(--space-2);
+  }
 }
 
 /* ─── TOAST ─── */
@@ -1201,7 +1188,7 @@ textarea.form-control {
 
 /* ─── BUTTONS ─── */
 .btn {
-  width: 100%;
+  width: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1260,6 +1247,10 @@ textarea.form-control {
 
 .btn--auto {
   width: auto;
+}
+
+.btn--full {
+  width: 100%;
 }
 
 .btn--centered {
@@ -1649,13 +1640,6 @@ mark,
   background: var(--danger);
 }
 
-/* ─── CHARTS ─── */
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: var(--space-3);
-}
-
 .chart-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -1911,6 +1895,7 @@ mark,
   /* ── FORM ROW — gap mais generoso ── */
   .form-row {
     gap: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .form-group {
@@ -1981,14 +1966,6 @@ mark,
   .search-bar .form-control {
     font-size: 14px;
     padding: 11px 14px 11px 38px;
-  }
-
-  /* ── STAT PILL no header ── */
-  .stat-pill__value {
-    font-size: 24px;
-  }
-  .stat-pill__label {
-    font-size: 10px;
   }
 }
 
@@ -3209,6 +3186,9 @@ mark,
   }
   .timeline {
     padding-left: 12px;
+  }
+  .timeline::before {
+    left: 1px;
   }
   .timeline__item {
     padding: 9px 10px;

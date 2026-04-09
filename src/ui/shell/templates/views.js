@@ -55,7 +55,7 @@ export function renderShellViews() {
               </div>
               <div id="dash-recentes"></div>
             </div>
-            <div class="dash-section">
+            <div class="dash-section dash-section--analysis">
               <div class="dash-section-header">
                 <span class="dash-section-header__label">ANÁLISE DO PARQUE</span>
                 <span class="dash-section-header__line"></span>

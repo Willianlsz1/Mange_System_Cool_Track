@@ -98,22 +98,11 @@ body::before {
 /* ===== NAVBAR FIXO — DESKTOP ONLY (≥1025px) ===== */
 @media (min-width: 1025px) {
   .nav-btn {
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 22px;
-    font-size: 14px;
-    font-weight: 500;
     color: rgba(255, 255, 255, 0.5);
-    border-left: none;
-    border-radius: var(--premier-radius);
     transition: all 0.2s ease;
-    position: relative;
   }
 
   .nav-btn__icon {
-    font-size: 16px;
     transition: transform 0.2s ease;
   }
 
@@ -129,37 +118,16 @@ body::before {
   .nav-btn.is-active {
     color: var(--neon-cyan);
     background: var(--neon-cyan-soft);
-    border-left: none;
     box-shadow:
       0 0 20px var(--neon-cyan-faint),
       inset 0 0 20px var(--neon-cyan-faint);
   }
 
-  .nav-btn.is-active::after {
-    display: none;
-  }
-
   .nav-btn__badge {
-    display: none;
-    position: absolute;
-    top: 2px;
-    right: 4px;
-    min-width: 16px;
-    height: 16px;
-    border-radius: 8px;
-    align-items: center;
-    justify-content: center;
     background: var(--danger);
     color: #fff;
-    font-size: 9px;
-    font-weight: 700;
     padding: 0 4px;
-    z-index: 10;
     line-height: 1;
-  }
-
-  .nav-btn__badge.is-visible {
-    display: flex;
   }
 
   .modal {

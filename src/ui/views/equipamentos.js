@@ -288,7 +288,7 @@ export async function viewEquip(id) {
       <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias</span></div>
       <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
     </div>
-    <button class="btn btn--primary btn--spaced-bottom" data-action="go-register-equip" data-id="${safeId}">+ Registrar Serviço</button>
+    <button class="btn btn--primary btn--spaced-bottom btn--full" data-action="go-register-equip" data-id="${safeId}">+ Registrar Serviço</button>
     <div class="eq-modal-summary">${regs.length} serviço(s) registrado(s)</div>
     ${regs
       .slice(0, 3)
