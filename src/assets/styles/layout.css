@@ -3,6 +3,10 @@
    CoolTrack Pro v5.0
    ============================================================ */
 
+:root {
+  --app-header-height: 96px;
+}
+
 #app {
   --app-header-offset: 96px;
   width: 100%;
@@ -150,7 +154,7 @@
 .app-content {
   flex: 1;
   width: min(var(--layout-max), calc(100% - 32px));
-  margin: 16px auto 0;
+  margin: calc(var(--app-header-height) + 16px) auto 0;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -393,6 +397,7 @@ main:focus {
 
 /* ── MOBILE (≤640px) ────────────────────────────── */
 @media (max-width: 640px) {
+<<<<<<< HEAD
   #app {
     --app-header-offset: 86px;
   }
@@ -405,11 +410,15 @@ main:focus {
   .dashboard-bento {
     max-width: 100%;
     overflow-x: hidden;
+=======
+  :root {
+    --app-header-height: 82px;
+>>>>>>> a416a1d (Fix header to stay fixed and align history sticky offsets)
   }
 
   /* Header */
   .app-header {
-    position: sticky !important;
+    position: fixed !important;
     top: 0 !important;
     z-index: 80 !important;
   }
@@ -466,8 +475,12 @@ main:focus {
   .app-content {
     padding-bottom: 70px !important;
     padding-top: 8px !important;
+<<<<<<< HEAD
     margin-top: 0 !important;
     width: calc(100% - 16px);
+=======
+    margin-top: var(--app-header-height) !important;
+>>>>>>> a416a1d (Fix header to stay fixed and align history sticky offsets)
   }
 
   /* Grids */

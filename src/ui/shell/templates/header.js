@@ -45,6 +45,8 @@ export function renderShellHeader() {
         <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Alternar tema" hidden>
           <span class="theme-toggle__icon" id="theme-icon">🌙</span>
         </button>
+        </div>
+      </div>
 
         <div class="header-stats-bar">
           <div class="header-stats-bar__inner" id="stats-bar-inner">
@@ -62,6 +64,6 @@ export function renderShellHeader() {
             </div>
           </div>
         </div>
-    </header>
+      </header>
 `;
 }
