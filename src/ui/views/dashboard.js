@@ -66,9 +66,9 @@ function _sparklineHtml(data, color = 'var(--primary)') {
 }
 
 function _alertContextText(count) {
-  if (count === 0) return { text: '✅ Excelente — nenhum alerta', cls: 'ok' };
-  if (count === 1) return { text: '⚠️ 1 alerta requer atenção', cls: 'warn' };
-  return { text: `🔴 ${count} alertas críticos`, cls: 'danger' };
+  if (count === 0) return { text: 'Sem alertas', cls: 'ok' };
+  if (count === 1) return { text: '1 alerta ativo', cls: 'warn' };
+  return { text: `${count} alertas ativos`, cls: 'danger' };
 }
 
 export function calcHealthScore(eqId) {
@@ -148,10 +148,14 @@ function _renderAlertStrip(alerts, hasCritical = false) {
 
   if (hasCritical) {
     const actionMeta = _getAlertActionMeta(primary);
+    const preventiveText = primary.nextDueDate
+      ? `🛠 Prev.: ${Utils.formatDate(primary.nextDueDate)}`
+      : '🛠 Preventiva em atraso';
     el.innerHTML = `<div class="critical-incident" role="alert" aria-live="assertive">
       <div class="critical-incident__label">FALHA CRÍTICA</div>
       <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento não identificado')}</div>
-      <div class="critical-incident__desc">${Utils.escapeHtml(Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92))}</div>
+      <div class="critical-incident__desc">⚠ ${Utils.escapeHtml(Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92))}</div>
+      <div class="critical-incident__meta">${Utils.escapeHtml(preventiveText)} · ↗ Ação imediata</div>
       <button class="btn btn--danger btn--sm btn--fit-content critical-incident__cta" data-action="${actionMeta.action}" data-id="${actionMeta.id}">Registrar agora</button>
     </div>`;
     return;
@@ -213,7 +217,7 @@ function _alertCardHtml(alert) {
       <div class="alert-card__title">${Utils.escapeHtml(alert.title)}</div>
       ${sub ? `<div class="alert-card__sub">${Utils.escapeHtml(sub)}</div>` : ''}
     </div>
-    <span class="alert-card__action">Agir →</span>
+    <span class="alert-card__action">↗ Agir</span>
   </div>`;
 }
 
@@ -453,8 +457,8 @@ export function updateHeader() {
   if (bentAlertSub)
     bentAlertSub.innerHTML =
       faultCount > 0
-        ? `<span class="kpi-trend kpi-trend--down">${faultCount} fora de operação</span>`
-        : `<span class="kpi-trend kpi-trend--ok">todos operando</span>`;
+        ? `<span class="kpi-trend kpi-trend--down">${faultCount} fora</span>`
+        : `<span class="kpi-trend kpi-trend--ok">estável</span>`;
 
   const failEl = Utils.getEl('hst-fail-bento');
   if (failEl) {
