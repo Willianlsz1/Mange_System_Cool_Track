@@ -777,16 +777,18 @@
 /* ─── TIMELINE ─── */
 .timeline {
   position: relative;
-  padding-left: 20px;
+  padding-left: 14px;
+  width: 100%;
+  max-width: 100%;
 }
 .timeline::before {
   content: '';
   position: absolute;
-  left: 6px;
+  left: 3px;
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--border-2);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .timeline__item {
@@ -794,25 +796,22 @@
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: var(--space-3);
+  padding: 10px 12px;
   margin-bottom: var(--space-2);
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
 }
 .timeline__item:hover {
-  background: var(--card-hover);
-  border-color: var(--border-2);
+  background: var(--card);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .timeline__item-inner {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-.timeline__item-body {
-  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px 10px;
   min-width: 0;
 }
 
@@ -821,17 +820,19 @@
   flex-direction: column;
   gap: 4px;
   flex-shrink: 0;
+  grid-column: 2;
+  grid-row: 1 / span 8;
 }
 
 .timeline__dot {
   position: absolute;
-  left: -17px;
-  top: 14px;
-  width: 8px;
-  height: 8px;
+  left: -13px;
+  top: 13px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--primary);
-  border: 2px solid var(--bg);
+  border: 1px solid var(--bg);
 }
 .timeline__dot--warn {
   background: var(--warning);
@@ -851,13 +852,13 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 .timeline__equip {
   color: var(--primary);
   font-size: 11px;
   font-weight: 500;
-  margin-bottom: var(--space-2);
+  margin-bottom: 6px;
   font-family: var(--font-mono);
 }
 .timeline__obs {
@@ -2243,14 +2244,14 @@ mark,
 
 /* ── Timeline: highlight pós-save ── */
 .timeline__item--highlight {
-  border-color: var(--primary) !important;
-  background: var(--primary-dim) !important;
+  border-color: rgba(0, 200, 232, 0.24) !important;
+  background: var(--card) !important;
   animation: highlight-fade 4s ease forwards;
 }
 @keyframes highlight-fade {
   0% {
-    border-color: var(--primary);
-    background: var(--primary-dim);
+    border-color: rgba(0, 200, 232, 0.24);
+    background: var(--card);
   }
   100% {
     border-color: var(--border);
@@ -3103,10 +3104,10 @@ mark,
   position: sticky;
   top: 80px; /* abaixo do app-header */
   z-index: 40;
-  background: var(--bg);
-  padding: 10px 0 8px;
+  background: transparent;
+  padding: 6px 0;
   margin-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .hist-sticky-header__top {
@@ -3137,12 +3138,13 @@ mark,
   display: flex;
   gap: 8px;
   align-items: center;
+  width: 100%;
 }
 
 .hist-equip-select {
-  width: auto;
+  width: min(220px, 36%);
   min-width: 140px;
-  max-width: 200px;
+  max-width: 240px;
   flex-shrink: 0;
   font-size: 13px;
   padding: 8px 10px;
@@ -3157,7 +3159,7 @@ mark,
   font-weight: 600;
   color: var(--text-3);
   letter-spacing: 0.04em;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 /* Badge "Mais recente" no primeiro card */
@@ -3177,7 +3179,7 @@ mark,
 
 /* Primeiro card: borda mais visível */
 .timeline__item--latest {
-  border-color: rgba(0, 200, 232, 0.2);
+  border-color: rgba(0, 200, 232, 0.16);
   border-left-width: 2px;
 }
 
@@ -3201,8 +3203,21 @@ mark,
     top: 70px;
   }
   .hist-equip-select {
-    min-width: 100px;
+    min-width: 96px;
+    width: 42%;
     font-size: 12px;
+  }
+  .hist-filters {
+    gap: 6px;
+  }
+  .timeline {
+    padding-left: 12px;
+  }
+  .timeline__item {
+    padding: 9px 10px;
+  }
+  .timeline__actions {
+    grid-row: 1 / span 9;
   }
   .hist-sticky-header__top .btn {
     display: none;
