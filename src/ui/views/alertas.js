@@ -6,6 +6,7 @@
 import { Utils } from '../../core/utils.js';
 import { Alerts } from '../../domain/alerts.js';
 import { emptyStateHtml } from '../components/emptyState.js';
+import { withSkeleton } from '../components/skeleton.js';
 
 function getAlertActionMeta(alert) {
   const id = Utils.escapeAttr(alert.eq?.id || '');
@@ -40,11 +41,18 @@ export function renderAlertas() {
   const list = Alerts.getAll();
   const el = Utils.getEl('lista-alertas');
   if (!el) return;
-  el.innerHTML = list.length
-    ? list.map(_alertCardHtml).join('')
-    : emptyStateHtml({
-        icon: 'OK',
-        title: 'Sem alertas ativos',
-        description: 'Todos os equipamentos estão dentro da rotina prevista.',
-      });
+
+  withSkeleton(
+    el,
+    { enabled: list.length >= 8, variant: 'alerts', count: Math.min(list.length, 5) },
+    () => {
+      el.innerHTML = list.length
+        ? list.map(_alertCardHtml).join('')
+        : emptyStateHtml({
+            icon: 'OK',
+            title: 'Sem alertas ativos',
+            description: 'Todos os equipamentos estão dentro da rotina prevista.',
+          });
+    },
+  );
 }

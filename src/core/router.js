@@ -1,5 +1,5 @@
 /**
- * CoolTrack Pro - Router v1.0
+ * CoolTrack Pro - Router v1.1
  * Roteamento puro — sem dependências de UI
  * Orquestrado pelo ui/controller.js que injeta os handlers de cada view
  */
@@ -8,6 +8,11 @@ const _routes = new Map(); // name → { onEnter, onLeave }
 let _current = null;
 let _transitioning = false;
 let _historyBound = false;
+
+function setRoutingState(isRouting) {
+  if (typeof document === 'undefined') return;
+  document.body?.classList.toggle('is-routing', isRouting);
+}
 
 function afterAnimation(element, fallbackMs, callback) {
   if (!element) {
@@ -57,12 +62,14 @@ export function goTo(name, params = {}, options = {}) {
   }
 
   _transitioning = true;
+  setRoutingState(true);
 
   const prevEl = _current ? document.getElementById(`view-${_current}`) : null;
   const nextEl = document.getElementById(`view-${name}`);
 
   if (!nextEl) {
     _transitioning = false;
+    setRoutingState(false);
     return;
   }
 
@@ -85,6 +92,7 @@ export function goTo(name, params = {}, options = {}) {
 
 function _activateRoute(name, el, params, options = {}) {
   const { fromHistory = false, replaceHistory = false } = options;
+
   // Atualizar nav
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('is-active'));
   document.getElementById(`nav-${name}`)?.classList.add('is-active');
@@ -108,6 +116,7 @@ function _activateRoute(name, el, params, options = {}) {
   // Scroll + foco
   document.getElementById('main-content')?.focus();
   window.scrollTo(0, 0);
+  requestAnimationFrame(() => setRoutingState(false));
 }
 
 export function currentRoute() {

@@ -1,0 +1,308 @@
+/* ============================================================
+   ux-polish.css — Premium UX refinement layer
+   Motion, feedback, skeletons and responsive rhythm
+   ============================================================ */
+
+:root {
+  --motion-fast: 140ms;
+  --motion-base: 220ms;
+  --motion-slow: 360ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --focus-ring: 0 0 0 2px rgba(0, 200, 232, 0.2);
+  --focus-ring-strong: 0 0 0 1px rgba(0, 200, 232, 0.45), 0 0 0 3px rgba(0, 200, 232, 0.14);
+}
+
+.app-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--primary) 35%, transparent 70%);
+  pointer-events: none;
+}
+
+body.is-routing .app-header::after {
+  opacity: 1;
+  animation: route-progress 900ms linear infinite;
+}
+
+@keyframes route-progress {
+  from {
+    transform: translateX(-26%);
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.75;
+  }
+  to {
+    transform: translateX(26%);
+    opacity: 0.3;
+  }
+}
+
+body.is-routing .view.active {
+  opacity: 0.92;
+}
+
+.status-indicator {
+  transition:
+    color var(--motion-base) var(--ease-standard),
+    opacity var(--motion-base) var(--ease-standard);
+}
+
+.status-indicator__dot {
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard);
+}
+
+.status-indicator--live .status-indicator__dot {
+  animation: dot-pulse 1.8s var(--ease-soft) infinite;
+}
+
+.status-indicator--syncing .status-indicator__dot {
+  animation: dot-sync 0.9s linear infinite;
+}
+
+@keyframes dot-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.22);
+    opacity: 0.72;
+  }
+}
+
+@keyframes dot-sync {
+  from {
+    transform: scale(0.9);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  to {
+    transform: scale(0.9);
+  }
+}
+
+:where(
+  .btn,
+  .nav-btn,
+  .header-icon-btn,
+  .theme-toggle,
+  .account-modal__action,
+  .equip-card,
+  .alert-card,
+  .recent-card,
+  .timeline__item,
+  .photo-drop,
+  .eq-expand-btn,
+  .ftx-path,
+  .timeline__delete,
+  .equip-card__delete,
+  .search-bar__clear
+) {
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard),
+    border-color var(--motion-base) var(--ease-standard),
+    background-color var(--motion-base) var(--ease-standard),
+    color var(--motion-base) var(--ease-standard),
+    opacity var(--motion-base) var(--ease-standard);
+}
+
+:where(
+  .btn,
+  .nav-btn,
+  .header-icon-btn,
+  .theme-toggle,
+  .account-modal__action,
+  .equip-card,
+  .alert-card,
+  .recent-card,
+  .timeline__item,
+  .photo-drop,
+  .eq-expand-btn,
+  .ftx-path,
+  .timeline__delete,
+  .equip-card__delete,
+  .search-bar__clear,
+  .form-control
+):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-strong);
+}
+
+.btn:active,
+.header-icon-btn:active,
+.theme-toggle:active,
+.nav-btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.form-control {
+  transition:
+    border-color var(--motion-base) var(--ease-standard),
+    box-shadow var(--motion-base) var(--ease-standard),
+    background-color var(--motion-base) var(--ease-standard);
+}
+
+.form-control:focus {
+  box-shadow: var(--focus-ring);
+}
+
+@media (hover: hover) {
+  .btn:hover,
+  .header-icon-btn:hover,
+  .theme-toggle:hover,
+  .account-modal__action:hover,
+  .eq-expand-btn:hover,
+  .search-bar__clear:hover {
+    transform: translateY(-1px);
+  }
+
+  .equip-card:hover,
+  .alert-card:hover,
+  .recent-card:hover,
+  .timeline__item:hover,
+  .photo-drop:hover,
+  .ftx-path:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.ui-skeleton-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.ui-skeleton-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+}
+
+.ui-skeleton-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 45%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.05) 55%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.15s linear infinite;
+}
+
+.ui-skeleton__line {
+  display: block;
+  height: 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 8px;
+}
+
+.ui-skeleton__line:last-child {
+  margin-bottom: 0;
+}
+
+.ui-skeleton__line--full {
+  width: 100%;
+}
+
+.ui-skeleton__line--medium {
+  width: 72%;
+}
+
+.ui-skeleton__line--short {
+  width: 44%;
+}
+
+.ui-skeleton-card--timeline .ui-skeleton__line--full {
+  width: 86%;
+}
+
+.ui-skeleton-card--timeline .ui-skeleton__line--short {
+  width: 38%;
+}
+
+.ui-skeleton-card--equipment .ui-skeleton__line--full {
+  width: 90%;
+}
+
+.ui-skeleton-card--alerts {
+  padding: 10px 12px;
+}
+
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (max-width: 640px) {
+  .toast-container {
+    top: calc(var(--app-header-height) + 8px);
+    right: 8px;
+    width: calc(100% - 16px);
+  }
+
+  .hist-sticky-header {
+    padding-top: 2px;
+    margin-bottom: 6px;
+  }
+
+  .hist-filters {
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .hist-equip-select {
+    min-width: 112px;
+    width: 40%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.is-routing .app-header::after,
+  .status-indicator--live .status-indicator__dot,
+  .status-indicator--syncing .status-indicator__dot,
+  .ui-skeleton-card::after {
+    animation: none;
+  }
+
+  :where(
+    .btn,
+    .nav-btn,
+    .header-icon-btn,
+    .theme-toggle,
+    .account-modal__action,
+    .equip-card,
+    .alert-card,
+    .recent-card,
+    .timeline__item,
+    .photo-drop,
+    .eq-expand-btn,
+    .ftx-path,
+    .timeline__delete,
+    .equip-card__delete,
+    .search-bar__clear,
+    .form-control
+  ) {
+    transition: none;
+  }
+}

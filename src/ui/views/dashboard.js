@@ -374,6 +374,21 @@ function _renderStatusChart() {
 // API PÚBLICA
 // ═══════════════════════════════════════════════════════
 
+function _setStatusIndicatorState(el, tone, options = {}) {
+  if (!el) return;
+  const { live = false, syncing = false } = options;
+  el.classList.remove(
+    'status-indicator--ok',
+    'status-indicator--warn',
+    'status-indicator--danger',
+    'status-indicator--live',
+    'status-indicator--syncing',
+  );
+  el.classList.add(`status-indicator--${tone}`);
+  if (live) el.classList.add('status-indicator--live');
+  if (syncing) el.classList.add('status-indicator--syncing');
+}
+
 export function updateHeader() {
   const { equipamentos, registros } = getState();
   const today = new Date();
@@ -412,16 +427,21 @@ export function updateHeader() {
     if (faultCount > 0) {
       statusSistema.hidden = true;
       statusFalhas.hidden = false;
+      _setStatusIndicatorState(statusFalhas, 'danger', { live: true });
       if (statusFalhasTxt)
         statusFalhasTxt.textContent = `${faultCount} falha${faultCount > 1 ? 's' : ''} ativa${faultCount > 1 ? 's' : ''}`;
     } else if (alertCount > 0) {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>Atenção requerida</span>`;
       statusSistema.hidden = false;
       statusFalhas.hidden = true;
+      _setStatusIndicatorState(statusSistema, 'warn', { live: true });
+      _setStatusIndicatorState(statusFalhas, 'danger');
     } else {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--ok"></span><span>Sistema operacional</span>`;
       statusSistema.hidden = false;
       statusFalhas.hidden = true;
+      _setStatusIndicatorState(statusSistema, 'ok');
+      _setStatusIndicatorState(statusFalhas, 'danger');
     }
   }
 
@@ -433,17 +453,20 @@ export function updateHeader() {
     if (syncStatus.state === 'syncing') {
       syncStatusEl.hidden = false;
       if (dot) dot.className = 'status-indicator__dot status-indicator__dot--ok';
+      _setStatusIndicatorState(syncStatusEl, 'ok', { live: true, syncing: true });
       syncStatusTxt.textContent =
         syncStatus.pendingOps > 1 ? 'Sincronizando alterações...' : 'Sincronizando...';
     } else if (syncStatus.state === 'pending') {
       syncStatusEl.hidden = false;
       if (dot) dot.className = 'status-indicator__dot status-indicator__dot--warn';
+      _setStatusIndicatorState(syncStatusEl, 'warn', { live: true });
       syncStatusTxt.textContent =
         syncStatus.pendingOps > 0
           ? `Sincronização pendente (${syncStatus.pendingOps})`
           : 'Sincronização pendente';
     } else {
       syncStatusEl.hidden = true;
+      _setStatusIndicatorState(syncStatusEl, 'ok');
     }
   }
 

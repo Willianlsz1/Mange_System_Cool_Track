@@ -91,8 +91,8 @@ export function renderShellViews() {
                 <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" />
                 <path d="M9.5 9.5L12 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
               </svg></span>
-            <input class="form-control search-bar__input" type="text" placeholder="Buscar por nome, TAG ou local..."
-              aria-label="Buscar equipamento" />
+                <input class="form-control search-bar__input" id="equip-busca" type="text" placeholder="Buscar por nome, TAG ou local..."
+                  aria-label="Buscar equipamento" />
           </div>
           <div id="lista-equip" role="list"></div>
         </div>
