@@ -130,14 +130,29 @@ function _updateStorageIndicator() {
 }
 
 // ── Alert strip ────────────────────────────────────────
-function _renderAlertStrip(alerts) {
+function _renderAlertStrip(alerts, hasCritical = false) {
   const el = Utils.getEl('dash-alert-strip');
   if (!el) return;
   const primary = alerts[0];
-  if (!primary) {
+  if (!hasCritical && !primary) {
     el.innerHTML = `<div class="alert-strip alert-strip--none">
       <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
       <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Nenhuma falha crítica detectada</div></div>
+    </div>`;
+    return;
+  }
+  if (!primary) {
+    el.innerHTML = '';
+    return;
+  }
+
+  if (hasCritical) {
+    const actionMeta = _getAlertActionMeta(primary);
+    el.innerHTML = `<div class="critical-incident" role="alert" aria-live="assertive">
+      <div class="critical-incident__label">FALHA CRÍTICA</div>
+      <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento não identificado')}</div>
+      <div class="critical-incident__desc">${Utils.escapeHtml(Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92))}</div>
+      <button class="btn btn--danger btn--sm btn--fit-content critical-incident__cta" data-action="${actionMeta.action}" data-id="${actionMeta.id}">Registrar agora</button>
     </div>`;
     return;
   }
@@ -432,7 +447,7 @@ export function updateHeader() {
   const bentAlert = Utils.getEl('hst-alert-bento');
   if (bentAlert) {
     bentAlert.textContent = String(activeCount);
-    bentAlert.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'warn' : 'ok'}`;
+    bentAlert.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'danger' : 'ok'}`;
   }
   const bentAlertSub = Utils.getEl('hst-alert-bento-sub');
   if (bentAlertSub)
@@ -442,7 +457,10 @@ export function updateHeader() {
         : `<span class="kpi-trend kpi-trend--ok">todos operando</span>`;
 
   const failEl = Utils.getEl('hst-fail-bento');
-  if (failEl) failEl.textContent = String(faultCount);
+  if (failEl) {
+    failEl.textContent = String(faultCount);
+    failEl.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'danger' : 'ok'}`;
+  }
   const failSub = Utils.getEl('hst-fail-bento-sub');
   if (failSub) {
     const ctx = _alertContextText(alertCount);
@@ -467,6 +485,7 @@ export function renderDashboard() {
   const { equipamentos, registros } = getState();
   const faults = equipamentos.filter((e) => e.status === 'danger').length;
   const alerts = Alerts.getAll();
+  const hasCritical = alerts.some((alert) => alert.severity === 'danger');
   const critical = equipamentos
     .map((eq) => ({
       eq,
@@ -504,8 +523,13 @@ export function renderDashboard() {
   }
 
   OnboardingBanner.render();
-  _renderAlertStrip(alerts);
-  _renderNextAction(equipamentos, alerts);
+  _renderAlertStrip(alerts, hasCritical);
+  if (hasCritical) {
+    const nextActionEl = Utils.getEl('dash-next-action');
+    if (nextActionEl) nextActionEl.innerHTML = '';
+  } else {
+    _renderNextAction(equipamentos, alerts);
+  }
 
   const criticosEl = Utils.getEl('dash-criticos');
   if (criticosEl) {
