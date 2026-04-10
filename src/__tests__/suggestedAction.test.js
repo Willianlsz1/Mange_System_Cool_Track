@@ -42,6 +42,7 @@ describe('suggested action engine', () => {
     expect([
       ACTION_CODE.CHECK_RECURRENT_CAUSE,
       ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE,
+      ACTION_CODE.REGISTER_PREVENTIVE,
     ]).toContain(result.actionCode);
     expect(result.actionReasons[0]).toContain('recorrentes');
   });
@@ -78,6 +79,7 @@ describe('suggested action engine', () => {
     expect([
       ACTION_CODE.CHECK_RECURRENT_CAUSE,
       ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE,
+      ACTION_CODE.REGISTER_PREVENTIVE,
     ]).toContain(result.actionCode);
     expect(result.actionReasons.length).toBeGreaterThan(0);
   });
