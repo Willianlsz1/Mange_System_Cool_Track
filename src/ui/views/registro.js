@@ -340,15 +340,11 @@ export async function saveRegistro() {
       equipamentos: prev.equipamentos.map((e) => {
         if (e.id !== equipId) return e;
         const op = getOperationalStatus({ status, lastStatus: status, ultimoRegistro: { status } });
-<<<<<<< codex/centralizar-e-padronizar-logica-do-cooltrack-veilfn
         return {
           ...e,
-          status: op.uiStatus === 'unknown' ? 'ok' : op.uiStatus,
+          status: op.uiStatus === 'unknown' ? e.status || 'ok' : op.uiStatus,
           statusDescricao: op.label,
         };
-=======
-        return { ...e, status: op.uiStatus === 'unknown' ? 'ok' : op.uiStatus, statusDescricao: op.label };
->>>>>>> main
       }),
     };
   });
