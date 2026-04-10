@@ -1,5 +1,6 @@
 import { getEquipmentMaintenanceContext, evaluateEquipmentRisk } from './maintenance.js';
 import { PRIORITY_LEVEL, evaluateEquipmentPriority } from './priorityEngine.js';
+import { getSuggestedAction as getCentralSuggestedAction } from '../core/equipmentRules.js';
 
 export const ACTION_CODE = {
   NONE: 'nenhuma_acao',
@@ -58,6 +59,15 @@ export function calculateSuggestedAction({
 } = {}) {
   const safeStatus = normalizeStatus(status);
   const highCriticidade = ['alta', 'critica'].includes(criticidade);
+  const centralAction = getCentralSuggestedAction({ status: safeStatus, daysToNext: preventiveOverdue ? -1 : 1, criticidade });
+
+  if (centralAction.requiresImmediateAction && (safeStatus === 'danger' || priorityLevel === PRIORITY_LEVEL.URGENTE)) {
+    return buildAction(ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE, [
+      'Equipamento fora de operação',
+      'Intervenção imediata necessária',
+      'Ação imediata obrigatória',
+    ]);
+  }
 
   if (safeStatus === 'danger') {
     return buildAction(ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE, [

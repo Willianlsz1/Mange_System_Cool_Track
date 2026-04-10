@@ -19,6 +19,7 @@ import {
 import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
 import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/suggestedAction.js';
 import { getActionPriorityScore } from '../../domain/actionPriority.js';
+import { getOperationalStatus } from '../../core/equipmentRules.js';
 
 // ── Labels internos ────────────────────────────────────
 const STATUS_OPERACIONAL = {
@@ -28,6 +29,16 @@ const STATUS_OPERACIONAL = {
 };
 const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
 const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'Alto risco' };
+
+const ALERT_SEVERITY_WEIGHT = { danger: 3, warn: 2, info: 1 };
+
+function _getMostSevereAlert(alerts = []) {
+  return [...alerts].sort(
+    (a, b) =>
+      (ALERT_SEVERITY_WEIGHT[b?.severity] || 0) - (ALERT_SEVERITY_WEIGHT[a?.severity] || 0) ||
+      (b?.sortScore || 0) - (a?.sortScore || 0),
+  )[0];
+}
 
 // ── Helpers privados de métricas ───────────────────────
 function _getMonthRange(monthsAgo = 0) {
@@ -142,7 +153,7 @@ function _updateStorageIndicator() {
 function _renderAlertStrip(alerts, hasCritical = false) {
   const el = Utils.getEl('dash-alert-strip');
   if (!el) return;
-  const primary = alerts[0];
+  const primary = _getMostSevereAlert(alerts);
   if (!hasCritical && !primary) {
     el.innerHTML = `<div class="alert-strip alert-strip--none">
       <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -272,7 +283,7 @@ function _renderNextAction(equipamentos, alerts) {
     return;
   }
 
-  const primaryAlert = alerts[0];
+  const primaryAlert = _getMostSevereAlert(alerts);
   if (primaryAlert) {
     const actionMeta = _getAlertActionMeta(primaryAlert);
     const cardClass =
@@ -586,7 +597,7 @@ export function renderDashboard() {
     })
     .filter(
       ({ eq, score, priority, hasAlert }) =>
-        hasAlert || eq.status !== 'ok' || score < 80 || priority.priorityLevel >= 2,
+        hasAlert || getOperationalStatus({ status: eq.status }).code !== 'ok' || score < 80 || priority.priorityLevel >= 2,
     )
     .sort(
       (a, b) =>
