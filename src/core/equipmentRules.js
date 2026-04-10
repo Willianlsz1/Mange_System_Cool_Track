@@ -145,7 +145,8 @@ export function validateOperationalPayload({ data, status } = {}) {
   if (data) {
     const parsed = new Date(data);
     if (Number.isNaN(parsed.getTime())) errors.push('Data inválida.');
-    else if (parsed.getTime() > now.getTime()) errors.push('Data do serviço não pode estar no futuro.');
+    else if (parsed.getTime() > now.getTime())
+      errors.push('Data do serviço não pode estar no futuro.');
   }
 
   if (status && !VALID_STATUS.includes(status)) {

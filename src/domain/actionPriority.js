@@ -1,7 +1,10 @@
 import { evaluateEquipmentRisk, getEquipmentMaintenanceContext } from './maintenance.js';
 import { evaluateEquipmentPriority } from './priorityEngine.js';
 import { evaluateEquipmentSuggestedAction } from './suggestedAction.js';
-import { getActionBucket as getCentralActionBucket, getOperationalStatus } from '../core/equipmentRules.js';
+import {
+  getActionBucket as getCentralActionBucket,
+  getOperationalStatus,
+} from '../core/equipmentRules.js';
 
 const CRITICIDADE_WEIGHT = { baixa: 4, media: 10, alta: 20, critica: 24 };
 const BUCKET_WEIGHT = { critico: 3, atencao: 2, monitoramento: 1 };
@@ -73,7 +76,16 @@ export function getActionPriorityScore(equipment, registros = []) {
   };
 }
 
+<<<<<<< codex/centralizar-e-padronizar-logica-do-cooltrack-veilfn
+export function getActionBucket({
+  status = 'ok',
+  daysToNext = null,
+  riskScore = 0,
+  ultimoRegistro = null,
+} = {}) {
+=======
 export function getActionBucket({ status = 'ok', daysToNext = null, riskScore = 0, ultimoRegistro = null } = {}) {
+>>>>>>> main
   const central = getCentralActionBucket({ status, daysToNext, ultimoRegistro });
   if (central === 'critico') return 'critico';
   if (central === 'atencao') return 'atencao';
