@@ -597,7 +597,10 @@ export function renderDashboard() {
     })
     .filter(
       ({ eq, score, priority, hasAlert }) =>
-        hasAlert || getOperationalStatus({ status: eq.status }).code !== 'ok' || score < 80 || priority.priorityLevel >= 2,
+        hasAlert ||
+        getOperationalStatus({ status: eq.status }).code !== 'ok' ||
+        score < 80 ||
+        priority.priorityLevel >= 2,
     )
     .sort(
       (a, b) =>

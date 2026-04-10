@@ -59,9 +59,16 @@ export function calculateSuggestedAction({
 } = {}) {
   const safeStatus = normalizeStatus(status);
   const highCriticidade = ['alta', 'critica'].includes(criticidade);
-  const centralAction = getCentralSuggestedAction({ status: safeStatus, daysToNext: preventiveOverdue ? -1 : 1, criticidade });
+  const centralAction = getCentralSuggestedAction({
+    status: safeStatus,
+    daysToNext: preventiveOverdue ? -1 : 1,
+    criticidade,
+  });
 
-  if (centralAction.requiresImmediateAction && (safeStatus === 'danger' || priorityLevel === PRIORITY_LEVEL.URGENTE)) {
+  if (
+    centralAction.requiresImmediateAction &&
+    (safeStatus === 'danger' || priorityLevel === PRIORITY_LEVEL.URGENTE)
+  ) {
     return buildAction(ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE, [
       'Equipamento fora de operação',
       'Intervenção imediata necessária',
