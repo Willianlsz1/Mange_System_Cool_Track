@@ -52,6 +52,7 @@ const CRITICIDADE_FACTOR = { baixa: 1.15, media: 1, alta: 0.85, critica: 0.7 };
 const CRITICIDADE_HEALTH_WEIGHT = { baixa: 0, media: 4, alta: 8, critica: 12 };
 const ALERT_PRIORITY_WEIGHT = { baixa: 4, media: 10, alta: 18, critica: 28 };
 const OPERACIONAL_WEIGHT = { baixa: 0, normal: 6, alta: 14 };
+const ALERT_SEVERITY_WEIGHT = { danger: 3, warn: 2, info: 1 };
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
@@ -623,5 +624,9 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
     }
   });
 
-  return alerts.sort((a, b) => b.sortScore - a.sortScore);
+  return alerts.sort(
+    (a, b) =>
+      (ALERT_SEVERITY_WEIGHT[b.severity] || 0) - (ALERT_SEVERITY_WEIGHT[a.severity] || 0) ||
+      b.sortScore - a.sortScore,
+  );
 }
