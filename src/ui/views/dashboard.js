@@ -18,7 +18,7 @@ import {
 } from '../../domain/maintenance.js';
 
 // ── Labels internos ────────────────────────────────────
-const STATUS_TECH = { ok: 'OPERANDO', warn: 'ATENÇÃO', danger: 'FALHA' };
+const STATUS_TECH = { ok: 'OPERANDO', warn: 'ALERTA', danger: 'FORA DE OPERAÇÃO' };
 
 // ── Helpers privados de métricas ───────────────────────
 function _getMonthRange(monthsAgo = 0) {
@@ -137,7 +137,7 @@ function _renderAlertStrip(alerts, hasCritical = false) {
   if (!hasCritical && !primary) {
     el.innerHTML = `<div class="alert-strip alert-strip--none">
       <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Nenhuma falha crítica detectada</div></div>
+      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Nenhuma anomalia crítica detectada</div></div>
     </div>`;
     return;
   }
@@ -152,7 +152,7 @@ function _renderAlertStrip(alerts, hasCritical = false) {
       ? `🛠 Prev.: ${Utils.formatDate(primary.nextDueDate)}`
       : '🛠 Preventiva em atraso';
     el.innerHTML = `<div class="critical-incident" role="alert" aria-live="assertive">
-      <div class="critical-incident__label">FALHA CRÍTICA</div>
+      <div class="critical-incident__label">ANOMALIA CRÍTICA</div>
       <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento não identificado')}</div>
       <div class="critical-incident__desc">⚠ ${Utils.escapeHtml(Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92))}</div>
       <div class="critical-incident__meta">${Utils.escapeHtml(preventiveText)} · ↗ Ação imediata</div>
@@ -448,7 +448,7 @@ export function updateHeader() {
       statusFalhas.hidden = false;
       _setStatusIndicatorState(statusFalhas, 'danger', { live: true });
       if (statusFalhasTxt)
-        statusFalhasTxt.textContent = `${faultCount} falha${faultCount > 1 ? 's' : ''} ativa${faultCount > 1 ? 's' : ''}`;
+        statusFalhasTxt.textContent = `${faultCount} anomalia${faultCount > 1 ? 's' : ''} crítica${faultCount > 1 ? 's' : ''} ativa${faultCount > 1 ? 's' : ''}`;
     } else if (alertCount > 0) {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>Atenção requerida</span>`;
       statusSistema.hidden = false;
@@ -547,7 +547,7 @@ export function renderDashboard() {
   if (greetEl) {
     greetEl.textContent =
       faults > 0
-        ? `${faults} Falha${faults > 1 ? 's' : ''} Detectada${faults > 1 ? 's' : ''}`
+        ? `${faults} anomalia${faults > 1 ? 's' : ''} operacional${faults > 1 ? 'is' : ''}`
         : alerts.length > 0
           ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
           : 'Sistema Operacional';

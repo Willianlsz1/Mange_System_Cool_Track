@@ -42,7 +42,7 @@ export function renderShellViews() {
                 <div class="bento-kpi__sub" id="hst-health-sub"></div>
               </div>
               <div class="bento-kpi bento-kpi--fail">
-                <div class="bento-kpi__label">FALHAS DETECTADAS</div>
+                <div class="bento-kpi__label">ANOMALIAS OPERACIONAIS</div>
                 <div class="bento-kpi__value bento-kpi__value--danger" id="hst-fail-bento">0</div>
                 <div class="bento-kpi__sub" id="hst-fail-bento-sub"></div>
               </div>
@@ -266,7 +266,7 @@ export function renderShellViews() {
 
         <!-- ALERTAS -->
         <div class="view" id="view-alertas">
-          <div class="section-title">Alertas e Falhas Detectadas</div>
+          <div class="section-title">Alertas e Anomalias Detectadas</div>
           <div id="lista-alertas" role="list"></div>
         </div>
 
