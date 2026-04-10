@@ -403,14 +403,23 @@ main:focus {
     --hist-sticky-gap: 2px;
   }
 
-  html,
-  body,
-  #app,
+  html {
+    max-width: 100%;
+  }
+
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  #app {
+    max-width: 100%;
+  }
+
   .app-content,
   .view,
   .dashboard-bento {
     max-width: 100%;
-    overflow-x: clip;
   }
 
   /* Header */
