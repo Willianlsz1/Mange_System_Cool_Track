@@ -3080,7 +3080,7 @@ mark,
 /* Sticky header do histórico */
 .hist-sticky-header {
   position: sticky;
-  top: calc(var(--app-header-total-height) + var(--hist-sticky-gap, 4px) + 4px);
+  top: 4px;
   z-index: 40;
   background: transparent;
   padding: 10px 0 8px;
@@ -3186,7 +3186,7 @@ mark,
 /* Mobile: sticky header compacto */
 @media (max-width: 639px) {
   .hist-sticky-header {
-    top: calc(var(--app-header-total-height) + 6px);
+    top: 4px;
     padding-top: 9px;
     margin-bottom: 12px;
   }
