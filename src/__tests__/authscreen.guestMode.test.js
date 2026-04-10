@@ -7,6 +7,7 @@ async function loadAuthScreen({ signInResult = { id: 'u-1' }, signUpResult = { i
     isValidEmail: vi.fn(() => true),
     signIn: vi.fn().mockResolvedValue(signInResult),
     signUp: vi.fn().mockResolvedValue(signUpResult),
+    signInWithGoogle: vi.fn().mockResolvedValue({ ok: true }),
   };
 
   const Toast = {
@@ -20,13 +21,16 @@ async function loadAuthScreen({ signInResult = { id: 'u-1' }, signUpResult = { i
     openPasswordResetEmailModal: vi.fn(),
   };
 
+  const trackEvent = vi.fn();
+
   vi.doMock('../core/auth.js', () => ({ Auth }));
   vi.doMock('../core/toast.js', () => ({ Toast }));
+  vi.doMock('../core/telemetry.js', () => ({ trackEvent }));
   vi.doMock('../ui/components/actionFeedback.js', () => ({ runAsyncAction }));
   vi.doMock('../ui/components/passwordRecoveryModal.js', () => ({ PasswordRecoveryModal }));
 
   const { AuthScreen } = await import('../ui/components/authscreen.js');
-  return { AuthScreen, Auth, runAsyncAction };
+  return { AuthScreen, Auth, runAsyncAction, trackEvent };
 }
 
 describe('AuthScreen guest-mode hygiene', () => {
@@ -69,5 +73,22 @@ describe('AuthScreen guest-mode hygiene', () => {
 
     expect(Auth.signUp).toHaveBeenCalledWith('novo@mail.com', '123456', 'Teste');
     expect(localStorage.getItem('cooltrack-guest-mode')).toBeNull();
+  });
+
+  it('starts google oauth with guest conversion context', async () => {
+    const { AuthScreen, Auth, trackEvent } = await loadAuthScreen();
+    localStorage.setItem('cooltrack-guest-mode', '1');
+
+    AuthScreen.show({ intent: 'guest-save' });
+    document.getElementById('btn-google-signin').click();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(trackEvent).toHaveBeenCalledWith(
+      'auth_google_clicked',
+      expect.objectContaining({ source: 'guest-save', wasGuest: true }),
+    );
+    expect(Auth.signInWithGoogle).toHaveBeenCalledWith({ source: 'guest-save', wasGuest: true });
   });
 });

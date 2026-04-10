@@ -169,10 +169,10 @@ export function applyQuickTemplate(templateId) {
 
 export async function saveRegistro() {
   if (localStorage.getItem('cooltrack-guest-mode') === '1') {
-    Toast.info('Crie uma conta grátis para salvar seus registros.');
+    Toast.info('Salvar meus dados com Google para persistir registros.');
     try {
       const { AuthScreen } = await import('../components/authscreen.js');
-      AuthScreen.show();
+      AuthScreen.show({ intent: 'guest-save' });
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,

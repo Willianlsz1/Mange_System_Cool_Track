@@ -1,3 +1,5 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 function createAuthSupabaseMock() {
   const onAuthStateChange = vi.fn();
   const profilesInsert = vi.fn().mockResolvedValue({ data: {}, error: null });
@@ -7,6 +9,7 @@ function createAuthSupabaseMock() {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u-1', email: 'a@b.com' } } }),
       signUp: vi.fn(),
       signInWithPassword: vi.fn(),
+      signInWithOAuth: vi.fn().mockResolvedValue({ data: {}, error: null }),
       signOut: vi.fn().mockResolvedValue({ error: null }),
       resetPasswordForEmail: vi.fn(),
       updateUser: vi.fn(),
@@ -22,18 +25,21 @@ async function loadAuthModule() {
   vi.resetModules();
   const supabaseMock = createAuthSupabaseMock();
   const toastMock = { error: vi.fn(), success: vi.fn(), warning: vi.fn(), info: vi.fn() };
+  const telemetryMock = { trackEvent: vi.fn() };
 
   vi.doMock('../core/supabase.js', () => ({ supabase: supabaseMock }));
   vi.doMock('../core/toast.js', () => ({ Toast: toastMock }));
+  vi.doMock('../core/telemetry.js', () => telemetryMock);
 
   const { Auth } = await import('../core/auth.js');
-  return { Auth, supabaseMock, toastMock };
+  return { Auth, supabaseMock, toastMock, telemetryMock };
 }
 
 describe('Auth integration wrapper', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.restoreAllMocks();
+    history.replaceState(null, '', '/');
   });
 
   it('handles signUp happy path and profile creation', async () => {
@@ -85,6 +91,42 @@ describe('Auth integration wrapper', () => {
     });
     await expect(Auth.signIn('a@b.com', 'wrong')).resolves.toBeNull();
     expect(toastMock.warning).toHaveBeenCalledWith('Email ou senha incorretos.');
+  });
+
+  it('starts google oauth with redirect and pending context', async () => {
+    const { Auth, supabaseMock } = await loadAuthModule();
+
+    const result = await Auth.signInWithGoogle({ source: 'auth-screen', wasGuest: true });
+
+    expect(result).toEqual({ ok: true });
+    expect(supabaseMock.auth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: expect.objectContaining({
+        redirectTo: expect.stringContaining(window.location.origin),
+      }),
+    });
+    expect(localStorage.getItem('cooltrack-oauth-pending-v1')).toContain('auth-screen');
+  });
+
+  it('finalizes oauth success and conversion telemetry', async () => {
+    const { Auth, telemetryMock } = await loadAuthModule();
+    localStorage.setItem(
+      'cooltrack-oauth-pending-v1',
+      JSON.stringify({ provider: 'google', source: 'guest-save', wasGuest: true }),
+    );
+    history.replaceState(null, '', '/?code=abc&state=def');
+
+    Auth.finalizeOAuthRedirect({ id: 'u-1' });
+
+    expect(telemetryMock.trackEvent).toHaveBeenCalledWith(
+      'auth_google_completed',
+      expect.objectContaining({ source: 'guest-save', wasGuest: true }),
+    );
+    expect(telemetryMock.trackEvent).toHaveBeenCalledWith(
+      'guest_converted_to_account',
+      expect.objectContaining({ method: 'google', source: 'guest-save' }),
+    );
+    expect(window.location.search).toBe('');
   });
 
   it('handles signOut flow', async () => {
