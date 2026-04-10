@@ -14,6 +14,38 @@ import { ErrorCodes, handleError } from '../../core/errors.js';
 import { uploadPendingPhotos } from '../../core/photoStorage.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
+const QUICK_TEMPLATE_MAP = {
+  limpeza: {
+    tipo: 'Limpeza de Filtros',
+    prioridade: 'media',
+    descricao:
+      'Limpeza preventiva realizada no equipamento. Filtros higienizados e operação validada em funcionamento normal.',
+  },
+  recarga_gas: {
+    tipo: 'Carga de Gás Refrigerante',
+    prioridade: 'alta',
+    descricao:
+      'Recarga de gás refrigerante aplicada após verificação de pressão e vedação. Sistema estabilizado para operação.',
+  },
+  troca_filtro: {
+    tipo: 'Limpeza de Filtros',
+    prioridade: 'media',
+    descricao:
+      'Troca de filtro executada para restabelecer vazão de ar e qualidade da operação. Equipamento testado após a substituição.',
+  },
+  inspecao: {
+    tipo: 'Inspeção Geral',
+    prioridade: 'baixa',
+    descricao:
+      'Inspeção técnica geral concluída com checklist visual e funcional. Sem anomalias críticas no momento.',
+  },
+  manutencao_corretiva: {
+    tipo: 'Manutenção Corretiva',
+    prioridade: 'alta',
+    descricao:
+      'Atendimento corretivo realizado para falha reportada em campo. Correção aplicada e equipamento reavaliado em funcionamento.',
+  },
+};
 
 // ── Barra de progresso do formulário ──────────────────
 const _fields = [
@@ -68,7 +100,7 @@ function _bindEquipChangeWarning() {
 // API PÚBLICA
 // ═══════════════════════════════════════════════════════
 
-export function initRegistro() {
+export function initRegistro(params = {}) {
   const formView = Utils.getEl('view-registro');
   if (!formView) return;
 
@@ -95,6 +127,28 @@ export function initRegistro() {
     const def = Profile.getDefaultTecnico();
     if (def) rTecnico.value = def;
   }
+
+  // Pré-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
+  if (params.equipId) Utils.setVal('r-equip', params.equipId);
+
+  const rPrioridade = Utils.getEl('r-prioridade');
+  if (rPrioridade && !rPrioridade.value) rPrioridade.value = 'media';
+}
+
+export function applyQuickTemplate(templateId) {
+  const template = QUICK_TEMPLATE_MAP[templateId];
+  if (!template) return;
+
+  Utils.setVal('r-tipo', template.tipo);
+  if (!Utils.getVal('r-obs').trim()) Utils.setVal('r-obs', template.descricao);
+  Utils.setVal('r-prioridade', template.prioridade);
+  Utils.setVal('r-data', Utils.nowDatetime());
+  if (!Utils.getVal('r-tecnico')) {
+    const def = Profile.getDefaultTecnico();
+    if (def) Utils.setVal('r-tecnico', def);
+  }
+  _updateProgressBar();
+  Toast.success('Ação rápida aplicada. Revise e toque em salvar.');
 }
 
 export async function saveRegistro() {
@@ -117,17 +171,20 @@ export async function saveRegistro() {
   const tipo = Utils.getVal('r-tipo');
   const obs = Utils.getVal('r-obs').trim();
   const tecnico = Utils.getVal('r-tecnico').trim();
+  const prioridade = Utils.getVal('r-prioridade') || 'media';
 
   const missing = [];
   if (!equipId) missing.push('Equipamento');
   if (!data) missing.push('Data');
   if (!tipo) missing.push('Tipo de Serviço');
   if (!tecnico) missing.push('Técnico Responsável');
-  if (!obs || obs.length < 10) missing.push('Descrição (mín. 10 caracteres)');
   if (missing.length) {
     Toast.warning(`Campos obrigatórios: ${missing.join(', ')}`);
     return;
   }
+
+  const descricaoFinal =
+    obs && obs.length >= 10 ? obs : `Serviço de ${tipo.toLowerCase()} registrado em modo rápido.`;
 
   const proxima = Utils.getVal('r-proxima');
   if (proxima && proxima < data.slice(0, 10)) {
@@ -153,8 +210,9 @@ export async function saveRegistro() {
               equipId,
               data,
               tipo,
-              obs,
+              obs: descricaoFinal,
               tecnico,
+              prioridade,
               status,
               pecas: Utils.getVal('r-pecas').trim(),
               proxima: Utils.getVal('r-proxima'),
@@ -238,12 +296,13 @@ export async function saveRegistro() {
           equipId,
           data,
           tipo,
-          obs,
+          obs: descricaoFinal,
           status,
           pecas: Utils.getVal('r-pecas').trim(),
           proxima,
           fotos: fotosRegistro,
           tecnico,
+          prioridade,
           custoPecas,
           custoMaoObra,
           assinatura: assinatura ? true : false,
@@ -280,10 +339,12 @@ export function clearRegistro(preserveEquip = false) {
     'r-tecnico',
     'r-custo-pecas',
     'r-custo-mao-obra',
+    'r-prioridade',
   ];
   if (!preserveEquip) toClear.push('r-equip');
   Utils.clearVals(...toClear);
   Utils.setVal('r-status', 'ok');
+  Utils.setVal('r-prioridade', 'media');
   Utils.setVal('r-data', Utils.nowDatetime());
   Photos.clear();
   document.getElementById(CONTAINER_ID)?.remove();
@@ -311,6 +372,7 @@ export function loadRegistroForEdit(id) {
   Utils.setVal('r-tipo', r.tipo);
   Utils.setVal('r-obs', r.obs);
   Utils.setVal('r-tecnico', r.tecnico);
+  Utils.setVal('r-prioridade', r.prioridade || 'media');
   Utils.setVal('r-pecas', r.pecas || '');
   Utils.setVal('r-custo-pecas', String(r.custoPecas || ''));
   Utils.setVal('r-custo-mao-obra', String(r.custoMaoObra || ''));

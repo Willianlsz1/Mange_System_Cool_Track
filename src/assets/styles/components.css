@@ -3099,6 +3099,29 @@ mark,
   border-bottom: 1px solid var(--border);
 }
 
+.registro-quick-actions {
+  margin-bottom: 16px;
+}
+
+.registro-quick-actions__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.registro-quick-actions__btn {
+  min-height: 42px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 10px 8px;
+}
+
+@media (max-width: 560px) {
+  .registro-quick-actions__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .registro-bloco:last-of-type {
   border-bottom: none;
   margin-bottom: 0;

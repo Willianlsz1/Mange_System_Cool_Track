@@ -123,6 +123,21 @@ export function renderShellViews() {
           <div class="section-title">O que foi feito hoje?</div>
           <div class="card">
             <div id="storage-indicator" class="storage-indicator" role="status" aria-live="polite" hidden></div>
+            <div class="registro-quick-actions">
+              <div class="registro-bloco__label">AÇÕES RÁPIDAS</div>
+              <div class="registro-quick-actions__grid">
+                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
+                  data-template="limpeza">Limpeza</button>
+                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
+                  data-template="recarga_gas">Recarga de gás</button>
+                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
+                  data-template="troca_filtro">Troca de filtro</button>
+                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
+                  data-template="inspecao">Inspeção</button>
+                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
+                  data-template="manutencao_corretiva">Manutenção corretiva</button>
+              </div>
+            </div>
             <div class="registro-bloco">
               <div class="registro-bloco__label">O SERVIÇO</div>
               <div class="form-group">
@@ -156,10 +171,10 @@ export function renderShellViews() {
                 </div>
               </div>
               <div class="form-group">
-                <label class="form-label" for="r-obs">Descreva o serviço *</label>
+                <label class="form-label" for="r-obs">Descreva o serviço</label>
                 <textarea id="r-obs" class="form-control registro-obs"
                   placeholder="O que foi encontrado e o que foi feito. Ex: Filtros sujos, limpeza realizada. Pressão de sucção 68 psi, dentro do normal. Sistema operando corretamente."
-                  required aria-required="true"></textarea>
+                  ></textarea>
                 <div class="form-hint">Seja específico — esse texto vai no relatório que você envia ao cliente</div>
               </div>
               <div class="form-group">
@@ -205,6 +220,14 @@ export function renderShellViews() {
               <div class="registro-bloco__label">O QUE VEM A SEGUIR</div>
               <div class="registro-bloco__desc">Como o equipamento saiu do serviço? Quando deve voltar?</div>
               <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="r-prioridade">Prioridade sugerida</label>
+                  <select id="r-prioridade" class="form-control">
+                    <option value="baixa">Baixa</option>
+                    <option value="media" selected>Média</option>
+                    <option value="alta">Alta</option>
+                  </select>
+                </div>
                 <div class="form-group">
                   <label class="form-label" for="r-status">Como ficou?</label>
                   <select id="r-status" class="form-control">
