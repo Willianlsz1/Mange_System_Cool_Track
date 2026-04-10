@@ -1,4 +1,5 @@
 import { evaluateEquipmentRisk, getEquipmentMaintenanceContext } from './maintenance.js';
+import { getPriority as getCentralPriority } from '../core/equipmentRules.js';
 
 export const PRIORITY_LEVEL = {
   OK: 1,
@@ -114,13 +115,26 @@ export function calculateActionPriority({
   daysToNext = null,
   recentCorrectiveCount = 0,
 } = {}) {
-  return classifyPriority({
+  const normalized = {
     riskScore: Number.isFinite(riskScore) ? riskScore : 0,
     criticidade: normalizeCriticidade(criticidade),
     status: normalizeStatus(status),
     daysToNext,
     recentCorrectiveCount: Number.isFinite(recentCorrectiveCount) ? recentCorrectiveCount : 0,
-  });
+  };
+  const central = getCentralPriority(normalized);
+  const base = classifyPriority(normalized);
+
+  if (central.level === 'alta' && base.priorityLevel < PRIORITY_LEVEL.ALTA) {
+    return {
+      ...base,
+      priorityLevel: PRIORITY_LEVEL.ALTA,
+      priorityLabel: PRIORITY_LABEL[PRIORITY_LEVEL.ALTA],
+      suggestedAction: 'Intervenção imediata / registrar corretiva',
+      priorityReasons: [...new Set([...central.reasons, ...base.priorityReasons])].slice(0, 3),
+    };
+  }
+  return base;
 }
 
 export function evaluateEquipmentPriority(equipamento, registros = []) {
