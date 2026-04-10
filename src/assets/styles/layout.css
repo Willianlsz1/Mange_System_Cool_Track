@@ -9,6 +9,7 @@
   --app-header-total-height: calc(var(--app-header-top-height) + var(--app-header-stats-height));
   --app-header-height: var(--app-header-total-height);
   --app-content-top-gap: 16px;
+  --app-nav-height: 80px;
   --hist-sticky-gap: 4px;
 }
 
@@ -30,7 +31,6 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: calc(var(--app-header-total-height) + var(--app-content-top-gap));
 }
 
 /* HEADER */
@@ -177,6 +177,7 @@ body {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  padding-top: calc(var(--app-header-total-height) + var(--app-content-top-gap));
 }
 
 /* NAV — mobile: fixed bottom */
@@ -275,7 +276,7 @@ main {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
-  padding: 0 0 calc(80px + env(safe-area-inset-bottom));
+  padding: 0 0 calc(var(--app-nav-height) + env(safe-area-inset-bottom));
 }
 main:focus {
   outline: none;

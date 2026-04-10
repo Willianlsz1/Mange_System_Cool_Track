@@ -23,7 +23,7 @@ describe('shell bootstrap', () => {
     expect(document.body.querySelectorAll('.app-header')).toHaveLength(1);
   });
 
-  it('syncs the total header height into the global layout variables', async () => {
+  it('syncs shell metrics into global layout variables', async () => {
     document.body.innerHTML = '<div id="app"></div>';
 
     const { initAppShell } = await import('../ui/shell.js');
@@ -35,8 +35,16 @@ describe('shell bootstrap', () => {
       throw new Error('Header not found');
     }
 
-    const getBoundingClientRect = vi.spyOn(header, 'getBoundingClientRect');
-    getBoundingClientRect.mockReturnValue({ height: 142 });
+    const nav = document.body.querySelector('.app-nav');
+    if (!nav) {
+      throw new Error('Bottom nav not found');
+    }
+
+    const headerRectSpy = vi.spyOn(header, 'getBoundingClientRect');
+    headerRectSpy.mockReturnValue({ height: 142 });
+
+    const navRectSpy = vi.spyOn(nav, 'getBoundingClientRect');
+    navRectSpy.mockReturnValue({ height: 76 });
 
     initAppShell();
 
@@ -44,6 +52,9 @@ describe('shell bootstrap', () => {
       '142px',
     );
     expect(document.documentElement.style.getPropertyValue('--app-header-height')).toBe('142px');
-    getBoundingClientRect.mockRestore();
+    expect(document.documentElement.style.getPropertyValue('--app-nav-height')).toBe('76px');
+
+    headerRectSpy.mockRestore();
+    navRectSpy.mockRestore();
   });
 });
