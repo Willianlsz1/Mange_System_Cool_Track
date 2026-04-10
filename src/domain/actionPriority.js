@@ -43,7 +43,8 @@ export function getActionPriorityScore(equipment, registros = []) {
   }
 
   score += priority.priorityLevel * 12;
-  if (priority.priorityLevel >= 3) reasons.push(`Prioridade ${priority.priorityLabel.toLowerCase()}`);
+  if (priority.priorityLevel >= 3)
+    reasons.push(`Prioridade ${priority.priorityLabel.toLowerCase()}`);
 
   score += CRITICIDADE_WEIGHT[criticidade] || 0;
   if (criticidade === 'alta' || criticidade === 'critica')
