@@ -7,6 +7,7 @@ import { initAppShell } from './ui/shell.js';
 import { FirstTimeExperience } from './ui/components/onboarding.js';
 import { Auth } from './core/auth.js';
 import { AuthScreen } from './ui/components/authscreen.js';
+import { LandingPage } from './ui/components/landingPage.js';
 import { PasswordRecoveryModal } from './ui/components/passwordRecoveryModal.js';
 import { Storage } from './core/storage.js';
 import { Tour } from './ui/components/tour.js';
@@ -21,16 +22,18 @@ import { ErrorCodes, handleError } from './core/errors.js';
 
 async function bootstrap() {
   try {
-    initAppShell();
     await Auth.tryHandlePasswordRecovery(() => PasswordRecoveryModal.openPasswordRecoveryModal());
 
     const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
     const user = await Auth.getUser();
 
     if (!user && !isGuest) {
-      AuthScreen.show();
+      LandingPage.render({ onLogin: () => AuthScreen.show() });
       return;
     }
+
+    LandingPage.clear();
+    initAppShell();
 
     // Carrega dados do Supabase se logado, localStorage se guest
     if (!isGuest) {
