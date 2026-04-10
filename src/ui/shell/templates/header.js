@@ -25,7 +25,7 @@ export function renderShellHeader() {
             </div>
             <div class="status-indicator" id="status-falhas" hidden>
               <span class="status-indicator__dot status-indicator__dot--danger"></span>
-              <span id="status-falhas-txt">0 falhas</span>
+              <span id="status-falhas-txt">0 anomalias críticas</span>
             </div>
             <div class="status-indicator" id="sync-status" hidden>
               <span class="status-indicator__dot status-indicator__dot--warn"></span>

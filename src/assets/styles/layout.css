@@ -319,6 +319,13 @@ main:focus {
   align-items: start;
   width: 100%;
 }
+.dashboard-operational-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 12px;
+  width: 100%;
+  align-items: stretch;
+}
 .dash-criticos-list {
   display: grid;
   grid-template-columns: 1fr;
@@ -506,6 +513,9 @@ main:focus {
   .dash-center-grid {
     grid-template-columns: 1fr;
   }
+  .dashboard-operational-grid {
+    grid-template-columns: 1fr;
+  }
   .dash-recentes-grid {
     grid-template-columns: 1fr;
   }
@@ -611,6 +621,9 @@ main:focus {
   }
   .dash-center-grid {
     grid-template-columns: minmax(0, 1fr) 260px;
+  }
+  .dashboard-operational-grid {
+    grid-template-columns: 1fr;
   }
   .dash-recentes-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
