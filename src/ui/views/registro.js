@@ -12,6 +12,7 @@ import { SavedHighlight } from '../components/onboarding.js';
 import { Profile } from '../../features/profile.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
 import { uploadPendingPhotos } from '../../core/photoStorage.js';
+import { getOperationalStatus, validateOperationalPayload } from '../../core/equipmentRules.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
 const QUICK_TEMPLATE_MAP = {
@@ -46,6 +47,14 @@ const QUICK_TEMPLATE_MAP = {
       'Atendimento corretivo realizado para falha reportada em campo. Correção aplicada e equipamento reavaliado em funcionamento.',
   },
 };
+
+const EDITING_KEY = 'cooltrack-editing-id';
+
+function resetEditingState() {
+  sessionStorage.removeItem(EDITING_KEY);
+  const formView = Utils.getEl('view-registro');
+  if (formView) formView.dataset.editMode = '0';
+}
 
 // ── Barra de progresso do formulário ──────────────────
 const _fields = [
@@ -83,6 +92,12 @@ function _bindEquipChangeWarning() {
   if (!sel) return;
   sel.addEventListener('change', () => {
     const id = sel.value;
+    const currentEditingId = sessionStorage.getItem(EDITING_KEY);
+    if (currentEditingId) {
+      resetEditingState();
+      clearRegistro();
+      if (id) Utils.setVal('r-equip', id);
+    }
     document.getElementById('reg-pending-warning')?.remove();
     if (!id) return;
     const lastReg = lastRegForEquip(id);
@@ -129,6 +144,7 @@ export function initRegistro(params = {}) {
   }
 
   // Pré-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
+  if (!params.editRegistroId) resetEditingState();
   if (params.equipId) Utils.setVal('r-equip', params.equipId);
 
   const rPrioridade = Utils.getEl('r-prioridade');
@@ -193,13 +209,18 @@ export async function saveRegistro() {
   }
 
   const status = Utils.getVal('r-status');
+  const validation = validateOperationalPayload({ data, status });
+  if (!validation.valid) {
+    Toast.error(validation.errors[0]);
+    return;
+  }
   const custoPecas = parseFloat(Utils.getVal('r-custo-pecas') || '0') || 0;
   const custoMaoObra = parseFloat(Utils.getVal('r-custo-mao-obra') || '0') || 0;
 
   Profile.saveLastTecnico(tecnico);
 
   // Modo edição — atualiza registro existente
-  const editingId = sessionStorage.getItem('cooltrack-editing-id');
+  const editingId = sessionStorage.getItem(EDITING_KEY);
   if (editingId) {
     setState((prev) => ({
       ...prev,
@@ -221,9 +242,13 @@ export async function saveRegistro() {
             }
           : r,
       ),
-      equipamentos: prev.equipamentos.map((e) => (e.id === equipId ? { ...e, status } : e)),
+      equipamentos: prev.equipamentos.map((e) => {
+        if (e.id !== equipId) return e;
+        const op = getOperationalStatus({ status, lastStatus: status, ultimoRegistro: { status } });
+        return { ...e, status: op.uiStatus === 'unknown' ? 'ok' : op.uiStatus, statusDescricao: op.label };
+      }),
     }));
-    sessionStorage.removeItem('cooltrack-editing-id');
+    resetEditingState();
     clearRegistro();
     Toast.success('Registro atualizado.');
     goTo('historico');
@@ -308,7 +333,11 @@ export async function saveRegistro() {
           assinatura: assinatura ? true : false,
         },
       ],
-      equipamentos: prev.equipamentos.map((e) => (e.id === equipId ? { ...e, status } : e)),
+      equipamentos: prev.equipamentos.map((e) => {
+        if (e.id !== equipId) return e;
+        const op = getOperationalStatus({ status, lastStatus: status, ultimoRegistro: { status } });
+        return { ...e, status: op.uiStatus === 'unknown' ? 'ok' : op.uiStatus, statusDescricao: op.label };
+      }),
     };
   });
 
@@ -343,6 +372,7 @@ export function clearRegistro(preserveEquip = false) {
   ];
   if (!preserveEquip) toClear.push('r-equip');
   Utils.clearVals(...toClear);
+  resetEditingState();
   Utils.setVal('r-status', 'ok');
   Utils.setVal('r-prioridade', 'media');
   Utils.setVal('r-data', Utils.nowDatetime());
@@ -365,7 +395,9 @@ export function loadRegistroForEdit(id) {
   const r = registros.find((r) => r.id === id);
   if (!r) return;
 
-  sessionStorage.setItem('cooltrack-editing-id', id);
+  sessionStorage.setItem(EDITING_KEY, id);
+  const formViewEdit = Utils.getEl('view-registro');
+  if (formViewEdit) formViewEdit.dataset.editMode = '1';
 
   Utils.setVal('r-equip', r.equipId);
   Utils.setVal('r-data', r.data);
