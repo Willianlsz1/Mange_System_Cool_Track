@@ -1,6 +1,7 @@
 import { evaluateEquipmentRisk, getEquipmentMaintenanceContext } from './maintenance.js';
 import { evaluateEquipmentPriority } from './priorityEngine.js';
 import { evaluateEquipmentSuggestedAction } from './suggestedAction.js';
+import { getActionBucket as getCentralActionBucket, getOperationalStatus } from '../core/equipmentRules.js';
 
 const CRITICIDADE_WEIGHT = { baixa: 4, media: 10, alta: 20, critica: 24 };
 const BUCKET_WEIGHT = { critico: 3, atencao: 2, monitoramento: 1 };
@@ -59,6 +60,7 @@ export function getActionPriorityScore(equipment, registros = []) {
     status: context.equipamento.status,
     daysToNext: context.daysToNext,
     riskScore: risk.score,
+    ultimoRegistro: context.ultimoRegistro,
   });
 
   score += BUCKET_WEIGHT[group] * 100;
@@ -71,10 +73,12 @@ export function getActionPriorityScore(equipment, registros = []) {
   };
 }
 
-export function getActionBucket({ status = 'ok', daysToNext = null, riskScore = 0 } = {}) {
-  if (status === 'danger') return 'critico';
-  if (daysToNext != null && daysToNext <= -1) return 'critico';
-  if (status === 'warn') return 'atencao';
-  if (riskScore >= 60) return 'atencao';
+export function getActionBucket({ status = 'ok', daysToNext = null, riskScore = 0, ultimoRegistro = null } = {}) {
+  const central = getCentralActionBucket({ status, daysToNext, ultimoRegistro });
+  if (central === 'critico') return 'critico';
+  if (central === 'atencao') return 'atencao';
+
+  const op = getOperationalStatus({ status, daysToNext, ultimoRegistro });
+  if (op.code === 'atencao' || riskScore >= 60) return 'atencao';
   return 'monitoramento';
 }
