@@ -3,6 +3,7 @@ import { evaluateEquipmentPriority } from './priorityEngine.js';
 import { evaluateEquipmentSuggestedAction } from './suggestedAction.js';
 
 const CRITICIDADE_WEIGHT = { baixa: 4, media: 10, alta: 20, critica: 24 };
+const BUCKET_WEIGHT = { critico: 3, atencao: 2, monitoramento: 1 };
 
 function normalizeCriticidade(value = 'media') {
   return ['baixa', 'media', 'alta', 'critica'].includes(value) ? value : 'media';
@@ -54,9 +55,13 @@ export function getActionPriorityScore(equipment, registros = []) {
   score += Math.round(risk.score * 0.35);
   if (risk.score >= 70) reasons.push('Score de risco elevado');
 
-  let group = 'monitoramento';
-  if (score >= 110) group = 'critico';
-  else if (score >= 70) group = 'atencao';
+  const group = getActionBucket({
+    status: context.equipamento.status,
+    daysToNext: context.daysToNext,
+    riskScore: risk.score,
+  });
+
+  score += BUCKET_WEIGHT[group] * 100;
 
   return {
     actionPriorityScore: score,
@@ -64,4 +69,12 @@ export function getActionPriorityScore(equipment, registros = []) {
     reasons: reasons.slice(0, 3),
     suggestedAction,
   };
+}
+
+export function getActionBucket({ status = 'ok', daysToNext = null, riskScore = 0 } = {}) {
+  if (status === 'danger') return 'critico';
+  if (daysToNext != null && daysToNext <= -1) return 'critico';
+  if (status === 'warn') return 'atencao';
+  if (riskScore >= 60) return 'atencao';
+  return 'monitoramento';
 }
