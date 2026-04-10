@@ -1,12 +1,76 @@
 import { supabase } from './supabase.js';
 import { Toast } from './toast.js';
 import { AppError, ErrorCodes, handleError } from './errors.js';
+import { trackEvent } from './telemetry.js';
+
+const OAUTH_PENDING_KEY = 'cooltrack-oauth-pending-v1';
 
 function getPasswordResetRedirectUrl() {
   const envRedirect = import.meta.env?.VITE_AUTH_REDIRECT_URL;
   if (typeof envRedirect === 'string' && envRedirect.trim()) return envRedirect.trim();
 
   return new URL(window.location.pathname, window.location.origin).toString();
+}
+
+function getOAuthRedirectUrl() {
+  const envRedirect = import.meta.env?.VITE_AUTH_REDIRECT_URL;
+  if (typeof envRedirect === 'string' && envRedirect.trim()) return envRedirect.trim();
+
+  return new URL(
+    window.location.pathname + window.location.search,
+    window.location.origin,
+  ).toString();
+}
+
+function hasOAuthParams(url) {
+  const params = url.searchParams;
+  return (
+    params.has('code') ||
+    params.has('state') ||
+    params.has('error') ||
+    params.has('error_description') ||
+    params.has('provider_token') ||
+    params.has('provider_refresh_token')
+  );
+}
+
+function cleanOAuthUrl() {
+  const url = new URL(window.location.href);
+  if (!hasOAuthParams(url)) return;
+
+  [
+    'code',
+    'state',
+    'error',
+    'error_description',
+    'provider_token',
+    'provider_refresh_token',
+  ].forEach((key) => url.searchParams.delete(key));
+
+  const query = url.searchParams.toString();
+  const nextUrl = `${url.pathname}${query ? `?${query}` : ''}${url.hash || ''}`;
+  history.replaceState(history.state, '', nextUrl);
+}
+
+function persistOAuthPending(payload = {}) {
+  const safePayload = {
+    provider: 'google',
+    source: payload.source || 'unknown',
+    wasGuest: payload.wasGuest === true,
+    startedAt: new Date().toISOString(),
+  };
+  localStorage.setItem(OAUTH_PENDING_KEY, JSON.stringify(safePayload));
+}
+
+function consumeOAuthPending() {
+  const raw = localStorage.getItem(OAUTH_PENDING_KEY);
+  if (!raw) return null;
+  localStorage.removeItem(OAUTH_PENDING_KEY);
+  try {
+    return JSON.parse(raw);
+  } catch (_error) {
+    return null;
+  }
 }
 
 export const Auth = {
@@ -43,7 +107,6 @@ export const Auth = {
         return null;
       }
 
-      // Cria o perfil junto
       if (data.user) {
         await supabase.from('profiles').insert({
           id: data.user.id,
@@ -82,6 +145,83 @@ export const Auth = {
       });
       return null;
     }
+  },
+
+  async signInWithGoogle({ source = 'auth-screen', wasGuest = false } = {}) {
+    try {
+      persistOAuthPending({ source, wasGuest });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: getOAuthRedirectUrl(),
+        },
+      });
+
+      if (error) {
+        localStorage.removeItem(OAUTH_PENDING_KEY);
+        handleError(
+          new AppError(
+            'Não foi possível iniciar o login com Google.',
+            ErrorCodes.AUTH_FAILED,
+            'warning',
+            {
+              action: 'signInWithGoogle',
+              detail: error.message,
+            },
+          ),
+        );
+        return { ok: false, message: 'Não foi possível iniciar o login com Google.' };
+      }
+
+      return { ok: true };
+    } catch (error) {
+      localStorage.removeItem(OAUTH_PENDING_KEY);
+      handleError(error, {
+        code: ErrorCodes.AUTH_FAILED,
+        message: 'Falha ao abrir login com Google. Tente novamente.',
+        context: { action: 'signInWithGoogle' },
+      });
+      return { ok: false, message: 'Falha ao abrir login com Google. Tente novamente.' };
+    }
+  },
+
+  finalizeOAuthRedirect(user) {
+    const url = new URL(window.location.href);
+    const oauthError = url.searchParams.get('error');
+    const oauthErrorDescription = url.searchParams.get('error_description');
+    const pending = consumeOAuthPending();
+    const hasOAuthContext = Boolean(oauthError || pending || hasOAuthParams(url));
+
+    if (!hasOAuthContext) return;
+
+    if (oauthError) {
+      trackEvent('auth_google_failed', {
+        source: pending?.source || 'unknown',
+        reason: oauthError,
+      });
+      Toast.error(
+        oauthErrorDescription
+          ? `Falha no login com Google: ${oauthErrorDescription}`
+          : 'Falha no login com Google. Tente novamente.',
+      );
+      cleanOAuthUrl();
+      return;
+    }
+
+    if (user && pending?.provider === 'google') {
+      trackEvent('auth_google_completed', {
+        source: pending.source,
+        wasGuest: pending.wasGuest,
+      });
+      if (pending.wasGuest) {
+        trackEvent('guest_converted_to_account', {
+          method: 'google',
+          source: pending.source,
+        });
+      }
+    }
+
+    cleanOAuthUrl();
   },
 
   async signOut() {

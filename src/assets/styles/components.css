@@ -3968,6 +3968,37 @@ mark,
   color: rgba(138, 170, 200, 0.4);
 }
 
+.auth-btn-google {
+  width: 100%;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin: 4px 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #101f31;
+  color: #e8f2fa;
+}
+
+.auth-btn-google--primary {
+  background: linear-gradient(135deg, #00c8e8, #00a8ff);
+  color: #07111f;
+  border: none;
+}
+
+.auth-btn-google:hover {
+  opacity: 0.92;
+}
+
+.auth-divider {
+  text-align: center;
+  font-size: 12px;
+  color: #6a8ba8;
+  margin: 2px 0 12px;
+}
+
 .auth-btn,
 .auth-btn-guest {
   width: 100%;

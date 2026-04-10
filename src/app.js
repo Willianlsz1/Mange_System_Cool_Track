@@ -26,6 +26,7 @@ async function bootstrap() {
 
     let isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
     const user = await Auth.getUser();
+    Auth.finalizeOAuthRedirect(user);
 
     if (user && isGuest) {
       localStorage.removeItem('cooltrack-guest-mode');
@@ -36,6 +37,10 @@ async function bootstrap() {
       LandingPage.render({ onLogin: () => AuthScreen.show() });
       return;
     }
+
+    Auth.onAuthChange((nextUser) => {
+      if (nextUser) localStorage.removeItem('cooltrack-guest-mode');
+    });
 
     LandingPage.clear();
     initAppShell();
