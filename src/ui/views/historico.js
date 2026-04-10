@@ -59,7 +59,7 @@ export function renderHist() {
     return;
   }
 
-  const scrollRoot = document.getElementById('main-content');
+  const scrollRoot = document.scrollingElement || document.documentElement;
   const prevScrollTop = scrollRoot ? scrollRoot.scrollTop : window.scrollY;
 
   const renderTimeline = () => {
