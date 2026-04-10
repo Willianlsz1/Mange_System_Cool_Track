@@ -21,7 +21,7 @@ import {
   normalizePeriodicidadePreventivaDias,
 } from '../../domain/maintenance.js';
 
-const STATUS_TECH = { ok: 'OPERANDO', warn: 'ATENÇÃO', danger: 'FALHA' };
+const STATUS_TECH = { ok: 'OPERANDO', warn: 'ALERTA', danger: 'FORA DE OPERAÇÃO' };
 
 function _empty(icon, msg, sub = '', cta = '') {
   return `<div class="empty-state">
@@ -273,7 +273,7 @@ export async function viewEquip(id) {
       <div class="eq-modal-health__circle eq-modal-health__circle--${cls}">${score}%</div>
       <div class="eq-modal-health__text">
         <div class="eq-modal-health__label">EFICIÊNCIA DO EQUIPAMENTO</div>
-        <div class="eq-modal-health__status">${cls === 'ok' ? 'Operando bem' : cls === 'warn' ? 'Atenção requerida' : 'Falha detectada'}</div>
+        <div class="eq-modal-health__status">${cls === 'ok' ? 'Operando bem' : cls === 'warn' ? 'Alerta técnico' : 'Anomalia detectada'}</div>
       </div>
     </div>
     <div class="eq-modal-summary">${healthSummary}</div>
