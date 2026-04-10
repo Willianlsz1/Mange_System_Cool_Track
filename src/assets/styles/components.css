@@ -2747,6 +2747,76 @@ mark,
   color: var(--text-3);
 }
 
+.equip-card__priority {
+  padding: 0 var(--space-3) var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.equip-card__priority-badge {
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.equip-card__priority-badge--1 {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+}
+
+.equip-card__priority-badge--2 {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+}
+
+.equip-card__priority-badge--3,
+.equip-card__priority-badge--4 {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+
+.equip-card__priority-action {
+  font-size: 11px;
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.equip-card__priority-reasons {
+  flex: 1 1 100%;
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.equip-card__suggested-action {
+  padding: 0 var(--space-3) var(--space-3);
+  display: grid;
+  gap: 4px;
+}
+
+.equip-card__suggested-action-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.equip-card__suggested-action-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.equip-card__suggested-action-reasons {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
 /* ── Métricas: 3 colunas ── */
 .equip-card__metrics {
   display: grid;
