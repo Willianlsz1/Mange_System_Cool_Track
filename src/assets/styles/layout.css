@@ -185,6 +185,7 @@ body {
   border-top: 1px solid var(--border-2);
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
   padding-bottom: env(safe-area-inset-bottom);
+  padding-top: 4px;
 }
 
 .app-nav__title {
@@ -198,39 +199,80 @@ body {
   border: none;
   background: transparent;
   cursor: pointer;
-  color: var(--text-3);
+  color: #8ea2bc;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
   position: relative;
   padding: 10px 4px 7px;
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  transition: color 0.15s ease;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-btn__icon {
   font-size: 18px;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s ease;
 }
 .nav-btn:hover .nav-btn__icon {
   transform: translateY(-1px);
 }
+
+.nav-btn:active {
+  transform: scale(0.97);
+}
+
 .nav-btn.is-active {
   color: var(--primary);
+  transform: translateY(-1px);
 }
 .nav-btn.is-active::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 20%;
-  right: 20%;
+  top: 2px;
+  left: 24%;
+  right: 24%;
   height: 2px;
   background: var(--primary);
   border-radius: 0 0 3px 3px;
+}
+
+#nav-registro {
+  width: 62px;
+  height: 62px;
+  justify-self: center;
+  align-self: start;
+  margin-top: -18px;
+  border-radius: 999px;
+  color: #02131f;
+  background: linear-gradient(135deg, #00d9ff, #00b5d4);
+  box-shadow:
+    0 10px 22px rgba(0, 200, 232, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  font-size: 0;
+  gap: 0;
+}
+
+#nav-registro .nav-btn__icon {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+#nav-registro .nav-btn__label {
+  display: none;
+}
+
+#nav-registro.is-active::after {
+  display: none;
 }
 
 .nav-btn {
@@ -240,8 +282,8 @@ body {
 .nav-btn__badge {
   display: none;
   position: absolute;
-  top: 2px;
-  right: 4px;
+  top: 4px;
+  right: 10px;
   min-width: 16px;
   height: 16px;
   border-radius: 8px;
@@ -252,12 +294,24 @@ body {
   font-size: 9px;
   font-weight: 700;
   padding: 0 4px;
-  z-index: 10;
+  z-index: 20;
   line-height: 1;
+  box-shadow: 0 0 0 2px rgba(8, 14, 24, 0.9);
 }
 
 .nav-btn__badge.is-visible {
   display: flex;
+  animation: nav-badge-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes nav-badge-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
 }
 
 /* MAIN */
@@ -595,8 +649,8 @@ main:focus {
 
   /* Badge mobile */
   .nav-btn__badge {
-    top: 0 !important;
-    right: 2px !important;
+    top: 2px !important;
+    right: 8px !important;
     min-width: 14px !important;
     height: 14px !important;
     font-size: 8px !important;
@@ -606,6 +660,12 @@ main:focus {
   }
   .app-header__date {
     display: none !important;
+  }
+
+  #nav-registro {
+    width: 58px;
+    height: 58px;
+    margin-top: -16px;
   }
 }
 
@@ -661,6 +721,29 @@ main:focus {
     border-left: none;
     border-radius: var(--radius-sm);
     position: relative;
+  }
+
+  #nav-registro {
+    width: auto;
+    height: auto;
+    margin-top: 0;
+    border-radius: var(--radius-sm);
+    padding: 12px 22px;
+    background: transparent;
+    color: var(--text-3);
+    font-size: 10px;
+    box-shadow: none;
+    gap: 8px;
+  }
+
+  #nav-registro .nav-btn__icon {
+    font-size: 18px;
+    font-weight: 500;
+    transform: none;
+  }
+
+  #nav-registro .nav-btn__label {
+    display: inline;
   }
 
   .nav-btn.is-active::after {

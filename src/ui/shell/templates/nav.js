@@ -2,7 +2,6 @@ export function renderShellNav() {
   return String.raw`
 <!-- NAV -->
       <nav class="app-nav" aria-label="Navegação principal">
-        <div class="app-nav__title">OPERAÇÃO</div>
         <button class="nav-btn is-active" id="nav-inicio" data-nav="inicio" aria-label="Painel">
           <span class="nav-btn__icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 15 15" fill="none">
               <rect x="1.5" y="1.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" />
@@ -22,11 +21,8 @@ export function renderShellNav() {
           Equip.
         </button>
         <button class="nav-btn" id="nav-registro" data-nav="registro" aria-label="Registrar serviço">
-          <span class="nav-btn__icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-              <rect x="2" y="2" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1.2" />
-              <path d="M7.5 5v5M5 7.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-            </svg></span>
-          Registrar
+          <span class="nav-btn__icon" aria-hidden="true">+</span>
+          <span class="nav-btn__label nav-btn__label--compact">Registrar</span>
         </button>
         <button class="nav-btn" id="nav-historico" data-nav="historico" aria-label="Histórico">
           <span class="nav-btn__icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -42,14 +38,6 @@ export function renderShellNav() {
             </svg></span>
           Alertas
           <span class="nav-btn__badge" id="alerta-badge">0</span>
-        </button>
-        <div class="app-nav__title">RELATÓRIOS</div>
-        <button class="nav-btn" id="nav-relatorio" data-nav="relatorio" aria-label="Relatório">
-          <span class="nav-btn__icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 15 15" fill="none">
-              <rect x="2" y="1" width="11" height="13" rx="1.5" stroke="currentColor" stroke-width="1.2" />
-              <path d="M5 5h5M5 8h5M5 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-            </svg></span>
-          Relatório
         </button>
       </nav>
 `;
