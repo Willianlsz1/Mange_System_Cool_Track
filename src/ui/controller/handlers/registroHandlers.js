@@ -1,7 +1,7 @@
 import { on } from '../../../core/events.js';
 import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
-import { saveRegistro, clearRegistro } from '../../views/registro.js';
+import { saveRegistro, clearRegistro, applyQuickTemplate } from '../../views/registro.js';
 import { deleteReg } from '../../views/historico.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
 
@@ -18,6 +18,7 @@ export function bindRegistroHandlers() {
     }
   });
   on('clear-registro', () => clearRegistro());
+  on('quick-service-template', (el) => applyQuickTemplate(el.dataset.template));
 
   on('delete-reg', async (el) => {
     try {

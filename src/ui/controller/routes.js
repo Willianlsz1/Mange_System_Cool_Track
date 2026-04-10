@@ -20,7 +20,7 @@ export function registerAppRoutes() {
 
   registerRoute('registro', (params = {}) => {
     populateEquipSelects();
-    initRegistro();
+    initRegistro(params);
     if (params.editRegistroId) loadRegistroForEdit(params.editRegistroId);
     updateHeader();
   });
