@@ -120,6 +120,7 @@ export const AuthScreen = {
       await runAsyncAction(btn, { loadingLabel: 'Entrando...' }, async () => {
         const user = await Auth.signIn(email, password);
         if (!user) return;
+        localStorage.removeItem('cooltrack-guest-mode');
         overlay.remove();
         window.location.reload();
       });
@@ -148,6 +149,7 @@ export const AuthScreen = {
       await runAsyncAction(btn, { loadingLabel: 'Criando conta...' }, async () => {
         const user = await Auth.signUp(email, password, nome);
         if (!user) return;
+        localStorage.removeItem('cooltrack-guest-mode');
         overlay.remove();
         window.location.reload();
       });
