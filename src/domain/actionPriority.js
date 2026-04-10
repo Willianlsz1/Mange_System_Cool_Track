@@ -46,7 +46,8 @@ export function getActionPriorityScore(equipment, registros = []) {
   if (priority.priorityLevel >= 3) reasons.push(`Prioridade ${priority.priorityLabel.toLowerCase()}`);
 
   score += CRITICIDADE_WEIGHT[criticidade] || 0;
-  if (criticidade === 'alta' || criticidade === 'critica') reasons.push(`Criticidade ${criticidade}`);
+  if (criticidade === 'alta' || criticidade === 'critica')
+    reasons.push(`Criticidade ${criticidade}`);
 
   if (context.recentCorrectiveCount > 0) {
     score += context.recentCorrectiveCount * 10;
@@ -73,7 +74,12 @@ export function getActionPriorityScore(equipment, registros = []) {
   };
 }
 
-export function getActionBucket({ status = 'ok', daysToNext = null, riskScore = 0, ultimoRegistro = null } = {}) {
+export function getActionBucket({
+  status = 'ok',
+  daysToNext = null,
+  riskScore = 0,
+  ultimoRegistro = null,
+} = {}) {
   const central = getCentralActionBucket({ status, daysToNext, ultimoRegistro });
   if (central === 'critico') return 'critico';
   if (central === 'atencao') return 'atencao';

@@ -31,8 +31,10 @@ function toPriorityLevel(centralPriority, statusCode) {
 }
 
 function toSuggestedActionText(suggestedAction) {
-  if (suggestedAction.code === 'acao_imediata_corretiva') return 'Registrar corretiva imediatamente';
-  if (suggestedAction.code === 'acao_imediata_preventiva') return 'Registrar preventiva imediatamente';
+  if (suggestedAction.code === 'acao_imediata_corretiva')
+    return 'Registrar corretiva imediatamente';
+  if (suggestedAction.code === 'acao_imediata_preventiva')
+    return 'Registrar preventiva imediatamente';
   if (suggestedAction.code === 'reavaliar_campo') return 'Reavaliar em campo';
   if (suggestedAction.code === 'programar_preventiva') return 'Programar preventiva';
   if (suggestedAction.code === 'coletar_dados') return 'Coletar dados iniciais';
@@ -60,7 +62,8 @@ export function calculateActionPriority({
 
   const priorityLevel = toPriorityLevel(central, statusCode);
   const reasons = [...central.reasons];
-  if (normalized.recentCorrectiveCount >= 2) reasons.push('Histórico recente de corretivas repetidas');
+  if (normalized.recentCorrectiveCount >= 2)
+    reasons.push('Histórico recente de corretivas repetidas');
   if (normalized.riskScore >= 70) reasons.push('Score de risco elevado');
 
   return {

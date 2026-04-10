@@ -72,7 +72,6 @@ export function calculateSuggestedAction({
     ]);
   }
 
-
   if (centralAction.code === 'programar_preventiva') {
     return buildAction(ACTION_CODE.SCHEDULE_PREVENTIVE, [
       'Preventiva próxima do vencimento',
