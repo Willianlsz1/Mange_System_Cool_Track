@@ -1,4 +1,9 @@
 import { Utils } from '../core/utils.js';
+import {
+  calculateFinalRiskScore,
+  getCriticidadeMultiplier,
+  getRiskClassLabel,
+} from './riskScore.js';
 
 export const CRITICIDADE_LABEL = {
   baixa: 'Baixa',
@@ -184,18 +189,6 @@ function getAlertScore(equipamento, health) {
     OPERACIONAL_WEIGHT[normalizePrioridadeOperacional(equipamento?.prioridadeOperacional)] +
     (100 - health.score)
   );
-}
-
-function getRiskClass(score) {
-  if (score >= 70) return 'alto';
-  if (score >= 35) return 'medio';
-  return 'baixo';
-}
-
-function getRiskClassLabel(riskClass) {
-  if (riskClass === 'alto') return 'Alto risco';
-  if (riskClass === 'medio') return 'Médio risco';
-  return 'Baixo risco';
 }
 
 function getRiskStatusFactor(status) {
@@ -474,32 +467,49 @@ export function evaluateEquipmentRisk(equipamento, registros = []) {
   }
 
   const context = getEquipmentMaintenanceContext(equipamento, registros);
+  const criticidadeMultiplier = getCriticidadeMultiplier(context.equipamento.criticidade);
   const factorSet = [
     getRiskStatusFactor(context.equipamento.status),
     getRiskAgeFactor(context),
     getRiskPreventiveFactor(context),
     getRiskCorrectiveFactor(context),
   ];
-  const score = clamp(
+  const baseTechnicalRisk = clamp(
     Math.round((factorSet.reduce((sum, factor) => sum + factor.points, 0) / 124) * 100),
     0,
     100,
   );
-  const classification = getRiskClass(score);
+  const finalRisk = calculateFinalRiskScore({
+    baseTechnicalRisk,
+    criticidade: context.equipamento.criticidade,
+  });
+  const criticidadeLabel =
+    CRITICIDADE_LABEL[context.equipamento.criticidade] || CRITICIDADE_LABEL.media;
+  const criticidadeFactor = {
+    label: 'criticidade operacional',
+    impact: Math.round(finalRisk.finalRisk - finalRisk.technicalRisk),
+    detail: `Criticidade ${criticidadeLabel} aplica multiplicador ${criticidadeMultiplier.toFixed(2)} sobre o risco técnico base para priorizar impacto operacional.`,
+  };
 
   return {
-    score,
-    classification,
-    classificationLabel: getRiskClassLabel(classification),
+    score: finalRisk.finalRisk,
+    classification: finalRisk.classification,
+    classificationLabel: getRiskClassLabel(finalRisk.classification),
+    technicalBaseScore: finalRisk.technicalRisk,
+    criticidadeMultiplier,
     factors: factorSet
       .filter((factor) => factor.points >= 10)
       .map((factor) => factor.shortLabel)
-      .slice(0, 3),
-    details: factorSet.map((factor) => ({
-      label: factor.shortLabel,
-      impact: factor.points,
-      detail: factor.detail,
-    })),
+      .slice(0, 3)
+      .concat('criticidade operacional'),
+    details: factorSet
+      .map((factor) => ({
+        label: factor.shortLabel,
+        impact: factor.points,
+        detail: factor.detail,
+      }))
+      .concat(criticidadeFactor),
+    explanation: `Risco técnico base ${finalRisk.technicalRisk} x criticidade (${criticidadeLabel}, ${criticidadeMultiplier.toFixed(2)}) = score final ${finalRisk.finalRisk}.`,
     context,
   };
 }
