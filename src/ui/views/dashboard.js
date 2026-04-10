@@ -12,13 +12,23 @@ import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner } from '../components/onboarding.js';
 import {
   calculateHealthScore,
-  CRITICIDADE_LABEL,
   getEquipmentMaintenanceContext,
   getHealthClass as getMaintenanceHealthClass,
 } from '../../domain/maintenance.js';
 
 // ── Labels internos ────────────────────────────────────
-const STATUS_TECH = { ok: 'OPERANDO', warn: 'ALERTA', danger: 'FORA DE OPERAÇÃO' };
+const STATUS_OPERACIONAL = {
+  ok: 'OPERANDO NORMALMENTE',
+  warn: 'OPERANDO COM RESTRIÇÕES',
+  danger: 'FORA DE OPERAÇÃO',
+};
+const CONDICAO_OBSERVADA = {
+  ok: 'Sem anormalidades',
+  warn: 'Condição fora do padrão',
+  danger: 'Intervenção necessária',
+  unknown: 'Não avaliado',
+};
+const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
 
 // ── Helpers privados de métricas ───────────────────────
 function _getMonthRange(monthsAgo = 0) {
@@ -137,7 +147,7 @@ function _renderAlertStrip(alerts, hasCritical = false) {
   if (!hasCritical && !primary) {
     el.innerHTML = `<div class="alert-strip alert-strip--none">
       <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Nenhuma anomalia crítica detectada</div></div>
+      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Sem anormalidades críticas registradas em campo</div></div>
     </div>`;
     return;
   }
@@ -152,7 +162,7 @@ function _renderAlertStrip(alerts, hasCritical = false) {
       ? `🛠 Prev.: ${Utils.formatDate(primary.nextDueDate)}`
       : '🛠 Preventiva em atraso';
     el.innerHTML = `<div class="critical-incident" role="alert" aria-live="assertive">
-      <div class="critical-incident__label">ANOMALIA CRÍTICA</div>
+      <div class="critical-incident__label">SITUAÇÃO CRÍTICA</div>
       <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento não identificado')}</div>
       <div class="critical-incident__desc">⚠ ${Utils.escapeHtml(Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92))}</div>
       <div class="critical-incident__meta">${Utils.escapeHtml(preventiveText)} · ↗ Ação imediata</div>
@@ -290,10 +300,6 @@ function _equipCardMini(eq) {
   const hcls = getHealthClass(score);
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
-  const criticidadeLabel = Utils.escapeHtml(
-    CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media,
-  );
-
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
     if (diff === 0) return 'Hoje';
@@ -333,15 +339,15 @@ function _equipCardMini(eq) {
     ctaLabel = 'Primeiro registro →';
   }
 
-  return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_TECH[scls]}">
+  return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_OPERACIONAL[scls]}">
     <div class="equip-card__status-band equip-card__status-band--${scls}"></div>
     <div class="equip-card__header">
       <div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq?.nome ?? '—')}</div>
-        <div class="equip-card__tag">${Utils.escapeHtml(eq.fluido || eq.tipo)} · Crit. ${criticidadeLabel}</div>
+        <div class="equip-card__tag">${Utils.escapeHtml(eq.fluido || eq.tipo)} · Prioridade ${Utils.escapeHtml(PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media)}</div>
       </div>
-      <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_TECH[scls]}</span>
+      <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_OPERACIONAL[scls]}</span>
       <div class="equip-card__actions">
         <button class="equip-card__delete" data-action="delete-equip" data-id="${safeId}" aria-label="Excluir ${Utils.escapeHtml(eq?.nome ?? '—')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
@@ -448,7 +454,7 @@ export function updateHeader() {
       statusFalhas.hidden = false;
       _setStatusIndicatorState(statusFalhas, 'danger', { live: true });
       if (statusFalhasTxt)
-        statusFalhasTxt.textContent = `${faultCount} anomalia${faultCount > 1 ? 's' : ''} crítica${faultCount > 1 ? 's' : ''} ativa${faultCount > 1 ? 's' : ''}`;
+        statusFalhasTxt.textContent = `${faultCount} situação${faultCount > 1 ? 'ões' : ''} crítica${faultCount > 1 ? 's' : ''} em aberto`;
     } else if (alertCount > 0) {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>Atenção requerida</span>`;
       statusSistema.hidden = false;
@@ -547,7 +553,7 @@ export function renderDashboard() {
   if (greetEl) {
     greetEl.textContent =
       faults > 0
-        ? `${faults} anomalia${faults > 1 ? 's' : ''} operacional${faults > 1 ? 'is' : ''}`
+        ? `${faults} situação${faults > 1 ? 'ões' : ''} exigindo intervenção`
         : alerts.length > 0
           ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
           : 'Sistema Operacional';
@@ -592,7 +598,7 @@ export function renderDashboard() {
         icon: '!!',
         tone: eq.status === 'danger' ? 'danger' : 'warn',
         title: eq.nome || 'Equipamento crítico',
-        subtitle: `${CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media} · ${STATUS_TECH[Utils.safeStatus(eq.status)]}`,
+        subtitle: `Condição: ${CONDICAO_OBSERVADA[Utils.safeStatus(eq.status)] || CONDICAO_OBSERVADA.unknown} · Prioridade: ${PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media}`,
         action: 'view-equip',
         id: eq.id,
         ctaLabel: 'Ver',
@@ -605,8 +611,8 @@ export function renderDashboard() {
         _criticalNowItemHtml({
           icon: '!',
           tone: 'danger',
-          title: `${alert.eq?.nome || alert.equipmentName || 'Equipamento'} — preventiva vencida`,
-          subtitle: alert.subtitle || 'Manutenção fora do prazo',
+          title: `${alert.eq?.nome || alert.equipmentName || 'Equipamento'} — manutenção necessária`,
+          subtitle: alert.subtitle || 'Preventiva fora do prazo',
           action: 'go-register-equip',
           id: alert.eq?.id || '',
           ctaLabel: 'Registrar',
