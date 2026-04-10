@@ -36,6 +36,11 @@ function afterAnimation(element, fallbackMs, callback) {
   element.addEventListener('animationend', onAnimationEnd);
 }
 
+function getScrollRoot() {
+  if (typeof document === 'undefined') return null;
+  return document.getElementById('main-content');
+}
+
 /**
  * Registra uma rota com seus hooks de ciclo de vida.
  * Chamado pelo controller no bootstrap.
@@ -114,8 +119,10 @@ function _activateRoute(name, el, params, options = {}) {
   }
 
   // Scroll + foco
-  document.getElementById('main-content')?.focus();
-  window.scrollTo(0, 0);
+  const scrollRoot = getScrollRoot();
+  scrollRoot?.focus?.();
+  if (scrollRoot) scrollRoot.scrollTop = 0;
+  else window.scrollTo(0, 0);
   requestAnimationFrame(() => setRoutingState(false));
 }
 

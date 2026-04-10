@@ -59,7 +59,8 @@ export function renderHist() {
     return;
   }
 
-  const prevScrollY = window.scrollY;
+  const scrollRoot = document.getElementById('main-content');
+  const prevScrollTop = scrollRoot ? scrollRoot.scrollTop : window.scrollY;
 
   const renderTimeline = () => {
     el.innerHTML = `<div class="timeline">${list
@@ -97,7 +98,12 @@ export function renderHist() {
       })
       .join('')}</div>`;
 
-    if (prevScrollY > 0) requestAnimationFrame(() => window.scrollTo(0, prevScrollY));
+    if (prevScrollTop > 0) {
+      requestAnimationFrame(() => {
+        if (scrollRoot) scrollRoot.scrollTop = prevScrollTop;
+        else window.scrollTo(0, prevScrollTop);
+      });
+    }
 
     // H5: highlight do item recém-salvo
     SavedHighlight.applyIfPending();
