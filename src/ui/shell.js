@@ -5,11 +5,12 @@ import { renderShellModals } from './shell/templates/modals.js';
 
 const HEADER_TOTAL_HEIGHT_VAR = '--app-header-total-height';
 const HEADER_HEIGHT_ALIAS_VAR = '--app-header-height';
+const NAV_HEIGHT_VAR = '--app-nav-height';
 
-let headerMetricsObserver = null;
-let headerMetricsFrame = 0;
-let observedHeader = null;
-let headerMetricsListenersBound = false;
+let shellMetricsObserver = null;
+let shellMetricsFrame = 0;
+let observedShellNodes = [];
+let shellMetricsListenersBound = false;
 
 function renderShellMainLayout() {
   return String.raw`
@@ -36,58 +37,73 @@ function getHeaderElement() {
   return document.querySelector('.app-header');
 }
 
-function applyHeaderMetrics() {
-  const header = getHeaderElement();
-  if (!header) return;
+function getBottomNavElement() {
+  if (typeof document === 'undefined') return null;
+  return document.querySelector('.app-nav');
+}
 
-  const totalHeight = Math.max(0, Math.ceil(header.getBoundingClientRect().height));
+function applyShellMetrics() {
+  const header = getHeaderElement();
+  const nav = getBottomNavElement();
   const rootStyle = document.documentElement?.style;
 
   if (!rootStyle) return;
 
-  rootStyle.setProperty(HEADER_TOTAL_HEIGHT_VAR, `${totalHeight}px`);
-  rootStyle.setProperty(HEADER_HEIGHT_ALIAS_VAR, `${totalHeight}px`);
-}
-
-function scheduleHeaderMetricsUpdate() {
-  if (typeof window === 'undefined') return;
-
-  if (headerMetricsFrame) {
-    window.cancelAnimationFrame(headerMetricsFrame);
+  if (header) {
+    const headerHeight = Math.max(0, Math.ceil(header.getBoundingClientRect().height));
+    rootStyle.setProperty(HEADER_TOTAL_HEIGHT_VAR, `${headerHeight}px`);
+    rootStyle.setProperty(HEADER_HEIGHT_ALIAS_VAR, `${headerHeight}px`);
   }
 
-  headerMetricsFrame = window.requestAnimationFrame(() => {
-    headerMetricsFrame = 0;
-    applyHeaderMetrics();
+  if (nav) {
+    const navHeight = Math.max(0, Math.ceil(nav.getBoundingClientRect().height));
+    rootStyle.setProperty(NAV_HEIGHT_VAR, `${navHeight}px`);
+  }
+}
+
+function scheduleShellMetricsUpdate() {
+  if (typeof window === 'undefined') return;
+
+  if (shellMetricsFrame) {
+    window.cancelAnimationFrame(shellMetricsFrame);
+  }
+
+  shellMetricsFrame = window.requestAnimationFrame(() => {
+    shellMetricsFrame = 0;
+    applyShellMetrics();
   });
 }
 
-function bindHeaderMetrics() {
+function bindShellMetrics() {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-  const header = getHeaderElement();
-  if (!header) return;
+  const shellNodes = [getHeaderElement(), getBottomNavElement()].filter(Boolean);
+  if (!shellNodes.length) return;
 
-  applyHeaderMetrics();
+  applyShellMetrics();
 
   if (typeof ResizeObserver !== 'undefined') {
-    if (!headerMetricsObserver) {
-      headerMetricsObserver = new ResizeObserver(() => {
-        scheduleHeaderMetricsUpdate();
+    if (!shellMetricsObserver) {
+      shellMetricsObserver = new ResizeObserver(() => {
+        scheduleShellMetricsUpdate();
       });
     }
 
-    if (observedHeader !== header) {
-      headerMetricsObserver.disconnect();
-      headerMetricsObserver.observe(header);
-      observedHeader = header;
+    const hasSameTargets =
+      shellNodes.length === observedShellNodes.length &&
+      shellNodes.every((node, idx) => node === observedShellNodes[idx]);
+
+    if (!hasSameTargets) {
+      shellMetricsObserver.disconnect();
+      shellNodes.forEach((node) => shellMetricsObserver?.observe(node));
+      observedShellNodes = shellNodes;
     }
   }
 
-  if (!headerMetricsListenersBound) {
-    window.addEventListener('resize', scheduleHeaderMetricsUpdate, { passive: true });
-    window.addEventListener('orientationchange', scheduleHeaderMetricsUpdate, { passive: true });
-    headerMetricsListenersBound = true;
+  if (!shellMetricsListenersBound) {
+    window.addEventListener('resize', scheduleShellMetricsUpdate, { passive: true });
+    window.addEventListener('orientationchange', scheduleShellMetricsUpdate, { passive: true });
+    shellMetricsListenersBound = true;
   }
 }
 
@@ -105,5 +121,5 @@ export function initAppShell() {
     mount.innerHTML = APP_SHELL_CONTENT_HTML;
   }
 
-  bindHeaderMetrics();
+  bindShellMetrics();
 }
