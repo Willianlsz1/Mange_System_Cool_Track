@@ -17,6 +17,7 @@ import {
   getHealthClass as getMaintenanceHealthClass,
 } from '../../domain/maintenance.js';
 import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
+import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/suggestedAction.js';
 
 // ── Labels internos ────────────────────────────────────
 const STATUS_OPERACIONAL = {
@@ -306,6 +307,16 @@ function _equipCardMini(eq) {
   const eqRegs = regsForEquip(eq.id);
   const risk = evaluateEquipmentRisk(eq, eqRegs);
   const priority = evaluateEquipmentPriority(eq, eqRegs);
+  const suggestedAction = evaluateEquipmentSuggestedAction(eq, eqRegs);
+
+  function getCtaByAction(actionCode) {
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE)
+      return 'Registrar corretiva agora →';
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar corretiva →';
+    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar preventiva →';
+    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar preventiva →';
+    return 'Registrar serviço →';
+  }
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
     if (diff === 0) return 'Hoje';
@@ -337,13 +348,8 @@ function _equipCardMini(eq) {
     }
   }
 
-  let ctaLabel = 'Registrar serviço →';
-  if (scls === 'danger') ctaLabel = 'Registrar corretiva →';
-  else if (context.proximaPreventiva && Utils.daysDiff(context.proximaPreventiva) <= 7) {
-    ctaLabel = 'Registrar preventiva →';
-  } else if (!last) {
-    ctaLabel = 'Primeiro registro →';
-  }
+  let ctaLabel = getCtaByAction(suggestedAction.actionCode);
+  if (!last && suggestedAction.actionCode === ACTION_CODE.NONE) ctaLabel = 'Primeiro registro →';
 
   return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_OPERACIONAL[scls]}">
     <div class="equip-card__status-band equip-card__status-band--${scls}"></div>
@@ -371,8 +377,12 @@ function _equipCardMini(eq) {
     </div>
     <div class="equip-card__priority">
       <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${Utils.escapeHtml(priority.priorityLabel)}</span>
-      <span class="equip-card__priority-action">${Utils.escapeHtml(priority.suggestedAction)}</span>
       <span class="equip-card__priority-reasons">${Utils.escapeHtml(priority.priorityReasons.join(' · '))}</span>
+    </div>
+    <div class="equip-card__suggested-action">
+      <span class="equip-card__suggested-action-label">Ação recomendada (baseada nos registros)</span>
+      <span class="equip-card__suggested-action-title">${Utils.escapeHtml(suggestedAction.actionLabel)}</span>
+      <span class="equip-card__suggested-action-reasons">${Utils.escapeHtml(suggestedAction.actionReasons.join(' · '))}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
