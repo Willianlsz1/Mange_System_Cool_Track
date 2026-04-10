@@ -16,6 +16,7 @@ import {
   getEquipmentMaintenanceContext,
   getHealthClass as getMaintenanceHealthClass,
 } from '../../domain/maintenance.js';
+import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
 
 // ── Labels internos ────────────────────────────────────
 const STATUS_OPERACIONAL = {
@@ -302,7 +303,9 @@ function _equipCardMini(eq) {
   const hcls = getHealthClass(score);
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
-  const risk = evaluateEquipmentRisk(eq, regsForEquip(eq.id));
+  const eqRegs = regsForEquip(eq.id);
+  const risk = evaluateEquipmentRisk(eq, eqRegs);
+  const priority = evaluateEquipmentPriority(eq, eqRegs);
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
     if (diff === 0) return 'Hoje';
@@ -365,6 +368,11 @@ function _equipCardMini(eq) {
       <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
       <span class="equip-card__risk-score">Score ${risk.score}</span>
       <span class="equip-card__risk-factors">Base ${risk.technicalBaseScore} × Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
+    </div>
+    <div class="equip-card__priority">
+      <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${Utils.escapeHtml(priority.priorityLabel)}</span>
+      <span class="equip-card__priority-action">${Utils.escapeHtml(priority.suggestedAction)}</span>
+      <span class="equip-card__priority-reasons">${Utils.escapeHtml(priority.priorityReasons.join(' · '))}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
@@ -547,13 +555,26 @@ export function renderDashboard() {
   const alerts = Alerts.getAll();
   const hasCritical = alerts.some((alert) => alert.severity === 'danger');
   const critical = equipamentos
-    .map((eq) => ({
-      eq,
-      score: calcHealthScore(eq.id),
-      hasAlert: alerts.some((alert) => alert.eq?.id === eq.id),
-    }))
-    .filter(({ eq, score, hasAlert }) => hasAlert || eq.status !== 'ok' || score < 80)
-    .sort((a, b) => a.score - b.score || Number(b.hasAlert) - Number(a.hasAlert))
+    .map((eq) => {
+      const eqRegs = regsForEquip(eq.id);
+      return {
+        eq,
+        score: calcHealthScore(eq.id),
+        riskScore: evaluateEquipmentRisk(eq, eqRegs).score,
+        priority: evaluateEquipmentPriority(eq, eqRegs),
+        hasAlert: alerts.some((alert) => alert.eq?.id === eq.id),
+      };
+    })
+    .filter(({ eq, score, priority, hasAlert }) =>
+      hasAlert || eq.status !== 'ok' || score < 80 || priority.priorityLevel >= 2,
+    )
+    .sort(
+      (a, b) =>
+        b.priority.priorityLevel - a.priority.priorityLevel ||
+        Number(b.hasAlert) - Number(a.hasAlert) ||
+        b.riskScore - a.riskScore ||
+        a.score - b.score,
+    )
     .map(({ eq }) => eq)
     .slice(0, 4);
 
