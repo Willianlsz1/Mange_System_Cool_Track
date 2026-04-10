@@ -19,6 +19,7 @@ import {
   getSuggestedPreventiveDays,
   normalizePeriodicidadePreventivaDias,
 } from '../../domain/maintenance.js';
+import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
 
 const STATUS_OPERACIONAL = {
   ok: 'OPERANDO NORMALMENTE',
@@ -52,7 +53,9 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
   const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
-  const risk = evaluateEquipmentRisk(eq, regsForEquip(eq.id));
+  const eqRegs = regsForEquip(eq.id);
+  const risk = evaluateEquipmentRisk(eq, eqRegs);
+  const priority = evaluateEquipmentPriority(eq, eqRegs);
   const riskFactors = risk.factors.length ? risk.factors.join(' · ') : 'rotina estável';
 
   function recencia(data) {
@@ -115,6 +118,11 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
       <span class="equip-card__risk-score">Score ${risk.score}</span>
       <span class="equip-card__risk-factors">${Utils.escapeHtml(riskFactors)} · Base ${risk.technicalBaseScore} × Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
     </div>
+    <div class="equip-card__priority">
+      <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${Utils.escapeHtml(priority.priorityLabel)}</span>
+      <span class="equip-card__priority-action">${Utils.escapeHtml(priority.suggestedAction)}</span>
+      <span class="equip-card__priority-reasons">${Utils.escapeHtml(priority.priorityReasons.join(' · '))}</span>
+    </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
         <div class="equip-card__metric-label">Último serviço</div>
@@ -154,12 +162,21 @@ export function renderEquip(filtro = '') {
   const el = Utils.getEl('lista-equip');
   if (!el) return;
 
+  const sortedList = [...list].sort((a, b) => {
+    const pa = evaluateEquipmentPriority(a, regsForEquip(a.id));
+    const pb = evaluateEquipmentPriority(b, regsForEquip(b.id));
+    if (pb.priorityLevel !== pa.priorityLevel) return pb.priorityLevel - pa.priorityLevel;
+    const ra = evaluateEquipmentRisk(a, regsForEquip(a.id)).score;
+    const rb = evaluateEquipmentRisk(b, regsForEquip(b.id)).score;
+    return rb - ra;
+  });
+
   withSkeleton(
     el,
     { enabled: list.length >= 9, variant: 'equipment', count: Math.min(list.length, 5) },
     () => {
-      el.innerHTML = list.length
-        ? list.map((eq) => equipCardHtml(eq)).join('')
+      el.innerHTML = sortedList.length
+        ? sortedList.map((eq) => equipCardHtml(eq)).join('')
         : _empty(
             '🔧',
             'Nenhum equipamento encontrado',
