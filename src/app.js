@@ -24,8 +24,13 @@ async function bootstrap() {
   try {
     await Auth.tryHandlePasswordRecovery(() => PasswordRecoveryModal.openPasswordRecoveryModal());
 
-    const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
+    let isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
     const user = await Auth.getUser();
+
+    if (user && isGuest) {
+      localStorage.removeItem('cooltrack-guest-mode');
+      isGuest = false;
+    }
 
     if (!user && !isGuest) {
       LandingPage.render({ onLogin: () => AuthScreen.show() });
