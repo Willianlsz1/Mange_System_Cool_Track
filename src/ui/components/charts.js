@@ -81,7 +81,7 @@ function buildStatusData(equipamentos, c) {
   });
 
   return {
-    labels: ['Operando', 'Atenção', 'Falha'],
+    labels: ['Operando', 'Alerta', 'Fora de operação'],
     datasets: [
       {
         data: [counts.ok, counts.warn, counts.danger],

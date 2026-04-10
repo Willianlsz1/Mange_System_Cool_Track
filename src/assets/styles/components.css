@@ -1692,6 +1692,102 @@ mark,
   grid-template-columns: 1fr;
 }
 
+/* ─── DASHBOARD OPERACIONAL ─── */
+.dash-section--critical-now {
+  border-color: rgba(224, 48, 64, 0.4);
+  box-shadow: 0 10px 24px rgba(224, 48, 64, 0.14);
+}
+
+.critical-now-group + .critical-now-group {
+  margin-top: 8px;
+}
+
+.critical-now-group__label {
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.critical-now-list {
+  display: grid;
+  gap: 8px;
+}
+
+.critical-now-item {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.critical-now-item--danger {
+  border-color: rgba(224, 48, 64, 0.55);
+  background: linear-gradient(90deg, rgba(224, 48, 64, 0.2), rgba(224, 48, 64, 0.05));
+}
+
+.critical-now-item--warn {
+  border-color: rgba(232, 160, 32, 0.45);
+  background: linear-gradient(90deg, rgba(232, 160, 32, 0.18), rgba(232, 160, 32, 0.05));
+}
+
+.critical-now-item__icon {
+  width: 24px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.critical-now-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.critical-now-item__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.critical-now-item__subtitle {
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.critical-now-item__cta {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dash-section--quick-actions {
+  border-color: rgba(0, 200, 232, 0.3);
+}
+
+.quick-actions-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.quick-action-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 40px;
+  font-weight: 700;
+}
+
 /* ─── THEME TOGGLE ─── */
 .theme-toggle {
   display: inline-flex;
@@ -3789,7 +3885,8 @@ mark,
   .alert-strip__content,
   .alert-card__body,
   .critical-incident__meta,
-  .next-action-card__body {
+  .next-action-card__body,
+  .critical-now-item__body {
     min-width: 0;
   }
 
@@ -3799,6 +3896,15 @@ mark,
 
   .bento-kpi {
     padding: 14px;
+  }
+
+  .critical-now-item {
+    padding: 9px;
+    gap: 8px;
+  }
+
+  .critical-now-item__title {
+    font-size: 11px;
   }
 
   /* Ocorrências: card operacional compacto para uso em campo */
