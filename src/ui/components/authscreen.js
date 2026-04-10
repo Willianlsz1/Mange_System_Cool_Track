@@ -1,5 +1,6 @@
 import { Auth } from '../../core/auth.js';
 import { Toast } from '../../core/toast.js';
+import { trackEvent } from '../../core/telemetry.js';
 import { runAsyncAction } from './actionFeedback.js';
 import { PasswordRecoveryModal } from './passwordRecoveryModal.js';
 
@@ -7,8 +8,26 @@ function focusFirstField(container, selector) {
   container.querySelector(selector)?.focus();
 }
 
+function getDefaultIntentOptions(intent) {
+  if (intent === 'guest-save') {
+    return {
+      highlightCopy: 'Salvar meus dados com Google',
+      source: 'guest-save',
+      wasGuest: true,
+    };
+  }
+
+  return {
+    highlightCopy: 'Continuar com Google',
+    source: 'auth-screen',
+    wasGuest: localStorage.getItem('cooltrack-guest-mode') === '1',
+  };
+}
+
 export const AuthScreen = {
-  show() {
+  show(options = {}) {
+    const intent = options.intent || 'default';
+    const intentOptions = getDefaultIntentOptions(intent);
     const existing = document.getElementById('auth-overlay');
     if (existing) {
       focusFirstField(existing, '.auth-input');
@@ -60,6 +79,10 @@ export const AuthScreen = {
         </div>
 
         <div id="auth-form-signin" role="tabpanel" aria-labelledby="tab-signin">
+          <button class="auth-btn-google auth-btn-google--primary" id="btn-google-signin" type="button">
+            ${intentOptions.highlightCopy}
+          </button>
+          <div class="auth-divider">ou com email e senha</div>
           <label class="auth-label" for="signin-email">EMAIL</label>
           <input class="auth-input" id="signin-email" type="email" placeholder="seu@email.com" autocomplete="email" />
           <label class="auth-label" for="signin-password">SENHA</label>
@@ -76,6 +99,8 @@ export const AuthScreen = {
         </div>
 
         <div id="auth-form-signup" role="tabpanel" aria-labelledby="tab-signup" hidden>
+          <button class="auth-btn-google" id="btn-google-signup" type="button">Continuar com Google</button>
+          <div class="auth-divider">ou crie com email e senha</div>
           <label class="auth-label" for="signup-nome">SEU NOME</label>
           <input class="auth-input" id="signup-nome" type="text" placeholder="Carlos Figueiredo" autocomplete="name" />
           <label class="auth-label" for="signup-email">EMAIL</label>
@@ -106,8 +131,31 @@ export const AuthScreen = {
       focusFirstField(overlay, showSignin ? '#signin-email' : '#signup-nome');
     };
 
+    const triggerGoogleAuth = async (button) => {
+      trackEvent('auth_google_clicked', {
+        source: intentOptions.source,
+        wasGuest: intentOptions.wasGuest,
+      });
+
+      await runAsyncAction(button, { loadingLabel: 'Redirecionando...' }, async () => {
+        const result = await Auth.signInWithGoogle({
+          source: intentOptions.source,
+          wasGuest: intentOptions.wasGuest,
+        });
+        if (!result?.ok && result?.message) Toast.error(result.message);
+      });
+    };
+
     tabSignin.addEventListener('click', () => setTab('signin'));
     tabSignup.addEventListener('click', () => setTab('signup'));
+
+    overlay.querySelector('#btn-google-signin').addEventListener('click', async () => {
+      await triggerGoogleAuth(overlay.querySelector('#btn-google-signin'));
+    });
+
+    overlay.querySelector('#btn-google-signup').addEventListener('click', async () => {
+      await triggerGoogleAuth(overlay.querySelector('#btn-google-signup'));
+    });
 
     overlay.querySelector('#btn-signin').addEventListener('click', async () => {
       const btn = overlay.querySelector('#btn-signin');

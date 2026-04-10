@@ -1,7 +1,4 @@
-function reloadAsAuth() {
-  localStorage.removeItem('cooltrack-guest-mode');
-  window.location.reload();
-}
+import { AuthScreen } from '../authscreen.js';
 
 export const GuestCtaModal = {
   open() {
@@ -24,12 +21,18 @@ export const GuestCtaModal = {
           </div>
         </div>
         <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
-          <button id="guest-signup-btn" style="
+          <button id="guest-google-btn" style="
             width:100%;background:linear-gradient(135deg,#00C8E8,#00A8FF);
             border:none;border-radius:8px;padding:14px 16px;
             color:#07111F;font-size:15px;font-weight:600;
             font-family:inherit;cursor:pointer;
-          ">Criar conta grátis →</button>
+          ">Salvar meus dados com Google</button>
+          <button id="guest-signup-btn" style="
+            width:100%;background:transparent;
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:8px;padding:12px 16px;
+            color:#8AAAC8;font-size:14px;font-family:inherit;cursor:pointer;
+          ">Criar conta com email</button>
           <button id="guest-signin-btn" style="
             width:100%;background:transparent;
             border:1px solid rgba(255,255,255,0.08);
@@ -48,14 +51,20 @@ export const GuestCtaModal = {
       if (e.target === guestOverlay) guestOverlay.remove();
     });
 
+    guestOverlay.querySelector('#guest-google-btn')?.addEventListener('click', () => {
+      guestOverlay.remove();
+      AuthScreen.show({ intent: 'guest-save' });
+    });
+
     guestOverlay.querySelector('#guest-signup-btn')?.addEventListener('click', () => {
       guestOverlay.remove();
-      reloadAsAuth();
+      AuthScreen.show({ intent: 'guest-save' });
+      document.getElementById('tab-signup')?.click();
     });
 
     guestOverlay.querySelector('#guest-signin-btn')?.addEventListener('click', () => {
       guestOverlay.remove();
-      reloadAsAuth();
+      AuthScreen.show({ intent: 'guest-save' });
     });
 
     guestOverlay.querySelector('#guest-continue-btn')?.addEventListener('click', () => {
