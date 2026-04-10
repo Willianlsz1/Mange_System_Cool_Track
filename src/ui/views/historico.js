@@ -137,7 +137,7 @@ export function deleteReg(id) {
       });
       return {
         ...eq,
-        status: nextStatus.uiStatus === 'unknown' ? 'ok' : nextStatus.uiStatus,
+        status: nextStatus.uiStatus === 'unknown' ? eq.status || 'ok' : nextStatus.uiStatus,
         statusDescricao: nextStatus.label,
       };
     });

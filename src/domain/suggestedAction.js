@@ -1,4 +1,4 @@
-import { getEquipmentMaintenanceContext, evaluateEquipmentRisk } from './maintenance.js';
+import { getEquipmentMaintenanceContext } from './maintenance.js';
 import { PRIORITY_LEVEL, evaluateEquipmentPriority } from './priorityEngine.js';
 import { getSuggestedAction as getCentralSuggestedAction } from '../core/equipmentRules.js';
 
@@ -11,6 +11,7 @@ export const ACTION_CODE = {
   MONITOR: 'acompanhar_equipamento',
   REEVALUATE_FIELD: 'reavaliar_em_campo',
   CHECK_RECURRENT_CAUSE: 'verificar_causa_recorrente',
+  COLLECT_DATA: 'coletar_dados',
 };
 
 const ACTION_LABEL = {
@@ -22,15 +23,8 @@ const ACTION_LABEL = {
   [ACTION_CODE.MONITOR]: 'Acompanhar equipamento',
   [ACTION_CODE.REEVALUATE_FIELD]: 'Reavaliar em campo',
   [ACTION_CODE.CHECK_RECURRENT_CAUSE]: 'Verificar causa recorrente',
+  [ACTION_CODE.COLLECT_DATA]: 'Coletar dados iniciais',
 };
-
-function normalizeStatus(status = 'ok') {
-  return ['ok', 'warn', 'danger'].includes(status) ? status : 'ok';
-}
-
-function hasStableCondition(conditionObserved = '') {
-  return ['ok', 'estavel', 'normal'].includes(String(conditionObserved).toLowerCase());
-}
 
 function buildAction(actionCode, reasons) {
   return {
@@ -40,35 +34,21 @@ function buildAction(actionCode, reasons) {
   };
 }
 
-function normalizePriorityLabel(priorityLabel = '') {
-  if (!priorityLabel) return '';
-  if (priorityLabel === 'Alta prioridade') return 'Alta';
-  return priorityLabel;
-}
-
 export function calculateSuggestedAction({
   priorityLevel = PRIORITY_LEVEL.OK,
-  priorityLabel = '',
   status = 'ok',
-  riskScore = 0,
   preventiveOverdue = false,
   preventiveSoon = false,
   recentCorrectiveCount = 0,
-  conditionObserved = '',
   criticidade = 'media',
 } = {}) {
-  const safeStatus = normalizeStatus(status);
-  const highCriticidade = ['alta', 'critica'].includes(criticidade);
   const centralAction = getCentralSuggestedAction({
-    status: safeStatus,
-    daysToNext: preventiveOverdue ? -1 : 1,
+    status,
     criticidade,
+    daysToNext: preventiveOverdue ? -1 : preventiveSoon ? 3 : null,
   });
 
-  if (
-    centralAction.requiresImmediateAction &&
-    (safeStatus === 'danger' || priorityLevel === PRIORITY_LEVEL.URGENTE)
-  ) {
+  if (centralAction.code === 'acao_imediata_corretiva') {
     return buildAction(ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE, [
       'Equipamento fora de operação',
       'Intervenção imediata necessária',
@@ -76,19 +56,35 @@ export function calculateSuggestedAction({
     ]);
   }
 
-  if (safeStatus === 'danger') {
-    return buildAction(ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE, [
-      'Equipamento fora de operação',
-      'Intervenção imediata necessária',
-      'Prioridade urgente',
+  if (centralAction.code === 'acao_imediata_preventiva') {
+    return buildAction(ACTION_CODE.REGISTER_PREVENTIVE, [
+      'Preventiva vencida',
+      'Registrar preventiva imediatamente',
+      'Ação imediata obrigatória',
     ]);
   }
 
-  if (priorityLevel === PRIORITY_LEVEL.URGENTE) {
-    return buildAction(ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE, [
-      'Prioridade urgente',
-      highCriticidade ? 'Criticidade operacional alta' : 'Risco elevado no contexto atual',
-      riskScore >= 70 ? 'Score de risco em nível crítico' : 'Atenção imediata recomendada',
+  if (centralAction.code === 'reavaliar_campo') {
+    return buildAction(ACTION_CODE.REEVALUATE_FIELD, [
+      'Equipamento operando com restrições',
+      'Condição fora do padrão operacional',
+      'Reavaliar situação no local',
+    ]);
+  }
+
+  if (centralAction.code === 'programar_preventiva') {
+    return buildAction(ACTION_CODE.SCHEDULE_PREVENTIVE, [
+      'Preventiva próxima do vencimento',
+      'Planejar janela de manutenção',
+      'Evitar avanço para cenário crítico',
+    ]);
+  }
+
+  if (centralAction.code === 'coletar_dados') {
+    return buildAction(ACTION_CODE.COLLECT_DATA, [
+      'Sem informação operacional',
+      'Não há histórico suficiente',
+      'Coletar dados para classificação',
     ]);
   }
 
@@ -100,52 +96,11 @@ export function calculateSuggestedAction({
     ]);
   }
 
-  if (preventiveOverdue) {
-    return buildAction(ACTION_CODE.REGISTER_PREVENTIVE, [
-      'Preventiva vencida',
-      'Rotina preventiva está atrasada',
-      'Registrar preventiva para reduzir risco operacional',
-    ]);
-  }
-
-  if (safeStatus === 'warn') {
-    return buildAction(ACTION_CODE.REEVALUATE_FIELD, [
-      'Equipamento operando com restrições',
-      'Condição fora do padrão operacional',
-      'Reavaliar situação no local',
-    ]);
-  }
-
-  if (priorityLevel === PRIORITY_LEVEL.ALTA) {
-    const normalizedPriority = normalizePriorityLabel(priorityLabel);
+  if (priorityLevel >= PRIORITY_LEVEL.ALTA && status !== 'ok') {
     return buildAction(ACTION_CODE.REGISTER_CORRECTIVE, [
-      normalizedPriority ? `Prioridade: ${normalizedPriority}` : 'Prioridade elevada para ação',
-      riskScore >= 60 ? 'Score de risco moderado/alto' : 'Contexto exige ação no mesmo dia',
+      'Prioridade elevada para ação',
+      'Contexto exige intervenção no mesmo dia',
       'Registrar manutenção para rastreabilidade',
-    ]);
-  }
-
-  if (preventiveSoon) {
-    return buildAction(ACTION_CODE.SCHEDULE_PREVENTIVE, [
-      'Preventiva próxima do vencimento',
-      'Planejar janela de manutenção',
-      'Evitar avanço para cenário de urgência',
-    ]);
-  }
-
-  if (priorityLevel === PRIORITY_LEVEL.MONITORAR) {
-    return buildAction(ACTION_CODE.MONITOR, [
-      'Prioridade em monitoramento',
-      'Acompanhar evolução do equipamento',
-      'Registrar sinais de desvio em campo',
-    ]);
-  }
-
-  if (riskScore <= 40 && hasStableCondition(conditionObserved)) {
-    return buildAction(ACTION_CODE.NONE, [
-      'Risco baixo no momento',
-      'Condição estável conforme registros',
-      'Sem fator relevante para ação imediata',
     ]);
   }
 
@@ -163,18 +118,14 @@ export function evaluateEquipmentSuggestedAction(equipamento, registros = []) {
 
   const priority = evaluateEquipmentPriority(equipamento, registros);
   const context = getEquipmentMaintenanceContext(equipamento, registros);
-  const risk = evaluateEquipmentRisk(equipamento, registros);
 
   return calculateSuggestedAction({
     priorityLevel: priority.priorityLevel,
-    priorityLabel: priority.priorityLabel,
     status: context.equipamento.status,
-    riskScore: risk.score,
     preventiveOverdue: context.daysToNext != null && context.daysToNext < 0,
     preventiveSoon:
       context.daysToNext != null && context.daysToNext >= 0 && context.daysToNext <= 7,
     recentCorrectiveCount: context.recentCorrectiveCount,
-    conditionObserved: context.equipamento.status,
     criticidade: context.equipamento.criticidade,
   });
 }
