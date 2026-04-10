@@ -21,6 +21,7 @@ import {
 } from '../../domain/maintenance.js';
 import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
 import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/suggestedAction.js';
+import { getActionPriorityScore } from '../../domain/actionPriority.js';
 
 const STATUS_OPERACIONAL = {
   ok: 'OPERANDO NORMALMENTE',
@@ -175,6 +176,11 @@ export function renderEquip(filtro = '') {
   if (!el) return;
 
   const sortedList = [...list].sort((a, b) => {
+    const apA = getActionPriorityScore(a, regsForEquip(a.id));
+    const apB = getActionPriorityScore(b, regsForEquip(b.id));
+    if (apB.actionPriorityScore !== apA.actionPriorityScore) {
+      return apB.actionPriorityScore - apA.actionPriorityScore;
+    }
     const pa = evaluateEquipmentPriority(a, regsForEquip(a.id));
     const pb = evaluateEquipmentPriority(b, regsForEquip(b.id));
     if (pb.priorityLevel !== pa.priorityLevel) return pb.priorityLevel - pa.priorityLevel;
