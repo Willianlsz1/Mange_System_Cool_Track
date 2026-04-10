@@ -12,6 +12,7 @@ import { SavedHighlight } from '../components/onboarding.js';
 import { cleanupOrphanSignatures } from '../components/signature.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { updateHeader } from './dashboard.js';
+import { getOperationalStatus } from '../../core/equipmentRules.js';
 
 export function renderHist() {
   const { registros } = getState();
@@ -122,12 +123,24 @@ export function deleteReg(id) {
     const reg = prev.registros.find((r) => r.id === id);
     const regs = prev.registros.filter((r) => r.id !== id);
     if (!reg) return { ...prev, registros: regs };
-    const last = regs
+    const remainingEqRegs = regs
       .filter((r) => r.equipId === reg.equipId)
-      .sort((a, b) => b.data.localeCompare(a.data))[0];
-    const equips = prev.equipamentos.map((eq) =>
-      eq.id === reg.equipId ? { ...eq, status: last?.status || 'ok' } : eq,
-    );
+      .sort((a, b) => b.data.localeCompare(a.data));
+    const last = remainingEqRegs[0] || null;
+    const equips = prev.equipamentos.map((eq) => {
+      if (eq.id !== reg.equipId) return eq;
+      const nextStatus = getOperationalStatus({
+        status: last?.status || '',
+        lastStatus: last?.status || '',
+        daysToNext: last?.proxima ? Utils.daysDiff(last.proxima.slice(0, 10)) : null,
+        ultimoRegistro: last,
+      });
+      return {
+        ...eq,
+        status: nextStatus.uiStatus === 'unknown' ? 'ok' : nextStatus.uiStatus,
+        statusDescricao: nextStatus.label,
+      };
+    });
     return { ...prev, registros: regs, equipamentos: equips };
   });
   localStorage.removeItem(`cooltrack-sig-${id}`);
