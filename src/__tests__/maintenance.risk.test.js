@@ -47,8 +47,11 @@ describe('equipment risk score', () => {
 
     expect(result.classification).toBe('alto');
     expect(result.score).toBeGreaterThanOrEqual(70);
+    expect(result.technicalBaseScore).toBeGreaterThan(0);
+    expect(result.criticidadeMultiplier).toBe(1.25);
     expect(result.factors).toContain('preventiva vencida');
     expect(result.factors).toContain('histórico de corretivas');
+    expect(result.factors).toContain('criticidade operacional');
   });
 
   it('returns low risk with healthy cadence and no corrective records', () => {
@@ -74,5 +77,6 @@ describe('equipment risk score', () => {
 
     expect(result.classification).toBe('baixo');
     expect(result.score).toBeLessThan(35);
+    expect(result.criticidadeMultiplier).toBe(1.1);
   });
 });
