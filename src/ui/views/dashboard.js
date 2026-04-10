@@ -221,6 +221,25 @@ function _alertCardHtml(alert) {
   </div>`;
 }
 
+function _criticalNowItemHtml({
+  icon = '!',
+  tone = 'danger',
+  title = 'Ação imediata',
+  subtitle = '',
+  action = 'view-equip',
+  id = '',
+  ctaLabel = 'Abrir',
+}) {
+  return `<button class="critical-now-item critical-now-item--${tone}" data-action="${Utils.escapeAttr(action)}" data-id="${Utils.escapeAttr(id)}">
+    <span class="critical-now-item__icon" aria-hidden="true">${Utils.escapeHtml(icon)}</span>
+    <span class="critical-now-item__body">
+      <span class="critical-now-item__title">${Utils.escapeHtml(title)}</span>
+      ${subtitle ? `<span class="critical-now-item__subtitle">${Utils.escapeHtml(subtitle)}</span>` : ''}
+    </span>
+    <span class="critical-now-item__cta">${Utils.escapeHtml(ctaLabel)}</span>
+  </button>`;
+}
+
 // ── Próxima ação (D3) ──────────────────────────────────
 function _renderNextAction(equipamentos, alerts) {
   const el = Utils.getEl('dash-next-action');
@@ -563,6 +582,52 @@ export function renderDashboard() {
     criticosEl.innerHTML = critical.length
       ? `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`
       : `<div class="dash-state-box dash-state-box--success">✅ Todos os equipamentos operando normalmente</div>`;
+  }
+
+  const criticalNowEl = Utils.getEl('dash-critical-now');
+  const criticalNowCountEl = Utils.getEl('dash-critical-now-count');
+  if (criticalNowEl) {
+    const criticalEquipments = critical.slice(0, 3).map((eq) =>
+      _criticalNowItemHtml({
+        icon: '!!',
+        tone: eq.status === 'danger' ? 'danger' : 'warn',
+        title: eq.nome || 'Equipamento crítico',
+        subtitle: `${CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media} · ${STATUS_TECH[Utils.safeStatus(eq.status)]}`,
+        action: 'view-equip',
+        id: eq.id,
+        ctaLabel: 'Ver',
+      }),
+    );
+    const overdueAlerts = alerts
+      .filter((alert) => alert.kind === 'overdue')
+      .slice(0, 3)
+      .map((alert) =>
+        _criticalNowItemHtml({
+          icon: '!',
+          tone: 'danger',
+          title: `${alert.eq?.nome || alert.equipmentName || 'Equipamento'} — preventiva vencida`,
+          subtitle: alert.subtitle || 'Manutenção fora do prazo',
+          action: 'go-register-equip',
+          id: alert.eq?.id || '',
+          ctaLabel: 'Registrar',
+        }),
+      );
+
+    const hasCriticalNow = criticalEquipments.length || overdueAlerts.length;
+    criticalNowEl.innerHTML = hasCriticalNow
+      ? `<div class="critical-now-group">
+          <div class="critical-now-group__label">Equipamentos críticos</div>
+          <div class="critical-now-list">${criticalEquipments.length ? criticalEquipments.join('') : '<div class="dash-state-box dash-state-box--muted">Sem equipamentos críticos no momento</div>'}</div>
+        </div>
+        <div class="critical-now-group">
+          <div class="critical-now-group__label">Manutenções vencidas</div>
+          <div class="critical-now-list">${overdueAlerts.length ? overdueAlerts.join('') : '<div class="dash-state-box dash-state-box--success">Nenhuma manutenção vencida</div>'}</div>
+        </div>`
+      : `<div class="dash-state-box dash-state-box--success">✅ Sem críticos imediatos</div>`;
+
+    if (criticalNowCountEl) {
+      criticalNowCountEl.textContent = String(criticalEquipments.length + overdueAlerts.length);
+    }
   }
 
   const alertsMini = Utils.getEl('dash-alertas-mini');
