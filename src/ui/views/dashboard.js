@@ -18,7 +18,7 @@ import {
 } from '../../domain/maintenance.js';
 
 // ── Labels internos ────────────────────────────────────
-const STATUS_TECH = { ok: 'OPERANDO', warn: 'ATENÇÃO', danger: 'FALHA' };
+const STATUS_TECH = { ok: 'OPERANDO', warn: 'ALERTA', danger: 'FORA DE OPERAÇÃO' };
 
 // ── Helpers privados de métricas ───────────────────────
 function _getMonthRange(monthsAgo = 0) {
@@ -137,7 +137,7 @@ function _renderAlertStrip(alerts, hasCritical = false) {
   if (!hasCritical && !primary) {
     el.innerHTML = `<div class="alert-strip alert-strip--none">
       <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Nenhuma falha crítica detectada</div></div>
+      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Nenhuma anomalia crítica detectada</div></div>
     </div>`;
     return;
   }
@@ -152,7 +152,7 @@ function _renderAlertStrip(alerts, hasCritical = false) {
       ? `🛠 Prev.: ${Utils.formatDate(primary.nextDueDate)}`
       : '🛠 Preventiva em atraso';
     el.innerHTML = `<div class="critical-incident" role="alert" aria-live="assertive">
-      <div class="critical-incident__label">FALHA CRÍTICA</div>
+      <div class="critical-incident__label">ANOMALIA CRÍTICA</div>
       <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento não identificado')}</div>
       <div class="critical-incident__desc">⚠ ${Utils.escapeHtml(Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92))}</div>
       <div class="critical-incident__meta">${Utils.escapeHtml(preventiveText)} · ↗ Ação imediata</div>
@@ -219,6 +219,25 @@ function _alertCardHtml(alert) {
     </div>
     <span class="alert-card__action">↗ Agir</span>
   </div>`;
+}
+
+function _criticalNowItemHtml({
+  icon = '!',
+  tone = 'danger',
+  title = 'Ação imediata',
+  subtitle = '',
+  action = 'view-equip',
+  id = '',
+  ctaLabel = 'Abrir',
+}) {
+  return `<button class="critical-now-item critical-now-item--${tone}" data-action="${Utils.escapeAttr(action)}" data-id="${Utils.escapeAttr(id)}">
+    <span class="critical-now-item__icon" aria-hidden="true">${Utils.escapeHtml(icon)}</span>
+    <span class="critical-now-item__body">
+      <span class="critical-now-item__title">${Utils.escapeHtml(title)}</span>
+      ${subtitle ? `<span class="critical-now-item__subtitle">${Utils.escapeHtml(subtitle)}</span>` : ''}
+    </span>
+    <span class="critical-now-item__cta">${Utils.escapeHtml(ctaLabel)}</span>
+  </button>`;
 }
 
 // ── Próxima ação (D3) ──────────────────────────────────
@@ -429,7 +448,7 @@ export function updateHeader() {
       statusFalhas.hidden = false;
       _setStatusIndicatorState(statusFalhas, 'danger', { live: true });
       if (statusFalhasTxt)
-        statusFalhasTxt.textContent = `${faultCount} falha${faultCount > 1 ? 's' : ''} ativa${faultCount > 1 ? 's' : ''}`;
+        statusFalhasTxt.textContent = `${faultCount} anomalia${faultCount > 1 ? 's' : ''} crítica${faultCount > 1 ? 's' : ''} ativa${faultCount > 1 ? 's' : ''}`;
     } else if (alertCount > 0) {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>Atenção requerida</span>`;
       statusSistema.hidden = false;
@@ -528,7 +547,7 @@ export function renderDashboard() {
   if (greetEl) {
     greetEl.textContent =
       faults > 0
-        ? `${faults} Falha${faults > 1 ? 's' : ''} Detectada${faults > 1 ? 's' : ''}`
+        ? `${faults} anomalia${faults > 1 ? 's' : ''} operacional${faults > 1 ? 'is' : ''}`
         : alerts.length > 0
           ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
           : 'Sistema Operacional';
@@ -563,6 +582,52 @@ export function renderDashboard() {
     criticosEl.innerHTML = critical.length
       ? `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`
       : `<div class="dash-state-box dash-state-box--success">✅ Todos os equipamentos operando normalmente</div>`;
+  }
+
+  const criticalNowEl = Utils.getEl('dash-critical-now');
+  const criticalNowCountEl = Utils.getEl('dash-critical-now-count');
+  if (criticalNowEl) {
+    const criticalEquipments = critical.slice(0, 3).map((eq) =>
+      _criticalNowItemHtml({
+        icon: '!!',
+        tone: eq.status === 'danger' ? 'danger' : 'warn',
+        title: eq.nome || 'Equipamento crítico',
+        subtitle: `${CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media} · ${STATUS_TECH[Utils.safeStatus(eq.status)]}`,
+        action: 'view-equip',
+        id: eq.id,
+        ctaLabel: 'Ver',
+      }),
+    );
+    const overdueAlerts = alerts
+      .filter((alert) => alert.kind === 'overdue')
+      .slice(0, 3)
+      .map((alert) =>
+        _criticalNowItemHtml({
+          icon: '!',
+          tone: 'danger',
+          title: `${alert.eq?.nome || alert.equipmentName || 'Equipamento'} — preventiva vencida`,
+          subtitle: alert.subtitle || 'Manutenção fora do prazo',
+          action: 'go-register-equip',
+          id: alert.eq?.id || '',
+          ctaLabel: 'Registrar',
+        }),
+      );
+
+    const hasCriticalNow = criticalEquipments.length || overdueAlerts.length;
+    criticalNowEl.innerHTML = hasCriticalNow
+      ? `<div class="critical-now-group">
+          <div class="critical-now-group__label">Equipamentos críticos</div>
+          <div class="critical-now-list">${criticalEquipments.length ? criticalEquipments.join('') : '<div class="dash-state-box dash-state-box--muted">Sem equipamentos críticos no momento</div>'}</div>
+        </div>
+        <div class="critical-now-group">
+          <div class="critical-now-group__label">Manutenções vencidas</div>
+          <div class="critical-now-list">${overdueAlerts.length ? overdueAlerts.join('') : '<div class="dash-state-box dash-state-box--success">Nenhuma manutenção vencida</div>'}</div>
+        </div>`
+      : `<div class="dash-state-box dash-state-box--success">✅ Sem críticos imediatos</div>`;
+
+    if (criticalNowCountEl) {
+      criticalNowCountEl.textContent = String(criticalEquipments.length + overdueAlerts.length);
+    }
   }
 
   const alertsMini = Utils.getEl('dash-alertas-mini');
