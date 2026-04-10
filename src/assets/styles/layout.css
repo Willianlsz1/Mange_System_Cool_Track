@@ -9,11 +9,23 @@
   --hist-sticky-gap: 4px;
 }
 
+html,
+body {
+  height: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
 #app {
   width: 100%;
-  min-height: 100vh;
+  min-height: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  padding-top: calc(var(--app-header-height) + var(--app-content-top-gap));
 }
 
 /* HEADER */
@@ -154,10 +166,11 @@
 .app-content {
   flex: 1;
   width: min(var(--layout-max), calc(100% - 32px));
-  margin: calc(var(--app-header-height) + var(--app-content-top-gap)) auto 0;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
 }
 
 /* NAV — mobile: fixed bottom */
@@ -252,6 +265,10 @@
 main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 0 0 calc(80px + env(safe-area-inset-bottom));
 }
 main:focus {
@@ -269,11 +286,9 @@ main:focus {
 @keyframes view-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 .view.is-exiting {
@@ -479,8 +494,6 @@ main:focus {
 
   /* Espaço para navbar fixo no fundo */
   .app-content {
-    padding-top: 0 !important;
-    margin-top: var(--app-header-height) !important;
     width: calc(100% - 16px);
   }
 
@@ -692,6 +705,14 @@ main:focus {
   #view-relatorio {
     background: #fff !important;
     color: #111 !important;
+  }
+  html,
+  body,
+  #app,
+  .app-content,
+  main {
+    height: auto !important;
+    overflow: visible !important;
   }
   #view-relatorio * {
     background-color: transparent !important;
