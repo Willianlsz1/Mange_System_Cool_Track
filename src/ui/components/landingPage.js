@@ -11,6 +11,16 @@ function buildFeatureItems(items) {
     .join('');
 }
 
+function buildCtaBlock() {
+  return `
+    <div class="landing-inline-cta">
+      <button class="landing-btn landing-btn--primary" type="button" data-action="start-trial">
+        Testar agora sem conta
+      </button>
+    </div>
+  `;
+}
+
 export const LandingPage = {
   render({ onStartTrial, onLogin } = {}) {
     const app = document.getElementById('app');
@@ -28,63 +38,85 @@ export const LandingPage = {
         </header>
 
         <section class="landing-hero">
-          <p class="landing-kicker">Gestão de manutenção sem fricção</p>
-          <h1>Organize serviços e comece em segundos.</h1>
+          <p class="landing-kicker">Manutenção com prioridade clara</p>
+          <h1>Saiba exatamente o que fazer em cada equipamento.</h1>
           <p class="landing-subtitle">
-            Registre atendimentos, acompanhe alertas e gere relatórios em um fluxo simples, mesmo sem criar conta.
+            O CoolTrack prioriza, mostra o que precisa de atenção e sugere a próxima ação — direto no campo.
           </p>
           <div class="landing-cta-group">
             <button class="landing-btn landing-btn--primary" type="button" data-action="start-trial">
               Testar agora sem conta
             </button>
             <button class="landing-btn landing-btn--ghost" type="button" data-action="login">
-              Entrar com conta
+              Já tenho conta
             </button>
           </div>
-          <div class="landing-media" role="img" aria-label="Demonstração do produto em vídeo ou GIF">
-            <p>Espaço para GIF ou vídeo do produto</p>
-            <small>Substitua por uma demo curta (10-20s)</small>
-          </div>
+          <ul class="landing-proof-list" aria-label="Provas rápidas">
+            <li>Sem cadastro</li>
+            <li>Funciona no celular</li>
+            <li>Comece em segundos</li>
+          </ul>
+          <article class="landing-mockup" aria-label="Exemplo da tela do CoolTrack">
+            <header class="landing-mockup__header">
+              <strong>Unidade Rooftop 03</strong>
+              <span>Score 67</span>
+            </header>
+            <div class="landing-mockup__status">FORA DE OPERAÇÃO</div>
+            <p class="landing-mockup__text">Ação recomendada: Registrar manutenção preventiva</p>
+            <div class="landing-mockup__chips">
+              <span>Prioridade: Alta</span>
+              <span>Última visita: 14 dias</span>
+            </div>
+          </article>
         </section>
 
         <section class="landing-section">
           <h2>Problema</h2>
-          <p class="landing-section__lead">
-            Rotina corrida, dados espalhados e retrabalho para comprovar cada serviço.
-          </p>
+          <ul class="landing-bullet-list">
+            <li>Equipamentos esquecidos</li>
+            <li>Preventivas atrasadas</li>
+            <li>Corretivas repetidas</li>
+            <li>Falta de prioridade clara</li>
+          </ul>
         </section>
 
         <section class="landing-section">
           <h2>Solução</h2>
-          <p class="landing-section__lead">
-            Um único painel para registrar ordens, acompanhar prioridades e entregar relatório final sem atraso.
-          </p>
-          <button class="landing-btn landing-btn--primary" type="button" data-action="start-trial">
-            Testar agora sem conta
-          </button>
+          <p class="landing-section__lead">O sistema analisa os registros e mostra:</p>
+          <ul class="landing-bullet-list">
+            <li>o que é crítico</li>
+            <li>o que precisa de atenção</li>
+            <li>o que pode esperar</li>
+          </ul>
+          ${buildCtaBlock()}
         </section>
 
         <section class="landing-section">
           <h2>Diferenciais</h2>
           <div class="landing-grid">
             ${buildFeatureItems([
-              { title: 'Fluxo direto', text: 'Comece em modo guest sem cadastro.' },
+              { title: 'Prioridade automática', text: 'Veja primeiro o que realmente importa.' },
               {
-                title: 'Tudo no mesmo lugar',
-                text: 'Equipamentos, registros e alertas no mesmo painel.',
+                title: 'Ação recomendada',
+                text: 'Saiba exatamente o que fazer em cada equipamento.',
               },
-              { title: 'Relatório rápido', text: 'Resumo pronto para envio ao cliente.' },
+              {
+                title: 'Fluxo rápido',
+                text: 'Registre um serviço em segundos, direto no campo.',
+              },
             ])}
           </div>
+          ${buildCtaBlock()}
         </section>
 
         <section class="landing-section">
           <h2>Como funciona</h2>
           <ol class="landing-steps">
-            <li>Inicie o modo guest com um clique.</li>
-            <li>Cadastre equipamento e registre serviço.</li>
-            <li>Acompanhe status e compartilhe relatório.</li>
+            <li>Abra o sistema</li>
+            <li>Veja o que precisa de atenção</li>
+            <li>Resolva e registre</li>
           </ol>
+          ${buildCtaBlock()}
         </section>
 
         <section class="landing-section">
@@ -101,14 +133,20 @@ export const LandingPage = {
             <article class="landing-plan">
               <h3>Conta CoolTrack</h3>
               <p class="landing-plan__price">Após trial</p>
-              <p>Persistência em nuvem e uso contínuo.</p>
+              <p>Dados persistidos na nuvem.</p>
               <button class="landing-btn landing-btn--ghost" type="button" data-action="login">
-                Criar/entrar na conta
+                Já tenho conta
               </button>
             </article>
           </div>
         </section>
       </main>
+
+      <div class="landing-sticky-cta" aria-label="CTA fixo mobile">
+        <button class="landing-btn landing-btn--primary" type="button" data-action="start-trial">
+          Testar agora sem conta
+        </button>
+      </div>
     `;
 
     const startTrialHandler =
