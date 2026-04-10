@@ -207,10 +207,10 @@ export function renderEquip(filtro = '') {
 
 export async function saveEquip() {
   if (localStorage.getItem('cooltrack-guest-mode') === '1') {
-    Toast.info('Crie uma conta grátis para salvar equipamentos.');
+    Toast.info('Salvar meus dados com Google para persistir equipamentos.');
     try {
       const { AuthScreen } = await import('../components/authscreen.js');
-      AuthScreen.show();
+      AuthScreen.show({ intent: 'guest-save' });
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,
