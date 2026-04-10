@@ -4,7 +4,10 @@
    ============================================================ */
 
 :root {
-  --app-header-height: 96px;
+  --app-header-top-height: 48px;
+  --app-header-stats-height: 48px;
+  --app-header-total-height: calc(var(--app-header-top-height) + var(--app-header-stats-height));
+  --app-header-height: var(--app-header-total-height);
   --app-content-top-gap: 16px;
   --hist-sticky-gap: 4px;
 }
@@ -22,10 +25,12 @@ body {
   width: 100%;
   min-height: 100%;
   height: 100%;
+  min-height: 100dvh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-top: calc(var(--app-header-height) + var(--app-content-top-gap));
+  padding-top: calc(var(--app-header-total-height) + var(--app-content-top-gap));
 }
 
 /* HEADER */
@@ -34,6 +39,7 @@ body {
   top: 0;
   left: 0;
   right: 0;
+  width: 100%;
   z-index: 80;
   background: var(--surface);
   border-bottom: 1px solid var(--border-2);
@@ -413,7 +419,10 @@ main:focus {
 /* ── MOBILE (≤640px) ────────────────────────────── */
 @media (max-width: 640px) {
   :root {
-    --app-header-height: 82px;
+    --app-header-top-height: 46px;
+    --app-header-stats-height: 36px;
+    --app-header-total-height: calc(var(--app-header-top-height) + var(--app-header-stats-height));
+    --app-header-height: var(--app-header-total-height);
     --app-content-top-gap: 0px;
     --hist-sticky-gap: 2px;
   }
@@ -441,6 +450,9 @@ main:focus {
   .app-header {
     position: fixed !important;
     top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
     z-index: 80 !important;
   }
 
