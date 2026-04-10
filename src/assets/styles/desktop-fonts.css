@@ -526,7 +526,7 @@
      HISTÓRICO
      ════════════════════════════════════════════════════════ */
   .hist-sticky-header {
-    top: var(--hist-sticky-gap, 4px);
+    top: calc(var(--app-header-total-height) + var(--hist-sticky-gap, 4px));
   }
   .hist-count {
     font-size: 13px; /* de 11px */
