@@ -76,12 +76,16 @@ export function getActionPriorityScore(equipment, registros = []) {
   };
 }
 
+<<<<<<< codex/centralizar-e-padronizar-logica-do-cooltrack-veilfn
 export function getActionBucket({
   status = 'ok',
   daysToNext = null,
   riskScore = 0,
   ultimoRegistro = null,
 } = {}) {
+=======
+export function getActionBucket({ status = 'ok', daysToNext = null, riskScore = 0, ultimoRegistro = null } = {}) {
+>>>>>>> main
   const central = getCentralActionBucket({ status, daysToNext, ultimoRegistro });
   if (central === 'critico') return 'critico';
   if (central === 'atencao') return 'atencao';
