@@ -13,15 +13,24 @@ import { Profile } from '../../features/profile.js';
 import { calcHealthScore, getHealthClass, updateHeader } from './dashboard.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
 import {
-  CRITICIDADE_LABEL,
-  PRIORIDADE_OPERACIONAL_LABEL,
   evaluateEquipmentHealth,
   getEquipmentMaintenanceContext,
   getSuggestedPreventiveDays,
   normalizePeriodicidadePreventivaDias,
 } from '../../domain/maintenance.js';
 
-const STATUS_TECH = { ok: 'OPERANDO', warn: 'ATENÇÃO', danger: 'FALHA' };
+const STATUS_OPERACIONAL = {
+  ok: 'OPERANDO NORMALMENTE',
+  warn: 'OPERANDO COM RESTRIÇÕES',
+  danger: 'FORA DE OPERAÇÃO',
+};
+const CONDICAO_OBSERVADA = {
+  ok: 'Sem anormalidades',
+  warn: 'Condição fora do padrão',
+  danger: 'Intervenção necessária',
+  unknown: 'Não avaliado',
+};
+const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
 
 function _empty(icon, msg, sub = '', cta = '') {
   return `<div class="empty-state">
@@ -40,7 +49,7 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
   const hcls = getHealthClass(score);
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
-  const criticidadeLabel = CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media;
+  const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
 
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
@@ -79,14 +88,14 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
     ctaLabel = 'Registrar preventiva →';
   else if (!last) ctaLabel = 'Primeiro registro →';
 
-  return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq.nome)} — ${STATUS_TECH[scls]}">
+  return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq.nome)} — ${STATUS_OPERACIONAL[scls]}">
     <div class="equip-card__header">
       <div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq.nome)}</div>
-        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · Crit. ${Utils.escapeHtml(criticidadeLabel)}</div>
+        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · Prioridade ${Utils.escapeHtml(prioridadeLabel)}</div>
       </div>
-      <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_TECH[scls]}</span>
+      <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_OPERACIONAL[scls]}</span>
       <div class="equip-card__actions">
         <button class="equip-card__delete" data-action="delete-equip" data-id="${safeId}" aria-label="Excluir ${Utils.escapeHtml(eq.nome)}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
@@ -257,9 +266,7 @@ export async function viewEquip(id) {
   const cls = getHealthClass(score);
   const safeId = Utils.escapeAttr(id);
   const context = health.context;
-  const criticidadeLabel = CRITICIDADE_LABEL[eq.criticidade] || CRITICIDADE_LABEL.media;
-  const prioridadeLabel =
-    PRIORIDADE_OPERACIONAL_LABEL[eq.prioridadeOperacional] || PRIORIDADE_OPERACIONAL_LABEL.normal;
+  const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
   const proximaPreventiva = context?.proximaPreventiva
     ? Utils.formatDate(context.proximaPreventiva)
     : 'Sem agenda';
@@ -273,7 +280,7 @@ export async function viewEquip(id) {
       <div class="eq-modal-health__circle eq-modal-health__circle--${cls}">${score}%</div>
       <div class="eq-modal-health__text">
         <div class="eq-modal-health__label">EFICIÊNCIA DO EQUIPAMENTO</div>
-        <div class="eq-modal-health__status">${cls === 'ok' ? 'Operando bem' : cls === 'warn' ? 'Atenção requerida' : 'Falha detectada'}</div>
+        <div class="eq-modal-health__status">${cls === 'ok' ? CONDICAO_OBSERVADA.ok : cls === 'warn' ? CONDICAO_OBSERVADA.warn : CONDICAO_OBSERVADA.danger}</div>
       </div>
     </div>
     <div class="eq-modal-summary">${healthSummary}</div>
@@ -283,8 +290,9 @@ export async function viewEquip(id) {
       <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq.fluido || '—')}</span></div>
       <div class="info-row"><span class="info-row__label">Modelo</span><span class="info-row__value">${Utils.escapeHtml(eq.modelo || '—')}</span></div>
       <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq.local)}</span></div>
-      <div class="info-row"><span class="info-row__label">Criticidade</span><span class="info-row__value">${Utils.escapeHtml(criticidadeLabel)}</span></div>
-      <div class="info-row"><span class="info-row__label">Prioridade operacional</span><span class="info-row__value">${Utils.escapeHtml(prioridadeLabel)}</span></div>
+      <div class="info-row"><span class="info-row__label">Estado operacional</span><span class="info-row__value">${Utils.escapeHtml(STATUS_OPERACIONAL[Utils.safeStatus(eq.status)] || CONDICAO_OBSERVADA.unknown)}</span></div>
+      <div class="info-row"><span class="info-row__label">Condição observada</span><span class="info-row__value">${Utils.escapeHtml(CONDICAO_OBSERVADA[Utils.safeStatus(eq.status)] || CONDICAO_OBSERVADA.unknown)}</span></div>
+      <div class="info-row"><span class="info-row__label">Prioridade</span><span class="info-row__value">${Utils.escapeHtml(prioridadeLabel)}</span></div>
       <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias</span></div>
       <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
     </div>

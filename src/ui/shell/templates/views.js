@@ -6,6 +6,27 @@ export function renderShellViews() {
           <div class="dashboard-bento">
             <div id="dash-alert-strip"></div>
             <div id="dash-next-action"></div>
+            <div class="dashboard-operational-grid">
+              <div class="dash-section dash-section--critical-now">
+                <div class="dash-section-header">
+                  <span class="dash-section-header__label">CRÍTICOS AGORA</span>
+                  <span class="dash-section-header__line"></span>
+                  <span class="dash-section-header__count" id="dash-critical-now-count">0</span>
+                </div>
+                <div id="dash-critical-now"></div>
+              </div>
+              <div class="dash-section dash-section--quick-actions">
+                <div class="dash-section-header">
+                  <span class="dash-section-header__label">AÇÕES RÁPIDAS</span>
+                  <span class="dash-section-header__line"></span>
+                </div>
+                <div class="quick-actions-grid">
+                  <button class="btn btn--primary quick-action-btn" data-nav="registro">Registrar manutenção</button>
+                  <button class="btn btn--outline quick-action-btn" data-nav="equipamentos">Buscar equipamento</button>
+                  <button class="btn btn--danger quick-action-btn" data-nav="alertas">Ver críticos</button>
+                </div>
+              </div>
+            </div>
             <div class="kpi-row">
               <div class="bento-kpi bento-kpi--alert">
                 <div class="bento-kpi__label">EQUIPAMENTOS ATIVOS</div>
@@ -21,7 +42,7 @@ export function renderShellViews() {
                 <div class="bento-kpi__sub" id="hst-health-sub"></div>
               </div>
               <div class="bento-kpi bento-kpi--fail">
-                <div class="bento-kpi__label">FALHAS DETECTADAS</div>
+                <div class="bento-kpi__label">ANOMALIAS OPERACIONAIS</div>
                 <div class="bento-kpi__value bento-kpi__value--danger" id="hst-fail-bento">0</div>
                 <div class="bento-kpi__sub" id="hst-fail-bento-sub"></div>
               </div>
@@ -245,7 +266,7 @@ export function renderShellViews() {
 
         <!-- ALERTAS -->
         <div class="view" id="view-alertas">
-          <div class="section-title">Alertas e Falhas Detectadas</div>
+          <div class="section-title">Alertas e Anormalidades registradas</div>
           <div id="lista-alertas" role="list"></div>
         </div>
 
