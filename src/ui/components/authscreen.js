@@ -27,6 +27,7 @@ function getDefaultIntentOptions(intent) {
 export const AuthScreen = {
   show(options = {}) {
     const intent = options.intent || 'default';
+    const initialTab = options.initialTab === 'signup' ? 'signup' : 'signin';
     const intentOptions = getDefaultIntentOptions(intent);
     const existing = document.getElementById('auth-overlay');
     if (existing) {
@@ -209,6 +210,6 @@ export const AuthScreen = {
       window.location.reload();
     });
 
-    focusFirstField(overlay, '#signin-email');
+    setTab(initialTab);
   },
 };
