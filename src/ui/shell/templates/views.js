@@ -9,7 +9,7 @@ export function renderShellViews() {
             <div class="dashboard-operational-grid">
               <div class="dash-section dash-section--critical-now">
                 <div class="dash-section-header">
-                  <span class="dash-section-header__label">CRÍTICOS AGORA</span>
+                  <span class="dash-section-header__label">A FAZER AGORA</span>
                   <span class="dash-section-header__line"></span>
                   <span class="dash-section-header__count" id="dash-critical-now-count">0</span>
                 </div>

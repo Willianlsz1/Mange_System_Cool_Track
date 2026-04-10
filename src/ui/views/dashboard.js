@@ -16,18 +16,15 @@ import {
   getEquipmentMaintenanceContext,
   getHealthClass as getMaintenanceHealthClass,
 } from '../../domain/maintenance.js';
+import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
+import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/suggestedAction.js';
+import { getActionPriorityScore } from '../../domain/actionPriority.js';
 
 // ── Labels internos ────────────────────────────────────
 const STATUS_OPERACIONAL = {
   ok: 'OPERANDO NORMALMENTE',
   warn: 'OPERANDO COM RESTRIÇÕES',
   danger: 'FORA DE OPERAÇÃO',
-};
-const CONDICAO_OBSERVADA = {
-  ok: 'Sem anormalidades',
-  warn: 'Condição fora do padrão',
-  danger: 'Intervenção necessária',
-  unknown: 'Não avaliado',
 };
 const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
 const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'Alto risco' };
@@ -252,6 +249,20 @@ function _criticalNowItemHtml({
   </button>`;
 }
 
+function _getActionButton(actionCode) {
+  if (
+    actionCode === ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE ||
+    actionCode === ACTION_CODE.REGISTER_CORRECTIVE ||
+    actionCode === ACTION_CODE.REGISTER_PREVENTIVE
+  ) {
+    return { action: 'go-register-equip', ctaLabel: 'Registrar' };
+  }
+  if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) {
+    return { action: 'go-register-equip', ctaLabel: 'Programar' };
+  }
+  return { action: 'view-equip', ctaLabel: 'Ver' };
+}
+
 // ── Próxima ação (D3) ──────────────────────────────────
 function _renderNextAction(equipamentos, alerts) {
   const el = Utils.getEl('dash-next-action');
@@ -302,7 +313,19 @@ function _equipCardMini(eq) {
   const hcls = getHealthClass(score);
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
-  const risk = evaluateEquipmentRisk(eq, regsForEquip(eq.id));
+  const eqRegs = regsForEquip(eq.id);
+  const risk = evaluateEquipmentRisk(eq, eqRegs);
+  const priority = evaluateEquipmentPriority(eq, eqRegs);
+  const suggestedAction = evaluateEquipmentSuggestedAction(eq, eqRegs);
+
+  function getCtaByAction(actionCode) {
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE)
+      return 'Registrar corretiva agora →';
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar corretiva →';
+    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar preventiva →';
+    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar preventiva →';
+    return 'Registrar serviço →';
+  }
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
     if (diff === 0) return 'Hoje';
@@ -334,13 +357,8 @@ function _equipCardMini(eq) {
     }
   }
 
-  let ctaLabel = 'Registrar serviço →';
-  if (scls === 'danger') ctaLabel = 'Registrar corretiva →';
-  else if (context.proximaPreventiva && Utils.daysDiff(context.proximaPreventiva) <= 7) {
-    ctaLabel = 'Registrar preventiva →';
-  } else if (!last) {
-    ctaLabel = 'Primeiro registro →';
-  }
+  let ctaLabel = getCtaByAction(suggestedAction.actionCode);
+  if (!last && suggestedAction.actionCode === ACTION_CODE.NONE) ctaLabel = 'Primeiro registro →';
 
   return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_OPERACIONAL[scls]}">
     <div class="equip-card__status-band equip-card__status-band--${scls}"></div>
@@ -365,6 +383,15 @@ function _equipCardMini(eq) {
       <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
       <span class="equip-card__risk-score">Score ${risk.score}</span>
       <span class="equip-card__risk-factors">Base ${risk.technicalBaseScore} × Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
+    </div>
+    <div class="equip-card__priority">
+      <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${Utils.escapeHtml(priority.priorityLabel)}</span>
+      <span class="equip-card__priority-reasons">${Utils.escapeHtml(priority.priorityReasons.join(' · '))}</span>
+    </div>
+    <div class="equip-card__suggested-action">
+      <span class="equip-card__suggested-action-label">Ação recomendada (baseada nos registros)</span>
+      <span class="equip-card__suggested-action-title">${Utils.escapeHtml(suggestedAction.actionLabel)}</span>
+      <span class="equip-card__suggested-action-reasons">${Utils.escapeHtml(suggestedAction.actionReasons.join(' · '))}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
@@ -547,13 +574,27 @@ export function renderDashboard() {
   const alerts = Alerts.getAll();
   const hasCritical = alerts.some((alert) => alert.severity === 'danger');
   const critical = equipamentos
-    .map((eq) => ({
-      eq,
-      score: calcHealthScore(eq.id),
-      hasAlert: alerts.some((alert) => alert.eq?.id === eq.id),
-    }))
-    .filter(({ eq, score, hasAlert }) => hasAlert || eq.status !== 'ok' || score < 80)
-    .sort((a, b) => a.score - b.score || Number(b.hasAlert) - Number(a.hasAlert))
+    .map((eq) => {
+      const eqRegs = regsForEquip(eq.id);
+      return {
+        eq,
+        score: calcHealthScore(eq.id),
+        riskScore: evaluateEquipmentRisk(eq, eqRegs).score,
+        priority: evaluateEquipmentPriority(eq, eqRegs),
+        hasAlert: alerts.some((alert) => alert.eq?.id === eq.id),
+      };
+    })
+    .filter(
+      ({ eq, score, priority, hasAlert }) =>
+        hasAlert || eq.status !== 'ok' || score < 80 || priority.priorityLevel >= 2,
+    )
+    .sort(
+      (a, b) =>
+        b.priority.priorityLevel - a.priority.priorityLevel ||
+        Number(b.hasAlert) - Number(a.hasAlert) ||
+        b.riskScore - a.riskScore ||
+        a.score - b.score,
+    )
     .map(({ eq }) => eq)
     .slice(0, 4);
 
@@ -601,46 +642,56 @@ export function renderDashboard() {
   const criticalNowEl = Utils.getEl('dash-critical-now');
   const criticalNowCountEl = Utils.getEl('dash-critical-now-count');
   if (criticalNowEl) {
-    const criticalEquipments = critical.slice(0, 3).map((eq) =>
-      _criticalNowItemHtml({
-        icon: '!!',
-        tone: eq.status === 'danger' ? 'danger' : 'warn',
-        title: eq.nome || 'Equipamento crítico',
-        subtitle: `Condição: ${CONDICAO_OBSERVADA[Utils.safeStatus(eq.status)] || CONDICAO_OBSERVADA.unknown} · Prioridade: ${PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media}`,
-        action: 'view-equip',
-        id: eq.id,
-        ctaLabel: 'Ver',
-      }),
-    );
-    const overdueAlerts = alerts
-      .filter((alert) => alert.kind === 'overdue')
-      .slice(0, 3)
-      .map((alert) =>
-        _criticalNowItemHtml({
-          icon: '!',
-          tone: 'danger',
-          title: `${alert.eq?.nome || alert.equipmentName || 'Equipamento'} — manutenção necessária`,
-          subtitle: alert.subtitle || 'Preventiva fora do prazo',
-          action: 'go-register-equip',
-          id: alert.eq?.id || '',
-          ctaLabel: 'Registrar',
-        }),
-      );
+    const actionQueue = equipamentos
+      .map((eq) => {
+        const score = getActionPriorityScore(eq, regsForEquip(eq.id));
+        return { eq, score };
+      })
+      .sort((a, b) => b.score.actionPriorityScore - a.score.actionPriorityScore)
+      .slice(0, 9);
 
-    const hasCriticalNow = criticalEquipments.length || overdueAlerts.length;
-    criticalNowEl.innerHTML = hasCriticalNow
+    const groups = {
+      critico: actionQueue.filter((item) => item.score.group === 'critico').slice(0, 3),
+      atencao: actionQueue.filter((item) => item.score.group === 'atencao').slice(0, 3),
+      monitoramento: actionQueue.filter((item) => item.score.group === 'monitoramento').slice(0, 3),
+    };
+
+    const renderActionItems = (items, tone = 'warn') =>
+      items.length
+        ? items
+            .map(({ eq, score }) => {
+              const actionMeta = _getActionButton(score.suggestedAction.actionCode);
+              return _criticalNowItemHtml({
+                icon: score.group === 'critico' ? '!!' : score.group === 'atencao' ? '!' : '•',
+                tone,
+                title: `${eq.nome || 'Equipamento'} · ${score.suggestedAction.actionLabel}`,
+                subtitle: score.reasons.join(' · ') || 'Sem sinais críticos no momento',
+                action: actionMeta.action,
+                id: eq.id,
+                ctaLabel: actionMeta.ctaLabel,
+              });
+            })
+            .join('')
+        : '<div class="dash-state-box dash-state-box--muted">Nenhum equipamento nesta faixa</div>';
+
+    const totalCount = groups.critico.length + groups.atencao.length + groups.monitoramento.length;
+    criticalNowEl.innerHTML = totalCount
       ? `<div class="critical-now-group">
-          <div class="critical-now-group__label">Equipamentos críticos</div>
-          <div class="critical-now-list">${criticalEquipments.length ? criticalEquipments.join('') : '<div class="dash-state-box dash-state-box--muted">Sem equipamentos críticos no momento</div>'}</div>
+          <div class="critical-now-group__label">Crítico agora</div>
+          <div class="critical-now-list">${renderActionItems(groups.critico, 'danger')}</div>
         </div>
         <div class="critical-now-group">
-          <div class="critical-now-group__label">Manutenções vencidas</div>
-          <div class="critical-now-list">${overdueAlerts.length ? overdueAlerts.join('') : '<div class="dash-state-box dash-state-box--success">Nenhuma manutenção vencida</div>'}</div>
+          <div class="critical-now-group__label">Atenção</div>
+          <div class="critical-now-list">${renderActionItems(groups.atencao, 'warn')}</div>
+        </div>
+        <div class="critical-now-group">
+          <div class="critical-now-group__label">Monitoramento</div>
+          <div class="critical-now-list">${renderActionItems(groups.monitoramento, 'warn')}</div>
         </div>`
-      : `<div class="dash-state-box dash-state-box--success">✅ Sem críticos imediatos</div>`;
+      : `<div class="dash-state-box dash-state-box--success">✅ Sem ações pendentes no momento</div>`;
 
     if (criticalNowCountEl) {
-      criticalNowCountEl.textContent = String(criticalEquipments.length + overdueAlerts.length);
+      criticalNowCountEl.textContent = String(totalCount);
     }
   }
 
