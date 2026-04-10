@@ -6,19 +6,18 @@ describe('LandingPage', () => {
     localStorage.clear();
   });
 
-  it('renders conversion hero, static mockup and CTA', () => {
+  it('renders conversion hero, risk result and CTA', () => {
     const onStartTrial = vi.fn();
 
     LandingPage.render({ onStartTrial, onLogin: vi.fn() });
 
     expect(document.querySelector('.landing-hero h1')?.textContent).toContain(
-      'Saiba exatamente o que fazer em cada equipamento.',
+      'Pare de perder tempo com manutenção desorganizada.',
     );
-    expect(document.body.textContent).toContain('Sem cadastro');
-    expect(document.body.textContent).toContain('Funciona no celular');
-    expect(document.body.textContent).toContain('Comece em segundos');
-    expect(document.body.textContent).toContain('Score 67');
-    expect(document.body.textContent).toContain('FORA DE OPERAÇÃO');
+    expect(document.body.textContent).toContain('Sem cadastro • Sem cartão • Comece em segundos');
+    expect(document.body.textContent).toContain('ALERTA CRÍTICO');
+    expect(document.body.textContent).toContain('Score de risco: 87');
+    expect(document.body.textContent).toContain('Ação sugerida');
 
     document.querySelector('[data-action="start-trial"]')?.click();
     expect(onStartTrial).toHaveBeenCalledTimes(1);
@@ -33,7 +32,7 @@ describe('LandingPage', () => {
     document.querySelectorAll('[data-action="start-trial"]').forEach((button) => button.click());
     document.querySelectorAll('[data-action="login"]').forEach((button) => button.click());
 
-    expect(onStartTrial).toHaveBeenCalledTimes(6);
+    expect(onStartTrial).toHaveBeenCalledTimes(3);
     expect(onLogin).toHaveBeenCalledTimes(3);
   });
 });
