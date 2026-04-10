@@ -2290,17 +2290,18 @@ mark,
   color: #25d366;
 }
 
-/* ── C4: Botão salvar fixo no mobile ── */
+/* ── Registro actions no fluxo normal (sem sticky/fixed) ── */
+.registro-btn-group {
+  position: static;
+  margin-top: var(--space-4);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  z-index: auto;
+}
+
 @media (max-width: 1024px) {
   .registro-btn-group {
-    position: sticky;
-    bottom: calc(72px + env(safe-area-inset-bottom));
-    background: var(--surface);
-    border-top: 1px solid var(--border-2);
-    margin: 0 calc(var(--space-4) * -1) calc(var(--space-4) * -1);
-    padding: 12px 16px;
-    z-index: 10;
-    border-radius: 0;
     gap: 8px;
   }
 }
@@ -3079,12 +3080,16 @@ mark,
 /* Sticky header do histórico */
 .hist-sticky-header {
   position: sticky;
-  top: var(--hist-sticky-gap, 4px);
+  top: calc(var(--app-header-total-height) + var(--hist-sticky-gap, 4px) + 4px);
   z-index: 40;
   background: transparent;
-  padding: 6px 0;
-  margin-bottom: 8px;
+  padding: 10px 0 8px;
+  margin-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.hist-sticky-header .section-title--toolbar {
+  margin: 2px 0;
 }
 
 .hist-sticky-header__top {
@@ -3092,7 +3097,7 @@ mark,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .hist-sticky-header__actions {
@@ -3116,6 +3121,10 @@ mark,
   gap: 8px;
   align-items: center;
   width: 100%;
+}
+
+.hist-sticky-header .search-bar--compact {
+  margin-bottom: 2px;
 }
 
 .hist-equip-select {
