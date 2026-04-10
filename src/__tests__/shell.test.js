@@ -21,6 +21,10 @@ describe('shell bootstrap', () => {
     expect(app?.querySelector('.app-header')).toBeNull();
     expect(app?.querySelector('#main-content')).not.toBeNull();
     expect(document.body.querySelectorAll('.app-header')).toHaveLength(1);
+    expect(document.body.querySelectorAll('.app-nav .nav-btn')).toHaveLength(5);
+    expect(
+      document.getElementById('nav-registro')?.querySelector('.nav-btn__icon')?.textContent,
+    ).toBe('+');
   });
 
   it('syncs shell metrics into global layout variables', async () => {

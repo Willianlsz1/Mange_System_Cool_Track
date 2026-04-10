@@ -109,7 +109,7 @@ describe('Auth integration wrapper', () => {
   });
 
   it('finalizes oauth success and conversion telemetry', async () => {
-    const { Auth, telemetryMock } = await loadAuthModule();
+    const { Auth, telemetryMock, toastMock } = await loadAuthModule();
     localStorage.setItem(
       'cooltrack-oauth-pending-v1',
       JSON.stringify({ provider: 'google', source: 'guest-save', wasGuest: true }),
@@ -119,12 +119,24 @@ describe('Auth integration wrapper', () => {
     Auth.finalizeOAuthRedirect({ id: 'u-1' });
 
     expect(telemetryMock.trackEvent).toHaveBeenCalledWith(
+      'google_login_success',
+      expect.objectContaining({ source: 'guest-save', wasGuest: true }),
+    );
+    expect(telemetryMock.trackEvent).toHaveBeenCalledWith(
       'auth_google_completed',
       expect.objectContaining({ source: 'guest-save', wasGuest: true }),
     );
     expect(telemetryMock.trackEvent).toHaveBeenCalledWith(
+      'guest_conversion_success',
+      expect.objectContaining({ method: 'google', source: 'guest-save' }),
+    );
+    expect(telemetryMock.trackEvent).toHaveBeenCalledWith(
       'guest_converted_to_account',
       expect.objectContaining({ method: 'google', source: 'guest-save' }),
+    );
+    expect(toastMock.success).toHaveBeenCalledWith('Seus dados foram salvos com segurança');
+    expect(toastMock.success).toHaveBeenCalledWith(
+      'Agora você pode acessar seus registros de qualquer lugar',
     );
     expect(window.location.search).toBe('');
   });
