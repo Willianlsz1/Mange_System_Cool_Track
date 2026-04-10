@@ -3080,11 +3080,11 @@ mark,
 /* Sticky header do histórico */
 .hist-sticky-header {
   position: sticky;
-  top: calc(var(--app-header-total-height) + var(--hist-sticky-gap, 4px));
+  top: 4px;
   z-index: 40;
   background: transparent;
-  padding: 6px 0;
-  margin-bottom: 8px;
+  padding: 10px 0 8px;
+  margin-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
@@ -3093,7 +3093,15 @@ mark,
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+}
+
+#view-historico .section-title--toolbar {
+  margin: 0 0 2px;
+}
+
+#view-historico .search-bar--compact {
+  margin-bottom: 2px;
 }
 
 .hist-sticky-header__actions {
@@ -3177,6 +3185,11 @@ mark,
 
 /* Mobile: sticky header compacto */
 @media (max-width: 639px) {
+  .hist-sticky-header {
+    top: 4px;
+    padding-top: 9px;
+    margin-bottom: 12px;
+  }
   .hist-equip-select {
     min-width: 96px;
     width: 42%;
