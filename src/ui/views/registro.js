@@ -13,6 +13,9 @@ import { Profile } from '../../features/profile.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
 import { uploadPendingPhotos } from '../../core/photoStorage.js';
 import { getOperationalStatus, validateOperationalPayload } from '../../core/equipmentRules.js';
+import { checkGuestLimit, isGuestMode } from '../../core/guestLimits.js';
+import { GuestConversionModal } from '../components/guestConversionModal.js';
+import { trackEvent } from '../../core/telemetry.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
 const QUICK_TEMPLATE_MAP = {
@@ -168,18 +171,11 @@ export function applyQuickTemplate(templateId) {
 }
 
 export async function saveRegistro() {
-  if (localStorage.getItem('cooltrack-guest-mode') === '1') {
-    Toast.info('Salvar meus dados com Google para persistir registros.');
-    try {
-      const { AuthScreen } = await import('../components/authscreen.js');
-      AuthScreen.show({ intent: 'guest-save' });
-    } catch (error) {
-      handleError(error, {
-        code: ErrorCodes.NETWORK_ERROR,
-        message: 'Não foi possível abrir a tela de cadastro no momento.',
-        context: { action: 'registro.saveRegistro.authscreen' },
-      });
-    }
+  const isGuest = isGuestMode();
+  const guestLimit = checkGuestLimit('registros');
+  if (guestLimit.blocked) {
+    trackEvent('limit_reached', { resource: 'registros', current: guestLimit.current, limit: 10 });
+    GuestConversionModal.open({ reason: 'limit_registros', source: 'save-registro' });
     return;
   }
   const equipId = Utils.getVal('r-equip');
@@ -365,6 +361,10 @@ export async function saveRegistro() {
   }
 
   goTo('historico');
+
+  if (isGuest) {
+    GuestConversionModal.open({ reason: 'save_attempt', source: 'save-registro' });
+  }
 }
 
 export function clearRegistro(preserveEquip = false) {
