@@ -1,5 +1,5 @@
 import { evaluateEquipmentRisk, getEquipmentMaintenanceContext } from './maintenance.js';
-import { getPriority as getCentralPriority } from '../core/equipmentRules.js';
+import { getPriority as getCentralPriority, getSuggestedAction } from '../core/equipmentRules.js';
 
 export const PRIORITY_LEVEL = {
   OK: 1,
@@ -23,89 +23,20 @@ function normalizeStatus(value = 'ok') {
   return ['ok', 'warn', 'danger'].includes(value) ? value : 'ok';
 }
 
-function buildSuggestedAction(level, status) {
-  if (level === PRIORITY_LEVEL.URGENTE) {
-    return status === 'danger'
-      ? 'Registrar corretiva imediatamente'
-      : 'Intervenção imediata / registrar corretiva';
-  }
-  if (level === PRIORITY_LEVEL.ALTA) return 'Registrar manutenção';
-  if (level === PRIORITY_LEVEL.MONITORAR) return 'Programar preventiva';
-  return 'Nenhuma ação imediata';
+function toPriorityLevel(centralPriority, statusCode) {
+  if (statusCode === 'critico') return PRIORITY_LEVEL.URGENTE;
+  if (centralPriority.level === 'alta') return PRIORITY_LEVEL.ALTA;
+  if (centralPriority.level === 'media') return PRIORITY_LEVEL.MONITORAR;
+  return PRIORITY_LEVEL.OK;
 }
 
-function classifyPriority({ status, riskScore, criticidade, daysToNext, recentCorrectiveCount }) {
-  const reasons = [];
-  let level = PRIORITY_LEVEL.OK;
-
-  const highCriticidade = criticidade === 'alta' || criticidade === 'critica';
-  const hasOverduePreventive = daysToNext != null && daysToNext < 0;
-  const hasNearPreventive = daysToNext != null && daysToNext >= 0 && daysToNext <= 7;
-  const hasCorrectiveRecurrence = recentCorrectiveCount >= 2;
-
-  if (status === 'danger') {
-    level = PRIORITY_LEVEL.URGENTE;
-    reasons.push('Equipamento fora de operação');
-  } else if (status === 'warn') {
-    level = Math.max(level, PRIORITY_LEVEL.ALTA);
-    reasons.push('Operando com restrições');
-  }
-
-  if (criticidade === 'critica') reasons.push('Criticidade operacional crítica');
-  else if (criticidade === 'alta') reasons.push('Criticidade operacional alta');
-
-  if (hasOverduePreventive) {
-    level = Math.max(level, PRIORITY_LEVEL.ALTA);
-    reasons.push('Preventiva vencida');
-  } else if (hasNearPreventive) {
-    level = Math.max(level, PRIORITY_LEVEL.MONITORAR);
-    reasons.push('Preventiva próxima do vencimento');
-  }
-
-  if (recentCorrectiveCount === 1) {
-    level = Math.max(level, PRIORITY_LEVEL.ALTA);
-    reasons.push('Corretiva recente registrada');
-  }
-
-  if (hasCorrectiveRecurrence) {
-    level = Math.max(level, PRIORITY_LEVEL.URGENTE);
-    reasons.push('Histórico recente de corretivas repetidas');
-  }
-
-  if (riskScore >= 80 && highCriticidade) {
-    level = PRIORITY_LEVEL.URGENTE;
-    reasons.push('Score de risco elevado com criticidade relevante');
-  } else if (riskScore >= 65) {
-    level = Math.max(level, PRIORITY_LEVEL.ALTA);
-    reasons.push('Score de risco moderado/alto');
-  } else if (riskScore >= 45) {
-    level = Math.max(level, PRIORITY_LEVEL.MONITORAR);
-    reasons.push('Score de risco em atenção');
-  }
-
-  const strongSignals = [
-    status === 'danger',
-    hasOverduePreventive,
-    highCriticidade,
-    hasCorrectiveRecurrence,
-    riskScore >= 70,
-  ].filter(Boolean).length;
-
-  if (strongSignals >= 3 && level < PRIORITY_LEVEL.URGENTE) {
-    level = PRIORITY_LEVEL.URGENTE;
-    reasons.push('Combinação de fatores críticos no equipamento');
-  }
-
-  if (!reasons.length) {
-    reasons.push('Operação normal sem fatores relevantes');
-  }
-
-  return {
-    priorityLevel: level,
-    priorityLabel: PRIORITY_LABEL[level],
-    priorityReasons: reasons.slice(0, 3),
-    suggestedAction: buildSuggestedAction(level, status),
-  };
+function toSuggestedActionText(suggestedAction) {
+  if (suggestedAction.code === 'acao_imediata_corretiva') return 'Registrar corretiva imediatamente';
+  if (suggestedAction.code === 'acao_imediata_preventiva') return 'Registrar preventiva imediatamente';
+  if (suggestedAction.code === 'reavaliar_campo') return 'Reavaliar em campo';
+  if (suggestedAction.code === 'programar_preventiva') return 'Programar preventiva';
+  if (suggestedAction.code === 'coletar_dados') return 'Coletar dados iniciais';
+  return 'Nenhuma ação imediata';
 }
 
 export function calculateActionPriority({
@@ -122,19 +53,22 @@ export function calculateActionPriority({
     daysToNext,
     recentCorrectiveCount: Number.isFinite(recentCorrectiveCount) ? recentCorrectiveCount : 0,
   };
-  const central = getCentralPriority(normalized);
-  const base = classifyPriority(normalized);
 
-  if (central.level === 'alta' && base.priorityLevel < PRIORITY_LEVEL.ALTA) {
-    return {
-      ...base,
-      priorityLevel: PRIORITY_LEVEL.ALTA,
-      priorityLabel: PRIORITY_LABEL[PRIORITY_LEVEL.ALTA],
-      suggestedAction: 'Intervenção imediata / registrar corretiva',
-      priorityReasons: [...new Set([...central.reasons, ...base.priorityReasons])].slice(0, 3),
-    };
-  }
-  return base;
+  const central = getCentralPriority(normalized);
+  const action = getSuggestedAction(normalized);
+  const statusCode = central.statusCode;
+
+  const priorityLevel = toPriorityLevel(central, statusCode);
+  const reasons = [...central.reasons];
+  if (normalized.recentCorrectiveCount >= 2) reasons.push('Histórico recente de corretivas repetidas');
+  if (normalized.riskScore >= 70) reasons.push('Score de risco elevado');
+
+  return {
+    priorityLevel,
+    priorityLabel: PRIORITY_LABEL[priorityLevel],
+    priorityReasons: [...new Set(reasons)].slice(0, 3),
+    suggestedAction: toSuggestedActionText(action),
+  };
 }
 
 export function evaluateEquipmentPriority(equipamento, registros = []) {
