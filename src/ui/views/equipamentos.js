@@ -113,7 +113,7 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
     <div class="equip-card__risk">
       <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
       <span class="equip-card__risk-score">Score ${risk.score}</span>
-      <span class="equip-card__risk-factors">${Utils.escapeHtml(riskFactors)}</span>
+      <span class="equip-card__risk-factors">${Utils.escapeHtml(riskFactors)} · Base ${risk.technicalBaseScore} × Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
@@ -302,6 +302,7 @@ export async function viewEquip(id) {
         </div>
         <span class="eq-risk-panel__badge eq-risk-panel__badge--${risk.classification}">${Utils.escapeHtml(risk.classificationLabel)}</span>
       </div>
+      <div class="eq-risk-panel__summary">${Utils.escapeHtml(risk.explanation)}</div>
       <div class="eq-risk-panel__factors">
         ${(risk.factors.length ? risk.factors : ['rotina estável'])
           .map((factor) => `<span class="eq-risk-panel__factor">${Utils.escapeHtml(factor)}</span>`)

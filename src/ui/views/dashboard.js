@@ -12,6 +12,7 @@ import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner } from '../components/onboarding.js';
 import {
   calculateHealthScore,
+  evaluateEquipmentRisk,
   getEquipmentMaintenanceContext,
   getHealthClass as getMaintenanceHealthClass,
 } from '../../domain/maintenance.js';
@@ -29,6 +30,7 @@ const CONDICAO_OBSERVADA = {
   unknown: 'Não avaliado',
 };
 const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
+const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'Alto risco' };
 
 // ── Helpers privados de métricas ───────────────────────
 function _getMonthRange(monthsAgo = 0) {
@@ -300,6 +302,7 @@ function _equipCardMini(eq) {
   const hcls = getHealthClass(score);
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
+  const risk = evaluateEquipmentRisk(eq, regsForEquip(eq.id));
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
     if (diff === 0) return 'Hoje';
@@ -357,6 +360,11 @@ function _equipCardMini(eq) {
     <div class="equip-card__health">
       <div class="equip-card__health-bar"><div class="equip-card__health-fill equip-card__health-fill--${hcls}" style="width:${score}%"></div></div>
       <div class="equip-card__health-meta"><span class="equip-card__health-label">Eficiência</span><span class="equip-card__health-value equip-card__health-value--${hcls}">${score}%</span></div>
+    </div>
+    <div class="equip-card__risk">
+      <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
+      <span class="equip-card__risk-score">Score ${risk.score}</span>
+      <span class="equip-card__risk-factors">Base ${risk.technicalBaseScore} × Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
