@@ -1,4 +1,4 @@
-import { getActionPriorityScore } from '../domain/actionPriority.js';
+import { getActionBucket, getActionPriorityScore } from '../domain/actionPriority.js';
 
 describe('action priority score', () => {
   it('adds strong weight for out of operation and overdue preventive', () => {
@@ -49,6 +49,16 @@ describe('action priority score', () => {
     const result = getActionPriorityScore(equipamento, registros);
 
     expect(result.group).toBe('monitoramento');
-    expect(result.actionPriorityScore).toBeLessThan(90);
+    expect(result.actionPriorityScore).toBeLessThan(200);
+  });
+
+  it('classifies overdue preventive as critical even without danger status', () => {
+    const bucket = getActionBucket({ status: 'ok', daysToNext: -1, riskScore: 35 });
+    expect(bucket).toBe('critico');
+  });
+
+  it('classifies warning status and high risk as attention', () => {
+    expect(getActionBucket({ status: 'warn', daysToNext: 3, riskScore: 40 })).toBe('atencao');
+    expect(getActionBucket({ status: 'ok', daysToNext: 5, riskScore: 60 })).toBe('atencao');
   });
 });

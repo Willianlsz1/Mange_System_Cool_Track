@@ -39,6 +39,12 @@ function buildAction(actionCode, reasons) {
   };
 }
 
+function normalizePriorityLabel(priorityLabel = '') {
+  if (!priorityLabel) return '';
+  if (priorityLabel === 'Alta prioridade') return 'Alta';
+  return priorityLabel;
+}
+
 export function calculateSuggestedAction({
   priorityLevel = PRIORITY_LEVEL.OK,
   priorityLabel = '',
@@ -94,8 +100,9 @@ export function calculateSuggestedAction({
   }
 
   if (priorityLevel === PRIORITY_LEVEL.ALTA) {
+    const normalizedPriority = normalizePriorityLabel(priorityLabel);
     return buildAction(ACTION_CODE.REGISTER_CORRECTIVE, [
-      priorityLabel ? `Prioridade ${priorityLabel.toLowerCase()}` : 'Prioridade elevada para ação',
+      normalizedPriority ? `Prioridade: ${normalizedPriority}` : 'Prioridade elevada para ação',
       riskScore >= 60 ? 'Score de risco moderado/alto' : 'Contexto exige ação no mesmo dia',
       'Registrar manutenção para rastreabilidade',
     ]);
