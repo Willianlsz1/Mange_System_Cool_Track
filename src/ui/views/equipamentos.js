@@ -19,6 +19,8 @@ import {
   getSuggestedPreventiveDays,
   normalizePeriodicidadePreventivaDias,
 } from '../../domain/maintenance.js';
+import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
+import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/suggestedAction.js';
 
 const STATUS_OPERACIONAL = {
   ok: 'OPERANDO NORMALMENTE',
@@ -52,8 +54,20 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
   const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
-  const risk = evaluateEquipmentRisk(eq, regsForEquip(eq.id));
+  const eqRegs = regsForEquip(eq.id);
+  const risk = evaluateEquipmentRisk(eq, eqRegs);
+  const priority = evaluateEquipmentPriority(eq, eqRegs);
+  const suggestedAction = evaluateEquipmentSuggestedAction(eq, eqRegs);
   const riskFactors = risk.factors.length ? risk.factors.join(' · ') : 'rotina estável';
+
+  function getCtaByAction(actionCode) {
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE)
+      return 'Registrar corretiva agora →';
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar corretiva →';
+    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar preventiva →';
+    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar preventiva →';
+    return 'Registrar serviço →';
+  }
 
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
@@ -86,11 +100,8 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
     }
   }
 
-  let ctaLabel = 'Registrar serviço →';
-  if (scls === 'danger') ctaLabel = 'Registrar corretiva →';
-  else if (context.proximaPreventiva && Utils.daysDiff(context.proximaPreventiva) <= 7)
-    ctaLabel = 'Registrar preventiva →';
-  else if (!last) ctaLabel = 'Primeiro registro →';
+  let ctaLabel = getCtaByAction(suggestedAction.actionCode);
+  if (!last && suggestedAction.actionCode === ACTION_CODE.NONE) ctaLabel = 'Primeiro registro →';
 
   return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq.nome)} — ${STATUS_OPERACIONAL[scls]}">
     <div class="equip-card__header">
@@ -114,6 +125,15 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
       <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
       <span class="equip-card__risk-score">Score ${risk.score}</span>
       <span class="equip-card__risk-factors">${Utils.escapeHtml(riskFactors)} · Base ${risk.technicalBaseScore} × Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
+    </div>
+    <div class="equip-card__priority">
+      <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${Utils.escapeHtml(priority.priorityLabel)}</span>
+      <span class="equip-card__priority-reasons">${Utils.escapeHtml(priority.priorityReasons.join(' · '))}</span>
+    </div>
+    <div class="equip-card__suggested-action">
+      <span class="equip-card__suggested-action-label">Ação recomendada (baseada nos registros)</span>
+      <span class="equip-card__suggested-action-title">${Utils.escapeHtml(suggestedAction.actionLabel)}</span>
+      <span class="equip-card__suggested-action-reasons">${Utils.escapeHtml(suggestedAction.actionReasons.join(' · '))}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
@@ -154,12 +174,21 @@ export function renderEquip(filtro = '') {
   const el = Utils.getEl('lista-equip');
   if (!el) return;
 
+  const sortedList = [...list].sort((a, b) => {
+    const pa = evaluateEquipmentPriority(a, regsForEquip(a.id));
+    const pb = evaluateEquipmentPriority(b, regsForEquip(b.id));
+    if (pb.priorityLevel !== pa.priorityLevel) return pb.priorityLevel - pa.priorityLevel;
+    const ra = evaluateEquipmentRisk(a, regsForEquip(a.id)).score;
+    const rb = evaluateEquipmentRisk(b, regsForEquip(b.id)).score;
+    return rb - ra;
+  });
+
   withSkeleton(
     el,
     { enabled: list.length >= 9, variant: 'equipment', count: Math.min(list.length, 5) },
     () => {
-      el.innerHTML = list.length
-        ? list.map((eq) => equipCardHtml(eq)).join('')
+      el.innerHTML = sortedList.length
+        ? sortedList.map((eq) => equipCardHtml(eq)).join('')
         : _empty(
             '🔧',
             'Nenhum equipamento encontrado',
