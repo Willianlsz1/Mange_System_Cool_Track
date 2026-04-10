@@ -565,8 +565,9 @@ export function renderDashboard() {
         hasAlert: alerts.some((alert) => alert.eq?.id === eq.id),
       };
     })
-    .filter(({ eq, score, priority, hasAlert }) =>
-      hasAlert || eq.status !== 'ok' || score < 80 || priority.priorityLevel >= 2,
+    .filter(
+      ({ eq, score, priority, hasAlert }) =>
+        hasAlert || eq.status !== 'ok' || score < 80 || priority.priorityLevel >= 2,
     )
     .sort(
       (a, b) =>
