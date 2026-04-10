@@ -14,6 +14,7 @@ import { calcHealthScore, getHealthClass, updateHeader } from './dashboard.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
 import {
   evaluateEquipmentHealth,
+  evaluateEquipmentRisk,
   getEquipmentMaintenanceContext,
   getSuggestedPreventiveDays,
   normalizePeriodicidadePreventivaDias,
@@ -31,6 +32,7 @@ const CONDICAO_OBSERVADA = {
   unknown: 'Não avaliado',
 };
 const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
+const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'Alto risco' };
 
 function _empty(icon, msg, sub = '', cta = '') {
   return `<div class="empty-state">
@@ -50,6 +52,8 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
   const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
+  const risk = evaluateEquipmentRisk(eq, regsForEquip(eq.id));
+  const riskFactors = risk.factors.length ? risk.factors.join(' · ') : 'rotina estável';
 
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
@@ -105,6 +109,11 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
     <div class="equip-card__health">
       <div class="equip-card__health-bar"><div class="equip-card__health-fill equip-card__health-fill--${hcls}" style="width:${score}%"></div></div>
       <div class="equip-card__health-meta"><span class="equip-card__health-label">Eficiência</span><span class="equip-card__health-value equip-card__health-value--${hcls}">${score}%</span></div>
+    </div>
+    <div class="equip-card__risk">
+      <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
+      <span class="equip-card__risk-score">Score ${risk.score}</span>
+      <span class="equip-card__risk-factors">${Utils.escapeHtml(riskFactors)}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
@@ -266,6 +275,7 @@ export async function viewEquip(id) {
   const cls = getHealthClass(score);
   const safeId = Utils.escapeAttr(id);
   const context = health.context;
+  const risk = evaluateEquipmentRisk(eq, regs);
   const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
   const proximaPreventiva = context?.proximaPreventiva
     ? Utils.formatDate(context.proximaPreventiva)
@@ -284,6 +294,32 @@ export async function viewEquip(id) {
       </div>
     </div>
     <div class="eq-modal-summary">${healthSummary}</div>
+    <div class="eq-risk-panel eq-risk-panel--${risk.classification}">
+      <div class="eq-risk-panel__header">
+        <div>
+          <div class="eq-risk-panel__label">PRIORIDADE DE ATENÇÃO</div>
+          <div class="eq-risk-panel__class">${Utils.escapeHtml(risk.classificationLabel)} · Score ${risk.score}</div>
+        </div>
+        <span class="eq-risk-panel__badge eq-risk-panel__badge--${risk.classification}">${Utils.escapeHtml(risk.classificationLabel)}</span>
+      </div>
+      <div class="eq-risk-panel__factors">
+        ${(risk.factors.length ? risk.factors : ['rotina estável'])
+          .map((factor) => `<span class="eq-risk-panel__factor">${Utils.escapeHtml(factor)}</span>`)
+          .join('')}
+      </div>
+      <details class="eq-risk-panel__analysis">
+        <summary>Ver análise</summary>
+        <ul class="eq-risk-panel__analysis-list">
+          ${risk.details
+            .map(
+              (detail) =>
+                `<li><strong>${Utils.escapeHtml(detail.label)}</strong>: ${Utils.escapeHtml(detail.detail)}</li>`,
+            )
+            .join('')}
+        </ul>
+        <p class="eq-risk-panel__note">Este score orienta a priorização e não substitui a decisão técnica em campo.</p>
+      </details>
+    </div>
     <div class="info-list info-list--spaced">
       <div class="info-row"><span class="info-row__label">TAG</span><span class="info-row__value info-row__value--mono">${Utils.escapeHtml(eq.tag || '—')}</span></div>
       <div class="info-row"><span class="info-row__label">Tipo</span><span class="info-row__value">${Utils.escapeHtml(eq.tipo)}</span></div>

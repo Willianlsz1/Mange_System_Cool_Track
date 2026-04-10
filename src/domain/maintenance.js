@@ -186,6 +186,137 @@ function getAlertScore(equipamento, health) {
   );
 }
 
+function getRiskClass(score) {
+  if (score >= 70) return 'alto';
+  if (score >= 35) return 'medio';
+  return 'baixo';
+}
+
+function getRiskClassLabel(riskClass) {
+  if (riskClass === 'alto') return 'Alto risco';
+  if (riskClass === 'medio') return 'Médio risco';
+  return 'Baixo risco';
+}
+
+function getRiskStatusFactor(status) {
+  if (status === 'danger') {
+    return {
+      points: 38,
+      shortLabel: 'fora de operação',
+      detail: 'Equipamento está fora de operação e pode gerar impacto imediato na rotina.',
+    };
+  }
+  if (status === 'warn') {
+    return {
+      points: 22,
+      shortLabel: 'operação com restrições',
+      detail: 'Equipamento opera com restrições e merece avaliação técnica prioritária.',
+    };
+  }
+  return {
+    points: 6,
+    shortLabel: 'operação normal',
+    detail: 'Equipamento opera normalmente no momento.',
+  };
+}
+
+function getRiskAgeFactor(context) {
+  if (!context.ultimoRegistro) {
+    return {
+      points: 30,
+      shortLabel: 'sem histórico de manutenção',
+      detail: 'Não há registro anterior para confirmar rotina de manutenção.',
+    };
+  }
+
+  const ratio = context.periodicidadeDias ? context.daysSinceLast / context.periodicidadeDias : 0;
+  if (ratio >= 1.25) {
+    return {
+      points: 28,
+      shortLabel: 'manutenção além do intervalo',
+      detail: `Último serviço há ${context.daysSinceLast} dias, acima do intervalo esperado.`,
+    };
+  }
+  if (ratio >= 0.9) {
+    return {
+      points: 18,
+      shortLabel: 'manutenção próxima do limite',
+      detail: `Último serviço há ${context.daysSinceLast} dias, perto do limite da rotina.`,
+    };
+  }
+  return {
+    points: 8,
+    shortLabel: 'manutenção recente',
+    detail: `Último serviço há ${context.daysSinceLast} dias, dentro da rotina planejada.`,
+  };
+}
+
+function getRiskPreventiveFactor(context) {
+  if (context.daysToNext == null) {
+    return {
+      points: 12,
+      shortLabel: 'preventiva sem agenda',
+      detail: 'A próxima preventiva não está agendada.',
+    };
+  }
+  if (context.daysToNext < 0) {
+    return {
+      points: 30,
+      shortLabel: 'preventiva vencida',
+      detail: `Preventiva atrasada há ${Math.abs(context.daysToNext)} dias.`,
+    };
+  }
+  if (context.daysToNext <= 7) {
+    return {
+      points: 20,
+      shortLabel: 'preventiva próxima',
+      detail: `Preventiva prevista para os próximos ${context.daysToNext} dias.`,
+    };
+  }
+  if (context.daysToNext <= 15) {
+    return {
+      points: 12,
+      shortLabel: 'preventiva se aproximando',
+      detail: `Preventiva prevista para daqui a ${context.daysToNext} dias.`,
+    };
+  }
+  return {
+    points: 4,
+    shortLabel: 'preventiva no prazo',
+    detail: `Próxima preventiva em ${context.daysToNext} dias.`,
+  };
+}
+
+function getRiskCorrectiveFactor(context) {
+  const count = context.recentCorrectiveCount;
+  if (count >= 3) {
+    return {
+      points: 26,
+      shortLabel: 'histórico de corretivas',
+      detail: `Foram registradas ${count} corretivas recentes, indicando reincidência de falhas.`,
+    };
+  }
+  if (count === 2) {
+    return {
+      points: 18,
+      shortLabel: 'histórico de corretivas',
+      detail: 'Duas corretivas recentes sugerem necessidade de atenção técnica.',
+    };
+  }
+  if (count === 1) {
+    return {
+      points: 10,
+      shortLabel: 'corretiva recente',
+      detail: 'Uma corretiva recente registrada para o equipamento.',
+    };
+  }
+  return {
+    points: 3,
+    shortLabel: 'sem corretivas recentes',
+    detail: 'Sem corretivas recentes entre os últimos registros.',
+  };
+}
+
 export function normalizeCriticidade(value, fallback = 'media') {
   return CRITICIDADE_VALUES.includes(value) ? value : fallback;
 }
@@ -328,6 +459,49 @@ export function calculateHealthScore(equipamento, registros = []) {
 
 export function getHealthClass(score) {
   return score >= 80 ? 'ok' : score >= 55 ? 'warn' : 'danger';
+}
+
+export function evaluateEquipmentRisk(equipamento, registros = []) {
+  if (!equipamento) {
+    return {
+      score: 0,
+      classification: 'baixo',
+      classificationLabel: 'Baixo risco',
+      factors: ['equipamento não encontrado'],
+      details: [],
+      context: null,
+    };
+  }
+
+  const context = getEquipmentMaintenanceContext(equipamento, registros);
+  const factorSet = [
+    getRiskStatusFactor(context.equipamento.status),
+    getRiskAgeFactor(context),
+    getRiskPreventiveFactor(context),
+    getRiskCorrectiveFactor(context),
+  ];
+  const score = clamp(
+    Math.round((factorSet.reduce((sum, factor) => sum + factor.points, 0) / 124) * 100),
+    0,
+    100,
+  );
+  const classification = getRiskClass(score);
+
+  return {
+    score,
+    classification,
+    classificationLabel: getRiskClassLabel(classification),
+    factors: factorSet
+      .filter((factor) => factor.points >= 10)
+      .map((factor) => factor.shortLabel)
+      .slice(0, 3),
+    details: factorSet.map((factor) => ({
+      label: factor.shortLabel,
+      impact: factor.points,
+      detail: factor.detail,
+    })),
+    context,
+  };
 }
 
 export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
