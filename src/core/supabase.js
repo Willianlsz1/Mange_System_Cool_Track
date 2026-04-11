@@ -26,6 +26,7 @@ function getUrlEnvOrThrow(name) {
 }
 
 const supabaseUrl = getUrlEnvOrThrow('VITE_SUPABASE_URL');
+// SECURITY: usar apenas a chave pública/anon no cliente (VITE_SUPABASE_KEY), nunca service_role.
 const supabaseKey = getEnvOrThrow('VITE_SUPABASE_KEY');
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
