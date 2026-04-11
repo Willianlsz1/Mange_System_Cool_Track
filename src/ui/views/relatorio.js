@@ -102,7 +102,7 @@ export function renderRelatorio() {
             <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq?.fluido ?? '—')}</span></div>
             <div class="info-row"><span class="info-row__label">Criticidade</span><span class="info-row__value">${Utils.escapeHtml(CRITICIDADE_LABEL[eq?.criticidade] || CRITICIDADE_LABEL.media)}</span></div>
             <div class="info-row"><span class="info-row__label">Prioridade operacional</span><span class="info-row__value">${Utils.escapeHtml(PRIORIDADE_OPERACIONAL_LABEL[eq?.prioridadeOperacional] || PRIORIDADE_OPERACIONAL_LABEL.normal)}</span></div>
-            <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${eq?.periodicidadePreventivaDias ? `${eq.periodicidadePreventivaDias} dias` : '—'}</span></div>
+            <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${Utils.escapeHtml(eq?.periodicidadePreventivaDias ? `${eq.periodicidadePreventivaDias} dias` : '—')}</span></div>
             <div class="info-row"><span class="info-row__label">Técnico</span><span class="info-row__value">${Utils.escapeHtml(r.tecnico ?? '—')}</span></div>
             ${r.pecas ? `<div class="info-row"><span class="info-row__label">Peças / Materiais</span><span class="info-row__value">${Utils.escapeHtml(r.pecas)}</span></div>` : ''}
             ${r.custoPecas > 0 ? `<div class="info-row"><span class="info-row__label">Custo de Peças</span><span class="info-row__value">R$ ${parseFloat(r.custoPecas).toFixed(2).replace('.', ',')}</span></div>` : ''}
