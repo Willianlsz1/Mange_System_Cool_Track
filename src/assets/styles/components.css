@@ -4366,6 +4366,37 @@ mark,
   color: var(--text-2);
 }
 
+.guest-conv-preview {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(12, 25, 41, 0.75);
+}
+
+.guest-conv-preview__title {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+
+.guest-conv-preview__line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.guest-conv-preview__line strong {
+  color: var(--text);
+}
+
+.guest-conv-preview__line--blur strong {
+  filter: blur(3px);
+  user-select: none;
+}
+
 .guest-conv-actions {
   display: grid;
   gap: 10px;
