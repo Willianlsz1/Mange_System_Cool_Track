@@ -1,6 +1,7 @@
 import { on } from '../../../core/events.js';
 import { Modal } from '../../../core/modal.js';
 import { goTo } from '../../../core/router.js';
+import { trackEvent } from '../../../core/telemetry.js';
 import { Photos } from '../../components/photos.js';
 import { Toast } from '../../../core/toast.js';
 import { Tour } from '../../components/tour.js';
@@ -59,4 +60,15 @@ export function bindNavigationHandlers() {
 
   on('print', () => window.print());
   on('close-lightbox', () => Photos.closeLightbox());
+  on('open-upgrade', async (el, event) => {
+    event?.preventDefault?.();
+    const source = ['usage_meter', 'upgrade_nudge', 'dashboard'].includes(
+      el?.dataset?.upgradeSource,
+    )
+      ? el.dataset.upgradeSource
+      : 'dashboard';
+    trackEvent('upgrade_cta_clicked', { source });
+    const { goTo: dynamicGoTo } = await import('../../../core/router.js');
+    dynamicGoTo('pricing', { highlightPlan: 'pro' });
+  });
 }

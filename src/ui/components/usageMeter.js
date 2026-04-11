@@ -157,7 +157,7 @@ export const UsageMeter = {
         </div>
 
         <div class="usage-meter__actions">
-          <a class="usage-meter__upgrade" href="#" data-action="open-upgrade">${upgradeText}</a>
+          <a class="usage-meter__upgrade" href="#" data-action="open-upgrade" data-upgrade-source="usage_meter">${upgradeText}</a>
           ${badgeHtml}
         </div>
       </section>

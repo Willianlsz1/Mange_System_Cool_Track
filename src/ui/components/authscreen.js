@@ -4,6 +4,13 @@ import { trackEvent } from '../../core/telemetry.js';
 import { runAsyncAction } from './actionFeedback.js';
 import { PasswordRecoveryModal } from './passwordRecoveryModal.js';
 
+const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
+
+function persistPostAuthRedirect(redirect) {
+  if (!redirect?.route) return;
+  localStorage.setItem(POST_AUTH_REDIRECT_KEY, JSON.stringify(redirect));
+}
+
 function focusFirstField(container, selector) {
   container.querySelector(selector)?.focus();
 }
@@ -28,6 +35,7 @@ export const AuthScreen = {
   show(options = {}) {
     const intent = options.intent || 'default';
     const initialTab = options.initialTab === 'signup' ? 'signup' : 'signin';
+    const postAuthRedirect = options.postAuthRedirect?.route ? options.postAuthRedirect : null;
     const intentOptions = getDefaultIntentOptions(intent);
     const existing = document.getElementById('auth-overlay');
     if (existing) {
@@ -215,6 +223,7 @@ export const AuthScreen = {
           wasGuest: intentOptions.wasGuest,
         });
         if (!result?.ok && result?.message) Toast.error(result.message);
+        if (result?.ok) persistPostAuthRedirect(postAuthRedirect);
       });
     };
 
@@ -276,6 +285,7 @@ export const AuthScreen = {
         const user = await Auth.signUp(email, password, nome);
         if (!user) return;
         localStorage.removeItem('cooltrack-guest-mode');
+        persistPostAuthRedirect(postAuthRedirect);
         overlay.remove();
         window.location.reload();
       });

@@ -329,5 +329,8 @@ export function renderShellViews() {
           </div>
           <div id="relatorio-corpo"></div>
         </div>
+
+        <!-- PRICING -->
+        <div class="view" id="view-pricing"></div>
 `;
 }
