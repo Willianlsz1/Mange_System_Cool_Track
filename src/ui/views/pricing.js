@@ -40,7 +40,7 @@ export function renderPricing() {
             <li>✓ Exportação de dados</li>
             <li>✓ Suporte prioritário</li>
           </ul>
-          <button class="btn pricing-card__cta pricing-card__cta--pro" type="button">Assinar Pro →</button>
+          <button class="btn pricing-card__cta pricing-card__cta--pro" type="button" data-action="open-upgrade" data-upgrade-source="dashboard">Assinar Pro →</button>
           <p class="pricing-card__microcopy">Cancele quando quiser • Sem fidelidade</p>
         </article>
       </div>

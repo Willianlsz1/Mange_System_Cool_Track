@@ -72,13 +72,20 @@ export const GuestCtaModal = {
 
     guestOverlay.querySelector('#guest-signup-btn')?.addEventListener('click', () => {
       guestOverlay.remove();
-      AuthScreen.show({ intent: 'guest-save' });
+      AuthScreen.show({
+        intent: 'guest-save',
+        postAuthRedirect: { route: 'pricing', params: { highlightPlan: 'pro' } },
+      });
       document.getElementById('tab-signup')?.click();
     });
 
     guestOverlay.querySelector('#guest-email-btn')?.addEventListener('click', () => {
       guestOverlay.remove();
-      AuthScreen.show({ intent: 'guest-save', initialTab: 'signup' });
+      AuthScreen.show({
+        intent: 'guest-save',
+        initialTab: 'signup',
+        postAuthRedirect: { route: 'pricing', params: { highlightPlan: 'pro' } },
+      });
     });
 
     guestOverlay.querySelector('#guest-signin-btn')?.addEventListener('click', () => {

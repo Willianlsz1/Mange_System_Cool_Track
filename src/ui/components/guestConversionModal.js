@@ -106,14 +106,32 @@ export const GuestConversionModal = {
         closeModal({ converted: false, dismissEvent: 'guest_modal_dismissed', trigger });
       });
     } else {
+      const shouldPromotePro =
+        reason === 'limit_pdf' ||
+        reason === 'limit_whatsapp' ||
+        source === 'pdf_export_attempt' ||
+        source === 'whatsapp_share_attempt';
+
       overlay.querySelector('[data-action="google"]')?.addEventListener('click', () => {
         closeModal({ converted: true, trigger });
-        AuthScreen.show({ intent: 'guest-save', initialTab: 'signin' });
+        AuthScreen.show({
+          intent: 'guest-save',
+          initialTab: 'signin',
+          postAuthRedirect: shouldPromotePro
+            ? { route: 'pricing', params: { highlightPlan: 'pro' } }
+            : null,
+        });
       });
 
       overlay.querySelector('[data-action="email"]')?.addEventListener('click', () => {
         closeModal({ converted: true, trigger });
-        AuthScreen.show({ intent: 'guest-save', initialTab: 'signup' });
+        AuthScreen.show({
+          intent: 'guest-save',
+          initialTab: 'signup',
+          postAuthRedirect: shouldPromotePro
+            ? { route: 'pricing', params: { highlightPlan: 'pro' } }
+            : null,
+        });
       });
 
       overlay.querySelector('[data-action="login"]')?.addEventListener('click', () => {
