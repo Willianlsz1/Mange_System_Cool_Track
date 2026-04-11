@@ -33,13 +33,23 @@ export const GuestCtaModal = {
             border:none;border-radius:8px;padding:14px 16px;
             color:#07111F;font-size:15px;font-weight:600;
             font-family:inherit;cursor:pointer;
-          ">Criar conta gratis</button>
+          ">Salvar meus dados com Google</button>
+          <button id="guest-signup-btn" style="
+            width:100%;background:transparent;
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:8px;padding:12px 16px;
+            color:#8AAAC8;font-size:14px;font-family:inherit;cursor:pointer;
+          ">Salvar meus dados agora</button>
           <button id="guest-signin-btn" style="
             width:100%;background:transparent;
             border:1px solid rgba(255,255,255,0.08);
             border-radius:8px;padding:12px 16px;
             color:#8AAAC8;font-size:14px;font-family:inherit;cursor:pointer;
           ">Ja tenho conta</button>
+          <button id="guest-continue-btn" style="
+            width:100%;background:transparent;border:none;
+            color:#4A6880;font-size:12px;font-family:inherit;cursor:pointer;padding:8px;
+          ">Continuar no modo visitante</button>
         </div>
       </div>`;
 

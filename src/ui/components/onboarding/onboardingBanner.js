@@ -18,9 +18,9 @@ export const OnboardingBanner = {
       <div class="onboarding-banner__icon">🚀</div>
       <div>
         <div class="onboarding-banner__title">Cadastre seu primeiro equipamento</div>
-        <div class="onboarding-banner__desc">Adicione um equipamento para começar a registrar serviços e gerar relatórios.</div>
+        <div class="onboarding-banner__desc">Em 2 minutos voce tera seu primeiro relatorio profissional pronto.</div>
       </div>
-      <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">Cadastrar agora</button>
+      <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">Adicionar meu primeiro equipamento</button>
     `;
     document.getElementById('lista-equip')?.before(el);
   },
