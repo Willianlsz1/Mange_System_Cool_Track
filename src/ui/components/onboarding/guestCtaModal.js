@@ -1,9 +1,24 @@
 import { AuthScreen } from '../authscreen.js';
+import { GuestTracker } from '../../../core/guestTracker.js';
+
+function getGuestWarningMessage(count) {
+  if (count >= 20) {
+    return `🚨 ${count} acoes perdidas em andamento. Ultima chance de salvar seu trabalho.`;
+  }
+  if (count >= 12) {
+    return `⚠️ ${count} acoes nao salvas. Seus dados vao desaparecer ao fechar o navegador.`;
+  }
+  if (count >= 7) {
+    return `Voce ja fez ${count} acoes sem salvar. Crie sua conta para nao perder nada.`;
+  }
+  return `Voce ja registrou ${count} acoes sem salvar`;
+}
 
 export const GuestCtaModal = {
   open() {
     document.getElementById('guest-cta-overlay')?.remove();
-    const guestActions = Number(localStorage.getItem('cooltrack-guest-actions') || '0');
+    const guestActions = GuestTracker.getCount();
+    const warningMessage = getGuestWarningMessage(guestActions);
     const guestOverlay = document.createElement('div');
     guestOverlay.id = 'guest-cta-overlay';
     guestOverlay.className = 'modal-overlay is-open';
@@ -18,7 +33,7 @@ export const GuestCtaModal = {
           <div style="font-size:32px;margin-bottom:12px">👁</div>
           <div style="font-size:16px;font-weight:600;color:#E8F2FA;margin-bottom:6px">Modo visitante</div>
           <div style="font-size:13px;color:#E8F2FA;line-height:1.5;margin-bottom:6px">
-            Voce ja registrou ${guestActions} acoes sem salvar
+            ${warningMessage}
           </div>
           <div style="font-size:13px;color:#4A6880;line-height:1.5">
             Você está explorando sem conta.<br>Seus dados não estão sendo salvos.
@@ -34,7 +49,7 @@ export const GuestCtaModal = {
             color:#07111F;font-size:15px;font-weight:600;
             font-family:inherit;cursor:pointer;
           ">Salvar meus dados com Google</button>
-          <button id="guest-signup-btn" style="
+          <button id="guest-signup-email-btn" style="
             width:100%;background:transparent;
             border:1px solid rgba(255,255,255,0.08);
             border-radius:8px;padding:12px 16px;
@@ -61,9 +76,18 @@ export const GuestCtaModal = {
       document.getElementById('tab-signup')?.click();
     });
 
+    guestOverlay.querySelector('#guest-signup-email-btn')?.addEventListener('click', () => {
+      guestOverlay.remove();
+      AuthScreen.show({ intent: 'guest-save', initialTab: 'signup' });
+    });
+
     guestOverlay.querySelector('#guest-signin-btn')?.addEventListener('click', () => {
       guestOverlay.remove();
       AuthScreen.show({ intent: 'guest-save' });
     });
   },
+};
+
+export const GuestCtaModalInternal = {
+  getGuestWarningMessage,
 };

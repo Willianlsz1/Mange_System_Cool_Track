@@ -176,7 +176,7 @@ export async function saveRegistro() {
   if (guestLimit.blocked) {
     trackEvent('limit_reached', { resource: 'registros', current: guestLimit.current, limit: 10 });
     GuestConversionModal.open({ reason: 'limit_registros', source: 'save-registro' });
-    return;
+    return false;
   }
   const equipId = Utils.getVal('r-equip');
   const data = Utils.getVal('r-data');
@@ -192,7 +192,7 @@ export async function saveRegistro() {
   if (!tecnico) missing.push('Técnico Responsável');
   if (missing.length) {
     Toast.warning(`Campos obrigatórios: ${missing.join(', ')}`);
-    return;
+    return false;
   }
 
   const descricaoFinal =
@@ -201,14 +201,14 @@ export async function saveRegistro() {
   const proxima = Utils.getVal('r-proxima');
   if (proxima && proxima < data.slice(0, 10)) {
     Toast.error('Próxima manutenção não pode ser anterior ao serviço.');
-    return;
+    return false;
   }
 
   const status = Utils.getVal('r-status');
   const validation = validateOperationalPayload({ data, status });
   if (!validation.valid) {
     Toast.error(validation.errors[0]);
-    return;
+    return false;
   }
   const custoPecas = parseFloat(Utils.getVal('r-custo-pecas') || '0') || 0;
   const custoMaoObra = parseFloat(Utils.getVal('r-custo-mao-obra') || '0') || 0;
@@ -252,7 +252,7 @@ export async function saveRegistro() {
     clearRegistro();
     Toast.success('Registro atualizado.');
     goTo('historico');
-    return;
+    return true;
   }
 
   // Modo criação — continua fluxo normal
@@ -365,6 +365,8 @@ export async function saveRegistro() {
   if (isGuest) {
     GuestConversionModal.open({ reason: 'save_attempt', source: 'save-registro' });
   }
+
+  return true;
 }
 
 export function clearRegistro(preserveEquip = false) {
