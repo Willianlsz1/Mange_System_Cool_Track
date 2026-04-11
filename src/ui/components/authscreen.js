@@ -205,6 +205,17 @@ export const AuthScreen = {
     });
 
     overlay.querySelector('#btn-guest').addEventListener('click', () => {
+      const guestLeadForm = overlay.querySelector('#guest-lead-form');
+      guestLeadForm.hidden = false;
+      overlay.querySelector('#guest-lead-email')?.focus();
+    });
+
+    overlay.querySelector('#btn-guest-start').addEventListener('click', () => {
+      const email = overlay.querySelector('#guest-lead-email').value.trim();
+      if (!email) return Toast.warning('Informe seu email para acessar a demo.');
+      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email valido.');
+
+      localStorage.setItem('cooltrack-lead-email', email);
       localStorage.setItem('cooltrack-guest-mode', '1');
       overlay.remove();
       window.location.reload();
