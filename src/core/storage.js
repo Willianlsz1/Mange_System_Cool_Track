@@ -14,6 +14,7 @@ import {
   normalizePrioridadeOperacional,
   normalizePeriodicidadePreventivaDias,
 } from '../domain/maintenance.js';
+import { sanitizePersistedEquipamento, sanitizePersistedRegistro } from './inputValidation.js';
 
 const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -34,15 +35,24 @@ let _syncStatus = {
 /* Normalizacao (mantida igual) */
 function normalizeEquip(e) {
   if (!e || typeof e !== 'object') return null;
-  if (!e.id || !e.nome || !e.local) return null;
+  if (!e.id) return null;
+
+  const sanitized = sanitizePersistedEquipamento({
+    nome: e.nome,
+    local: e.local,
+    tag: e.tag,
+    modelo: e.modelo,
+  });
+  if (!sanitized) return null;
+
   return {
     id: String(e.id),
-    nome: String(e.nome),
-    local: String(e.local),
+    nome: sanitized.nome,
+    local: sanitized.local,
     status: ['ok', 'warn', 'danger'].includes(e.status) ? e.status : 'ok',
-    tag: String(e.tag || ''),
+    tag: sanitized.tag,
     tipo: String(e.tipo || 'Outro'),
-    modelo: String(e.modelo || ''),
+    modelo: sanitized.modelo,
     fluido: String(e.fluido || ''),
     criticidade: normalizeCriticidade(e.criticidade),
     prioridadeOperacional: normalizePrioridadeOperacional(e.prioridadeOperacional || e.prioridade),
@@ -92,20 +102,39 @@ function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
 function normalizeRegistro(r, equipamentoIds) {
   if (!r || typeof r !== 'object') return null;
   if (!r.id || !r.equipId || !equipamentoIds.has(String(r.equipId))) return null;
-  if (!r.data || !r.tipo) return null;
+
+  const sanitized = sanitizePersistedRegistro(
+    {
+      equipId: String(r.equipId),
+      data: r.data,
+      tipo: r.tipo,
+      obs: r.obs,
+      status: r.status,
+      pecas: r.pecas,
+      proxima: r.proxima,
+      tecnico: r.tecnico,
+      custoPecas: r.custoPecas,
+      custoMaoObra: r.custoMaoObra,
+    },
+    {
+      existingEquipamentos: [{ id: String(r.equipId) }],
+    },
+  );
+  if (!sanitized) return null;
+
   return {
     id: String(r.id),
-    equipId: String(r.equipId),
-    data: String(r.data),
-    tipo: String(r.tipo),
-    obs: String(r.obs || ''),
-    status: ['ok', 'warn', 'danger'].includes(r.status) ? r.status : 'ok',
-    pecas: String(r.pecas || ''),
-    proxima: String(r.proxima || ''),
+    equipId: sanitized.equipId,
+    data: sanitized.data,
+    tipo: sanitized.tipo,
+    obs: sanitized.obs,
+    status: sanitized.status,
+    pecas: sanitized.pecas,
+    proxima: sanitized.proxima,
     fotos: normalizePhotoList(r.fotos),
-    tecnico: String(r.tecnico || ''),
-    custoPecas: parseFloat(r.custoPecas || 0) || 0,
-    custoMaoObra: parseFloat(r.custoMaoObra || 0) || 0,
+    tecnico: sanitized.tecnico,
+    custoPecas: sanitized.custoPecas,
+    custoMaoObra: sanitized.custoMaoObra,
     assinatura: Boolean(r.assinatura),
   };
 }

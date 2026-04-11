@@ -102,7 +102,7 @@ describe('Auth integration wrapper', () => {
     expect(supabaseMock.auth.signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
       options: expect.objectContaining({
-        redirectTo: expect.stringContaining(window.location.origin),
+        redirectTo: expect.stringMatching(/^https?:\/\/localhost:\d+\/?/),
       }),
     });
     expect(localStorage.getItem('cooltrack-oauth-pending-v1')).toContain('auth-screen');
@@ -160,7 +160,9 @@ describe('Auth integration wrapper', () => {
     expect(ok).toEqual({ ok: true });
     expect(supabaseMock.auth.resetPasswordForEmail).toHaveBeenCalledWith(
       'user@mail.com',
-      expect.objectContaining({ redirectTo: expect.stringContaining(window.location.origin) }),
+      expect.objectContaining({
+        redirectTo: expect.stringMatching(/^https?:\/\/localhost:\d+\/?/),
+      }),
     );
 
     supabaseMock.auth.resetPasswordForEmail.mockResolvedValueOnce({

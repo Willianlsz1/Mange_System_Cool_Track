@@ -1,6 +1,6 @@
 /**
  * CoolTrack Pro - Registro View v5.0
- * Funções: initRegistro, saveRegistro, clearRegistro
+ * FunÃ§Ãµes: initRegistro, saveRegistro, clearRegistro
  */
 
 import { Utils } from '../../core/utils.js';
@@ -17,6 +17,7 @@ import { checkGuestLimit, isGuestMode } from '../../core/guestLimits.js';
 import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
 import { withViewSkeleton } from '../components/skeleton.js';
+import { validateRegistroPayload } from '../../core/inputValidation.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
 const QUICK_TEMPLATE_MAP = {
@@ -24,31 +25,31 @@ const QUICK_TEMPLATE_MAP = {
     tipo: 'Limpeza de Filtros',
     prioridade: 'media',
     descricao:
-      'Limpeza preventiva realizada no equipamento. Filtros higienizados e operação validada em funcionamento normal.',
+      'Limpeza preventiva realizada no equipamento. Filtros higienizados e operaÃ§Ã£o validada em funcionamento normal.',
   },
   recarga_gas: {
-    tipo: 'Carga de Gás Refrigerante',
+    tipo: 'Carga de GÃ¡s Refrigerante',
     prioridade: 'alta',
     descricao:
-      'Recarga de gás refrigerante aplicada após verificação de pressão e vedação. Sistema estabilizado para operação.',
+      'Recarga de gÃ¡s refrigerante aplicada apÃ³s verificaÃ§Ã£o de pressÃ£o e vedaÃ§Ã£o. Sistema estabilizado para operaÃ§Ã£o.',
   },
   troca_filtro: {
     tipo: 'Limpeza de Filtros',
     prioridade: 'media',
     descricao:
-      'Troca de filtro executada para restabelecer vazão de ar e qualidade da operação. Equipamento testado após a substituição.',
+      'Troca de filtro executada para restabelecer vazÃ£o de ar e qualidade da operaÃ§Ã£o. Equipamento testado apÃ³s a substituiÃ§Ã£o.',
   },
   inspecao: {
-    tipo: 'Inspeção Geral',
+    tipo: 'InspeÃ§Ã£o Geral',
     prioridade: 'baixa',
     descricao:
-      'Inspeção técnica geral concluída com checklist visual e funcional. Sem anomalias críticas no momento.',
+      'InspeÃ§Ã£o tÃ©cnica geral concluÃ­da com checklist visual e funcional. Sem anomalias crÃ­ticas no momento.',
   },
   manutencao_corretiva: {
-    tipo: 'Manutenção Corretiva',
+    tipo: 'ManutenÃ§Ã£o Corretiva',
     prioridade: 'alta',
     descricao:
-      'Atendimento corretivo realizado para falha reportada em campo. Correção aplicada e equipamento reavaliado em funcionamento.',
+      'Atendimento corretivo realizado para falha reportada em campo. CorreÃ§Ã£o aplicada e equipamento reavaliado em funcionamento.',
   },
 };
 
@@ -60,7 +61,7 @@ function resetEditingState() {
   if (formView) formView.dataset.editMode = '0';
 }
 
-// ── Barra de progresso do formulário ──────────────────
+// â”€â”€ Barra de progresso do formulÃ¡rio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const _fields = [
   { id: 'r-equip', validate: (v) => v !== '' },
   { id: 'r-data', validate: (v) => v !== '' },
@@ -90,7 +91,7 @@ function _updateProgressBar() {
   if (cnt) cnt.textContent = `${filled}/${_fields.length}`;
 }
 
-// ── Aviso de manutenção agendada ───────────────────────
+// â”€â”€ Aviso de manutenÃ§Ã£o agendada â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function _bindEquipChangeWarning() {
   const sel = Utils.getEl('r-equip');
   if (!sel) return;
@@ -109,15 +110,15 @@ function _bindEquipChangeWarning() {
       const w = document.createElement('div');
       w.id = 'reg-pending-warning';
       w.className = 'reg-pending-warning';
-      w.textContent = '⚠ Manutenção preventiva agendada. Registre apenas em emergência.';
+      w.textContent = 'âš  ManutenÃ§Ã£o preventiva agendada. Registre apenas em emergÃªncia.';
       sel.parentNode.parentNode.insertBefore(w, sel.parentNode.nextSibling);
     }
   });
 }
 
-// ═══════════════════════════════════════════════════════
-// API PÚBLICA
-// ═══════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// API PÃšBLICA
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 export function initRegistro(params = {}) {
   const formView = Utils.getEl('view-registro');
@@ -138,17 +139,17 @@ export function initRegistro(params = {}) {
     }
     _updateProgressBar();
 
-    // Data padrão
+    // Data padrÃ£o
     if (!Utils.getVal('r-data')) Utils.setVal('r-data', Utils.nowDatetime());
 
-    // H1: técnico padrão
+    // H1: tÃ©cnico padrÃ£o
     const rTecnico = Utils.getEl('r-tecnico');
     if (rTecnico && !rTecnico.value) {
       const def = Profile.getDefaultTecnico();
       if (def) rTecnico.value = def;
     }
 
-    // Pré-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
+    // PrÃ©-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
     if (!params.editRegistroId) resetEditingState();
     if (params.equipId) Utils.setVal('r-equip', params.equipId);
 
@@ -170,7 +171,7 @@ export function applyQuickTemplate(templateId) {
     if (def) Utils.setVal('r-tecnico', def);
   }
   _updateProgressBar();
-  Toast.success('Ação rápida aplicada. Revise e toque em salvar.');
+  Toast.success('AÃ§Ã£o rÃ¡pida aplicada. Revise e toque em salvar.');
 }
 
 export async function saveRegistro() {
@@ -181,44 +182,44 @@ export async function saveRegistro() {
     GuestConversionModal.open({ reason: 'limit_registros', source: 'save-registro' });
     return false;
   }
-  const equipId = Utils.getVal('r-equip');
-  const data = Utils.getVal('r-data');
-  const tipo = Utils.getVal('r-tipo');
-  const obs = Utils.getVal('r-obs').trim();
-  const tecnico = Utils.getVal('r-tecnico').trim();
   const prioridade = Utils.getVal('r-prioridade') || 'media';
+  const { equipamentos } = getState();
+  const payloadValidation = validateRegistroPayload(
+    {
+      equipId: Utils.getVal('r-equip'),
+      data: Utils.getVal('r-data'),
+      tipo: Utils.getVal('r-tipo'),
+      obs: Utils.getVal('r-obs'),
+      tecnico: Utils.getVal('r-tecnico'),
+      status: Utils.getVal('r-status'),
+      pecas: Utils.getVal('r-pecas'),
+      proxima: Utils.getVal('r-proxima'),
+      custoPecas: Utils.getVal('r-custo-pecas'),
+      custoMaoObra: Utils.getVal('r-custo-mao-obra'),
+    },
+    { existingEquipamentos: equipamentos },
+  );
 
-  const missing = [];
-  if (!equipId) missing.push('Equipamento');
-  if (!data) missing.push('Data');
-  if (!tipo) missing.push('Tipo de Serviço');
-  if (!tecnico) missing.push('Técnico Responsável');
-  if (missing.length) {
-    Toast.warning(`Campos obrigatórios: ${missing.join(', ')}`);
+  if (!payloadValidation.valid) {
+    Toast.warning(payloadValidation.errors[0]);
     return false;
   }
+
+  const { equipId, data, tipo, tecnico, obs, pecas, proxima, status, custoPecas, custoMaoObra } =
+    payloadValidation.value;
 
   const descricaoFinal =
-    obs && obs.length >= 10 ? obs : `Serviço de ${tipo.toLowerCase()} registrado em modo rápido.`;
+    obs && obs.length >= 10 ? obs : `Servico de ${tipo.toLowerCase()} registrado em modo rapido.`;
 
-  const proxima = Utils.getVal('r-proxima');
-  if (proxima && proxima < data.slice(0, 10)) {
-    Toast.error('Próxima manutenção não pode ser anterior ao serviço.');
-    return false;
-  }
-
-  const status = Utils.getVal('r-status');
   const validation = validateOperationalPayload({ data, status });
   if (!validation.valid) {
     Toast.error(validation.errors[0]);
     return false;
   }
-  const custoPecas = parseFloat(Utils.getVal('r-custo-pecas') || '0') || 0;
-  const custoMaoObra = parseFloat(Utils.getVal('r-custo-mao-obra') || '0') || 0;
 
   Profile.saveLastTecnico(tecnico);
 
-  // Modo edição — atualiza registro existente
+  // Modo ediÃ§Ã£o â€” atualiza registro existente
   const editingId = sessionStorage.getItem(EDITING_KEY);
   if (editingId) {
     setState((prev) => ({
@@ -234,8 +235,8 @@ export async function saveRegistro() {
               tecnico,
               prioridade,
               status,
-              pecas: Utils.getVal('r-pecas').trim(),
-              proxima: Utils.getVal('r-proxima'),
+              pecas,
+              proxima,
               custoPecas,
               custoMaoObra,
             }
@@ -258,7 +259,7 @@ export async function saveRegistro() {
     return true;
   }
 
-  // Modo criação — continua fluxo normal
+  // Modo criaÃ§Ã£o â€” continua fluxo normal
   const novoId = Utils.uid();
   let fotosRegistro = [...Photos.pending];
 
@@ -272,7 +273,7 @@ export async function saveRegistro() {
     handleError(error, {
       code: ErrorCodes.NETWORK_ERROR,
       severity: 'warning',
-      message: 'Não foi possível carregar o módulo de assinatura.',
+      message: 'NÃ£o foi possÃ­vel carregar o mÃ³dulo de assinatura.',
       context: { action: 'registro.saveRegistro.signatureImport' },
     });
   }
@@ -285,7 +286,7 @@ export async function saveRegistro() {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
         severity: 'warning',
-        message: 'Não foi possível registrar a assinatura digital.',
+        message: 'NÃ£o foi possÃ­vel registrar a assinatura digital.',
         context: { action: 'registro.saveRegistro.signatureRequest', registroId: novoId },
       });
     }
@@ -297,14 +298,14 @@ export async function saveRegistro() {
       fotosRegistro = uploadResult.photos;
       if (uploadResult.failedCount > 0) {
         Toast.warning(
-          'Algumas fotos não puderam ser enviadas para a nuvem e ficaram salvas localmente.',
+          'Algumas fotos nÃ£o puderam ser enviadas para a nuvem e ficaram salvas localmente.',
         );
       }
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
-        message: 'Falha no upload das fotos. O registro será salvo com fallback local.',
+        message: 'Falha no upload das fotos. O registro serÃ¡ salvo com fallback local.',
         context: { action: 'registro.saveRegistro.photoUpload', registroId: novoId },
       });
     }
@@ -326,7 +327,7 @@ export async function saveRegistro() {
           tipo,
           obs: descricaoFinal,
           status,
-          pecas: Utils.getVal('r-pecas').trim(),
+          pecas,
           proxima,
           fotos: fotosRegistro,
           tecnico,
@@ -350,14 +351,14 @@ export async function saveRegistro() {
 
   SavedHighlight.markForHighlight(novoId);
   clearRegistro();
-  Toast.success('Serviço registrado com sucesso.');
+  Toast.success('ServiÃ§o registrado com sucesso.');
 
   const { registros } = getState();
   if (registros.length > 0 && registros.length % 3 === 0) {
     setTimeout(
       () =>
         Toast.info(
-          `💡 Você tem ${registros.length} registros. Gere um relatório PDF para enviar ao cliente.`,
+          `ðŸ’¡ VocÃª tem ${registros.length} registros. Gere um relatÃ³rio PDF para enviar ao cliente.`,
         ),
       1800,
     );
@@ -426,7 +427,7 @@ export function loadRegistroForEdit(id) {
 
   const btn = document.querySelector('[data-action="save-registro"]');
   if (btn) {
-    btn.textContent = 'Salvar alterações';
+    btn.textContent = 'Salvar alteraÃ§Ãµes';
     btn.classList.add('btn--editing');
   }
 

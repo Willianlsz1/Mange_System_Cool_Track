@@ -1,0 +1,238 @@
+const VALID_STATUS = new Set(['ok', 'warn', 'danger']);
+
+export const EQUIPMENT_FIELD_LIMITS = Object.freeze({
+  nome: 120,
+  local: 160,
+  tag: 40,
+  modelo: 120,
+});
+
+export const REGISTRO_FIELD_LIMITS = Object.freeze({
+  tipo: 120,
+  obs: 2000,
+  pecas: 800,
+  tecnico: 120,
+});
+
+function normalizeInlineText(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeMultilineText(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[^\S\n]+/g, ' ')
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
+    .trim();
+}
+
+function validateTextField({ name, value, required = false, maxLength, multiline = false }) {
+  const normalized = multiline ? normalizeMultilineText(value) : normalizeInlineText(value);
+
+  if (required && !normalized) {
+    return { value: normalized, error: `Campo obrigatorio: ${name}.` };
+  }
+
+  if (normalized.length > maxLength) {
+    return {
+      value: normalized,
+      error: `${name} excede o limite de ${maxLength} caracteres.`,
+    };
+  }
+
+  return { value: normalized, error: null };
+}
+
+function parseCost(value, fieldName) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return { value: 0, error: null };
+
+  const parsed = Number.parseFloat(normalized.replace(',', '.'));
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return { value: 0, error: `${fieldName} invalido.` };
+  }
+
+  return { value: parsed, error: null };
+}
+
+function normalizeTag(value) {
+  return normalizeInlineText(value).toUpperCase();
+}
+
+function hasDuplicateTag(tag, existingEquipamentos = [], editingId = null) {
+  if (!tag) return false;
+
+  return existingEquipamentos.some((equipamento) => {
+    if (!equipamento || typeof equipamento !== 'object') return false;
+    if (editingId && String(equipamento.id || '') === String(editingId)) return false;
+    return normalizeTag(equipamento.tag) === tag;
+  });
+}
+
+export function validateEquipamentoPayload(
+  payload,
+  { existingEquipamentos = [], editingId = null } = {},
+) {
+  const errors = [];
+  const nome = validateTextField({
+    name: 'Nome',
+    value: payload?.nome,
+    required: true,
+    maxLength: EQUIPMENT_FIELD_LIMITS.nome,
+  });
+  const local = validateTextField({
+    name: 'Local',
+    value: payload?.local,
+    required: true,
+    maxLength: EQUIPMENT_FIELD_LIMITS.local,
+  });
+  const modelo = validateTextField({
+    name: 'Modelo',
+    value: payload?.modelo,
+    required: false,
+    maxLength: EQUIPMENT_FIELD_LIMITS.modelo,
+  });
+
+  if (nome.error) errors.push(nome.error);
+  if (local.error) errors.push(local.error);
+  if (modelo.error) errors.push(modelo.error);
+
+  const tag = normalizeTag(payload?.tag);
+  if (tag.length > EQUIPMENT_FIELD_LIMITS.tag) {
+    errors.push(`TAG excede o limite de ${EQUIPMENT_FIELD_LIMITS.tag} caracteres.`);
+  }
+  if (hasDuplicateTag(tag, existingEquipamentos, editingId)) {
+    errors.push('Ja existe equipamento com esta TAG.');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    value: {
+      nome: nome.value,
+      local: local.value,
+      tag,
+      modelo: modelo.value,
+    },
+  };
+}
+
+export function validateRegistroPayload(
+  payload,
+  { existingEquipamentos = [], requireTecnico = true, allowMissingStatus = false } = {},
+) {
+  const errors = [];
+  const equipamentoIds = new Set(existingEquipamentos.map((equipamento) => String(equipamento.id)));
+
+  const equipId = String(payload?.equipId || '').trim();
+  const data = String(payload?.data || '').trim();
+  const proxima = String(payload?.proxima || '').trim();
+  const status = VALID_STATUS.has(payload?.status)
+    ? payload.status
+    : allowMissingStatus
+      ? 'ok'
+      : '';
+
+  const tipo = validateTextField({
+    name: 'Tipo de servico',
+    value: payload?.tipo,
+    required: true,
+    maxLength: REGISTRO_FIELD_LIMITS.tipo,
+  });
+  const tecnico = validateTextField({
+    name: 'Tecnico responsavel',
+    value: payload?.tecnico,
+    required: requireTecnico,
+    maxLength: REGISTRO_FIELD_LIMITS.tecnico,
+  });
+  const obs = validateTextField({
+    name: 'Observacoes',
+    value: payload?.obs,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.obs,
+    multiline: true,
+  });
+  const pecas = validateTextField({
+    name: 'Pecas e materiais',
+    value: payload?.pecas,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.pecas,
+    multiline: true,
+  });
+
+  if (!equipId) errors.push('Campo obrigatorio: Equipamento.');
+  if (equipId && !equipamentoIds.has(equipId))
+    errors.push('Equipamento invalido para este registro.');
+  if (!data) errors.push('Campo obrigatorio: Data.');
+  if (!status) errors.push('Status informado nao e permitido.');
+  if (tipo.error) errors.push(tipo.error);
+  if (tecnico.error) errors.push(tecnico.error);
+  if (obs.error) errors.push(obs.error);
+  if (pecas.error) errors.push(pecas.error);
+
+  if (data) {
+    const parsedData = new Date(data);
+    if (Number.isNaN(parsedData.getTime())) {
+      errors.push('Data invalida.');
+    }
+  }
+
+  if (proxima && data && proxima < data.slice(0, 10)) {
+    errors.push('Proxima manutencao nao pode ser anterior ao servico.');
+  }
+
+  const custoPecas = parseCost(payload?.custoPecas, 'Custo de pecas');
+  const custoMaoObra = parseCost(payload?.custoMaoObra, 'Custo de mao de obra');
+  if (custoPecas.error) errors.push(custoPecas.error);
+  if (custoMaoObra.error) errors.push(custoMaoObra.error);
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    value: {
+      equipId,
+      data,
+      proxima,
+      status,
+      tipo: tipo.value,
+      tecnico: tecnico.value,
+      obs: obs.value,
+      pecas: pecas.value,
+      custoPecas: custoPecas.value,
+      custoMaoObra: custoMaoObra.value,
+    },
+  };
+}
+
+export function sanitizePersistedEquipamento(payload) {
+  const result = validateEquipamentoPayload(payload, { existingEquipamentos: [] });
+  if (!result.valid) return null;
+
+  return {
+    nome: result.value.nome,
+    local: result.value.local,
+    tag: result.value.tag,
+    modelo: result.value.modelo,
+  };
+}
+
+export function sanitizePersistedRegistro(payload, { existingEquipamentos = [] } = {}) {
+  const result = validateRegistroPayload(payload, {
+    existingEquipamentos,
+    requireTecnico: false,
+    allowMissingStatus: true,
+  });
+  if (!result.valid) return null;
+  return result.value;
+}
+
+export const InputValidation = {
+  normalizeInlineText,
+  normalizeMultilineText,
+};
