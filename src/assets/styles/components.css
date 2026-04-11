@@ -751,6 +751,76 @@
 }
 
 /* ─── TIMELINE ─── */
+.hist-summary-card {
+  background: rgba(0, 200, 232, 0.04);
+  border: 1px solid rgba(0, 200, 232, 0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+
+.hist-summary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.hist-summary-item__value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e8f2fa;
+  line-height: 1.2;
+}
+
+.hist-summary-item__label {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #6a8ba8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hist-summary-item__separator {
+  color: #2a4060;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.hist-summary-upsell {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hist-summary-upsell__link {
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.hist-summary-upsell__link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 760px) {
+  .hist-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .hist-summary-item__separator {
+    display: none;
+  }
+}
+
 .timeline {
   position: relative;
   padding-left: 14px;
