@@ -322,70 +322,116 @@ export async function viewEquip(id) {
   const healthSummary = health.reasons.length
     ? Utils.escapeHtml(health.reasons.slice(0, 2).join(' | '))
     : 'Historico dentro da rotina prevista';
+  const statusCode = Utils.safeStatus(eq.status);
+  const statusOperacional = STATUS_OPERACIONAL[statusCode] || CONDICAO_OBSERVADA.unknown;
+  const condicaoObservada = CONDICAO_OBSERVADA[statusCode] || CONDICAO_OBSERVADA.unknown;
+  const fatorOperacao =
+    statusCode === 'ok'
+      ? 'Sem restrições no momento'
+      : statusCode === 'warn'
+        ? 'Operação com restrições'
+        : 'Fora de operação';
+  const fatorPreventiva =
+    context?.daysToNext == null
+      ? 'Preventiva sem agenda'
+      : context.daysToNext < 0
+        ? `Preventiva vencida há ${Math.abs(context.daysToNext)} dia${Math.abs(context.daysToNext) > 1 ? 's' : ''}`
+        : context.daysToNext === 0
+          ? 'Preventiva vence hoje'
+          : `Preventiva em ${context.daysToNext} dia${context.daysToNext > 1 ? 's' : ''}`;
+  const fatorCriticidade = `Criticidade operacional ${prioridadeLabel.toLowerCase()}`;
 
   Utils.getEl('eq-det-corpo').innerHTML = `
-    <div class="modal__title" id="eq-det-title">${Utils.escapeHtml(eq.nome)}</div>
-    <div class="eq-modal-health">
-      <div class="eq-modal-health__circle eq-modal-health__circle--${cls}">${score}%</div>
-      <div class="eq-modal-health__text">
-        <div class="eq-modal-health__label">EFICIÊNCIA DO EQUIPAMENTO</div>
-        <div class="eq-modal-health__status">${cls === 'ok' ? CONDICAO_OBSERVADA.ok : cls === 'warn' ? CONDICAO_OBSERVADA.warn : CONDICAO_OBSERVADA.danger}</div>
-      </div>
-    </div>
-    <div class="eq-modal-summary">${healthSummary}</div>
-    <div class="eq-risk-panel eq-risk-panel--${risk.classification}">
-      <div class="eq-risk-panel__header">
-        <div>
-          <div class="eq-risk-panel__label">PRIORIDADE DE ATENÇÃO</div>
-          <div class="eq-risk-panel__class">${Utils.escapeHtml(risk.classificationLabel)} · Score ${risk.score}</div>
+    <div class="eq-detail-view">
+      <div class="modal__title" id="eq-det-title">${Utils.escapeHtml(eq.nome)}</div>
+      <div class="eq-detail-hero">
+        <div class="eq-modal-health">
+          <div class="eq-modal-health__circle eq-modal-health__circle--${cls}">${score}%</div>
+          <div class="eq-modal-health__text">
+            <div class="eq-modal-health__label">SCORE OPERACIONAL</div>
+            <div class="eq-modal-health__status">${cls === 'ok' ? CONDICAO_OBSERVADA.ok : cls === 'warn' ? CONDICAO_OBSERVADA.warn : CONDICAO_OBSERVADA.danger}</div>
+          </div>
         </div>
-        <span class="eq-risk-panel__badge eq-risk-panel__badge--${risk.classification}">${Utils.escapeHtml(risk.classificationLabel)}</span>
+        <div class="eq-detail-hero__badges">
+          <span class="eq-detail-badge">${Utils.escapeHtml(statusOperacional)}</span>
+          <span class="eq-detail-badge">${Utils.escapeHtml(condicaoObservada)}</span>
+          <span class="eq-detail-badge">Prioridade ${Utils.escapeHtml(prioridadeLabel)}</span>
+        </div>
+        <div class="eq-modal-summary">${healthSummary}</div>
+        <div class="eq-score-factors">
+          <div class="eq-score-factors__item"><strong>Operação:</strong> ${Utils.escapeHtml(fatorOperacao)}</div>
+          <div class="eq-score-factors__item"><strong>Preventiva:</strong> ${Utils.escapeHtml(fatorPreventiva)}</div>
+          <div class="eq-score-factors__item"><strong>Criticidade:</strong> ${Utils.escapeHtml(fatorCriticidade)}</div>
+        </div>
       </div>
-      <div class="eq-risk-panel__summary">${Utils.escapeHtml(risk.explanation)}</div>
-      <div class="eq-risk-panel__factors">
-        ${(risk.factors.length ? risk.factors : ['rotina estável'])
-          .map((factor) => `<span class="eq-risk-panel__factor">${Utils.escapeHtml(factor)}</span>`)
-          .join('')}
-      </div>
-      <details class="eq-risk-panel__analysis">
-        <summary>Ver análise</summary>
-        <ul class="eq-risk-panel__analysis-list">
-          ${risk.details
+      <div class="eq-risk-panel eq-risk-panel--${risk.classification}">
+        <div class="eq-risk-panel__header">
+          <div>
+            <div class="eq-risk-panel__label">PRIORIDADE DE ATENÇÃO</div>
+            <div class="eq-risk-panel__class">${Utils.escapeHtml(risk.classificationLabel)} · Score ${risk.score}</div>
+          </div>
+          <span class="eq-risk-panel__badge eq-risk-panel__badge--${risk.classification}">${Utils.escapeHtml(risk.classificationLabel)}</span>
+        </div>
+        <div class="eq-risk-panel__summary">${Utils.escapeHtml(risk.explanation)}</div>
+        <div class="eq-risk-panel__factors">
+          ${(risk.factors.length ? risk.factors : ['rotina estável'])
             .map(
-              (detail) =>
-                `<li><strong>${Utils.escapeHtml(detail.label)}</strong>: ${Utils.escapeHtml(detail.detail)}</li>`,
+              (factor) => `<span class="eq-risk-panel__factor">${Utils.escapeHtml(factor)}</span>`,
             )
             .join('')}
-        </ul>
-        <p class="eq-risk-panel__note">Este score orienta a priorização e não substitui a decisão técnica em campo.</p>
-      </details>
-    </div>
-    <div class="info-list info-list--spaced">
-      <div class="info-row"><span class="info-row__label">TAG</span><span class="info-row__value info-row__value--mono">${Utils.escapeHtml(eq.tag || '—')}</span></div>
-      <div class="info-row"><span class="info-row__label">Tipo</span><span class="info-row__value">${Utils.escapeHtml(eq.tipo)}</span></div>
-      <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq.fluido || '—')}</span></div>
-      <div class="info-row"><span class="info-row__label">Modelo</span><span class="info-row__value">${Utils.escapeHtml(eq.modelo || '—')}</span></div>
-      <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq.local)}</span></div>
-      <div class="info-row"><span class="info-row__label">Estado operacional</span><span class="info-row__value">${Utils.escapeHtml(STATUS_OPERACIONAL[Utils.safeStatus(eq.status)] || CONDICAO_OBSERVADA.unknown)}</span></div>
-      <div class="info-row"><span class="info-row__label">Condição observada</span><span class="info-row__value">${Utils.escapeHtml(CONDICAO_OBSERVADA[Utils.safeStatus(eq.status)] || CONDICAO_OBSERVADA.unknown)}</span></div>
-      <div class="info-row"><span class="info-row__label">Prioridade</span><span class="info-row__value">${Utils.escapeHtml(prioridadeLabel)}</span></div>
-      <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias</span></div>
-      <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
-    </div>
-    <button class="btn btn--primary btn--spaced-bottom btn--full" data-action="go-register-equip" data-id="${safeId}">+ Registrar Serviço</button>
-    <div class="eq-modal-summary">${regs.length} serviço(s) registrado(s)</div>
-    ${regs
-      .slice(0, 3)
-      .map(
-        (r) =>
-          `<div class="eq-modal-quick">${Utils.escapeHtml(r.tipo)} · ${Utils.formatDatetime(r.data)}</div>`,
-      )
-      .join('')}
-    <div class="eq-modal-footer">
-      <button class="eq-delete-link" data-action="delete-equip" data-id="${safeId}">
-        <svg class="eq-delete-link__icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        Excluir equipamento
-      </button>
+        </div>
+        <details class="eq-risk-panel__analysis">
+          <summary>Ver análise</summary>
+          <ul class="eq-risk-panel__analysis-list">
+            ${risk.details
+              .map(
+                (detail) =>
+                  `<li><strong>${Utils.escapeHtml(detail.label)}</strong>: ${Utils.escapeHtml(detail.detail)}</li>`,
+              )
+              .join('')}
+          </ul>
+          <p class="eq-risk-panel__note">Este score orienta a priorização e não substitui a decisão técnica em campo.</p>
+        </details>
+      </div>
+      <div class="eq-tech-sheet">
+        <div class="eq-tech-sheet__section">
+          <div class="eq-tech-sheet__title">Identificação</div>
+          <div class="info-list info-list--spaced info-list--soft">
+            <div class="info-row"><span class="info-row__label">TAG</span><span class="info-row__value info-row__value--mono">${Utils.escapeHtml(eq.tag || '—')}</span></div>
+            <div class="info-row"><span class="info-row__label">Tipo</span><span class="info-row__value">${Utils.escapeHtml(eq.tipo)}</span></div>
+            <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq.fluido || '—')}</span></div>
+            <div class="info-row"><span class="info-row__label">Modelo</span><span class="info-row__value">${Utils.escapeHtml(eq.modelo || '—')}</span></div>
+            <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq.local)}</span></div>
+          </div>
+        </div>
+        <div class="eq-tech-sheet__section">
+          <div class="eq-tech-sheet__title">Operação</div>
+          <div class="info-list info-list--spaced info-list--soft">
+            <div class="info-row"><span class="info-row__label">Estado operacional</span><span class="info-row__value">${Utils.escapeHtml(statusOperacional)}</span></div>
+            <div class="info-row"><span class="info-row__label">Condição observada</span><span class="info-row__value">${Utils.escapeHtml(condicaoObservada)}</span></div>
+            <div class="info-row"><span class="info-row__label">Prioridade</span><span class="info-row__value">${Utils.escapeHtml(prioridadeLabel)}</span></div>
+            <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias</span></div>
+            <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="eq-detail-cta">
+        <button class="btn btn--primary btn--full" data-action="go-register-equip" data-id="${safeId}">+ Registrar Serviço</button>
+      </div>
+      <div class="eq-modal-summary">${regs.length} serviço(s) registrado(s)</div>
+      ${regs
+        .slice(0, 3)
+        .map(
+          (r) =>
+            `<div class="eq-modal-quick">${Utils.escapeHtml(r.tipo)} · ${Utils.formatDatetime(r.data)}</div>`,
+        )
+        .join('')}
+      <div class="eq-modal-footer">
+        <button class="eq-delete-link" data-action="delete-equip" data-id="${safeId}">
+          <svg class="eq-delete-link__icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          Excluir equipamento
+        </button>
+      </div>
     </div>`;
 
   try {
