@@ -194,7 +194,7 @@ export function renderEquip(filtro = '') {
 
   withSkeleton(
     el,
-    { enabled: list.length >= 9, variant: 'equipment', count: Math.min(list.length, 5) },
+    { enabled: true, variant: 'equipment', count: Math.min(Math.max(list.length, 3), 5) },
     () => {
       el.innerHTML = sortedList.length
         ? sortedList.map((eq) => equipCardHtml(eq)).join('')

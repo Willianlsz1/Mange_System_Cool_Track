@@ -183,6 +183,21 @@ body.is-routing .view.active {
   gap: 10px;
 }
 
+.is-skeleton-loading {
+  position: relative;
+}
+
+.ui-skeleton-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 6px 0;
+  background: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  animation: skeleton-overlay-in 0.12s ease 0.2s forwards;
+}
+
 .ui-skeleton-card {
   position: relative;
   overflow: hidden;
@@ -251,6 +266,12 @@ body.is-routing .view.active {
 @keyframes skeleton-shimmer {
   to {
     transform: translateX(100%);
+  }
+}
+
+@keyframes skeleton-overlay-in {
+  to {
+    opacity: 1;
   }
 }
 
