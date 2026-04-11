@@ -331,7 +331,7 @@ main:focus {
 }
 .view.active {
   display: block;
-  animation: view-enter 0.2s ease-out;
+  animation: view-enter 0.15s ease;
 }
 @keyframes view-enter {
   from {
@@ -342,7 +342,7 @@ main:focus {
   }
 }
 .view.is-exiting {
-  animation: view-exit 0.15s ease-in forwards;
+  animation: view-exit 0.15s ease forwards;
 }
 @keyframes view-exit {
   from {
