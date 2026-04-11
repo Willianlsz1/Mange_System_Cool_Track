@@ -25,6 +25,7 @@ import {
 import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
 import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/suggestedAction.js';
 import { getActionPriorityScore } from '../../domain/actionPriority.js';
+import { getPreventivaDueEquipmentIds } from '../../domain/alerts.js';
 
 const STATUS_OPERACIONAL = {
   ok: 'OPERANDO NORMALMENTE',
@@ -165,16 +166,22 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
   </div>`;
 }
 
-export function renderEquip(filtro = '') {
-  const { equipamentos } = getState();
+export function renderEquip(filtro = '', options = {}) {
+  const { equipamentos, registros } = getState();
   const q = filtro.toLowerCase();
-  const list = equipamentos.filter(
-    (e) =>
+  const preventivas7dIds =
+    options.statusFilter === 'preventiva-7d'
+      ? new Set(getPreventivaDueEquipmentIds(registros, 7))
+      : null;
+  const list = equipamentos.filter((e) => {
+    const matchesStatus = !preventivas7dIds || preventivas7dIds.has(e.id);
+    const matchesSearch =
       !q ||
       e.nome.toLowerCase().includes(q) ||
       e.local.toLowerCase().includes(q) ||
-      (e.tag || '').toLowerCase().includes(q),
-  );
+      (e.tag || '').toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
   const el = Utils.getEl('lista-equip');
   if (!el) return;
 

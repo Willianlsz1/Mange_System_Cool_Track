@@ -2,7 +2,7 @@ vi.mock('../core/state.js', () => ({
   getState: vi.fn(),
 }));
 
-import { Alerts } from '../domain/alerts.js';
+import { Alerts, getPreventivaDueEquipmentIds } from '../domain/alerts.js';
 import { getState } from '../core/state.js';
 
 describe('Alerts.getAll', () => {
@@ -163,5 +163,36 @@ describe('Alerts.getAll', () => {
         recommendedAction: 'inspect',
       }),
     );
+  });
+});
+
+describe('getPreventivaDueEquipmentIds', () => {
+  it('returns unique equipment ids with preventiva due within 7 days', () => {
+    const ids = getPreventivaDueEquipmentIds(
+      [
+        { equipId: 'eq-1', tipo: 'preventiva', proxima: '2026-04-14' },
+        { equipId: 'eq-1', tipo: 'preventiva', proxima: '2026-04-15' },
+        { equipId: 'eq-2', tipo: 'preventiva', proxima: '2026-04-19' },
+        { equipId: 'eq-3', tipo: 'preventiva', proxima: '2026-04-20' },
+        { equipId: 'eq-4', tipo: 'corretiva', proxima: '2026-04-12' },
+      ],
+      7,
+      new Date('2026-04-12T10:00:00'),
+    );
+
+    expect(ids).toEqual(['eq-1', 'eq-2']);
+  });
+
+  it('ignores invalid or past dates', () => {
+    const ids = getPreventivaDueEquipmentIds(
+      [
+        { equipId: 'eq-1', tipo: 'preventiva', proxima: 'invalid' },
+        { equipId: 'eq-2', tipo: 'preventiva', proxima: '2026-04-01' },
+      ],
+      7,
+      new Date('2026-04-12T10:00:00'),
+    );
+
+    expect(ids).toEqual([]);
   });
 });

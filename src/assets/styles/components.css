@@ -342,6 +342,16 @@
   }
 }
 
+@keyframes fault-pulse-premium {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 48, 64, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(224, 48, 64, 0.16);
+  }
+}
+
 /* Header do card */
 .equip-card__header {
   display: flex;
@@ -642,6 +652,40 @@
 }
 
 /* ─── ALERT CARD ─── */
+.alertas-context-banner {
+  background: rgba(232, 160, 32, 0.1);
+  border: 1px solid rgba(232, 160, 32, 0.35);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.alertas-context-banner__icon {
+  font-size: 16px;
+}
+
+.alertas-context-banner__text {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.alertas-context-banner__cta {
+  border: 0;
+  background: transparent;
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.alertas-context-banner__cta:hover {
+  text-decoration: underline;
+}
+
 .alert-card {
   background: linear-gradient(90deg, rgba(232, 160, 32, 0.2), rgba(232, 160, 32, 0.07));
   border: 1px solid rgba(232, 160, 32, 0.18);
@@ -2374,6 +2418,56 @@ mark,
   background: var(--primary-soft);
   color: var(--primary);
   border-color: var(--primary);
+}
+
+.header-alert-btn {
+  position: relative;
+}
+
+.header-alert-pill {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #e03040;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.header-alert-pill.is-visible {
+  animation: fault-pulse-premium 2s ease-in-out infinite;
+}
+
+.header-alert-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  border-radius: 6px;
+  background: #0c1929;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 8px;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+  z-index: 40;
+}
+
+.header-alert-btn:hover .header-alert-tooltip {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .header-help {
