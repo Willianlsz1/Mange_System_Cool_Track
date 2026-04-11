@@ -54,13 +54,13 @@ export function renderHist() {
               title: 'Nenhum resultado para esse filtro',
               description: 'Tente outro termo ou remova o filtro.',
             })
-          : emptyStateHtml({
-              icon: '📋',
-              title: 'Nenhum registro ainda',
-              description: 'Registre o primeiro serviço para formar o histórico.',
-              ctaHtml:
-                '<button class="btn btn--primary btn--sm btn--auto" data-nav="registro">Registrar serviço</button>',
-            });
+          : `<section class="engaging-empty-state" aria-label="Histórico vazio">
+              <div class="engaging-empty-state__icon">📋</div>
+              <h3 class="engaging-empty-state__title">Nenhum serviço registrado ainda</h3>
+              <p class="engaging-empty-state__description">Cada serviço registrado vira um relatório profissional pronto para o cliente. Técnicos que registram aqui economizam em média 3 horas por semana.</p>
+              <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar meu primeiro serviço →</button>
+              <div class="engaging-empty-state__microcopy">Leva menos de 2 minutos</div>
+            </section>`;
       return;
     }
 
