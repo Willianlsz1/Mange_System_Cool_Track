@@ -2,6 +2,7 @@
  * CoolTrack Pro - Utils v5.0
  * Movido para core/utils.js
  */
+// SECURITY: sempre usar escapeHtml() ao inserir dados do usuário no DOM via innerHTML
 
 export const STORAGE_KEY = 'cooltrack_v3';
 export const MAX_PHOTOS_PER_RECORD = 5;
