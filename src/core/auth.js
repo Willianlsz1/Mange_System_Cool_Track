@@ -6,6 +6,7 @@ import { trackEvent } from './telemetry.js';
 const OAUTH_PENDING_KEY = 'cooltrack-oauth-pending-v1';
 
 function getPasswordResetRedirectUrl() {
+  // Prefer explicit environment redirect for production domains (ex.: Netlify custom domain).
   const envRedirect = import.meta.env?.VITE_AUTH_REDIRECT_URL;
   if (typeof envRedirect === 'string' && envRedirect.trim()) return envRedirect.trim();
 
@@ -13,6 +14,7 @@ function getPasswordResetRedirectUrl() {
 }
 
 function getOAuthRedirectUrl() {
+  // Reuse the same env redirect to avoid hardcoded origins in OAuth callback flows.
   const envRedirect = import.meta.env?.VITE_AUTH_REDIRECT_URL;
   if (typeof envRedirect === 'string' && envRedirect.trim()) return envRedirect.trim();
 
