@@ -1,46 +1,104 @@
+import { Auth } from '../../core/auth.js';
+import { fetchMyProfileBilling } from '../../core/monetization.js';
+import { PLAN_CODE_FREE, PLAN_CODE_PRO, getEffectivePlan } from '../../core/subscriptionPlans.js';
 import { Utils } from '../../core/utils.js';
 
-export function renderPricing() {
-  const view = Utils.getEl('view-pricing');
-  if (!view) return;
+function normalizeHighlightPlan(highlightPlan) {
+  return String(highlightPlan || '').toLowerCase() === PLAN_CODE_PRO ? PLAN_CODE_PRO : null;
+}
 
-  view.innerHTML = `
+async function resolveCurrentPlanCode() {
+  if (localStorage.getItem('cooltrack-guest-mode') === '1') return PLAN_CODE_FREE;
+
+  const user = await Auth.getUser();
+  if (!user?.id) return PLAN_CODE_FREE;
+
+  try {
+    const { profile } = await fetchMyProfileBilling();
+    return getEffectivePlan(profile);
+  } catch {
+    return PLAN_CODE_FREE;
+  }
+}
+
+function getPricingMarkup(planCode, { highlightPlan = null } = {}) {
+  const isPro = planCode === PLAN_CODE_PRO;
+  const isFree = !isPro;
+  const freeHighlighted = highlightPlan === PLAN_CODE_FREE;
+  const proHighlighted = highlightPlan === PLAN_CODE_PRO;
+
+  const freeCardClasses = [
+    'pricing-card',
+    isFree ? 'pricing-card--active' : '',
+    freeHighlighted ? 'pricing-card--highlighted' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const proCardClasses = [
+    'pricing-card',
+    'pricing-card--pro',
+    isPro ? 'pricing-card--active' : '',
+    proHighlighted ? 'pricing-card--highlighted' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const planLabel = isPro ? 'Pro' : 'Free';
+
+  return `
     <section class="pricing-view" aria-labelledby="pricing-title">
       <header class="pricing-hero">
-        <h1 class="pricing-hero__title" id="pricing-title">Escolha o plano certo para o seu negócio</h1>
-        <p class="pricing-hero__subtitle">Comece grátis. Faça upgrade quando precisar.</p>
+        <h1 class="pricing-hero__title" id="pricing-title">Escolha o plano certo para o seu negocio</h1>
+        <p class="pricing-hero__subtitle">Comece gratis. Faca upgrade quando precisar.</p>
+        <p class="pricing-plan-indicator pricing-plan-indicator--${planCode}">
+          Seu plano atual: <strong>${planLabel}</strong>
+        </p>
       </header>
 
-      <div class="pricing-grid" role="list" aria-label="Planos disponíveis">
-        <article class="pricing-card" role="listitem" aria-label="Plano Gratuito">
-          <span class="pricing-badge pricing-badge--current">ATUAL</span>
+      <div class="pricing-grid" role="list" aria-label="Planos disponiveis">
+        <article class="${freeCardClasses}" role="listitem" aria-label="Plano Gratuito">
+          ${
+            isFree
+              ? '<span class="pricing-badge pricing-badge--current">PLANO ATUAL</span>'
+              : '<span class="pricing-badge pricing-badge--neutral">BASE</span>'
+          }
           <h2 class="pricing-card__title">Gratuito</h2>
           <p class="pricing-card__price">R$ 0 / sempre</p>
           <ul class="pricing-features">
-            <li>&#10003; Até 5 equipamentos</li>
-            <li>&#10003; 10 registros por mês</li>
-            <li>&#10003; Relatório PDF básico</li>
+            <li>&#10003; Ate 3 equipamentos</li>
+            <li>&#10003; 10 registros por mes</li>
             <li>&#10003; Alertas de preventiva</li>
             <li>&#10003; Funciona offline</li>
           </ul>
-          <button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Plano atual</button>
+          ${
+            isFree
+              ? '<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Plano atual</button>'
+              : '<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Voce esta no Pro</button>'
+          }
         </article>
 
-        <article class="pricing-card pricing-card--pro" role="listitem" aria-label="Plano Pro">
-          <span class="pricing-badge pricing-badge--popular">MAIS POPULAR</span>
+        <article class="${proCardClasses}" role="listitem" aria-label="Plano Pro">
+          ${
+            isPro
+              ? '<span class="pricing-badge pricing-badge--current">PLANO ATUAL</span>'
+              : '<span class="pricing-badge pricing-badge--popular">MAIS POPULAR</span>'
+          }
           <h2 class="pricing-card__title">Pro</h2>
-          <p class="pricing-card__price pricing-card__price--pro">R$ 29 / mês</p>
+          <p class="pricing-card__price pricing-card__price--pro">R$ 29 / mes</p>
           <p class="pricing-card__annual">ou R$ 249/ano (economize 28%)</p>
           <ul class="pricing-features">
             <li>&#10003; Equipamentos ilimitados</li>
             <li>&#10003; Registros ilimitados</li>
-            <li>&#10003; Relatório PDF com sua logo</li>
-            <li>&#10003; Compartilhamento WhatsApp</li>
-            <li>&#10003; Histórico completo</li>
-            <li>&#10003; Exportação de dados</li>
-            <li>&#10003; Suporte prioritário</li>
+            <li>&#10003; Exportacao PDF completa</li>
+            <li>&#10003; Compartilhamento WhatsApp sem limite</li>
+            <li>&#10003; Historico completo</li>
           </ul>
-          <button class="btn pricing-card__cta pricing-card__cta--pro" type="button" data-action="open-upgrade" data-upgrade-source="dashboard">Assinar Pro &rarr;</button>
+          ${
+            isPro
+              ? '<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Plano atual</button>'
+              : '<button class="btn pricing-card__cta pricing-card__cta--pro" type="button" data-action="start-checkout" data-plan="pro" data-upgrade-source="pricing">Assinar Pro &rarr;</button>'
+          }
           <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>
         </article>
       </div>
@@ -53,13 +111,30 @@ export function renderPricing() {
         </details>
         <details class="pricing-faq__item">
           <summary>O que acontece com meus dados se cancelar?</summary>
-          <p>Seus dados ficam salvos. Você volta ao plano grátis com acesso aos dados já registrados.</p>
+          <p>Seus dados ficam salvos. Voce volta ao plano gratis com acesso ao que ja foi registrado.</p>
         </details>
         <details class="pricing-faq__item">
           <summary>Aceita PIX ou boleto?</summary>
-          <p>Sim! PIX, cartão de crédito e boleto bancário.</p>
+          <p>Sim! PIX, cartao de credito e boleto bancario.</p>
         </details>
       </section>
     </section>
   `;
+}
+
+export async function renderPricing(params = {}) {
+  const view = Utils.getEl('view-pricing');
+  if (!view) return;
+
+  view.innerHTML = `
+    <section class="pricing-view" aria-labelledby="pricing-title">
+      <header class="pricing-hero">
+        <h1 class="pricing-hero__title" id="pricing-title">Carregando planos...</h1>
+      </header>
+    </section>
+  `;
+
+  const currentPlanCode = await resolveCurrentPlanCode();
+  const highlightPlan = normalizeHighlightPlan(params?.highlightPlan);
+  view.innerHTML = getPricingMarkup(currentPlanCode, { highlightPlan });
 }

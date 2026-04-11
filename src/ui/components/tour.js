@@ -51,11 +51,8 @@ export const Tour = {
   },
 
   bindHelpButton() {
-    const helpBtn = document.getElementById('header-help-btn');
-    if (!helpBtn || helpBtn.dataset.tourBound === '1') return;
-
-    helpBtn.dataset.tourBound = '1';
-    helpBtn.addEventListener('click', () => this.restart());
+    // O tour é iniciado pelo handler 'help-open-tutorial' em navigationHandlers.js.
+    // Este método é mantido apenas por compatibilidade de chamada.
   },
 
   restart() {

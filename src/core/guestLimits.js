@@ -1,5 +1,12 @@
 import { getState } from './state.js';
-import { getPlanForUser } from './subscriptionPlans.js';
+import {
+  PLAN_CODE_FREE,
+  canCreateEquipment,
+  getEffectivePlan,
+  getPlanForUser,
+  getPlanProfileForUserId,
+} from './subscriptionPlans.js';
+import { supabase } from './supabase.js';
 
 export function isGuestMode() {
   return localStorage.getItem('cooltrack-guest-mode') === '1';
@@ -28,4 +35,38 @@ export function checkGuestLimit(resource) {
     limit,
     current,
   };
+}
+
+export async function checkPlanLimit(resource, { supabaseClient = supabase } = {}) {
+  const usage = getUsageSnapshot();
+  const current = usage[resource];
+  const isGuest = isGuestMode();
+  let planCode = PLAN_CODE_FREE;
+  let profile = null;
+
+  if (!isGuest) {
+    try {
+      const {
+        data: { user },
+      } = await supabaseClient.auth.getUser();
+      profile = await getPlanProfileForUserId(user?.id, { supabaseClient });
+      planCode = getEffectivePlan(profile);
+    } catch {
+      planCode = PLAN_CODE_FREE;
+      profile = null;
+    }
+  }
+
+  const plan = getPlanForUser({ isGuest: false, planCode });
+  let limit = plan.limits[resource];
+  let blocked = Number.isFinite(limit) ? current >= limit : false;
+
+  if (resource === 'equipamentos') {
+    const createDecision = canCreateEquipment(profile, current);
+    blocked = !createDecision.allowed;
+    limit = createDecision.limit;
+    planCode = createDecision.planCode;
+  }
+
+  return { blocked, resource, limit, current, isGuest, planCode };
 }

@@ -8,13 +8,17 @@ import { trackEvent } from '../../../core/telemetry.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
 import { ShareSuccessToast } from '../../components/shareSuccessToast.js';
 import { GuestConversionModal } from '../../components/guestConversionModal.js';
-import { getPlanCodeForUserId } from '../../../core/subscriptionPlans.js';
+import {
+  assertProAccess,
+  getEffectivePlan,
+  getPlanCodeForUserId,
+} from '../../../core/subscriptionPlans.js';
+import { fetchMyProfileBilling, PREMIUM_FEATURE_PDF_EXPORT } from '../../../core/monetization.js';
 import {
   getMonthlyLimitForPlan,
   getMonthlyUsageSnapshot,
   hasReachedMonthlyLimit,
   incrementMonthlyUsage,
-  USAGE_RESOURCE_PDF_EXPORT,
   USAGE_RESOURCE_WHATSAPP_SHARE,
 } from '../../../core/usageLimits.js';
 
@@ -66,24 +70,19 @@ function bindPdfExport() {
           return;
         }
 
-        const { planCode, usageSnapshot } = await resolvePlanAndUsage(user.id);
+        const { profile } = await fetchMyProfileBilling();
+        const planCode = getEffectivePlan(profile);
         trackEvent('pdf_export_attempted', { isGuest: false, plan: planCode });
 
-        const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
-        const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
-
-        if (
-          hasReachedMonthlyLimit({
-            planCode,
-            resource: USAGE_RESOURCE_PDF_EXPORT,
-            usedCount: pdfUsed,
-          })
-        ) {
-          trackEvent('pdf_export_blocked', { reason: 'limit_reached' });
+        try {
+          assertProAccess(profile, PREMIUM_FEATURE_PDF_EXPORT);
+        } catch (accessError) {
+          trackEvent('pdf_export_blocked', { reason: 'premium_required' });
           GuestConversionModal.open({
-            reason: 'limit_pdf',
-            source: 'pdf_export_limit',
-            message: `Voce gerou ${pdfLimit} relatorios este mes. O plano Pro tem relatorios ilimitados.`,
+            reason: 'premium_pdf',
+            source: 'pdf_export_premium',
+            title: 'Recurso disponivel no plano Pro',
+            message: accessError?.message || 'A exportacao em PDF esta disponivel no plano Pro.',
           });
           return;
         }
@@ -95,10 +94,6 @@ function bindPdfExport() {
         }
 
         Toast.success(`PDF gerado: ${fileName}`);
-
-        if (Number.isFinite(pdfLimit)) {
-          await incrementMonthlyUsage(user.id, USAGE_RESOURCE_PDF_EXPORT);
-        }
       });
     } catch (error) {
       handleError(error, {

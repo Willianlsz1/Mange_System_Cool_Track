@@ -331,7 +331,7 @@ export function renderShellViews() {
           <div id="relatorio-corpo"></div>
         </div>
 
-        <!-- PRICING -->
+        <!-- PLANOS -->
         <div class="view" id="view-pricing"></div>
 `;
 }

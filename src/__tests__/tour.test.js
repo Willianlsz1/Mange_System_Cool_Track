@@ -36,13 +36,13 @@ describe('Tour', () => {
     expect(text).toContain('Toque aqui para registrar um serviço');
   });
 
-  it('binds tutorial restart to header help button', async () => {
+  it('keeps bindHelpButton as compatibility no-op', async () => {
     const { Tour } = await import('../ui/components/tour.js');
     const restartSpy = vi.spyOn(Tour, 'restart').mockImplementation(() => {});
 
     Tour.bindHelpButton();
     document.getElementById('header-help-btn')?.click();
 
-    expect(restartSpy).toHaveBeenCalledTimes(1);
+    expect(restartSpy).not.toHaveBeenCalled();
   });
 });

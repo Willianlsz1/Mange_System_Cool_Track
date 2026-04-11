@@ -50,9 +50,19 @@ vi.mock('../ui/components/shareSuccessToast.js', () => ({
   ShareSuccessToast: { show },
 }));
 
+const fetchMyProfileBilling = vi.fn();
+vi.mock('../core/monetization.js', () => ({
+  PREMIUM_FEATURE_PDF_EXPORT: 'pdf_export',
+  fetchMyProfileBilling,
+}));
+
 const getPlanCodeForUserId = vi.fn();
+const getEffectivePlan = vi.fn();
+const assertProAccess = vi.fn();
 vi.mock('../core/subscriptionPlans.js', () => ({
   getPlanCodeForUserId,
+  getEffectivePlan,
+  assertProAccess,
 }));
 
 const getMonthlyUsageSnapshot = vi.fn();
@@ -61,7 +71,6 @@ const hasReachedMonthlyLimit = vi.fn();
 const incrementMonthlyUsage = vi.fn();
 
 vi.mock('../core/usageLimits.js', () => ({
-  USAGE_RESOURCE_PDF_EXPORT: 'pdf_export',
   USAGE_RESOURCE_WHATSAPP_SHARE: 'whatsapp_share',
   getMonthlyUsageSnapshot,
   getMonthlyLimitForPlan,
@@ -76,13 +85,21 @@ describe('reportExportHandlers', () => {
     localStorage.clear();
 
     getPlanCodeForUserId.mockResolvedValue('free');
+    getEffectivePlan.mockReturnValue('free');
+    assertProAccess.mockImplementation(() => {
+      throw new Error('A exportacao em PDF e exclusiva do plano Pro.');
+    });
+
+    fetchMyProfileBilling.mockResolvedValue({
+      profile: { id: 'u1', plan_code: 'free', subscription_status: 'inactive', is_dev: false },
+    });
+
     getMonthlyUsageSnapshot.mockResolvedValue({
       monthStart: '2026-04-01',
-      pdf_export: 0,
       whatsapp_share: 0,
     });
     getMonthlyLimitForPlan.mockImplementation((_planCode, resource) =>
-      resource === 'pdf_export' ? 3 : 10,
+      resource === 'whatsapp_share' ? 10 : Number.POSITIVE_INFINITY,
     );
     hasReachedMonthlyLimit.mockReturnValue(false);
     incrementMonthlyUsage.mockResolvedValue(1);
@@ -99,6 +116,7 @@ describe('reportExportHandlers', () => {
 
   it('blocks PDF for guests and opens conversion modal with preview', async () => {
     getUser.mockResolvedValueOnce(null);
+
     await handlers.get('export-pdf')({});
 
     expect(generateMaintenanceReport).not.toHaveBeenCalled();
@@ -111,18 +129,38 @@ describe('reportExportHandlers', () => {
     expect(trackEvent).toHaveBeenCalledWith('pdf_export_blocked', { reason: 'guest' });
   });
 
-  it('allows authenticated free users to export PDF under monthly limit', async () => {
+  it('blocks PDF for authenticated free users with friendly pro feedback', async () => {
     getUser.mockResolvedValueOnce({ id: 'u1' });
+
+    await handlers.get('export-pdf')({});
+
+    expect(assertProAccess).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'u1' }),
+      'pdf_export',
+    );
+    expect(generateMaintenanceReport).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'premium_pdf',
+        source: 'pdf_export_premium',
+      }),
+    );
+    expect(trackEvent).toHaveBeenCalledWith('pdf_export_blocked', { reason: 'premium_required' });
+  });
+
+  it('allows authenticated pro users to export PDF', async () => {
+    getUser.mockResolvedValueOnce({ id: 'u1' });
+    getEffectivePlan.mockReturnValueOnce('pro');
+    fetchMyProfileBilling.mockResolvedValueOnce({
+      profile: { id: 'u1', plan: 'pro', subscription_status: 'active', is_dev: false },
+    });
+    assertProAccess.mockImplementationOnce(() => ({ allowed: true, planCode: 'pro' }));
     generateMaintenanceReport.mockResolvedValueOnce('relatorio.pdf');
 
     await handlers.get('export-pdf')({});
 
-    expect(getPlanCodeForUserId).toHaveBeenCalledWith('u1');
-    expect(getMonthlyUsageSnapshot).toHaveBeenCalledWith('u1');
     expect(generateMaintenanceReport).toHaveBeenCalledTimes(1);
     expect(success).toHaveBeenCalledWith('PDF gerado: relatorio.pdf');
-    expect(incrementMonthlyUsage).toHaveBeenCalledWith('u1', 'pdf_export');
-    expect(localStorage.getItem('cooltrack-plan')).toBeNull();
   });
 
   it('blocks whatsapp share for free users above monthly limit', async () => {

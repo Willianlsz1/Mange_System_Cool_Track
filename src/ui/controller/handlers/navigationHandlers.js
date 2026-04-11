@@ -5,6 +5,7 @@ import { trackEvent } from '../../../core/telemetry.js';
 import { Photos } from '../../components/photos.js';
 import { Toast } from '../../../core/toast.js';
 import { Tour } from '../../components/tour.js';
+import { AuthScreen } from '../../components/authscreen.js';
 
 let isHelpOpen = false;
 
@@ -78,5 +79,31 @@ export function bindNavigationHandlers() {
     trackEvent('upgrade_cta_clicked', { source });
     const { goTo: dynamicGoTo } = await import('../../../core/router.js');
     dynamicGoTo('pricing', { highlightPlan: 'pro' });
+  });
+  on('start-checkout', async (el, event) => {
+    event?.preventDefault?.();
+    const plan = el?.dataset?.plan === 'pro' ? 'pro' : 'pro';
+    const source = el?.dataset?.upgradeSource || 'pricing';
+    trackEvent('checkout_start_clicked', { source, plan });
+
+    try {
+      const { startCheckout } = await import('../../../core/monetization.js');
+      const url = await startCheckout({ plan });
+      window.location.href = url;
+    } catch (error) {
+      if (error?.code === 'NO_SESSION') {
+        Toast.warning('Faça login para assinar o plano Pro.');
+        AuthScreen.show();
+        return;
+      }
+
+      if (error?.code === 'INVALID_JWT') {
+        Toast.warning('Sessão expirada. Faça login novamente.');
+        AuthScreen.show();
+        return;
+      }
+
+      Toast.error(error?.message || 'Não foi possível iniciar o checkout.');
+    }
   });
 }
