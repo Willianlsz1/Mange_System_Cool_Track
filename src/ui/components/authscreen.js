@@ -88,13 +88,13 @@ export const AuthScreen = {
           <input class="auth-input" id="signin-email" type="email" placeholder="seu@email.com" autocomplete="email" />
           <label class="auth-label" for="signin-password">SENHA</label>
           <input class="auth-input" id="signin-password" type="password" placeholder="********" autocomplete="current-password" />
-          <button class="auth-btn" id="btn-signin" type="button">Entrar &rarr;</button>
+          <button class="auth-btn" id="btn-signin" type="button">Acessar meu painel &rarr;</button>
           <div class="auth-actions-center">
             <button class="auth-btn-forgot" id="btn-forgot" type="button">Esqueci minha senha</button>
           </div>
-          <div class="auth-hint">Seus dados ficam salvos na nuvem,<br>acessiveis de qualquer dispositivo.</div>
+          <div class="auth-hint">Seus relatorios, alertas e historico — seguros na nuvem, acessiveis do canteiro de obra.</div>
           <div class="auth-guest-panel">
-            <button class="auth-btn-guest" id="btn-guest" type="button">Explorar sem conta &rarr;</button>
+            <button class="auth-btn-guest" id="btn-guest" type="button">Ver demo interativa &rarr;</button>
             <div class="auth-hint auth-hint--tight">Dados de exemplo &middot; Nada e salvo</div>
           </div>
         </div>
@@ -108,8 +108,8 @@ export const AuthScreen = {
           <input class="auth-input" id="signup-email" type="email" placeholder="seu@email.com" autocomplete="email" />
           <label class="auth-label" for="signup-password">SENHA</label>
           <input class="auth-input" id="signup-password" type="password" placeholder="min. 6 caracteres" autocomplete="new-password" />
-          <button class="auth-btn" id="btn-signup" type="button">Criar conta gratis &rarr;</button>
-          <div class="auth-hint">Gratis para sempre para 1 tecnico.<br>Sem cartao de credito.</div>
+          <button class="auth-btn" id="btn-signup" type="button">Comecar a gerar relatorios &rarr;</button>
+          <div class="auth-hint">Gratis para 1 tecnico. Gere ate 10 relatorios/mes. Sem cartao.</div>
         </div>
       </div>
     `;

@@ -311,7 +311,7 @@ export const FirstTimeExperience = {
           </div>
 
           <div class="ftx-eyebrow">BEM-VINDO</div>
-          <div class="ftx-title">Gestão de manutenção para quem trabalha de verdade.</div>
+          <div class="ftx-title">Chega de planilha. Seus relatorios prontos em 30 segundos.</div>
 
           <div class="ftx-value-props">
             <div class="ftx-prop">
@@ -335,7 +335,7 @@ export const FirstTimeExperience = {
             autocomplete="name" />
 
           <button class="ftx-btn-primary" id="ftx-next-0">
-            Continuar →
+            Vamos la →
           </button>
           <div class="ftx-hint">2 minutos para configurar · Sem cartão de crédito</div>
         </div>`;
@@ -415,7 +415,7 @@ export const FirstTimeExperience = {
           </div>
 
           <button class="ftx-btn-primary" id="ftx-next-1">
-            Cadastrar equipamento →
+            Salvar e continuar →
           </button>
           <div class="ftx-hint">Você edita ou exclui a qualquer momento</div>
         </div>`;
@@ -551,10 +551,10 @@ export const FirstTimeExperience = {
 
           <div class="ftx-actions">
             <button class="ftx-btn-primary" id="ftx-go-registro">
-              Registrar primeiro serviço →
+              Registrar meu primeiro servico →
             </button>
             <button class="ftx-btn-sec" id="ftx-go-dashboard">
-              Ver o painel primeiro
+              Explorar o painel
             </button>
           </div>
 
