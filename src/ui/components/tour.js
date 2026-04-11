@@ -4,46 +4,36 @@ const TOUR_DONE_KEY = 'cooltrack-tour-done';
 
 const STEPS = [
   {
-    selector: '#dash-greeting',
-    route: 'inicio',
-    text: '👋 Bem-vindo ao CoolTrack Pro! Aqui você acompanha o resumo dos seus equipamentos e manutenções.',
-  },
-  {
-    selector: '.kpi-row',
-    route: 'inicio',
-    text: '🔧 Estes cards mostram a situação atual dos seus equipamentos. Verde = ok, Amarelo = atenção, Vermelho = crítico.',
-  },
-  {
     selector: '#nav-registro',
-    text: '📋 Aqui você registra um novo serviço realizado. Preencha equipamento, descrição, peças e colete a assinatura do cliente.',
+    text: 'Toque aqui para registrar um serviço',
   },
   {
-    selector: '#photo-drop-zone',
-    route: 'registro',
-    text: '📷 Anexe até 5 fotos por registro para documentar o serviço realizado.',
+    selector: '#nav-equipamentos',
+    text: 'Cadastre e gerencie equipamentos',
   },
   {
-    selector: '#tour-signature-anchor',
-    route: 'registro',
-    text: '✍️ Colete a assinatura do cliente diretamente na tela. Ela aparecerá no PDF do relatório como comprovante.',
+    selector: '#nav-alertas',
+    text: 'Veja o que precisa de atenção',
   },
   {
-    selector: '#nav-historico',
-    text: '🕒 Consulte todos os serviços realizados. Use os filtros para encontrar registros por equipamento ou período.',
-  },
-  {
-    selector: '#nav-relatorio',
-    text: '📄 Gere relatórios em PDF com os registros filtrados. O PDF inclui assinatura do cliente e sai com fundo branco para economizar tinta na impressão.',
-  },
-  {
-    selector: 'button[data-action="open-profile"]',
-    text: '👤 Acesse seu perfil, edite seus dados ou saia da conta por aqui.',
-  },
-  {
-    selector: '#tour-help-btn',
-    text: '❓ Clicou aqui por acidente? Este botão reinicia o tour sempre que precisar relembrar alguma função.',
+    selector: '#lista-equip .equip-card, #dash-criticos .equip-card',
+    route: 'equipamentos',
+    text: 'O score indica o risco operacional',
   },
 ];
+
+function waitFrames(total = 1) {
+  return new Promise((resolve) => {
+    const tick = (remaining) => {
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(() => tick(remaining - 1));
+    };
+    tick(total);
+  });
+}
 
 export const Tour = {
   stepIndex: 0,
@@ -57,11 +47,11 @@ export const Tour = {
 
     if (localStorage.getItem(TOUR_DONE_KEY) === '1') return;
 
-    setTimeout(() => this.start(), 450);
+    waitFrames(2).then(() => this.start());
   },
 
   bindHelpButton() {
-    const helpBtn = document.getElementById('tour-help-btn');
+    const helpBtn = document.getElementById('header-help-btn');
     if (!helpBtn || helpBtn.dataset.tourBound === '1') return;
 
     helpBtn.dataset.tourBound = '1';
@@ -140,7 +130,7 @@ export const Tour = {
 
     if (step.route) {
       goTo(step.route);
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await waitFrames(2);
     }
 
     const target = document.querySelector(step.selector);

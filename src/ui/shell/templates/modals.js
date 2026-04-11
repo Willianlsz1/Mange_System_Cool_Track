@@ -145,6 +145,5 @@ export function renderShellModals() {
     <img class="lightbox__img" id="lightbox-img" src="" alt="Registro fotográfico" />
   </div>
 
-  <button id="tour-help-btn" class="tour-help-btn" type="button" aria-label="Reiniciar tour guiado" title="Reiniciar tour">?</button>
 `;
 }
