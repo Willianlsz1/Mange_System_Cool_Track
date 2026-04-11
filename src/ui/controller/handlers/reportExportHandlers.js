@@ -4,6 +4,7 @@ import { ErrorCodes, handleError } from '../../../core/errors.js';
 import { PDFGenerator } from '../../../domain/pdf.js';
 import { WhatsAppExport } from '../../../domain/whatsapp.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
+import { ShareSuccessToast } from '../../components/shareSuccessToast.js';
 
 function getReportFilters() {
   return {
@@ -40,7 +41,7 @@ function bindWhatsAppExport() {
           Toast.warning('Nenhum registro para enviar.');
           return;
         }
-        Toast.success('Resumo preparado para envio no WhatsApp.');
+        ShareSuccessToast.show();
       });
     } catch (error) {
       handleError(error, {
