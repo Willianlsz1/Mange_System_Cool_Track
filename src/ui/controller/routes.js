@@ -5,6 +5,7 @@ import { renderHist } from '../views/historico.js';
 import { renderAlertas } from '../views/alertas.js';
 import { renderRelatorio, populateRelatorioSelects } from '../views/relatorio.js';
 import { initRegistro, loadRegistroForEdit } from '../views/registro.js';
+import { renderPricing } from '../views/pricing.js';
 
 export function registerAppRoutes() {
   registerRoute('inicio', () => {
@@ -39,6 +40,11 @@ export function registerAppRoutes() {
   registerRoute('relatorio', () => {
     populateRelatorioSelects();
     renderRelatorio();
+    updateHeader();
+  });
+
+  registerRoute('pricing', () => {
+    renderPricing();
     updateHeader();
   });
 }
