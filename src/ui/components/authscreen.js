@@ -88,18 +88,13 @@ export const AuthScreen = {
           <input class="auth-input" id="signin-email" type="email" placeholder="seu@email.com" autocomplete="email" />
           <label class="auth-label" for="signin-password">SENHA</label>
           <input class="auth-input" id="signin-password" type="password" placeholder="********" autocomplete="current-password" />
-          <button class="auth-btn" id="btn-signin" type="button">Entrar &rarr;</button>
+          <button class="auth-btn" id="btn-signin" type="button">Acessar meu painel &rarr;</button>
           <div class="auth-actions-center">
             <button class="auth-btn-forgot" id="btn-forgot" type="button">Esqueci minha senha</button>
           </div>
-          <div class="auth-hint">Seus dados ficam salvos na nuvem,<br>acessiveis de qualquer dispositivo.</div>
+          <div class="auth-hint">Seus relatorios, alertas e historico — seguros na nuvem, acessiveis do canteiro de obra.</div>
           <div class="auth-guest-panel">
             <button class="auth-btn-guest" id="btn-guest" type="button">Ver demo interativa &rarr;</button>
-            <div id="guest-lead-form" hidden>
-              <label class="auth-label" for="guest-lead-email" style="margin-top:10px">Receba dicas de manutencao + acesso a demo</label>
-              <input class="auth-input" id="guest-lead-email" type="email" placeholder="seu@email.com" autocomplete="email" />
-              <button class="auth-btn-guest" id="btn-guest-start" type="button">Iniciar demo &rarr;</button>
-            </div>
             <div class="auth-hint auth-hint--tight">Dados de exemplo &middot; Nada e salvo</div>
           </div>
         </div>
@@ -113,8 +108,8 @@ export const AuthScreen = {
           <input class="auth-input" id="signup-email" type="email" placeholder="seu@email.com" autocomplete="email" />
           <label class="auth-label" for="signup-password">SENHA</label>
           <input class="auth-input" id="signup-password" type="password" placeholder="min. 6 caracteres" autocomplete="new-password" />
-          <button class="auth-btn" id="btn-signup" type="button">Criar conta gratis &rarr;</button>
-          <div class="auth-hint">Gratis para sempre para 1 tecnico.<br>Sem cartao de credito.</div>
+          <button class="auth-btn" id="btn-signup" type="button">Comecar a gerar relatorios &rarr;</button>
+          <div class="auth-hint">Gratis para 1 tecnico. Gere ate 10 relatorios/mes. Sem cartao.</div>
         </div>
       </div>
     `;
@@ -152,19 +147,24 @@ export const AuthScreen = {
       });
     };
 
-    tabSignin.addEventListener('click', () => setTab('signin'));
-    tabSignup.addEventListener('click', () => setTab('signup'));
+    tabSignin?.addEventListener('click', () => setTab('signin'));
+    tabSignup?.addEventListener('click', () => setTab('signup'));
 
-    overlay.querySelector('#btn-google-signin').addEventListener('click', async () => {
-      await triggerGoogleAuth(overlay.querySelector('#btn-google-signin'));
+    overlay.querySelector('#btn-google-signin')?.addEventListener('click', async () => {
+      const button = overlay.querySelector('#btn-google-signin');
+      if (!button) return;
+      await triggerGoogleAuth(button);
     });
 
-    overlay.querySelector('#btn-google-signup').addEventListener('click', async () => {
-      await triggerGoogleAuth(overlay.querySelector('#btn-google-signup'));
+    overlay.querySelector('#btn-google-signup')?.addEventListener('click', async () => {
+      const button = overlay.querySelector('#btn-google-signup');
+      if (!button) return;
+      await triggerGoogleAuth(button);
     });
 
-    overlay.querySelector('#btn-signin').addEventListener('click', async () => {
+    overlay.querySelector('#btn-signin')?.addEventListener('click', async () => {
       const btn = overlay.querySelector('#btn-signin');
+      if (!btn) return;
       const email = overlay.querySelector('#signin-email').value.trim();
       const password = overlay.querySelector('#signin-password').value;
 
@@ -180,13 +180,14 @@ export const AuthScreen = {
       });
     });
 
-    overlay.querySelector('#btn-forgot').addEventListener('click', () => {
+    overlay.querySelector('#btn-forgot')?.addEventListener('click', () => {
       const email = overlay.querySelector('#signin-email').value.trim();
       PasswordRecoveryModal.openPasswordResetEmailModal(email);
     });
 
-    overlay.querySelector('#btn-signup').addEventListener('click', async () => {
+    overlay.querySelector('#btn-signup')?.addEventListener('click', async () => {
       const btn = overlay.querySelector('#btn-signup');
+      if (!btn) return;
       const nome = overlay.querySelector('#signup-nome').value.trim();
       const email = overlay.querySelector('#signup-email').value.trim();
       const password = overlay.querySelector('#signup-password').value;
@@ -209,18 +210,7 @@ export const AuthScreen = {
       });
     });
 
-    overlay.querySelector('#btn-guest').addEventListener('click', () => {
-      const guestLeadForm = overlay.querySelector('#guest-lead-form');
-      guestLeadForm.hidden = false;
-      overlay.querySelector('#guest-lead-email')?.focus();
-    });
-
-    overlay.querySelector('#btn-guest-start').addEventListener('click', () => {
-      const email = overlay.querySelector('#guest-lead-email').value.trim();
-      if (!email) return Toast.warning('Informe seu email para acessar a demo.');
-      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email valido.');
-
-      localStorage.setItem('cooltrack-lead-email', email);
+    overlay.querySelector('#btn-guest')?.addEventListener('click', () => {
       localStorage.setItem('cooltrack-guest-mode', '1');
       overlay.remove();
       window.location.reload();
