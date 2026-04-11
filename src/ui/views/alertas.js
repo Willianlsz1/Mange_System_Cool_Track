@@ -44,7 +44,7 @@ export function renderAlertas() {
 
   withSkeleton(
     el,
-    { enabled: list.length >= 8, variant: 'alerts', count: Math.min(list.length, 5) },
+    { enabled: true, variant: 'alerts', count: Math.min(Math.max(list.length, 3), 5) },
     () => {
       el.innerHTML = list.length
         ? list.map(_alertCardHtml).join('')

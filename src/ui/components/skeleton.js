@@ -24,6 +24,33 @@ function skeletonHtml(variant, count) {
   </div>`;
 }
 
+function createOverlay(variant, count) {
+  const overlay = document.createElement('div');
+  overlay.className = 'ui-skeleton-overlay';
+  overlay.setAttribute('aria-hidden', 'true');
+  overlay.innerHTML = skeletonHtml(variant, count);
+  return overlay;
+}
+
+function runWithLoadingState(target, variant, count, renderFn) {
+  target.setAttribute('aria-busy', 'true');
+  target.classList.add('is-skeleton-loading');
+  const overlay = createOverlay(variant, count);
+  target.appendChild(overlay);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      try {
+        renderFn();
+      } finally {
+        target.removeAttribute('aria-busy');
+        target.classList.remove('is-skeleton-loading');
+        overlay.remove();
+      }
+    });
+  });
+}
+
 export function withSkeleton(target, options, renderFn) {
   if (!(target instanceof HTMLElement) || !(renderFn instanceof Function)) return;
   const { enabled = false, variant = 'generic', count = 3 } = options || {};
@@ -35,18 +62,19 @@ export function withSkeleton(target, options, renderFn) {
     return;
   }
 
-  target.setAttribute('aria-busy', 'true');
-  target.classList.add('is-skeleton-loading');
-  target.innerHTML = skeletonHtml(variant, count);
+  runWithLoadingState(target, variant, count, renderFn);
+}
 
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      try {
-        renderFn();
-      } finally {
-        target.removeAttribute('aria-busy');
-        target.classList.remove('is-skeleton-loading');
-      }
-    });
-  });
+export function withViewSkeleton(target, options, renderFn) {
+  if (!(target instanceof HTMLElement) || !(renderFn instanceof Function)) return;
+  const { enabled = false, variant = 'generic', count = 3 } = options || {};
+
+  if (!enabled) {
+    target.removeAttribute('aria-busy');
+    target.classList.remove('is-skeleton-loading');
+    renderFn();
+    return;
+  }
+
+  runWithLoadingState(target, variant, count, renderFn);
 }
