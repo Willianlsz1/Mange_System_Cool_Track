@@ -112,6 +112,77 @@ export const AuthScreen = {
           <div class="auth-hint">Gratis para 1 tecnico. Gere ate 10 relatorios/mes. Sem cartao.</div>
         </div>
       </div>
+
+      <section class="auth-social-proof" aria-label="Prova social">
+        <div class="auth-social-proof__metrics">
+          2.400+ tecnicos | 18.000+ servicos registrados | 4.8/5 avaliacao
+        </div>
+
+        <div class="auth-social-proof__testimonials" aria-hidden="true">
+          <article class="auth-social-proof__quote">
+            "Parei de perder preventiva desde o primeiro mes. O relatorio PDF impressiona o cliente."
+            — Carlos, tecnico autonomo em SP
+          </article>
+          <article class="auth-social-proof__quote">
+            "Gerencio 47 equipamentos sozinho. Antes usava planilha e perdia tudo."
+            — Rafael, refrigeracao comercial RJ
+          </article>
+        </div>
+
+        <p class="auth-social-proof__community">
+          Junte-se a comunidade de tecnicos que ja economizam 5h por semana
+        </p>
+      </section>
+
+      <style>
+        .auth-social-proof {
+          margin-top: 14px;
+          padding: 0 16px;
+          display: grid;
+          gap: 10px;
+          justify-items: center;
+        }
+
+        .auth-social-proof__metrics {
+          font-size: 12px;
+          color: #4a6880;
+          text-align: center;
+          letter-spacing: 0.05em;
+        }
+
+        .auth-social-proof__testimonials {
+          display: grid;
+          gap: 10px;
+        }
+
+        .auth-social-proof__quote {
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 10px;
+          padding: 16px;
+          font-size: 13px;
+          color: #8aaac8;
+          max-width: 360px;
+        }
+
+        .auth-social-proof__community {
+          margin: 0;
+          font-size: 13px;
+          color: #00c8e8;
+          font-weight: 500;
+          text-align: center;
+        }
+
+        @media (max-width: 479px) {
+          .auth-social-proof__testimonials {
+            display: none;
+          }
+
+          .auth-social-proof__community {
+            display: none;
+          }
+        }
+      </style>
     `;
 
     document.body.appendChild(overlay);
