@@ -7,12 +7,84 @@ import { Utils } from '../../core/utils.js';
 import { getState, findEquip, setState } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Toast } from '../../core/toast.js';
+import { goTo } from '../../core/router.js';
 import { emptyStateHtml } from '../components/emptyState.js';
 import { SavedHighlight } from '../components/onboarding.js';
 import { cleanupOrphanSignatures } from '../components/signature.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { updateHeader } from './dashboard.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
+
+function toNumber(value) {
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function getSummaryMetrics(list) {
+  const totalServicos = list.length;
+  const custoTotal = list.reduce(
+    (acc, reg) => acc + toNumber(reg.custoPecas) + toNumber(reg.custoMaoObra),
+    0,
+  );
+  const preventivas = list
+    .filter((reg) => (reg.tipo || '').trim().toLowerCase() === 'preventiva')
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  let mediaDiasPreventiva = null;
+  if (preventivas.length >= 2) {
+    const intervals = [];
+    for (let i = 1; i < preventivas.length; i += 1) {
+      const previous = new Date(preventivas[i - 1].data);
+      const current = new Date(preventivas[i].data);
+      const diffMs = current.getTime() - previous.getTime();
+      if (!Number.isNaN(diffMs) && diffMs > 0) intervals.push(diffMs / (1000 * 60 * 60 * 24));
+    }
+    if (intervals.length) {
+      mediaDiasPreventiva = Math.round(
+        intervals.reduce((acc, val) => acc + val, 0) / intervals.length,
+      );
+    }
+  }
+
+  return { totalServicos, custoTotal, mediaDiasPreventiva };
+}
+
+function renderSummaryCard(list) {
+  const { totalServicos, custoTotal, mediaDiasPreventiva } = getSummaryMetrics(list);
+  const mediaLabel = mediaDiasPreventiva !== null ? `${mediaDiasPreventiva} dias` : '—';
+
+  return `<section class="hist-summary-card" aria-label="Resumo do período">
+    <div class="hist-summary-grid" role="list">
+      <div class="hist-summary-item" role="listitem">
+        <div class="hist-summary-item__value">${totalServicos}</div>
+        <div class="hist-summary-item__label">Serviços registrados</div>
+      </div>
+      <div class="hist-summary-item__separator" aria-hidden="true">·</div>
+      <div class="hist-summary-item" role="listitem">
+        <div class="hist-summary-item__value">${formatCurrency(custoTotal)}</div>
+        <div class="hist-summary-item__label">Custo total</div>
+      </div>
+      <div class="hist-summary-item__separator" aria-hidden="true">·</div>
+      <div class="hist-summary-item" role="listitem">
+        <div class="hist-summary-item__value">${mediaLabel}</div>
+        <div class="hist-summary-item__label">Média entre preventivas</div>
+      </div>
+    </div>
+    <div class="hist-summary-upsell">
+      <span>📊 Economize 3h/semana com relatórios automáticos</span>
+      <button type="button" class="hist-summary-upsell__link" data-action="hist-pricing-link">Ver planos →</button>
+    </div>
+  </section>`;
+}
 
 export function renderHist() {
   const { registros } = getState();
@@ -46,25 +118,30 @@ export function renderHist() {
   const prevScrollTop = scrollRoot ? scrollRoot.scrollTop : window.scrollY;
 
   const renderTimeline = () => {
+    const summaryCard = renderSummaryCard(list);
+
     if (!list.length) {
       el.innerHTML =
         busca || filtEq
-          ? emptyStateHtml({
+          ? `${summaryCard}${emptyStateHtml({
               icon: '🔍',
               title: 'Nenhum resultado para esse filtro',
               description: 'Tente outro termo ou remova o filtro.',
-            })
-          : `<section class="engaging-empty-state" aria-label="Histórico vazio">
+            })}`
+          : `${summaryCard}<section class="engaging-empty-state" aria-label="Histórico vazio">
               <div class="engaging-empty-state__icon">📋</div>
               <h3 class="engaging-empty-state__title">Nenhum serviço registrado ainda</h3>
               <p class="engaging-empty-state__description">Cada serviço registrado vira um relatório profissional pronto para o cliente. Técnicos que registram aqui economizam em média 3 horas por semana.</p>
               <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar meu primeiro serviço →</button>
               <div class="engaging-empty-state__microcopy">Leva menos de 2 minutos</div>
             </section>`;
+      el.querySelector('[data-action="hist-pricing-link"]')?.addEventListener('click', () =>
+        goTo('pricing'),
+      );
       return;
     }
 
-    el.innerHTML = `<div class="timeline">${list
+    el.innerHTML = `${summaryCard}<div class="timeline">${list
       .map((r, idx) => {
         const eq = findEquip(r.equipId);
         const safeStatus = Utils.safeStatus(r.status);
@@ -98,6 +175,9 @@ export function renderHist() {
       </div>`;
       })
       .join('')}</div>`;
+    el.querySelector('[data-action="hist-pricing-link"]')?.addEventListener('click', () =>
+      goTo('pricing'),
+    );
 
     if (prevScrollTop > 0) {
       requestAnimationFrame(() => {
