@@ -58,6 +58,14 @@ export function bindNavigationHandlers() {
     goTo('registro', { editRegistroId: el.dataset.id });
   });
 
+  on('go-alertas', () => {
+    goTo('alertas');
+  });
+
+  on('go-equipamentos-preventiva-7d', () => {
+    goTo('equipamentos', { statusFilter: 'preventiva-7d' });
+  });
+
   on('print', () => window.print());
   on('close-lightbox', () => Photos.closeLightbox());
   on('open-upgrade', async (el, event) => {

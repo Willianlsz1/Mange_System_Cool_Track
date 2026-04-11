@@ -5,7 +5,7 @@
 
 import { Utils } from '../../core/utils.js';
 import { getState } from '../../core/state.js';
-import { Alerts } from '../../domain/alerts.js';
+import { Alerts, getPreventivaDueEquipmentIds } from '../../domain/alerts.js';
 import { withSkeleton } from '../components/skeleton.js';
 
 function getAlertActionMeta(alert) {
@@ -38,10 +38,22 @@ function _alertCardHtml(alert) {
 }
 
 export function renderAlertas() {
-  const { equipamentos } = getState();
+  const { equipamentos, registros } = getState();
   const list = Alerts.getAll();
+  const preventivas7dCount = getPreventivaDueEquipmentIds(registros, 7).length;
   const el = Utils.getEl('lista-alertas');
+  const contextual = Utils.getEl('alertas-contextual');
   if (!el) return;
+  if (contextual) {
+    contextual.innerHTML =
+      preventivas7dCount > 0
+        ? `<section class="alertas-context-banner" role="status" aria-live="polite">
+            <span class="alertas-context-banner__icon" aria-hidden="true">⚠️</span>
+            <div class="alertas-context-banner__text">Você tem ${preventivas7dCount} preventiva(s) nos próximos 7 dias. Agende agora para evitar parada.</div>
+            <button type="button" class="alertas-context-banner__cta" data-action="go-equipamentos-preventiva-7d">Ver equipamentos →</button>
+          </section>`
+        : '';
+  }
 
   withSkeleton(
     el,
