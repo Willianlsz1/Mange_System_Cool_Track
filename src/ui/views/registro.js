@@ -16,6 +16,7 @@ import { getOperationalStatus, validateOperationalPayload } from '../../core/equ
 import { checkGuestLimit, isGuestMode } from '../../core/guestLimits.js';
 import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
+import { withViewSkeleton } from '../components/skeleton.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
 const QUICK_TEMPLATE_MAP = {
@@ -122,36 +123,38 @@ export function initRegistro(params = {}) {
   const formView = Utils.getEl('view-registro');
   if (!formView) return;
 
-  _ensureProgressBar(formView);
-  if (!formView.dataset.bound) {
-    _fields.forEach((f) => {
-      const i = Utils.getEl(f.id);
-      if (i) {
-        i.addEventListener('input', _updateProgressBar);
-        i.addEventListener('change', _updateProgressBar);
-      }
-    });
-    _bindEquipChangeWarning();
-    formView.dataset.bound = '1';
-  }
-  _updateProgressBar();
+  withViewSkeleton(formView, { enabled: true, variant: 'generic', count: 3 }, () => {
+    _ensureProgressBar(formView);
+    if (!formView.dataset.bound) {
+      _fields.forEach((f) => {
+        const i = Utils.getEl(f.id);
+        if (i) {
+          i.addEventListener('input', _updateProgressBar);
+          i.addEventListener('change', _updateProgressBar);
+        }
+      });
+      _bindEquipChangeWarning();
+      formView.dataset.bound = '1';
+    }
+    _updateProgressBar();
 
-  // Data padrão
-  if (!Utils.getVal('r-data')) Utils.setVal('r-data', Utils.nowDatetime());
+    // Data padrão
+    if (!Utils.getVal('r-data')) Utils.setVal('r-data', Utils.nowDatetime());
 
-  // H1: técnico padrão
-  const rTecnico = Utils.getEl('r-tecnico');
-  if (rTecnico && !rTecnico.value) {
-    const def = Profile.getDefaultTecnico();
-    if (def) rTecnico.value = def;
-  }
+    // H1: técnico padrão
+    const rTecnico = Utils.getEl('r-tecnico');
+    if (rTecnico && !rTecnico.value) {
+      const def = Profile.getDefaultTecnico();
+      if (def) rTecnico.value = def;
+    }
 
-  // Pré-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
-  if (!params.editRegistroId) resetEditingState();
-  if (params.equipId) Utils.setVal('r-equip', params.equipId);
+    // Pré-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
+    if (!params.editRegistroId) resetEditingState();
+    if (params.equipId) Utils.setVal('r-equip', params.equipId);
 
-  const rPrioridade = Utils.getEl('r-prioridade');
-  if (rPrioridade && !rPrioridade.value) rPrioridade.value = 'media';
+    const rPrioridade = Utils.getEl('r-prioridade');
+    if (rPrioridade && !rPrioridade.value) rPrioridade.value = 'media';
+  });
 }
 
 export function applyQuickTemplate(templateId) {
