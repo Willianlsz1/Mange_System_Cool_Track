@@ -10,6 +10,8 @@ import { Alerts } from '../../domain/alerts.js';
 import { Charts } from '../components/charts.js';
 import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner } from '../components/onboarding.js';
+import { UpgradeNudge } from '../components/upgradeNudge.js';
+import { UsageMeter } from '../components/usageMeter.js';
 import {
   calculateHealthScore,
   evaluateEquipmentRisk,
@@ -620,10 +622,28 @@ export function renderDashboard() {
         : alerts.length > 0
           ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
           : 'Sistema Operacional';
+
+    let usageMeterHost = document.getElementById('dash-usage-meter');
+    if (!usageMeterHost) {
+      usageMeterHost = document.createElement('div');
+      usageMeterHost.id = 'dash-usage-meter';
+      greetEl.insertAdjacentElement('afterend', usageMeterHost);
+    }
+    usageMeterHost.innerHTML = UsageMeter.render();
   }
 
   const bento = document.querySelector('.dashboard-bento');
   if (!bento) return;
+
+  let upgradeCardHost = document.getElementById('dash-upgrade-card');
+  if (!upgradeCardHost) {
+    upgradeCardHost = document.createElement('div');
+    upgradeCardHost.id = 'dash-upgrade-card';
+    bento.appendChild(upgradeCardHost);
+  } else if (upgradeCardHost.parentElement !== bento) {
+    bento.appendChild(upgradeCardHost);
+  }
+  upgradeCardHost.innerHTML = UpgradeNudge.renderDashboardCard();
 
   if (!equipamentos.length) {
     bento.innerHTML = `<div class="dash-empty-shell">${emptyStateHtml({
@@ -714,6 +734,14 @@ export function renderDashboard() {
     alertsMini.innerHTML = alerts.length
       ? `<div class="dash-alertas-list">${alerts.slice(0, 4).map(_alertCardHtml).join('')}</div>`
       : `<div class="dash-state-box dash-state-box--muted">Nenhum alerta ativo</div>`;
+
+    let inlineHintHost = document.getElementById('dash-upgrade-inline-hint');
+    if (!inlineHintHost) {
+      inlineHintHost = document.createElement('div');
+      inlineHintHost.id = 'dash-upgrade-inline-hint';
+      alertsMini.insertAdjacentElement('afterend', inlineHintHost);
+    }
+    inlineHintHost.innerHTML = UpgradeNudge.renderInlineHint('Exportar relatorio em lote');
   }
 
   const recentEl = Utils.getEl('dash-recentes');

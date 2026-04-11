@@ -1,12 +1,10 @@
 import { getState } from '../../../core/state.js';
 
-const BANNER_KEY = 'cooltrack-banner-dismissed';
-
 export const OnboardingBanner = {
   render() {
     const { equipamentos } = getState();
     const bannerEl = document.getElementById('onboarding-banner');
-    if (equipamentos.length || localStorage.getItem(BANNER_KEY)) {
+    if (equipamentos.length) {
       if (bannerEl) bannerEl.remove();
       return;
     }
@@ -23,9 +21,6 @@ export const OnboardingBanner = {
       <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">Adicionar meu primeiro equipamento</button>
     `;
     document.getElementById('lista-equip')?.before(el);
-  },
-  dismiss() {
-    localStorage.setItem(BANNER_KEY, '1');
   },
   remove() {
     document.getElementById('onboarding-banner')?.remove();

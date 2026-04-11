@@ -43,15 +43,6 @@ export const FirstTimeExperience = {
           position:relative;
         }
 
-        .ftx-skip{
-          position:absolute;top:16px;right:16px;
-          background:none;border:none;cursor:pointer;
-          font-size:12px;color:rgba(138,170,200,0.5);
-          font-family:inherit;padding:4px 8px;
-          transition:color .15s;
-        }
-        .ftx-skip:hover{color:rgba(138,170,200,0.9)}
-
         .ftx-steps{
           display:flex;align-items:center;gap:6px;
           margin-bottom:28px;
@@ -268,7 +259,6 @@ export const FirstTimeExperience = {
       </style>
 
       <div id="ftx-card">
-        <button class="ftx-skip" id="ftx-skip-btn">Pular →</button>
         <div class="ftx-steps">
           <div class="ftx-step-dot active" id="ftx-dot-0"></div>
           <div class="ftx-step-dot" id="ftx-dot-1"></div>
@@ -348,6 +338,10 @@ export const FirstTimeExperience = {
       input?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') btn.click();
       });
+      input?.addEventListener('input', () => {
+        input.style.borderColor = '';
+        input.placeholder = 'Seu nome completo...';
+      });
 
       btn.addEventListener('click', () => {
         const nome = input.value.trim();
@@ -425,6 +419,12 @@ export const FirstTimeExperience = {
       const btn = overlay.querySelector('#ftx-next-1');
 
       setTimeout(() => nomeInput?.focus(), 100);
+      nomeInput?.addEventListener('input', () => {
+        nomeInput.style.borderColor = '';
+      });
+      localInput?.addEventListener('input', () => {
+        localInput.style.borderColor = '';
+      });
 
       btn.addEventListener('click', () => {
         const nome = nomeInput.value.trim();
@@ -587,10 +587,6 @@ export const FirstTimeExperience = {
         }, 250);
       });
     };
-
-    overlay.querySelector('#ftx-skip-btn').addEventListener('click', () => {
-      dismiss(overlay);
-    });
 
     renderStep0();
   },
