@@ -13,9 +13,9 @@ export function registerAppRoutes() {
     renderDashboard();
   });
 
-  registerRoute('equipamentos', () => {
+  registerRoute('equipamentos', (params = {}) => {
     populateEquipSelects();
-    renderEquip();
+    renderEquip('', params);
     updateHeader();
   });
 

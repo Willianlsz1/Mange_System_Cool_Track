@@ -67,6 +67,25 @@ export function renderShellHeader() {
             </div>
           </div>
 
+          <button
+            class="header-icon-btn header-alert-btn"
+            data-action="go-alertas"
+            aria-label="Abrir alertas"
+            title="Alertas"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M8 2.2a3.4 3.4 0 0 0-3.4 3.4v1.2c0 .8-.2 1.6-.6 2.3l-.4.9h8.8l-.4-.9c-.4-.7-.6-1.5-.6-2.3V5.6A3.4 3.4 0 0 0 8 2.2Z"
+                stroke="currentColor"
+                stroke-width="1.2"
+                stroke-linejoin="round"
+              />
+              <path d="M6.4 11.8a1.6 1.6 0 0 0 3.2 0" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+            </svg>
+            <span class="header-alert-pill" id="header-alert-pill" hidden>0</span>
+            <span class="header-alert-tooltip" id="header-alert-tooltip" role="tooltip" hidden></span>
+          </button>
+
           <button class="header-icon-btn" data-action="open-profile" aria-label="Meu perfil"
             title="Meu perfil — pré-preenche seu nome nos registros">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

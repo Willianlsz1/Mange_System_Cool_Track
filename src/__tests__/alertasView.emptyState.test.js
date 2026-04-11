@@ -4,8 +4,10 @@ const getState = vi.fn();
 vi.mock('../core/state.js', () => ({ getState }));
 
 const getAll = vi.fn();
+const getPreventivaDueEquipmentIds = vi.fn();
 vi.mock('../domain/alerts.js', () => ({
   Alerts: { getAll },
+  getPreventivaDueEquipmentIds,
 }));
 
 vi.mock('../ui/components/skeleton.js', () => ({
@@ -15,7 +17,8 @@ vi.mock('../ui/components/skeleton.js', () => ({
 describe('renderAlertas empty states', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    document.body.innerHTML = '<div id="lista-alertas"></div>';
+    getPreventivaDueEquipmentIds.mockReturnValue([]);
+    document.body.innerHTML = '<div id="alertas-contextual"></div><div id="lista-alertas"></div>';
   });
 
   it('shows setup empty state when there are no equipamentos', async () => {
