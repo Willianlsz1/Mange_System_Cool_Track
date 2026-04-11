@@ -290,6 +290,7 @@ export function renderShellViews() {
         <!-- ALERTAS -->
         <div class="view" id="view-alertas">
           <div class="section-title">Alertas e Anormalidades registradas</div>
+          <div id="alertas-contextual"></div>
           <div id="lista-alertas" role="list"></div>
         </div>
 
