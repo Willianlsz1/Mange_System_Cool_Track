@@ -10,6 +10,7 @@ import { Alerts } from '../../domain/alerts.js';
 import { Charts } from '../components/charts.js';
 import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner } from '../components/onboarding.js';
+import { UsageMeter } from '../components/usageMeter.js';
 import {
   calculateHealthScore,
   evaluateEquipmentRisk,
@@ -620,6 +621,14 @@ export function renderDashboard() {
         : alerts.length > 0
           ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
           : 'Sistema Operacional';
+
+    let usageMeterHost = document.getElementById('dash-usage-meter');
+    if (!usageMeterHost) {
+      usageMeterHost = document.createElement('div');
+      usageMeterHost.id = 'dash-usage-meter';
+      greetEl.insertAdjacentElement('afterend', usageMeterHost);
+    }
+    usageMeterHost.innerHTML = UsageMeter.render();
   }
 
   const bento = document.querySelector('.dashboard-bento');
