@@ -41,6 +41,15 @@ function getScrollRoot() {
   return document.getElementById('main-content');
 }
 
+function emitRouteChanged(route, previousRoute) {
+  if (typeof document === 'undefined') return;
+  document.dispatchEvent(
+    new CustomEvent('app:route-changed', {
+      detail: { route, previousRoute },
+    }),
+  );
+}
+
 /**
  * Registra uma rota com seus hooks de ciclo de vida.
  * Chamado pelo controller no bootstrap.
@@ -98,6 +107,8 @@ export function goTo(name, params = {}, options = {}) {
 function _activateRoute(name, el, params, options = {}) {
   const { fromHistory = false, replaceHistory = false } = options;
 
+  const previousRoute = _current;
+
   // Atualizar nav
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('is-active'));
   document.getElementById(`nav-${name}`)?.classList.add('is-active');
@@ -109,6 +120,7 @@ function _activateRoute(name, el, params, options = {}) {
   _routes.get(name)?.onEnter(params);
 
   _current = name;
+  emitRouteChanged(name, previousRoute);
   _transitioning = false;
 
   if (!fromHistory && typeof window !== 'undefined' && window.history) {
