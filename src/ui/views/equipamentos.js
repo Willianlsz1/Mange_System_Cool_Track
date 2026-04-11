@@ -283,7 +283,6 @@ export async function saveEquip() {
   const periodicidadeInput = Utils.getEl('eq-periodicidade');
   if (periodicidadeInput) periodicidadeInput.dataset.manual = '0';
 
-  OnboardingBanner.dismiss();
   OnboardingBanner.remove();
   try {
     const { renderDashboard } = await import('./dashboard.js');
