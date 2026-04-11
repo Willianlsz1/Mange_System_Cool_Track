@@ -418,7 +418,7 @@ export async function viewEquip(id) {
             <div class="info-row"><span class="info-row__label">Estado operacional</span><span class="info-row__value">${Utils.escapeHtml(statusOperacional)}</span></div>
             <div class="info-row"><span class="info-row__label">Condição observada</span><span class="info-row__value">${Utils.escapeHtml(condicaoObservada)}</span></div>
             <div class="info-row"><span class="info-row__label">Prioridade</span><span class="info-row__value">${Utils.escapeHtml(prioridadeLabel)}</span></div>
-            <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias</span></div>
+            <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${Utils.escapeHtml(`${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias`)}</span></div>
             <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
           </div>
         </div>

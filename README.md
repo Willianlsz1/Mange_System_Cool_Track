@@ -110,6 +110,7 @@ cp .env.example .env
 
 - `VITE_SUPABASE_URL`: URL do projeto Supabase.
 - `VITE_SUPABASE_KEY`: **chave pública anon** do Supabase (uso client-side).
+- `VITE_AUTH_REDIRECT_URL`: URL pública da aplicação para callbacks de auth (ex.: `https://seudominio.com.br`).
 
 ### Opcionais
 
@@ -176,15 +177,21 @@ npm run test:coverage
 
 ## Deploy
 
-- `deploy.yml` publica no GitHub Pages em `push` para `main`.
-- O `vite.config.js` usa `base: '/Mange_System_Cool_Track/'`, portanto o build está acoplado ao path atual do repositório no Pages.
+- **Netlify (recomendado)**:
+  1. Conectar o repositório em `app.netlify.com`.
+  2. Definir as env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `VITE_AUTH_REDIRECT_URL`.
+  3. Confirmar `Build command`: `npm run build`.
+  4. Confirmar `Publish directory`: `dist`.
+  5. O arquivo `netlify.toml` já inclui headers de segurança e redirect SPA.
+- **GitHub Pages (fallback)**:
+  - `deploy.yml` continua publicando em `push` para `main`.
+- `vite.config.js` está com `base: '/'` para deploy em domínio customizado (ex.: Netlify + domínio próprio).
 
 ## Limitações atuais
 
 - Projeto em JavaScript sem tipagem estática.
 - Sem suíte E2E.
 - Sem política de cobertura mínima no CI.
-- Base path de deploy fixo no Vite.
 - Dependência de configuração correta das env vars para recursos Supabase.
 
 ## Roadmap técnico (incremental)
