@@ -33,18 +33,51 @@ export function renderShellHeader() {
             </div>
           </div>
           <div class="app-header__date" id="hdr-date"></div>
+          <div class="header-help">
+            <button
+              class="header-icon-btn"
+              id="header-help-btn"
+              data-action="toggle-help-menu"
+              aria-label="Ajuda"
+              title="Ajuda"
+              aria-expanded="false"
+              aria-controls="header-help-menu"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.2" />
+                <path
+                  d="M6.8 6.1a1.7 1.7 0 1 1 2.3 1.6c-.6.3-.9.7-.9 1.3"
+                  stroke="currentColor"
+                  stroke-width="1.2"
+                  stroke-linecap="round"
+                />
+                <circle cx="8" cy="11.7" r=".7" fill="currentColor" />
+              </svg>
+            </button>
+            <div class="header-help-menu" id="header-help-menu" hidden>
+              <button type="button" class="header-help-menu__item" data-action="help-open-tutorial">
+                Ver tutorial
+              </button>
+              <button type="button" class="header-help-menu__item" data-action="help-score-info">
+                Como funciona o score
+              </button>
+              <button type="button" class="header-help-menu__item" data-action="help-support">
+                Suporte
+              </button>
+            </div>
+          </div>
 
-        <button class="header-icon-btn" data-action="open-profile" aria-label="Meu perfil"
-          title="Meu perfil — pré-preenche seu nome nos registros">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="8" cy="5.5" r="3" stroke="currentColor" stroke-width="1.2" />
-            <path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-          </svg>
+          <button class="header-icon-btn" data-action="open-profile" aria-label="Meu perfil"
+            title="Meu perfil — pré-preenche seu nome nos registros">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="5.5" r="3" stroke="currentColor" stroke-width="1.2" />
+              <path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+            </svg>
 
-        </button>
-        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Alternar tema" hidden>
-          <span class="theme-toggle__icon" id="theme-icon">🌙</span>
-        </button>
+          </button>
+          <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Alternar tema" hidden>
+            <span class="theme-toggle__icon" id="theme-icon">🌙</span>
+          </button>
         </div>
       </div>
 
