@@ -11,7 +11,7 @@ function getGuestWarningMessage(count) {
   if (count >= 7) {
     return `Voce ja fez ${count} acoes sem salvar. Crie sua conta para nao perder nada.`;
   }
-  return `Voce ja registrou ${count} acoes sem salvar`;
+  return `Você já registrou ${count} acoes sem salvar`;
 }
 
 export const GuestCtaModal = {
@@ -49,7 +49,7 @@ export const GuestCtaModal = {
             color:#07111F;font-size:15px;font-weight:600;
             font-family:inherit;cursor:pointer;
           ">Salvar meus dados com Google</button>
-          <button id="guest-signup-email-btn" style="
+          <button id="guest-email-btn" style="
             width:100%;background:transparent;
             border:1px solid rgba(255,255,255,0.08);
             border-radius:8px;padding:12px 16px;
@@ -76,7 +76,7 @@ export const GuestCtaModal = {
       document.getElementById('tab-signup')?.click();
     });
 
-    guestOverlay.querySelector('#guest-signup-email-btn')?.addEventListener('click', () => {
+    guestOverlay.querySelector('#guest-email-btn')?.addEventListener('click', () => {
       guestOverlay.remove();
       AuthScreen.show({ intent: 'guest-save', initialTab: 'signup' });
     });
