@@ -12,6 +12,7 @@ import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner } from '../components/onboarding.js';
 import { UpgradeNudge } from '../components/upgradeNudge.js';
 import { UsageMeter } from '../components/usageMeter.js';
+import { withViewSkeleton } from '../components/skeleton.js';
 import {
   calculateHealthScore,
   evaluateEquipmentRisk,
@@ -614,103 +615,110 @@ export function renderDashboard() {
     .map(({ eq }) => eq)
     .slice(0, 4);
 
-  const greetEl = Utils.getEl('dash-greeting');
-  if (greetEl) {
-    greetEl.textContent =
-      faults > 0
-        ? `${faults} situação${faults > 1 ? 'ões' : ''} exigindo intervenção`
-        : alerts.length > 0
-          ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
-          : 'Sistema Operacional';
+  const viewInicio = Utils.getEl('view-inicio');
+  if (!viewInicio) return;
 
-    let usageMeterHost = document.getElementById('dash-usage-meter');
-    if (!usageMeterHost) {
-      usageMeterHost = document.createElement('div');
-      usageMeterHost.id = 'dash-usage-meter';
-      greetEl.insertAdjacentElement('afterend', usageMeterHost);
+  withViewSkeleton(viewInicio, { enabled: true, variant: 'generic', count: 4 }, () => {
+    const greetEl = Utils.getEl('dash-greeting');
+    if (greetEl) {
+      greetEl.textContent =
+        faults > 0
+          ? `${faults} situação${faults > 1 ? 'ões' : ''} exigindo intervenção`
+          : alerts.length > 0
+            ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
+            : 'Sistema Operacional';
+
+      let usageMeterHost = document.getElementById('dash-usage-meter');
+      if (!usageMeterHost) {
+        usageMeterHost = document.createElement('div');
+        usageMeterHost.id = 'dash-usage-meter';
+        greetEl.insertAdjacentElement('afterend', usageMeterHost);
+      }
+      usageMeterHost.innerHTML = UsageMeter.render();
     }
-    usageMeterHost.innerHTML = UsageMeter.render();
-  }
 
-  const bento = document.querySelector('.dashboard-bento');
-  if (!bento) return;
+    const bento = document.querySelector('.dashboard-bento');
+    if (!bento) return;
 
-  let upgradeCardHost = document.getElementById('dash-upgrade-card');
-  if (!upgradeCardHost) {
-    upgradeCardHost = document.createElement('div');
-    upgradeCardHost.id = 'dash-upgrade-card';
-    bento.appendChild(upgradeCardHost);
-  } else if (upgradeCardHost.parentElement !== bento) {
-    bento.appendChild(upgradeCardHost);
-  }
-  upgradeCardHost.innerHTML = UpgradeNudge.renderDashboardCard();
+    let upgradeCardHost = document.getElementById('dash-upgrade-card');
+    if (!upgradeCardHost) {
+      upgradeCardHost = document.createElement('div');
+      upgradeCardHost.id = 'dash-upgrade-card';
+      bento.appendChild(upgradeCardHost);
+    } else if (upgradeCardHost.parentElement !== bento) {
+      bento.appendChild(upgradeCardHost);
+    }
+    upgradeCardHost.innerHTML = UpgradeNudge.renderDashboardCard();
 
-  if (!equipamentos.length) {
-    bento.innerHTML = `<div class="dash-empty-shell">${emptyStateHtml({
-      icon: '🔧',
-      title: 'Seu painel está pronto',
-      description:
-        'Cadastre o primeiro equipamento para ver eficiência, alertas e histórico em tempo real.',
-      ctaHtml:
-        '<button class="btn btn--primary btn--auto btn--centered" data-action="open-modal" data-id="modal-add-eq">+ Cadastrar meu primeiro equipamento &rarr;</button>',
-    })}</div>`;
-    return;
-  }
+    if (!equipamentos.length) {
+      bento.innerHTML = `<div class="dash-empty-shell">${emptyStateHtml({
+        icon: '🔧',
+        title: 'Seu painel está pronto',
+        description:
+          'Cadastre o primeiro equipamento para ver eficiência, alertas e histórico em tempo real.',
+        ctaHtml:
+          '<button class="btn btn--primary btn--auto btn--centered" data-action="open-modal" data-id="modal-add-eq">+ Cadastrar meu primeiro equipamento &rarr;</button>',
+      })}</div>`;
+      return;
+    }
 
-  OnboardingBanner.render();
-  _renderAlertStrip(alerts, hasCritical);
-  if (hasCritical) {
-    const nextActionEl = Utils.getEl('dash-next-action');
-    if (nextActionEl) nextActionEl.innerHTML = '';
-  } else {
-    _renderNextAction(equipamentos, alerts);
-  }
+    OnboardingBanner.render();
+    _renderAlertStrip(alerts, hasCritical);
+    if (hasCritical) {
+      const nextActionEl = Utils.getEl('dash-next-action');
+      if (nextActionEl) nextActionEl.innerHTML = '';
+    } else {
+      _renderNextAction(equipamentos, alerts);
+    }
 
-  const criticosEl = Utils.getEl('dash-criticos');
-  if (criticosEl) {
-    criticosEl.innerHTML = critical.length
-      ? `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`
-      : `<div class="dash-state-box dash-state-box--success">✅ Todos os equipamentos operando normalmente</div>`;
-  }
+    const criticosEl = Utils.getEl('dash-criticos');
+    if (criticosEl) {
+      criticosEl.innerHTML = critical.length
+        ? `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`
+        : `<div class="dash-state-box dash-state-box--success">✅ Todos os equipamentos operando normalmente</div>`;
+    }
 
-  const criticalNowEl = Utils.getEl('dash-critical-now');
-  const criticalNowCountEl = Utils.getEl('dash-critical-now-count');
-  if (criticalNowEl) {
-    const actionQueue = equipamentos
-      .map((eq) => {
-        const score = getActionPriorityScore(eq, regsForEquip(eq.id));
-        return { eq, score };
-      })
-      .sort((a, b) => b.score.actionPriorityScore - a.score.actionPriorityScore)
-      .slice(0, 9);
+    const criticalNowEl = Utils.getEl('dash-critical-now');
+    const criticalNowCountEl = Utils.getEl('dash-critical-now-count');
+    if (criticalNowEl) {
+      const actionQueue = equipamentos
+        .map((eq) => {
+          const score = getActionPriorityScore(eq, regsForEquip(eq.id));
+          return { eq, score };
+        })
+        .sort((a, b) => b.score.actionPriorityScore - a.score.actionPriorityScore)
+        .slice(0, 9);
 
-    const groups = {
-      critico: actionQueue.filter((item) => item.score.group === 'critico').slice(0, 3),
-      atencao: actionQueue.filter((item) => item.score.group === 'atencao').slice(0, 3),
-      monitoramento: actionQueue.filter((item) => item.score.group === 'monitoramento').slice(0, 3),
-    };
+      const groups = {
+        critico: actionQueue.filter((item) => item.score.group === 'critico').slice(0, 3),
+        atencao: actionQueue.filter((item) => item.score.group === 'atencao').slice(0, 3),
+        monitoramento: actionQueue
+          .filter((item) => item.score.group === 'monitoramento')
+          .slice(0, 3),
+      };
 
-    const renderActionItems = (items, tone = 'warn') =>
-      items.length
-        ? items
-            .map(({ eq, score }) => {
-              const actionMeta = _getActionButton(score.suggestedAction.actionCode);
-              return _criticalNowItemHtml({
-                icon: score.group === 'critico' ? '!!' : score.group === 'atencao' ? '!' : '•',
-                tone,
-                title: `${eq.nome || 'Equipamento'} · ${score.suggestedAction.actionLabel}`,
-                subtitle: score.reasons.join(' · ') || 'Sem sinais críticos no momento',
-                action: actionMeta.action,
-                id: eq.id,
-                ctaLabel: actionMeta.ctaLabel,
-              });
-            })
-            .join('')
-        : '<div class="dash-state-box dash-state-box--muted">Nenhum equipamento nesta faixa</div>';
+      const renderActionItems = (items, tone = 'warn') =>
+        items.length
+          ? items
+              .map(({ eq, score }) => {
+                const actionMeta = _getActionButton(score.suggestedAction.actionCode);
+                return _criticalNowItemHtml({
+                  icon: score.group === 'critico' ? '!!' : score.group === 'atencao' ? '!' : '•',
+                  tone,
+                  title: `${eq.nome || 'Equipamento'} · ${score.suggestedAction.actionLabel}`,
+                  subtitle: score.reasons.join(' · ') || 'Sem sinais críticos no momento',
+                  action: actionMeta.action,
+                  id: eq.id,
+                  ctaLabel: actionMeta.ctaLabel,
+                });
+              })
+              .join('')
+          : '<div class="dash-state-box dash-state-box--muted">Nenhum equipamento nesta faixa</div>';
 
-    const totalCount = groups.critico.length + groups.atencao.length + groups.monitoramento.length;
-    criticalNowEl.innerHTML = totalCount
-      ? `<div class="critical-now-group">
+      const totalCount =
+        groups.critico.length + groups.atencao.length + groups.monitoramento.length;
+      criticalNowEl.innerHTML = totalCount
+        ? `<div class="critical-now-group">
           <div class="critical-now-group__label">Crítico agora</div>
           <div class="critical-now-list">${renderActionItems(groups.critico, 'danger')}</div>
         </div>
@@ -722,51 +730,52 @@ export function renderDashboard() {
           <div class="critical-now-group__label">Monitoramento</div>
           <div class="critical-now-list">${renderActionItems(groups.monitoramento, 'warn')}</div>
         </div>`
-      : `<div class="dash-state-box dash-state-box--success">✅ Sem ações pendentes no momento</div>`;
+        : `<div class="dash-state-box dash-state-box--success">✅ Sem ações pendentes no momento</div>`;
 
-    if (criticalNowCountEl) {
-      criticalNowCountEl.textContent = String(totalCount);
+      if (criticalNowCountEl) {
+        criticalNowCountEl.textContent = String(totalCount);
+      }
     }
-  }
 
-  const alertsMini = Utils.getEl('dash-alertas-mini');
-  if (alertsMini) {
-    alertsMini.innerHTML = alerts.length
-      ? `<div class="dash-alertas-list">${alerts.slice(0, 4).map(_alertCardHtml).join('')}</div>`
-      : `<div class="dash-state-box dash-state-box--muted">Nenhum alerta ativo</div>`;
+    const alertsMini = Utils.getEl('dash-alertas-mini');
+    if (alertsMini) {
+      alertsMini.innerHTML = alerts.length
+        ? `<div class="dash-alertas-list">${alerts.slice(0, 4).map(_alertCardHtml).join('')}</div>`
+        : `<div class="dash-state-box dash-state-box--muted">Nenhum alerta ativo</div>`;
 
-    let inlineHintHost = document.getElementById('dash-upgrade-inline-hint');
-    if (!inlineHintHost) {
-      inlineHintHost = document.createElement('div');
-      inlineHintHost.id = 'dash-upgrade-inline-hint';
-      alertsMini.insertAdjacentElement('afterend', inlineHintHost);
+      let inlineHintHost = document.getElementById('dash-upgrade-inline-hint');
+      if (!inlineHintHost) {
+        inlineHintHost = document.createElement('div');
+        inlineHintHost.id = 'dash-upgrade-inline-hint';
+        alertsMini.insertAdjacentElement('afterend', inlineHintHost);
+      }
+      inlineHintHost.innerHTML = UpgradeNudge.renderInlineHint('Exportar relatorio em lote');
     }
-    inlineHintHost.innerHTML = UpgradeNudge.renderInlineHint('Exportar relatorio em lote');
-  }
 
-  const recentEl = Utils.getEl('dash-recentes');
-  if (recentEl) {
-    const recent = [...registros].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 3);
-    recentEl.innerHTML = recent.length
-      ? `<div class="dash-recentes-grid">${recent
-          .map((r) => {
-            const eq = findEquip(r.equipId);
-            return `<article class="card recent-card" data-nav="historico">
+    const recentEl = Utils.getEl('dash-recentes');
+    if (recentEl) {
+      const recent = [...registros].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 3);
+      recentEl.innerHTML = recent.length
+        ? `<div class="dash-recentes-grid">${recent
+            .map((r) => {
+              const eq = findEquip(r.equipId);
+              return `<article class="card recent-card" data-nav="historico">
             <div class="recent-card__date">${Utils.formatDatetime(r.data)}</div>
             <div class="recent-card__title">${Utils.escapeHtml(r.tipo)}</div>
             <div class="recent-card__equip">${Utils.escapeHtml(eq?.nome ?? '—')} · ${Utils.escapeHtml(eq?.tag ?? '')}</div>
             <div class="recent-card__obs">${Utils.escapeHtml(Utils.truncate(r.obs, 70))}</div>
           </article>`;
-          })
-          .join('')}</div>`
-      : emptyStateHtml({
-          icon: '📋',
-          title: 'Nenhum serviço registrado',
-          description: 'Registre o primeiro serviço para acompanhar a operação.',
-          ctaHtml:
-            '<button class="btn btn--outline btn--sm btn--auto" data-nav="registro">Registrar serviço</button>',
-        });
-  }
+            })
+            .join('')}</div>`
+        : emptyStateHtml({
+            icon: '📋',
+            title: 'Nenhum serviço registrado',
+            description: 'Registre o primeiro serviço para acompanhar a operação.',
+            ctaHtml:
+              '<button class="btn btn--outline btn--sm btn--auto" data-nav="registro">Registrar serviço</button>',
+          });
+    }
 
-  _renderStatusChart();
+    _renderStatusChart();
+  });
 }

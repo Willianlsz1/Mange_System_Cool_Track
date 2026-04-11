@@ -35,17 +35,6 @@ export function renderRelatorio() {
   const el = Utils.getEl('relatorio-corpo');
   if (!el) return;
 
-  if (!list.length) {
-    el.innerHTML = emptyStateHtml({
-      icon: '📋',
-      title: 'Sem registros no período selecionado',
-      description: 'Ajuste os filtros ou registre um novo serviço para gerar o relatório.',
-      ctaHtml:
-        '<button class="btn btn--outline btn--sm btn--auto" data-nav="historico">Ver histórico</button>',
-    });
-    return;
-  }
-
   const hoje = new Date().toLocaleDateString('pt-BR');
   const total = list.reduce(
     (acc, r) => acc + (parseFloat(r.custoPecas || 0) + parseFloat(r.custoMaoObra || 0)),
@@ -53,6 +42,17 @@ export function renderRelatorio() {
   );
 
   const renderContent = () => {
+    if (!list.length) {
+      el.innerHTML = emptyStateHtml({
+        icon: '📋',
+        title: 'Sem registros no período selecionado',
+        description: 'Ajuste os filtros ou registre um novo serviço para gerar o relatório.',
+        ctaHtml:
+          '<button class="btn btn--outline btn--sm btn--auto" data-nav="historico">Ver histórico</button>',
+      });
+      return;
+    }
+
     el.innerHTML = `
       <div class="card">
         <div class="report-header">RELATÓRIO DE MANUTENÇÃO — COOLTRACK PRO</div>
@@ -95,7 +95,7 @@ export function renderRelatorio() {
 
   withSkeleton(
     el,
-    { enabled: list.length >= 10, variant: 'report', count: Math.min(list.length, 4) },
+    { enabled: true, variant: 'report', count: Math.min(Math.max(list.length, 3), 4) },
     renderContent,
   );
 }
