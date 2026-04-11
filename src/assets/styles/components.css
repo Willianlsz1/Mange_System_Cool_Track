@@ -2312,7 +2312,8 @@ mark,
 
 .header-help-menu {
   position: absolute;
-  inset: calc(100% + 8px) 0 auto auto;
+  top: calc(100% + 8px);
+  right: 0;
   width: 210px;
   padding: 6px;
   border: 1px solid var(--border);
@@ -2322,6 +2323,10 @@ mark,
   display: grid;
   gap: 4px;
   z-index: 90;
+}
+
+.header-help-menu[hidden] {
+  display: none;
 }
 
 .header-help-menu__item {
