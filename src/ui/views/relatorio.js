@@ -5,7 +5,6 @@
 
 import { Utils, STATUS_LABEL } from '../../core/utils.js';
 import { getState, findEquip } from '../../core/state.js';
-import { emptyStateHtml } from '../components/emptyState.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { CRITICIDADE_LABEL, PRIORIDADE_OPERACIONAL_LABEL } from '../../domain/maintenance.js';
 
@@ -43,13 +42,38 @@ export function renderRelatorio() {
 
   const renderContent = () => {
     if (!list.length) {
-      el.innerHTML = emptyStateHtml({
-        icon: '📋',
-        title: 'Sem registros no período selecionado',
-        description: 'Ajuste os filtros ou registre um novo serviço para gerar o relatório.',
-        ctaHtml:
-          '<button class="btn btn--outline btn--sm btn--auto" data-nav="historico">Ver histórico</button>',
-      });
+      el.innerHTML = `<section class="engaging-empty-state" aria-label="Sem dados para relatório">
+        <div class="engaging-empty-state__icon">📋</div>
+        <h3 class="engaging-empty-state__title">Sem registros no período selecionado</h3>
+        <p class="engaging-empty-state__description">Registre um serviço e veja seu relatório profissional pronto para envio em segundos.</p>
+        <div class="report-empty-preview-wrap" role="presentation">
+          <div class="report-empty-preview">
+            <div class="report-empty-preview__header">
+              <div class="report-empty-preview__brand">
+                <span>❄️</span>
+                <span>CoolTrack Pro — Relatório de Serviço</span>
+              </div>
+            </div>
+            <div class="report-empty-preview__meta">
+              <div><span>Técnico</span><strong>Seu nome</strong></div>
+              <div><span>Data</span><strong>${Utils.escapeHtml(hoje)}</strong></div>
+              <div><span>Equipamento</span><strong>Split Loja Centro</strong></div>
+              <div><span>Tipo</span><strong>Manutenção Preventiva</strong></div>
+            </div>
+            <table class="report-empty-preview__table" aria-label="Preview de relatório">
+              <thead>
+                <tr><th>Serviço</th><th>Status</th><th>Obs</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Limpeza de filtros</td><td>Concluído</td><td>Fluxo estabilizado</td></tr>
+                <tr><td>Inspeção elétrica</td><td>Concluído</td><td>Sem aquecimento</td></tr>
+                <tr><td>Verificação de dreno</td><td>Concluído</td><td>Sem obstrução</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar serviço para gerar relatório →</button>
+      </section>`;
       return;
     }
 

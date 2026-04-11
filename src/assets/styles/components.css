@@ -4402,6 +4402,112 @@ mark,
   gap: 10px;
 }
 
+.engaging-empty-state {
+  max-width: 400px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 48px 24px;
+}
+
+.engaging-empty-state__icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 200, 232, 0.08);
+  border: 1px solid rgba(0, 200, 232, 0.35);
+  border-radius: 50%;
+  font-size: 22px;
+}
+
+.engaging-empty-state__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e8f2fa;
+}
+
+.engaging-empty-state__description {
+  font-size: 14px;
+  color: #8aaac8;
+  line-height: 1.6;
+  margin: 12px 0 24px;
+}
+
+.engaging-empty-state__cta {
+  width: 100%;
+}
+
+.engaging-empty-state__microcopy {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.report-empty-preview-wrap {
+  margin: 0 0 20px;
+}
+
+.report-empty-preview {
+  text-align: left;
+  border: 1px solid rgba(0, 200, 232, 0.22);
+  border-radius: 12px;
+  background: #0c1929;
+  overflow: hidden;
+}
+
+.report-empty-preview__header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.report-empty-preview__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #dff7fd;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.report-empty-preview__meta {
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.report-empty-preview__meta span {
+  display: block;
+  font-size: 10px;
+  color: var(--text-2);
+}
+
+.report-empty-preview__meta strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--text);
+}
+
+.report-empty-preview__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.report-empty-preview__table th,
+.report-empty-preview__table td {
+  border-top: 1px solid var(--border);
+  padding: 8px 10px;
+  color: #cfe5f7;
+}
+
+.report-empty-preview__table th {
+  color: #9ec4df;
+  font-size: 10px;
+}
+
 /* ─── WHATSAPP SHARE SUCCESS TOAST ─── */
 .share-success-toast {
   position: fixed;
