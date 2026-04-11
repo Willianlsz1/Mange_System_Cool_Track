@@ -42,28 +42,28 @@ export function renderHist() {
       ? `${list.length} registro${list.length !== 1 ? 's' : ''}`
       : '';
 
-  if (!list.length) {
-    el.innerHTML =
-      busca || filtEq
-        ? emptyStateHtml({
-            icon: '🔍',
-            title: 'Nenhum resultado para esse filtro',
-            description: 'Tente outro termo ou remova o filtro.',
-          })
-        : emptyStateHtml({
-            icon: '📋',
-            title: 'Nenhum registro ainda',
-            description: 'Registre o primeiro serviço para formar o histórico.',
-            ctaHtml:
-              '<button class="btn btn--primary btn--sm btn--auto" data-nav="registro">Registrar serviço</button>',
-          });
-    return;
-  }
-
   const scrollRoot = document.scrollingElement || document.documentElement;
   const prevScrollTop = scrollRoot ? scrollRoot.scrollTop : window.scrollY;
 
   const renderTimeline = () => {
+    if (!list.length) {
+      el.innerHTML =
+        busca || filtEq
+          ? emptyStateHtml({
+              icon: '🔍',
+              title: 'Nenhum resultado para esse filtro',
+              description: 'Tente outro termo ou remova o filtro.',
+            })
+          : emptyStateHtml({
+              icon: '📋',
+              title: 'Nenhum registro ainda',
+              description: 'Registre o primeiro serviço para formar o histórico.',
+              ctaHtml:
+                '<button class="btn btn--primary btn--sm btn--auto" data-nav="registro">Registrar serviço</button>',
+            });
+      return;
+    }
+
     el.innerHTML = `<div class="timeline">${list
       .map((r, idx) => {
         const eq = findEquip(r.equipId);
@@ -112,7 +112,7 @@ export function renderHist() {
 
   withSkeleton(
     el,
-    { enabled: list.length >= 14, variant: 'timeline', count: Math.min(list.length, 5) },
+    { enabled: true, variant: 'timeline', count: Math.min(Math.max(list.length, 3), 5) },
     renderTimeline,
   );
 }
