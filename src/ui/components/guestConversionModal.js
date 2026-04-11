@@ -7,6 +7,16 @@ function removeModal() {
   document.getElementById(MODAL_ID)?.remove();
 }
 
+function closeModal({ converted = false, dismissEvent = '', trigger = 'unknown' } = {}) {
+  removeModal();
+  if (!converted) {
+    trackEvent('guest_modal_abandoned', { trigger });
+  }
+  if (dismissEvent) {
+    trackEvent(dismissEvent, { trigger });
+  }
+}
+
 function buildReasonMessage(reason) {
   if (reason === 'limit_equipamentos')
     return 'Você atingiu o limite do plano Free para equipamentos.';
@@ -17,6 +27,7 @@ function buildReasonMessage(reason) {
 export const GuestConversionModal = {
   open({ reason = 'save_attempt', source = 'unknown' } = {}) {
     removeModal();
+    const trigger = source;
 
     const overlay = document.createElement('div');
     overlay.id = MODAL_ID;
@@ -47,17 +58,27 @@ export const GuestConversionModal = {
     `;
 
     overlay.addEventListener('click', (event) => {
-      if (event.target === overlay) removeModal();
+      if (event.target === overlay) {
+        closeModal({ converted: false, trigger });
+      }
     });
 
     overlay.querySelector('[data-action="google"]')?.addEventListener('click', () => {
-      removeModal();
+      closeModal({ converted: true, trigger });
       AuthScreen.show({ intent: 'guest-save', initialTab: 'signin' });
     });
 
     overlay.querySelector('[data-action="email"]')?.addEventListener('click', () => {
-      removeModal();
+      closeModal({ converted: true, trigger });
       AuthScreen.show({ intent: 'guest-save', initialTab: 'signup' });
+    });
+
+    overlay.querySelector('[data-action="login"]')?.addEventListener('click', () => {
+      closeModal({ converted: false, dismissEvent: 'guest_modal_login_clicked', trigger });
+    });
+
+    overlay.querySelector('[data-action="continue-guest"]')?.addEventListener('click', () => {
+      closeModal({ converted: false, dismissEvent: 'guest_modal_dismissed', trigger });
     });
 
     document.body.appendChild(overlay);
@@ -65,6 +86,6 @@ export const GuestConversionModal = {
   },
 
   close() {
-    removeModal();
+    closeModal({ converted: false });
   },
 };
