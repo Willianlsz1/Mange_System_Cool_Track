@@ -4,8 +4,8 @@
  */
 
 import { Utils } from '../../core/utils.js';
+import { getState } from '../../core/state.js';
 import { Alerts } from '../../domain/alerts.js';
-import { emptyStateHtml } from '../components/emptyState.js';
 import { withSkeleton } from '../components/skeleton.js';
 
 function getAlertActionMeta(alert) {
@@ -38,6 +38,7 @@ function _alertCardHtml(alert) {
 }
 
 export function renderAlertas() {
+  const { equipamentos } = getState();
   const list = Alerts.getAll();
   const el = Utils.getEl('lista-alertas');
   if (!el) return;
@@ -46,13 +47,27 @@ export function renderAlertas() {
     el,
     { enabled: true, variant: 'alerts', count: Math.min(Math.max(list.length, 3), 5) },
     () => {
-      el.innerHTML = list.length
-        ? list.map(_alertCardHtml).join('')
-        : emptyStateHtml({
-            icon: 'OK',
-            title: 'Sem alertas ativos',
-            description: 'Todos os equipamentos estão dentro da rotina prevista.',
-          });
+      if (list.length) {
+        el.innerHTML = list.map(_alertCardHtml).join('');
+        return;
+      }
+
+      if (!equipamentos.length) {
+        el.innerHTML = `<section class="engaging-empty-state" aria-label="Sem equipamentos">
+          <div class="engaging-empty-state__icon">🔧</div>
+          <h3 class="engaging-empty-state__title">Cadastre um equipamento para receber alertas</h3>
+          <p class="engaging-empty-state__description">Alertas automáticos identificam quando um equipamento precisa de atenção — sem você precisar lembrar.</p>
+          <button class="btn btn--primary engaging-empty-state__cta" data-nav="equipamentos">Cadastrar equipamento →</button>
+        </section>`;
+        return;
+      }
+
+      el.innerHTML = `<section class="engaging-empty-state" aria-label="Sem alertas">
+        <div class="engaging-empty-state__icon">✅</div>
+        <h3 class="engaging-empty-state__title">Tudo em dia!</h3>
+        <p class="engaging-empty-state__description">Nenhum equipamento precisa de atenção agora. Continue registrando serviços para manter o histórico atualizado.</p>
+        <button class="btn btn--outline engaging-empty-state__cta" data-nav="equipamentos">Ver todos os equipamentos</button>
+      </section>`;
     },
   );
 }
