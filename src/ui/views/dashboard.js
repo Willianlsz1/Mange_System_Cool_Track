@@ -1,6 +1,6 @@
 /**
  * CoolTrack Pro - Dashboard View v5.0
- * FunÃ§Ãµes: updateHeader, renderDashboard (renderInicio)
+ * Funções: updateHeader, renderDashboard (renderInicio)
  */
 
 import { Utils, TIPO_ICON } from '../../core/utils.js';
@@ -24,14 +24,14 @@ import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/sugg
 import { getActionPriorityScore } from '../../domain/actionPriority.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
 
-// â”€â”€ Labels internos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Labels internos ────────────────────────────────────
 const STATUS_OPERACIONAL = {
   ok: 'OPERANDO NORMALMENTE',
-  warn: 'OPERANDO COM RESTRIÃ‡Ã•ES',
-  danger: 'FORA DE OPERAÃ‡ÃƒO',
+  warn: 'OPERANDO COM RESTRIÇÕES',
+  danger: 'FORA DE OPERAÇÃO',
 };
-const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'MÃ©dia', alta: 'Alta', critica: 'CrÃ­tica' };
-const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'MÃ©dio risco', alto: 'Alto risco' };
+const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
+const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'Alto risco' };
 
 const ALERT_SEVERITY_WEIGHT = { danger: 3, warn: 2, info: 1 };
 
@@ -43,7 +43,7 @@ function _getMostSevereAlert(alerts = []) {
   )[0];
 }
 
-// â”€â”€ Helpers privados de mÃ©tricas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers privados de métricas ───────────────────────
 function _getMonthRange(monthsAgo = 0) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
@@ -65,11 +65,11 @@ function _sparklineData(registros, months = 6) {
 
 function _trendTag(current, previous) {
   if (previous === 0 && current === 0) return { text: 'Sem dados anteriores', cls: 'neutral' };
-  if (previous === 0 && current > 0) return { text: `+${current} este mÃªs`, cls: 'up' };
+  if (previous === 0 && current > 0) return { text: `+${current} este mês`, cls: 'up' };
   const diff = current - previous;
-  if (diff === 0) return { text: 'Igual ao mÃªs passado', cls: 'neutral' };
-  if (diff > 0) return { text: `â†‘ ${diff} vs mÃªs passado`, cls: 'up' };
-  return { text: `â†“ ${Math.abs(diff)} vs mÃªs passado`, cls: 'down' };
+  if (diff === 0) return { text: 'Igual ao mês passado', cls: 'neutral' };
+  if (diff > 0) return { text: `&uarr; ${diff} vs mês passado`, cls: 'up' };
+  return { text: `&darr; ${Math.abs(diff)} vs mês passado`, cls: 'down' };
 }
 
 function _sparklineHtml(data, color = 'var(--primary)') {
@@ -82,7 +82,7 @@ function _sparklineHtml(data, color = 'var(--primary)') {
       const height = Math.max(pct, 8);
       return `<div class="kpi-spark__bar${isLast ? ' kpi-spark__bar--last' : ''}"
       style="height:${height}%;background:${fill}"
-      title="${v} serviÃ§o${v !== 1 ? 's' : ''}"></div>`;
+      title="${v} serviço${v !== 1 ? 's' : ''}"></div>`;
     })
     .join('');
   return `<div class="kpi-spark">${bars}</div>`;
@@ -109,7 +109,7 @@ function _renderGlobalEfficiency(equipamentos) {
   const barEl = Utils.getEl('health-bar-fill');
   const subEl = Utils.getEl('hst-health-sub');
   if (!equipamentos.length) {
-    if (el) el.textContent = 'â€”';
+    if (el) el.textContent = '—';
     if (barEl) barEl.style.width = '0%';
     if (subEl) subEl.innerHTML = '';
     return;
@@ -128,12 +128,12 @@ function _renderGlobalEfficiency(equipamentos) {
   if (subEl) {
     const ctx =
       avg >= 90
-        ? `<span class="kpi-trend kpi-trend--ok">â†‘ Excelente â€” parque saudÃ¡vel</span>`
+        ? `<span class="kpi-trend kpi-trend--ok">&uarr; Excelente - parque saudavel</span>`
         : avg >= 75
-          ? `<span class="kpi-trend kpi-trend--ok">Bom â€” manutenÃ§Ã£o em dia</span>`
+          ? `<span class="kpi-trend kpi-trend--ok">Bom - manutencao em dia</span>`
           : avg >= 50
-            ? `<span class="kpi-trend kpi-trend--warn">Atencao recomendada</span>`
-            : `<span class="kpi-trend kpi-trend--down">â†“ IntervenÃ§Ã£o necessÃ¡ria</span>`;
+            ? `<span class="kpi-trend kpi-trend--warn">&#9888; Atencao recomendada</span>`
+            : `<span class="kpi-trend kpi-trend--down">&darr; Intervencao necessaria</span>`;
     subEl.innerHTML = ctx;
   }
 }
@@ -152,7 +152,7 @@ function _updateStorageIndicator() {
   indicator.innerHTML = `<div class="storage-indicator__label"><span>Armazenamento local</span><span>${Utils.formatBytes(used)} / ${Utils.formatBytes(total)}</span></div><div class="storage-indicator__bar"><div class="storage-indicator__fill storage-indicator__fill--${cls}" style="width:${percent}%"></div></div>`;
 }
 
-// â”€â”€ Alert strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Alert strip ────────────────────────────────────────
 function _renderAlertStrip(alerts, hasCritical = false) {
   const el = Utils.getEl('dash-alert-strip');
   if (!el) return;
@@ -160,7 +160,7 @@ function _renderAlertStrip(alerts, hasCritical = false) {
   if (!hasCritical && !primary) {
     el.innerHTML = `<div class="alert-strip alert-strip--none">
       <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Sem anormalidades crÃ­ticas registradas em campo</div></div>
+      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Sem anormalidades críticas registradas em campo</div></div>
     </div>`;
     return;
   }
@@ -172,26 +172,26 @@ function _renderAlertStrip(alerts, hasCritical = false) {
   if (hasCritical) {
     const actionMeta = _getAlertActionMeta(primary);
     const preventiveText = primary.nextDueDate
-      ? `Prev.: ${Utils.formatDate(primary.nextDueDate)}`
-      : 'Preventiva em atraso';
+      ? `🛠 Prev.: ${Utils.formatDate(primary.nextDueDate)}`
+      : '🛠 Preventiva em atraso';
     el.innerHTML = `<div class="critical-incident" role="alert" aria-live="assertive">
-      <div class="critical-incident__label">SITUAÃ‡ÃƒO CRÃTICA</div>
-      <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento nÃ£o identificado')}</div>
-      <div class="critical-incident__desc">ALERTA: ${Utils.escapeHtml(Utils.truncate(primary.title || primary.subtitle || 'IntervenÃ§Ã£o imediata necessÃ¡ria.', 92))}</div>
-      <div class="critical-incident__meta">${Utils.escapeHtml(preventiveText)} Â· â†— AÃ§Ã£o imediata</div>
+      <div class="critical-incident__label">SITUAÇÃO CRÍTICA</div>
+      <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento não identificado')}</div>
+      <div class="critical-incident__desc">&#9888; ${Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92)}</div>
+      <div class="critical-incident__meta">${Utils.escapeHtml(preventiveText)} &middot; &rarr; Ação imediata</div>
       <button class="btn btn--danger btn--sm btn--fit-content critical-incident__cta" data-action="${actionMeta.action}" data-id="${actionMeta.id}">Registrar agora</button>
     </div>`;
     return;
   }
 
-  const detail = [primary.eq?.nome, primary.subtitle]
-    .filter(Boolean)
-    .map((value) => Utils.escapeHtml(value))
-    .join(' Â· ');
+  const detailParts = [];
+  if (primary.eq?.nome) detailParts.push(Utils.escapeHtml(primary.eq.nome));
+  if (primary.subtitle) detailParts.push(primary.subtitle);
+  const detail = detailParts.join(' &middot; ');
   const meta = primary.reg?.data
-    ? `Ult. serviÃ§o: ${Utils.formatDatetime(primary.reg.data)}`
+    ? `Ult. serviço: ${Utils.formatDatetime(primary.reg.data)}`
     : primary.nextDueDate
-      ? `PrÃ³xima preventiva: ${Utils.formatDate(primary.nextDueDate)}`
+      ? `Próxima preventiva: ${Utils.formatDate(primary.nextDueDate)}`
       : '';
   const actionMeta = _getAlertActionMeta(primary);
   const toneClass =
@@ -202,9 +202,9 @@ function _renderAlertStrip(alerts, hasCritical = false) {
         : 'alert-strip--info';
 
   el.innerHTML = `<div class="alert-strip ${toneClass}" role="alert" aria-live="assertive">
-    <div class="alert-strip__icon" aria-hidden="true">${Utils.escapeHtml(primary.icon || '!')}</div>
+    <div class="alert-strip__icon" aria-hidden="true">${primary.icon || '!'}</div>
     <div class="alert-strip__content">
-      <div class="alert-strip__title">${Utils.escapeHtml(primary.title)}</div>
+      <div class="alert-strip__title">${primary.title}</div>
       <div class="alert-strip__desc">${detail}</div>
       ${meta ? `<div class="alert-strip__time">${Utils.escapeHtml(meta)}</div>` : ''}
     </div>
@@ -212,7 +212,7 @@ function _renderAlertStrip(alerts, hasCritical = false) {
   </div>`;
 }
 
-// â”€â”€ Alert card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Alert card ─────────────────────────────────────────
 function _getAlertActionMeta(alert) {
   const id = Utils.escapeAttr(alert.eq?.id || '');
   switch (alert.recommendedAction) {
@@ -234,32 +234,32 @@ function _alertCardHtml(alert) {
   const toneClass = alert.severity === 'danger' ? ' alert-card--critical' : '';
   const sub = Utils.truncate(alert.subtitle || '', 56);
   return `<div class="alert-card${toneClass}" data-action="${actionMeta.action}" data-id="${actionMeta.id}" role="listitem" tabindex="0">
-    <span class="alert-card__icon">${Utils.escapeHtml(alert.icon || '!')}</span>
+    <span class="alert-card__icon">${alert.icon || '!'}</span>
     <div class="alert-card__body">
-      <div class="alert-card__equip">${Utils.escapeHtml(alert.eq?.nome ?? alert.equipmentName ?? 'â€”')}</div>
-      <div class="alert-card__title">${Utils.escapeHtml(alert.title)}</div>
-      ${sub ? `<div class="alert-card__sub">${Utils.escapeHtml(sub)}</div>` : ''}
+      <div class="alert-card__equip">${Utils.escapeHtml(alert.eq?.nome ?? alert.equipmentName ?? '—')}</div>
+      <div class="alert-card__title">${alert.title}</div>
+      ${sub ? `<div class="alert-card__sub">${sub}</div>` : ''}
     </div>
-    <span class="alert-card__action">â†— Agir</span>
+    <span class="alert-card__action">&rarr; Agir</span>
   </div>`;
 }
 
 function _criticalNowItemHtml({
   icon = '!',
   tone = 'danger',
-  title = 'AÃ§Ã£o imediata',
+  title = 'Ação imediata',
   subtitle = '',
   action = 'view-equip',
   id = '',
   ctaLabel = 'Abrir',
 }) {
   return `<button class="critical-now-item critical-now-item--${tone}" data-action="${Utils.escapeAttr(action)}" data-id="${Utils.escapeAttr(id)}">
-    <span class="critical-now-item__icon" aria-hidden="true">${Utils.escapeHtml(icon)}</span>
+    <span class="critical-now-item__icon" aria-hidden="true">${icon}</span>
     <span class="critical-now-item__body">
-      <span class="critical-now-item__title">${Utils.escapeHtml(title)}</span>
-      ${subtitle ? `<span class="critical-now-item__subtitle">${Utils.escapeHtml(subtitle)}</span>` : ''}
+      <span class="critical-now-item__title">${title}</span>
+      ${subtitle ? `<span class="critical-now-item__subtitle">${subtitle}</span>` : ''}
     </span>
-    <span class="critical-now-item__cta">${Utils.escapeHtml(ctaLabel)}</span>
+    <span class="critical-now-item__cta">${ctaLabel}</span>
   </button>`;
 }
 
@@ -277,7 +277,7 @@ function _getActionButton(actionCode) {
   return { action: 'view-equip', ctaLabel: 'Ver' };
 }
 
-// â”€â”€ PrÃ³xima aÃ§Ã£o (D3) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Próxima ação (D3) ──────────────────────────────────
 function _renderNextAction(equipamentos, alerts) {
   const el = Utils.getEl('dash-next-action');
   if (!el) return;
@@ -297,11 +297,11 @@ function _renderNextAction(equipamentos, alerts) {
           : 'next-action-card';
 
     el.innerHTML = `<div class="${cardClass}" data-action="${actionMeta.action}" data-id="${actionMeta.id}">
-      <div class="next-action-card__icon">${Utils.escapeHtml(primaryAlert.icon || '!')}</div>
+      <div class="next-action-card__icon">${primaryAlert.icon || '!'}</div>
       <div class="next-action-card__body">
-        <div class="next-action-card__label">${Utils.escapeHtml(primaryAlert.title.toUpperCase())}</div>
-        <div class="next-action-card__title">${Utils.escapeHtml(primaryAlert.eq?.nome || 'â€”')}</div>
-        <div class="next-action-card__sub">${Utils.escapeHtml(primaryAlert.subtitle || '')}</div>
+        <div class="next-action-card__label">${primaryAlert.title.toUpperCase()}</div>
+        <div class="next-action-card__title">${Utils.escapeHtml(primaryAlert.eq?.nome || '—')}</div>
+        <div class="next-action-card__sub">${primaryAlert.subtitle || ''}</div>
       </div>
       <button class="btn ${primaryAlert.severity === 'danger' ? 'btn--danger' : 'btn--primary'} btn--sm btn--fit-content" data-action="${actionMeta.action}" data-id="${actionMeta.id}">${actionMeta.label}</button>
     </div>`;
@@ -311,16 +311,16 @@ function _renderNextAction(equipamentos, alerts) {
   el.innerHTML = `<div class="next-action-card next-action-card--ok">
     <div class="next-action-card__icon">OK</div>
     <div class="next-action-card__body">
-      <div class="next-action-card__label">NENHUMA AÃ‡ÃƒO URGENTE</div>
-      <div class="next-action-card__title">Todas as rotinas estÃ£o dentro do prazo</div>
-      <div class="next-action-card__sub">Continue registrando os serviÃ§os para manter o histÃ³rico atualizado</div>
+      <div class="next-action-card__label">NENHUMA AÇÃO URGENTE</div>
+      <div class="next-action-card__title">Todas as rotinas estão dentro do prazo</div>
+      <div class="next-action-card__sub">Continue registrando os serviços para manter o histórico atualizado</div>
     </div>
   </div>`;
 }
 
-// â”€â”€ equip card (miniatura para o dashboard) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── equip card (miniatura para o dashboard) ────────────
 function _equipCardMini(eq) {
-  const icon = TIPO_ICON[eq.tipo] ?? 'âš™ï¸';
+  const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
   const context = getEquipmentMaintenanceContext(eq, regsForEquip(eq.id));
   const last = context.ultimoRegistro;
   const score = calcHealthScore(eq.id);
@@ -334,28 +334,28 @@ function _equipCardMini(eq) {
 
   function getCtaByAction(actionCode) {
     if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE)
-      return 'Registrar corretiva agora â†’';
-    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar corretiva â†’';
-    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar preventiva â†’';
-    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar preventiva â†’';
-    return 'Registrar serviÃ§o â†’';
+      return 'Registrar corretiva agora &rarr;';
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar corretiva &rarr;';
+    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar preventiva &rarr;';
+    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar preventiva &rarr;';
+    return 'Registrar serviço &rarr;';
   }
   function recencia(data) {
     const diff = Math.round((new Date() - new Date(data)) / 86400000);
     if (diff === 0) return 'Hoje';
     if (diff === 1) return 'Ontem';
-    if (diff < 30) return `HÃ¡ ${diff} dias`;
-    if (diff < 60) return 'HÃ¡ 1 mÃªs';
-    return `HÃ¡ ${Math.floor(diff / 30)} meses`;
+    if (diff < 30) return `Há ${diff} dias`;
+    if (diff < 60) return 'Há 1 mês';
+    return `Há ${Math.floor(diff / 30)} meses`;
   }
 
-  let proximaLabel = 'â€”';
+  let proximaLabel = '—';
   let proximaCls = 'equip-card__metric-value--muted';
   let proximaIcon = '';
   if (context.proximaPreventiva) {
     const diff = Utils.daysDiff(context.proximaPreventiva);
     if (diff < 0) {
-      proximaLabel = `Vencida hÃ¡ ${Math.abs(diff)}d`;
+      proximaLabel = `Vencida há ${Math.abs(diff)}d`;
       proximaCls = 'equip-card__metric-value--danger';
       proximaIcon = '!!';
     } else if (diff === 0) {
@@ -372,64 +372,65 @@ function _equipCardMini(eq) {
   }
 
   let ctaLabel = getCtaByAction(suggestedAction.actionCode);
-  if (!last && suggestedAction.actionCode === ACTION_CODE.NONE) ctaLabel = 'Primeiro registro â†’';
+  if (!last && suggestedAction.actionCode === ACTION_CODE.NONE)
+    ctaLabel = 'Primeiro registro &rarr;';
 
-  return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? 'â€”')} â€” ${STATUS_OPERACIONAL[scls]}">
+  return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_OPERACIONAL[scls]}">
     <div class="equip-card__status-band equip-card__status-band--${scls}"></div>
     <div class="equip-card__header">
       <div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>
       <div class="equip-card__meta">
-        <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq?.nome ?? 'â€”')}</div>
-        <div class="equip-card__tag">${Utils.escapeHtml(eq.fluido || eq.tipo)} Â· Prioridade ${Utils.escapeHtml(PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media)}</div>
+        <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq?.nome ?? '—')}</div>
+        <div class="equip-card__tag">${Utils.escapeHtml(eq.fluido || eq.tipo)} &middot; Prioridade ${PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media}</div>
       </div>
       <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_OPERACIONAL[scls]}</span>
       <div class="equip-card__actions">
-        <button class="equip-card__delete" data-action="delete-equip" data-id="${safeId}" aria-label="Excluir ${Utils.escapeHtml(eq?.nome ?? 'â€”')}">
+        <button class="equip-card__delete" data-action="delete-equip" data-id="${safeId}" aria-label="Excluir ${Utils.escapeHtml(eq?.nome ?? '—')}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
         </button>
       </div>
     </div>
     <div class="equip-card__health">
       <div class="equip-card__health-bar"><div class="equip-card__health-fill equip-card__health-fill--${hcls}" style="width:${score}%"></div></div>
-      <div class="equip-card__health-meta"><span class="equip-card__health-label">EficiÃªncia</span><span class="equip-card__health-value equip-card__health-value--${hcls}">${score}%</span></div>
+      <div class="equip-card__health-meta"><span class="equip-card__health-label">Eficiência</span><span class="equip-card__health-value equip-card__health-value--${hcls}">${score}%</span></div>
     </div>
     <div class="equip-card__risk">
       <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
       <span class="equip-card__risk-score">Score ${risk.score}</span>
-      <span class="equip-card__risk-factors">Base ${risk.technicalBaseScore} Ã— Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
+      <span class="equip-card__risk-factors">Base ${risk.technicalBaseScore} × Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
     </div>
     <div class="equip-card__priority">
-      <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${Utils.escapeHtml(priority.priorityLabel)}</span>
-      <span class="equip-card__priority-reasons">${Utils.escapeHtml(priority.priorityReasons.join(' Â· '))}</span>
+      <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${priority.priorityLabel}</span>
+      <span class="equip-card__priority-reasons">${priority.priorityReasons.join(' &middot; ')}</span>
     </div>
     <div class="equip-card__suggested-action">
-      <span class="equip-card__suggested-action-label">AÃ§Ã£o recomendada (baseada nos registros)</span>
-      <span class="equip-card__suggested-action-title">${Utils.escapeHtml(suggestedAction.actionLabel)}</span>
-      <span class="equip-card__suggested-action-reasons">${Utils.escapeHtml(suggestedAction.actionReasons.join(' Â· '))}</span>
+      <span class="equip-card__suggested-action-label">Ação recomendada (baseada nos registros)</span>
+      <span class="equip-card__suggested-action-title">${suggestedAction.actionLabel}</span>
+      <span class="equip-card__suggested-action-reasons">${suggestedAction.actionReasons.join(' &middot; ')}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
-        <div class="equip-card__metric-label">Ãšltima manutenÃ§Ã£o</div>
+        <div class="equip-card__metric-label">Última manutenção</div>
         <div class="equip-card__metric-value">${last ? Utils.escapeHtml(recencia(last.data)) : '<span class="equip-card__metric-empty">Nenhum registro</span>'}</div>
         ${last ? `<div class="equip-card__metric-sub">${Utils.escapeHtml(Utils.truncate(last.tipo, 22))}</div>` : ''}
       </div>
       <div class="equip-card__metric">
-        <div class="equip-card__metric-label">LocalizaÃ§Ã£o</div>
+        <div class="equip-card__metric-label">Localização</div>
         <div class="equip-card__metric-value equip-card__metric-value--muted">${Utils.escapeHtml(Utils.truncate(eq.local, 24))}</div>
       </div>
       <div class="equip-card__metric">
-        <div class="equip-card__metric-label">PrÃ³xima prev.</div>
+        <div class="equip-card__metric-label">Próxima prev.</div>
         <div class="equip-card__metric-value ${proximaCls}">${proximaIcon ? `<span>${proximaIcon}</span> ` : ''}${proximaLabel}</div>
       </div>
     </div>
     <div class="equip-card__footer">
-      <span class="equip-card__footer-tecnico">${last?.tecnico ? `ðŸ‘· ${Utils.escapeHtml(last.tecnico)}` : ''}</span>
+      <span class="equip-card__footer-tecnico">${last?.tecnico ? `👷 ${Utils.escapeHtml(last.tecnico)}` : ''}</span>
       <button class="equip-card__cta" data-action="go-register-equip" data-id="${safeId}">${ctaLabel}</button>
     </div>
   </div>`;
 }
 
-// â”€â”€ GrÃ¡ficos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Gráficos ───────────────────────────────────────────
 let _lastChartHash = null;
 
 function _renderStatusChart() {
@@ -444,9 +445,9 @@ function _renderStatusChart() {
   });
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// API PÃšBLICA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════
+// API PÚBLICA
+// ═══════════════════════════════════════════════════════
 
 function _setStatusIndicatorState(el, tone, options = {}) {
   if (!el) return;
@@ -482,9 +483,9 @@ export function updateHeader() {
 
   const totalEl = Utils.getEl('hst-total');
   if (totalEl)
-    totalEl.textContent = equipamentos.length ? `${activeCount}/${equipamentos.length}` : 'â€”';
+    totalEl.textContent = equipamentos.length ? `${activeCount}/${equipamentos.length}` : '—';
   const mesEl = Utils.getEl('hst-mes');
-  if (mesEl) mesEl.textContent = mesCount || 'â€”';
+  if (mesEl) mesEl.textContent = mesCount || '—';
   const alertEl = Utils.getEl('hst-alert');
   if (alertEl) alertEl.textContent = alertCount || '0';
 
@@ -502,7 +503,7 @@ export function updateHeader() {
     headerAlertPill.textContent = String(preventivas7dCount);
     headerAlertPill.hidden = preventivas7dCount <= 0;
     headerAlertPill.classList.toggle('is-visible', preventivas7dCount > 0);
-    headerAlertTooltip.textContent = `${preventivas7dCount} equipamento${preventivas7dCount > 1 ? 's' : ''} com preventiva nos prÃ³ximos 7 dias`;
+    headerAlertTooltip.textContent = `${preventivas7dCount} equipamento${preventivas7dCount > 1 ? 's' : ''} com preventiva nos próximos 7 dias`;
     headerAlertTooltip.hidden = preventivas7dCount <= 0;
     headerAlertBtn.setAttribute('title', headerAlertTooltip.textContent);
   }
@@ -516,9 +517,9 @@ export function updateHeader() {
       statusFalhas.hidden = false;
       _setStatusIndicatorState(statusFalhas, 'danger', { live: true });
       if (statusFalhasTxt)
-        statusFalhasTxt.textContent = `${faultCount} situaÃ§Ã£o${faultCount > 1 ? 'Ãµes' : ''} crÃ­tica${faultCount > 1 ? 's' : ''} em aberto`;
+        statusFalhasTxt.textContent = `${faultCount} situação${faultCount > 1 ? 'ões' : ''} crítica${faultCount > 1 ? 's' : ''} em aberto`;
     } else if (alertCount > 0) {
-      statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>AtenÃ§Ã£o requerida</span>`;
+      statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>Atenção requerida</span>`;
       statusSistema.hidden = false;
       statusFalhas.hidden = true;
       _setStatusIndicatorState(statusSistema, 'warn', { live: true });
@@ -542,15 +543,15 @@ export function updateHeader() {
       if (dot) dot.className = 'status-indicator__dot status-indicator__dot--ok';
       _setStatusIndicatorState(syncStatusEl, 'ok', { live: true, syncing: true });
       syncStatusTxt.textContent =
-        syncStatus.pendingOps > 1 ? 'Sincronizando alteraÃ§Ãµes...' : 'Sincronizando...';
+        syncStatus.pendingOps > 1 ? 'Sincronizando alterações...' : 'Sincronizando...';
     } else if (syncStatus.state === 'pending') {
       syncStatusEl.hidden = false;
       if (dot) dot.className = 'status-indicator__dot status-indicator__dot--warn';
       _setStatusIndicatorState(syncStatusEl, 'warn', { live: true });
       syncStatusTxt.textContent =
         syncStatus.pendingOps > 0
-          ? `SincronizaÃ§Ã£o pendente (${syncStatus.pendingOps})`
-          : 'SincronizaÃ§Ã£o pendente';
+          ? `Sincronização pendente (${syncStatus.pendingOps})`
+          : 'Sincronização pendente';
     } else {
       syncStatusEl.hidden = true;
       _setStatusIndicatorState(syncStatusEl, 'ok');
@@ -568,7 +569,7 @@ export function updateHeader() {
     bentAlertSub.innerHTML =
       faultCount > 0
         ? `<span class="kpi-trend kpi-trend--down">${faultCount} fora</span>`
-        : `<span class="kpi-trend kpi-trend--ok">estÃ¡vel</span>`;
+        : `<span class="kpi-trend kpi-trend--ok">estável</span>`;
 
   const failEl = Utils.getEl('hst-fail-bento');
   if (failEl) {
@@ -636,9 +637,9 @@ export function renderDashboard() {
     if (greetEl) {
       greetEl.textContent =
         faults > 0
-          ? `${faults} situaÃ§Ã£o${faults > 1 ? 'Ãµes' : ''} exigindo intervenÃ§Ã£o`
+          ? `${faults} situação${faults > 1 ? 'ões' : ''} exigindo intervenção`
           : alerts.length > 0
-            ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenÃ§Ã£o`
+            ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
             : 'Sistema Operacional';
 
       let usageMeterHost = document.getElementById('dash-usage-meter');
@@ -665,10 +666,10 @@ export function renderDashboard() {
 
     if (!equipamentos.length) {
       bento.innerHTML = `<div class="dash-empty-shell">${emptyStateHtml({
-        icon: 'ðŸ”§',
-        title: 'Seu painel estÃ¡ pronto',
+        icon: '🔧',
+        title: 'Seu painel está pronto',
         description:
-          'Cadastre o primeiro equipamento para ver eficiÃªncia, alertas e histÃ³rico em tempo real.',
+          'Cadastre o primeiro equipamento para ver eficiência, alertas e histórico em tempo real.',
         cta: {
           label: '+ Cadastrar meu primeiro equipamento',
           action: 'open-modal',
@@ -694,7 +695,7 @@ export function renderDashboard() {
     if (criticosEl) {
       criticosEl.innerHTML = critical.length
         ? `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`
-        : `<div class="dash-state-box dash-state-box--success">âœ… Todos os equipamentos operando normalmente</div>`;
+        : `<div class="dash-state-box dash-state-box--success">✅ Todos os equipamentos operando normalmente</div>`;
     }
 
     const criticalNowEl = Utils.getEl('dash-critical-now');
@@ -722,10 +723,11 @@ export function renderDashboard() {
               .map(({ eq, score }) => {
                 const actionMeta = _getActionButton(score.suggestedAction.actionCode);
                 return _criticalNowItemHtml({
-                  icon: score.group === 'critico' ? '!!' : score.group === 'atencao' ? '!' : 'â€¢',
+                  icon:
+                    score.group === 'critico' ? '!!' : score.group === 'atencao' ? '!' : '&bull;',
                   tone,
-                  title: `${eq.nome || 'Equipamento'} Â· ${score.suggestedAction.actionLabel}`,
-                  subtitle: score.reasons.join(' Â· ') || 'Sem sinais crÃ­ticos no momento',
+                  title: `${eq.nome || 'Equipamento'} &middot; ${score.suggestedAction.actionLabel}`,
+                  subtitle: score.reasons.join(' &middot; ') || 'Sem sinais críticos no momento',
                   action: actionMeta.action,
                   id: eq.id,
                   ctaLabel: actionMeta.ctaLabel,
@@ -738,18 +740,18 @@ export function renderDashboard() {
         groups.critico.length + groups.atencao.length + groups.monitoramento.length;
       criticalNowEl.innerHTML = totalCount
         ? `<div class="critical-now-group">
-          <div class="critical-now-group__label">CrÃ­tico agora</div>
+          <div class="critical-now-group__label">Crítico agora</div>
           <div class="critical-now-list">${renderActionItems(groups.critico, 'danger')}</div>
         </div>
         <div class="critical-now-group">
-          <div class="critical-now-group__label">AtenÃ§Ã£o</div>
+          <div class="critical-now-group__label">Atenção</div>
           <div class="critical-now-list">${renderActionItems(groups.atencao, 'warn')}</div>
         </div>
         <div class="critical-now-group">
           <div class="critical-now-group__label">Monitoramento</div>
           <div class="critical-now-list">${renderActionItems(groups.monitoramento, 'warn')}</div>
         </div>`
-        : `<div class="dash-state-box dash-state-box--success">âœ… Sem aÃ§Ãµes pendentes no momento</div>`;
+        : `<div class="dash-state-box dash-state-box--success">✅ Sem ações pendentes no momento</div>`;
 
       if (criticalNowCountEl) {
         criticalNowCountEl.textContent = String(totalCount);
@@ -781,17 +783,17 @@ export function renderDashboard() {
               return `<article class="card recent-card" data-nav="historico">
             <div class="recent-card__date">${Utils.formatDatetime(r.data)}</div>
             <div class="recent-card__title">${Utils.escapeHtml(r.tipo)}</div>
-            <div class="recent-card__equip">${Utils.escapeHtml(eq?.nome ?? 'â€”')} Â· ${Utils.escapeHtml(eq?.tag ?? '')}</div>
+            <div class="recent-card__equip">${Utils.escapeHtml(eq?.nome ?? '—')} &middot; ${Utils.escapeHtml(eq?.tag ?? '')}</div>
             <div class="recent-card__obs">${Utils.escapeHtml(Utils.truncate(r.obs, 70))}</div>
           </article>`;
             })
             .join('')}</div>`
         : emptyStateHtml({
-            icon: 'ðŸ“‹',
-            title: 'Nenhum serviÃ§o registrado',
-            description: 'Registre o primeiro serviÃ§o para acompanhar a operaÃ§Ã£o.',
+            icon: '📋',
+            title: 'Nenhum serviço registrado',
+            description: 'Registre o primeiro serviço para acompanhar a operação.',
             cta: {
-              label: 'Registrar servico',
+              label: 'Registrar serviço',
               nav: 'registro',
               tone: 'outline',
               size: 'sm',

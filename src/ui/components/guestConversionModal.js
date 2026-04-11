@@ -74,9 +74,9 @@ export const GuestConversionModal = {
         ${buildPreviewHtml(preview)}
         <div class="guest-conv-plan">
           <strong>Plano Free</strong>
-          <span>Até 5 equipamentos • Até 10 registros</span>
+          <span>Até 5 equipamentos &bull; Até 10 registros</span>
           <strong>Plano Pro</strong>
-          <span>Ilimitado • Histórico completo • Relatórios</span>
+          <span>Ilimitado &bull; Histórico completo &bull; Relatórios</span>
         </div>
         <div class="guest-conv-actions">
           ${

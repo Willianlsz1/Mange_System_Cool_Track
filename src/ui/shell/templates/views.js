@@ -212,7 +212,7 @@ export function renderShellViews() {
                 <input type="file" accept="image/*" multiple id="input-fotos" aria-label="Adicionar fotos" />
                 <div class="photo-drop__icon" aria-hidden="true">📷</div>
                 <div class="photo-drop__text" id="photo-drop-text">Adicionar fotos do serviço</div>
-                <div class="photo-drop__limit">Antes e depois · Máx. 5 fotos</div>
+                <div class="photo-drop__limit">Antes e depois &middot; Máx. 5 fotos</div>
               </div>
               <div class="photo-grid" id="photo-preview" role="list" aria-label="Fotos adicionadas"></div>
             </div>
@@ -299,7 +299,7 @@ export function renderShellViews() {
           <div class="page-toolbar">
             <div class="section-title">Relatório de Manutenção</div>
             <div class="page-toolbar__actions">
-              <button class="btn btn--outline btn--sm" data-nav="historico">← Voltar</button>
+              <button class="btn btn--outline btn--sm" data-nav="historico">&larr; Voltar</button>
               <button class="btn btn--outline btn--sm" id="btn-print" data-action="print">Imprimir</button>
               <button class="btn btn--outline btn--sm btn--whatsapp" id="btn-whatsapp" data-action="whatsapp-export">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="icon-inline--fixed">

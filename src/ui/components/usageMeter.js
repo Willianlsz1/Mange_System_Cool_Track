@@ -55,8 +55,8 @@ export const UsageMeter = {
       ? '#e03040'
       : getReportBarColor(usageState.reportPercent);
     const upgradeText = usageState.hasOverLimit
-      ? 'Voce precisa do plano Pro para continuar →'
-      : 'Desbloquear ilimitado →';
+      ? 'Voce precisa do plano Pro para continuar &rarr;'
+      : 'Desbloquear ilimitado &rarr;';
     const badgeHtml = usageState.hasOverLimit
       ? '<span class="usage-meter__badge usage-meter__badge--danger">LIMITE ULTRAPASSADO</span>'
       : usageState.hasNearLimit
@@ -64,7 +64,7 @@ export const UsageMeter = {
         : '';
 
     return `
-      <section class="usage-meter" aria-label="Consumo do plano grátis">
+      <section class="usage-meter" aria-label="Consumo do plano gratis">
         <style>
           .usage-meter {
             background: rgba(0, 200, 232, 0.05);
@@ -136,9 +136,18 @@ export const UsageMeter = {
           }
 
           @keyframes usage-meter-pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.06); opacity: 0.85; }
-            100% { transform: scale(1); opacity: 1; }
+            0% {
+              transform: scale(1);
+              opacity: 1;
+            }
+            50% {
+              transform: scale(1.06);
+              opacity: 0.85;
+            }
+            100% {
+              transform: scale(1);
+              opacity: 1;
+            }
           }
         </style>
 

@@ -17,11 +17,11 @@ export function renderPricing() {
           <h2 class="pricing-card__title">Gratuito</h2>
           <p class="pricing-card__price">R$ 0 / sempre</p>
           <ul class="pricing-features">
-            <li>✓ Até 5 equipamentos</li>
-            <li>✓ 10 registros por mês</li>
-            <li>✓ Relatório PDF básico</li>
-            <li>✓ Alertas de preventiva</li>
-            <li>✓ Funciona offline</li>
+            <li>&#10003; Até 5 equipamentos</li>
+            <li>&#10003; 10 registros por mês</li>
+            <li>&#10003; Relatório PDF básico</li>
+            <li>&#10003; Alertas de preventiva</li>
+            <li>&#10003; Funciona offline</li>
           </ul>
           <button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Plano atual</button>
         </article>
@@ -32,16 +32,16 @@ export function renderPricing() {
           <p class="pricing-card__price pricing-card__price--pro">R$ 29 / mês</p>
           <p class="pricing-card__annual">ou R$ 249/ano (economize 28%)</p>
           <ul class="pricing-features">
-            <li>✓ Equipamentos ilimitados</li>
-            <li>✓ Registros ilimitados</li>
-            <li>✓ Relatório PDF com sua logo</li>
-            <li>✓ Compartilhamento WhatsApp</li>
-            <li>✓ Histórico completo</li>
-            <li>✓ Exportação de dados</li>
-            <li>✓ Suporte prioritário</li>
+            <li>&#10003; Equipamentos ilimitados</li>
+            <li>&#10003; Registros ilimitados</li>
+            <li>&#10003; Relatório PDF com sua logo</li>
+            <li>&#10003; Compartilhamento WhatsApp</li>
+            <li>&#10003; Histórico completo</li>
+            <li>&#10003; Exportação de dados</li>
+            <li>&#10003; Suporte prioritário</li>
           </ul>
-          <button class="btn pricing-card__cta pricing-card__cta--pro" type="button" data-action="open-upgrade" data-upgrade-source="dashboard">Assinar Pro →</button>
-          <p class="pricing-card__microcopy">Cancele quando quiser • Sem fidelidade</p>
+          <button class="btn pricing-card__cta pricing-card__cta--pro" type="button" data-action="open-upgrade" data-upgrade-source="dashboard">Assinar Pro &rarr;</button>
+          <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>
         </article>
       </div>
 

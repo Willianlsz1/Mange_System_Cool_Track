@@ -31,7 +31,7 @@ describe('UsageMeter', () => {
     expect(html).toContain(
       'Relatorios este mes: <span class="usage-meter__value">9 / 10</span> no plano gratis',
     );
-    expect(html).toContain('Desbloquear ilimitado →');
+    expect(html).toContain('Desbloquear ilimitado &rarr;');
     expect(html).toContain('QUASE NO LIMITE');
     expect(html).toContain('usage-meter__badge--warn');
   });
@@ -53,7 +53,7 @@ describe('UsageMeter', () => {
     expect(html).toContain('width:100%;background:#e03040');
     expect(html).toContain('LIMITE ULTRAPASSADO');
     expect(html).toContain('usage-meter__badge--danger');
-    expect(html).toContain('Voce precisa do plano Pro para continuar →');
+    expect(html).toContain('Voce precisa do plano Pro para continuar &rarr;');
   });
 
   it('calcula contagem mensal e cores de barra corretamente', () => {
