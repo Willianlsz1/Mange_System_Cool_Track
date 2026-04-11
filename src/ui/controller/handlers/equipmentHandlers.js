@@ -20,7 +20,7 @@ export function bindEquipmentHandlers() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
-        message: 'Nao foi possivel salvar o equipamento.',
+        message: 'Não foi possível salvar o equipamento.',
         context: { action: 'controller.save-equip' },
       });
     }
@@ -32,7 +32,7 @@ export function bindEquipmentHandlers() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,
-        message: 'Nao foi possivel abrir o equipamento selecionado.',
+        message: 'Não foi possível abrir o equipamento selecionado.',
         context: { action: 'controller.view-equip', id: el.dataset.id },
       });
     }
@@ -42,7 +42,7 @@ export function bindEquipmentHandlers() {
     try {
       const ok = await CustomConfirm.show(
         'Excluir Equipamento',
-        'Isso remove o equipamento e todo o historico vinculado. Essa acao nao pode ser desfeita.',
+        'Isso remove o equipamento e todo o historico vinculado. Essa acao não pode ser desfeita.',
         {
           confirmLabel: 'Excluir equipamento',
           cancelLabel: 'Manter equipamento',
@@ -53,7 +53,7 @@ export function bindEquipmentHandlers() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
-        message: 'Nao foi possivel confirmar a exclusao do equipamento.',
+        message: 'Não foi possível confirmar a exclusao do equipamento.',
         context: { action: 'controller.delete-equip', id: el.dataset.id },
       });
     }

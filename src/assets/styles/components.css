@@ -4370,3 +4370,77 @@ mark,
   display: grid;
   gap: 10px;
 }
+
+/* ─── WHATSAPP SHARE SUCCESS TOAST ─── */
+.share-success-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10000;
+  width: min(360px, calc(100vw - 24px));
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  padding: 12px 14px;
+  background: #00c870;
+  color: #042b1a;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(20px);
+  opacity: 0;
+  transition:
+    transform 0.28s ease,
+    opacity 0.28s ease;
+}
+
+.share-success-toast--visible {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.share-success-toast--hiding {
+  transform: translateY(24px);
+  opacity: 0;
+}
+
+.share-success-toast__icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.share-success-toast__content {
+  min-width: 0;
+}
+
+.share-success-toast__title,
+.share-success-toast__subtitle {
+  margin: 0;
+  word-break: break-word;
+}
+
+.share-success-toast__title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.share-success-toast__subtitle {
+  margin-top: 4px;
+  font-size: 12px;
+  opacity: 0.92;
+}
+
+@media (max-width: 640px) {
+  .share-success-toast {
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, 20px);
+  }
+
+  .share-success-toast--visible {
+    transform: translate(-50%, 0);
+  }
+
+  .share-success-toast--hiding {
+    transform: translate(-50%, 24px);
+  }
+}
