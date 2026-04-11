@@ -74,7 +74,7 @@ export const GuestConversionModal = {
         ${buildPreviewHtml(preview)}
         <div class="guest-conv-plan">
           <strong>Plano Free</strong>
-          <span>Até 5 equipamentos &bull; Até 10 registros</span>
+          <span>Até 3 equipamentos &bull; Até 10 registros</span>
           <strong>Plano Pro</strong>
           <span>Ilimitado &bull; Histórico completo &bull; Relatórios</span>
         </div>
@@ -100,7 +100,7 @@ export const GuestConversionModal = {
       overlay.querySelector('[data-action="pricing"]')?.addEventListener('click', async () => {
         closeModal({ converted: true, trigger });
         const { goTo } = await import('../../core/router.js');
-        goTo('pricing');
+        goTo('pricing', { highlightPlan: 'pro' });
       });
       overlay.querySelector('[data-action="dismiss"]')?.addEventListener('click', () => {
         closeModal({ converted: false, dismissEvent: 'guest_modal_dismissed', trigger });

@@ -136,7 +136,7 @@ export function renderHist() {
               <div class="engaging-empty-state__microcopy">Leva menos de 2 minutos</div>
             </section>`;
       el.querySelector('[data-action="hist-pricing-link"]')?.addEventListener('click', () =>
-        goTo('pricing'),
+        goTo('pricing', { highlightPlan: 'pro' }),
       );
       return;
     }
@@ -176,7 +176,7 @@ export function renderHist() {
       })
       .join('')}</div>`;
     el.querySelector('[data-action="hist-pricing-link"]')?.addEventListener('click', () =>
-      goTo('pricing'),
+      goTo('pricing', { highlightPlan: 'pro' }),
     );
 
     if (prevScrollTop > 0) {

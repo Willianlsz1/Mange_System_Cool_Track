@@ -4765,6 +4765,30 @@ mark,
   font-size: 14px;
 }
 
+.pricing-plan-indicator {
+  margin-top: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pricing-plan-indicator--free {
+  color: #a9c6dd;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.pricing-plan-indicator--pro {
+  color: #9df2ca;
+  border-color: rgba(0, 200, 112, 0.4);
+  background: rgba(0, 200, 112, 0.12);
+}
+
 .pricing-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4777,6 +4801,20 @@ mark,
   border-radius: var(--radius);
   padding: var(--space-4);
   box-shadow: var(--shadow);
+}
+
+.pricing-card--active {
+  border-color: rgba(0, 200, 112, 0.45);
+  box-shadow:
+    0 0 0 1px rgba(0, 200, 112, 0.24),
+    0 0 30px rgba(0, 200, 112, 0.14);
+}
+
+.pricing-card--highlighted {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px rgba(0, 200, 232, 0.24),
+    0 0 34px rgba(0, 200, 232, 0.2);
 }
 
 .pricing-card--pro {
@@ -4805,6 +4843,12 @@ mark,
 .pricing-badge--popular {
   background: #00c8e8;
   color: #07111f;
+}
+
+.pricing-badge--neutral {
+  color: #8fb0cb;
+  border: 1px solid rgba(143, 176, 203, 0.35);
+  background: rgba(143, 176, 203, 0.08);
 }
 
 .pricing-card__title {
@@ -4893,6 +4937,52 @@ mark,
   margin-top: var(--space-2);
   color: var(--text-2);
   font-size: 14px;
+}
+
+.upgrade-nudge-card {
+  position: relative;
+  background: linear-gradient(135deg, rgba(0, 200, 232, 0.06), rgba(0, 168, 255, 0.03));
+  border: 1px solid rgba(0, 200, 232, 0.12);
+  border-radius: 14px;
+  padding: 24px;
+  display: grid;
+  gap: 14px;
+}
+
+.upgrade-nudge-card__badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 10px;
+  color: #00c870;
+  background: rgba(0, 200, 112, 0.15);
+  border-radius: 999px;
+  padding: 4px 8px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.upgrade-nudge-card__icon {
+  font-size: 24px;
+}
+
+.upgrade-nudge-card--pro-active {
+  border-color: rgba(0, 200, 112, 0.28);
+  background: linear-gradient(135deg, rgba(0, 200, 112, 0.12), rgba(0, 200, 232, 0.08));
+}
+
+.upgrade-nudge-card__pro-title {
+  margin: 0;
+  color: #e8f2fa;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.upgrade-nudge-card__pro-copy {
+  margin: 0;
+  color: #b4d3e8;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 @media (max-width: 768px) {

@@ -6,6 +6,7 @@
 import { Utils, TIPO_ICON } from '../../core/utils.js';
 import { getState, findEquip, regsForEquip } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
+import { Auth } from '../../core/auth.js';
 import { Alerts } from '../../domain/alerts.js';
 import { Charts } from '../components/charts.js';
 import { emptyStateHtml } from '../components/emptyState.js';
@@ -13,6 +14,8 @@ import { OnboardingBanner } from '../components/onboarding.js';
 import { UpgradeNudge } from '../components/upgradeNudge.js';
 import { UsageMeter } from '../components/usageMeter.js';
 import { withViewSkeleton } from '../components/skeleton.js';
+import { fetchMyProfileBilling } from '../../core/monetization.js';
+import { PLAN_CODE_FREE, getEffectivePlan, hasProAccess } from '../../core/subscriptionPlans.js';
 import {
   calculateHealthScore,
   evaluateEquipmentRisk,
@@ -150,6 +153,36 @@ function _updateStorageIndicator() {
   const cls = percent >= 85 ? 'danger' : 'warn';
   indicator.className = `storage-indicator storage-indicator--${cls}`;
   indicator.innerHTML = `<div class="storage-indicator__label"><span>Armazenamento local</span><span>${Utils.formatBytes(used)} / ${Utils.formatBytes(total)}</span></div><div class="storage-indicator__bar"><div class="storage-indicator__fill storage-indicator__fill--${cls}" style="width:${percent}%"></div></div>`;
+}
+
+function _renderProStatusCard() {
+  return `
+    <article class="upgrade-nudge-card upgrade-nudge-card--pro-active" aria-label="Plano Pro ativo">
+      <span class="upgrade-nudge-card__badge">PRO ATIVO</span>
+      <div class="upgrade-nudge-card__icon" aria-hidden="true">&#10003;</div>
+      <h3 class="upgrade-nudge-card__pro-title">Plano Pro ativo</h3>
+      <p class="upgrade-nudge-card__pro-copy">Todos os recursos premium estao liberados para sua conta.</p>
+    </article>
+  `;
+}
+
+async function resolveDashboardPlanContext() {
+  if (localStorage.getItem('cooltrack-guest-mode') === '1') {
+    return { planCode: PLAN_CODE_FREE, hasPro: false };
+  }
+
+  const user = await Auth.getUser();
+  if (!user?.id) return { planCode: PLAN_CODE_FREE, hasPro: false };
+
+  try {
+    const { profile } = await fetchMyProfileBilling();
+    return {
+      planCode: getEffectivePlan(profile),
+      hasPro: hasProAccess(profile),
+    };
+  } catch {
+    return { planCode: PLAN_CODE_FREE, hasPro: false };
+  }
 }
 
 // ── Alert strip ────────────────────────────────────────
@@ -596,7 +629,8 @@ export function updateHeader() {
   _updateStorageIndicator();
 }
 
-export function renderDashboard() {
+export async function renderDashboard() {
+  const planContext = await resolveDashboardPlanContext();
   const { equipamentos, registros } = getState();
   const faults = equipamentos.filter((e) => e.status === 'danger').length;
   const alerts = Alerts.getAll();
@@ -648,7 +682,7 @@ export function renderDashboard() {
         usageMeterHost.id = 'dash-usage-meter';
         greetEl.insertAdjacentElement('afterend', usageMeterHost);
       }
-      usageMeterHost.innerHTML = UsageMeter.render();
+      usageMeterHost.innerHTML = UsageMeter.render({ planCode: planContext.planCode });
     }
 
     const bento = document.querySelector('.dashboard-bento');
@@ -662,7 +696,9 @@ export function renderDashboard() {
     } else if (upgradeCardHost.parentElement !== bento) {
       bento.appendChild(upgradeCardHost);
     }
-    upgradeCardHost.innerHTML = UpgradeNudge.renderDashboardCard();
+    upgradeCardHost.innerHTML = planContext.hasPro
+      ? _renderProStatusCard()
+      : UpgradeNudge.renderDashboardCard();
 
     if (!equipamentos.length) {
       bento.innerHTML = `<div class="dash-empty-shell">${emptyStateHtml({
@@ -770,7 +806,9 @@ export function renderDashboard() {
         inlineHintHost.id = 'dash-upgrade-inline-hint';
         alertsMini.insertAdjacentElement('afterend', inlineHintHost);
       }
-      inlineHintHost.innerHTML = UpgradeNudge.renderInlineHint('Exportar relatorio em lote');
+      inlineHintHost.innerHTML = planContext.hasPro
+        ? ''
+        : UpgradeNudge.renderInlineHint('Exportar relatorio em lote');
     }
 
     const recentEl = Utils.getEl('dash-recentes');

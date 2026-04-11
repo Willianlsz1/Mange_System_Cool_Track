@@ -12,6 +12,9 @@ import { PasswordRecoveryModal } from './ui/components/passwordRecoveryModal.js'
 import { Storage } from './core/storage.js';
 import { Tour } from './ui/components/tour.js';
 import { ErrorCodes, handleError } from './core/errors.js';
+import { supabase } from './core/supabase.js';
+import { Toast } from './core/toast.js';
+import { sanitizeSessionForCurrentProject, startCheckout } from './core/monetization.js';
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 
@@ -24,6 +27,12 @@ const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 
 async function bootstrap() {
   try {
+    try {
+      await sanitizeSessionForCurrentProject();
+    } catch (sessionError) {
+      Toast.warning(sessionError?.message || 'Sessão inválida. Faça login novamente.');
+    }
+
     await Auth.tryHandlePasswordRecovery(() => PasswordRecoveryModal.openPasswordRecoveryModal());
 
     let isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
@@ -47,7 +56,6 @@ async function bootstrap() {
     LandingPage.clear();
     initAppShell();
 
-    // Carrega dados do Supabase se logado, localStorage se guest
     if (!isGuest) {
       const cloudState = await Storage.loadFromSupabase();
       if (cloudState) {
@@ -67,6 +75,7 @@ async function bootstrap() {
     initController();
     initHistory();
     goTo('inicio', {}, { replaceHistory: true });
+
     const pendingRedirectRaw = localStorage.getItem(POST_AUTH_REDIRECT_KEY);
     if (pendingRedirectRaw) {
       localStorage.removeItem(POST_AUTH_REDIRECT_KEY);
@@ -76,7 +85,7 @@ async function bootstrap() {
           goTo(pendingRedirect.route, pendingRedirect.params || {});
         }
       } catch (_error) {
-        // no-op: ignore redirect payload malformatado
+        // ignore malformed redirect payload
       }
     }
 
@@ -84,7 +93,9 @@ async function bootstrap() {
       const { equipamentos } = getState();
       FirstTimeExperience.show(equipamentos);
     });
+
     Tour.initIfFirstVisit();
+    document.getElementById('btn-teste-checkout')?.addEventListener('click', testarCheckout);
   } catch (error) {
     handleError(error, {
       code: ErrorCodes.NETWORK_ERROR,
@@ -111,4 +122,28 @@ window.onunhandledrejection = (event) => {
   });
 };
 
+async function testarCheckout() {
+  try {
+    const url = await startCheckout({ plan: 'pro' });
+    window.location.href = url;
+  } catch (error) {
+    if (error?.code === 'NO_SESSION') {
+      Toast.warning('Faça login antes de iniciar o checkout.');
+      AuthScreen.show();
+      return;
+    }
+
+    if (error?.code === 'INVALID_JWT') {
+      Toast.warning('Sua sessão expirou. Faça login novamente.');
+      await supabase.auth.signOut();
+      AuthScreen.show();
+      return;
+    }
+
+    Toast.error(error?.message || 'Falha ao iniciar checkout.');
+  }
+}
+
+window.supabase = supabase;
+window.testarCheckout = testarCheckout;
 bootstrap();

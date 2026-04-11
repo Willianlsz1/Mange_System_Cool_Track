@@ -12,7 +12,7 @@ import { withSkeleton } from '../components/skeleton.js';
 import { Profile } from '../../features/profile.js';
 import { calcHealthScore, getHealthClass, updateHeader } from './dashboard.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
-import { checkGuestLimit, isGuestMode } from '../../core/guestLimits.js';
+import { checkPlanLimit, isGuestMode } from '../../core/guestLimits.js';
 import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
 import {
@@ -217,14 +217,22 @@ export function renderEquip(filtro = '', options = {}) {
 
 export async function saveEquip() {
   const isGuest = isGuestMode();
-  const guestLimit = checkGuestLimit('equipamentos');
-  if (guestLimit.blocked) {
+  const planLimit = await checkPlanLimit('equipamentos');
+  if (planLimit.blocked) {
     trackEvent('limit_reached', {
       resource: 'equipamentos',
-      current: guestLimit.current,
-      limit: 5,
+      current: planLimit.current,
+      limit: planLimit.limit,
     });
-    GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
+    if (planLimit.isGuest) {
+      GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
+    } else {
+      Toast.warning(
+        `Voce atingiu o limite de ${planLimit.limit} equipamentos do plano Free. Assine o Pro para cadastrar mais.`,
+      );
+      const { goTo } = await import('../../core/router.js');
+      goTo('pricing', { highlightPlan: 'pro' });
+    }
     return false;
   }
   const { equipamentos } = getState();
@@ -503,7 +511,7 @@ export function populateEquipSelects() {
     equipamentos.forEach((equipamento) => {
       const option = document.createElement('option');
       option.value = String(equipamento.id || '');
-      option.textContent = `${equipamento.nome || '—'} — ${equipamento.local || '—'}`;
+      option.textContent = `${equipamento.nome || 'â€”'} â€” ${equipamento.local || 'â€”'}`;
       el.appendChild(option);
     });
   });
