@@ -21,7 +21,7 @@ export function bindRegistroHandlers() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
-        message: 'Nao foi possivel salvar o registro.',
+        message: 'Não foi possível salvar o registro.',
         context: { action: 'controller.save-registro' },
       });
     }
@@ -44,7 +44,7 @@ export function bindRegistroHandlers() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
-        message: 'Nao foi possivel confirmar a exclusao do registro.',
+        message: 'Não foi possível confirmar a exclusao do registro.',
         context: { action: 'controller.delete-reg', id: el.dataset.id },
       });
     }
