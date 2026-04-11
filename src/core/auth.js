@@ -209,11 +209,21 @@ export const Auth = {
     }
 
     if (user && pending?.provider === 'google') {
+      trackEvent('google_login_success', {
+        source: pending.source,
+        wasGuest: pending.wasGuest,
+      });
       trackEvent('auth_google_completed', {
         source: pending.source,
         wasGuest: pending.wasGuest,
       });
+      Toast.success('Seus dados foram salvos com segurança');
       if (pending.wasGuest) {
+        trackEvent('guest_conversion_success', {
+          method: 'google',
+          source: pending.source,
+        });
+        Toast.success('Agora você pode acessar seus registros de qualquer lugar');
         trackEvent('guest_converted_to_account', {
           method: 'google',
           source: pending.source,

@@ -11,14 +11,20 @@ function buildFeatureItems(items) {
     .join('');
 }
 
-function buildCtaBlock() {
-  return `
-    <div class="landing-inline-cta">
-      <button class="landing-btn landing-btn--primary" type="button" data-action="start-trial">
-        Testar agora sem conta
-      </button>
-    </div>
-  `;
+function buildHowItWorksSteps(steps) {
+  return steps
+    .map(
+      ({ title, text }, index) => `
+        <li class="landing-step-item">
+          <span class="landing-step-item__index">${index + 1}</span>
+          <div>
+            <strong>${title}</strong>
+            <p>${text}</p>
+          </div>
+        </li>
+      `,
+    )
+    .join('');
 }
 
 export const LandingPage = {
@@ -34,110 +40,105 @@ export const LandingPage = {
             <span class="landing-brand__name">CoolTrack</span>
             <span class="landing-brand__badge">PRO</span>
           </div>
-          <button class="landing-link" type="button" data-action="login">Já tenho conta</button>
+          <button class="landing-link" type="button" data-action="login">Entrar com Google</button>
         </header>
 
         <section class="landing-hero">
-          <p class="landing-kicker">Manutenção com prioridade clara</p>
-          <h1>Saiba exatamente o que fazer em cada equipamento.</h1>
+          <p class="landing-kicker">HVAC em campo sem atraso</p>
+          <h1>Pare de perder tempo com manutenção desorganizada.</h1>
           <p class="landing-subtitle">
-            O CoolTrack prioriza, mostra o que precisa de atenção e sugere a próxima ação — direto no campo.
+            Registre o serviço em segundos e receba prioridade com ação sugerida para cada equipamento.
           </p>
           <div class="landing-cta-group">
             <button class="landing-btn landing-btn--primary" type="button" data-action="start-trial">
               Testar agora sem conta
             </button>
             <button class="landing-btn landing-btn--ghost" type="button" data-action="login">
-              Já tenho conta
+              Entrar com Google
             </button>
           </div>
-          <ul class="landing-proof-list" aria-label="Provas rápidas">
-            <li>Sem cadastro</li>
-            <li>Funciona no celular</li>
-            <li>Comece em segundos</li>
-          </ul>
+          <p class="landing-microcopy">Sem cadastro • Sem cartão • Comece em segundos</p>
           <article class="landing-mockup" aria-label="Exemplo da tela do CoolTrack">
             <header class="landing-mockup__header">
-              <strong>Unidade Rooftop 03</strong>
-              <span>Score 67</span>
+              <strong>Hospital Central — Chiller 02</strong>
+              <span>Score de risco: 87</span>
             </header>
-            <div class="landing-mockup__status">FORA DE OPERAÇÃO</div>
-            <p class="landing-mockup__text">Ação recomendada: Registrar manutenção preventiva</p>
+            <div class="landing-mockup__status">ALERTA CRÍTICO</div>
+            <p class="landing-mockup__text">Ação sugerida: Inspecionar compressor e registrar corretiva imediata</p>
             <div class="landing-mockup__chips">
-              <span>Prioridade: Alta</span>
-              <span>Última visita: 14 dias</span>
+              <span>Prioridade: Máxima</span>
+              <span>Último serviço: 18 dias</span>
             </div>
           </article>
         </section>
 
         <section class="landing-section">
-          <h2>Problema</h2>
-          <ul class="landing-bullet-list">
-            <li>Equipamentos esquecidos</li>
-            <li>Preventivas atrasadas</li>
-            <li>Corretivas repetidas</li>
-            <li>Falta de prioridade clara</li>
-          </ul>
+          <h2>Como funciona</h2>
+          <ol class="landing-steps landing-steps--cards">
+            ${buildHowItWorksSteps([
+              {
+                title: 'Selecione o equipamento',
+                text: 'Escolha a unidade em atendimento e inicie o registro direto no celular.',
+              },
+              {
+                title: 'Registre o serviço em segundos',
+                text: 'Descreva o que foi feito e conclua sem fluxo longo ou cadastro obrigatório.',
+              },
+              {
+                title: 'Receba prioridade e ação recomendada',
+                text: 'Veja na hora o nível de risco e a próxima ação para evitar parada.',
+              },
+            ])}
+          </ol>
         </section>
 
-        <section class="landing-section">
-          <h2>Solução</h2>
-          <p class="landing-section__lead">O sistema analisa os registros e mostra:</p>
-          <ul class="landing-bullet-list">
-            <li>o que é crítico</li>
-            <li>o que precisa de atenção</li>
-            <li>o que pode esperar</li>
-          </ul>
-          ${buildCtaBlock()}
+        <section class="landing-section landing-section--result">
+          <h2>Tome decisão mais rápido em campo</h2>
+          <div class="landing-grid landing-grid--result">
+            ${buildFeatureItems([
+              {
+                title: 'Alerta crítico',
+                text: 'Identifique imediatamente equipamentos fora de operação.',
+              },
+              {
+                title: 'Score de risco',
+                text: 'Priorize visitas com base em impacto real da falha.',
+              },
+              {
+                title: 'Ação sugerida',
+                text: 'Receba orientação objetiva para agir sem perder tempo.',
+              },
+            ])}
+          </div>
         </section>
 
         <section class="landing-section">
           <h2>Diferenciais</h2>
           <div class="landing-grid">
             ${buildFeatureItems([
-              { title: 'Prioridade automática', text: 'Veja primeiro o que realmente importa.' },
               {
-                title: 'Ação recomendada',
-                text: 'Saiba exatamente o que fazer em cada equipamento.',
+                title: 'Sem cadastro obrigatório',
+                text: 'Clique, teste e registre sem criar conta.',
               },
+              { title: 'Registro em segundos', text: 'Fluxo curto para quem está em campo.' },
               {
-                title: 'Fluxo rápido',
-                text: 'Registre um serviço em segundos, direto no campo.',
+                title: 'Prioridade automática',
+                text: 'Saiba o que resolver primeiro sem planilha.',
               },
+              { title: 'Relatório pronto', text: 'Histórico organizado para auditoria e repasse.' },
             ])}
           </div>
-          ${buildCtaBlock()}
         </section>
 
-        <section class="landing-section">
-          <h2>Como funciona</h2>
-          <ol class="landing-steps">
-            <li>Abra o sistema</li>
-            <li>Veja o que precisa de atenção</li>
-            <li>Resolva e registre</li>
-          </ol>
-          ${buildCtaBlock()}
-        </section>
-
-        <section class="landing-section">
-          <h2>Pricing simples</h2>
-          <div class="landing-pricing">
-            <article class="landing-plan">
-              <h3>Trial Guest</h3>
-              <p class="landing-plan__price">R$ 0</p>
-              <p>Teste imediato, sem conta.</p>
-              <button class="landing-btn landing-btn--primary" type="button" data-action="start-trial">
-                Testar agora sem conta
-              </button>
-            </article>
-            <article class="landing-plan">
-              <h3>Conta CoolTrack</h3>
-              <p class="landing-plan__price">Após trial</p>
-              <p>Dados persistidos na nuvem.</p>
-              <button class="landing-btn landing-btn--ghost" type="button" data-action="login">
-                Já tenho conta
-              </button>
-            </article>
+        <section class="landing-section landing-section--final-cta">
+          <h2>Comece agora — leva menos de 30 segundos</h2>
+          <div class="landing-cta-group landing-cta-group--final">
+            <button class="landing-btn landing-btn--primary" type="button" data-action="start-trial">
+              Testar sem conta
+            </button>
+            <button class="landing-btn landing-btn--ghost" type="button" data-action="login">
+              Entrar com Google
+            </button>
           </div>
         </section>
       </main>

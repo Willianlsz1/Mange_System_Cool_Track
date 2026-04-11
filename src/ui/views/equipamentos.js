@@ -12,6 +12,9 @@ import { withSkeleton } from '../components/skeleton.js';
 import { Profile } from '../../features/profile.js';
 import { calcHealthScore, getHealthClass, updateHeader } from './dashboard.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
+import { checkGuestLimit, isGuestMode } from '../../core/guestLimits.js';
+import { GuestConversionModal } from '../components/guestConversionModal.js';
+import { trackEvent } from '../../core/telemetry.js';
 import {
   evaluateEquipmentHealth,
   evaluateEquipmentRisk,
@@ -206,18 +209,15 @@ export function renderEquip(filtro = '') {
 }
 
 export async function saveEquip() {
-  if (localStorage.getItem('cooltrack-guest-mode') === '1') {
-    Toast.info('Salvar meus dados com Google para persistir equipamentos.');
-    try {
-      const { AuthScreen } = await import('../components/authscreen.js');
-      AuthScreen.show({ intent: 'guest-save' });
-    } catch (error) {
-      handleError(error, {
-        code: ErrorCodes.NETWORK_ERROR,
-        message: 'Não foi possível abrir a tela de login agora.',
-        context: { action: 'equipamentos.saveEquip.authscreen' },
-      });
-    }
+  const isGuest = isGuestMode();
+  const guestLimit = checkGuestLimit('equipamentos');
+  if (guestLimit.blocked) {
+    trackEvent('limit_reached', {
+      resource: 'equipamentos',
+      current: guestLimit.current,
+      limit: 5,
+    });
+    GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
     return;
   }
   const nome = Utils.getVal('eq-nome').trim();
@@ -299,6 +299,10 @@ export async function saveEquip() {
   renderEquip();
   updateHeader();
   Toast.success('Equipamento cadastrado.');
+
+  if (isGuest) {
+    GuestConversionModal.open({ reason: 'save_attempt', source: 'save-equip' });
+  }
 }
 
 export async function viewEquip(id) {
