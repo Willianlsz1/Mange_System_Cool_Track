@@ -2312,8 +2312,7 @@ mark,
 
 .header-help-menu {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  inset: calc(100% + 8px) 0 auto auto;
   width: 210px;
   padding: 6px;
   border: 1px solid var(--border);

@@ -28,6 +28,8 @@ describe('router', () => {
     const { registerRoute, goTo, currentRoute } = await loadRouterModule();
     const enterInicio = vi.fn();
     const pushSpy = vi.spyOn(window.history, 'pushState');
+    const routeChangedSpy = vi.fn();
+    document.addEventListener('app:route-changed', routeChangedSpy);
 
     registerRoute('inicio', enterInicio);
     goTo('inicio', { source: 'spec' });
@@ -37,6 +39,11 @@ describe('router', () => {
     expect(document.getElementById('nav-inicio').classList.contains('is-active')).toBe(true);
     expect(currentRoute()).toBe('inicio');
     expect(pushSpy).toHaveBeenCalledTimes(1);
+    expect(routeChangedSpy).toHaveBeenCalledTimes(1);
+    expect(routeChangedSpy.mock.calls[0][0].detail).toEqual({
+      route: 'inicio',
+      previousRoute: null,
+    });
   });
 
   it('runs transition hooks and switches active view after timeout', async () => {
