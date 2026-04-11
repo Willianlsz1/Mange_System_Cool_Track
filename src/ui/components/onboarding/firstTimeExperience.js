@@ -180,6 +180,91 @@ export const FirstTimeExperience = {
           display:flex;align-items:center;justify-content:center;
           font-size:13px;flex-shrink:0;
         }
+        .ftx-report-copy-top{
+          font-size:14px;color:#CFE2F4;line-height:1.5;
+          margin-bottom:14px;
+        }
+        .ftx-report-preview-wrap{
+          position:relative;
+          max-height:280px;
+          overflow:hidden;
+          border-radius:10px;
+          border:1px solid rgba(255,255,255,0.14);
+          margin-bottom:14px;
+          background:#fff;
+        }
+        .ftx-report-preview-wrap::after{
+          content:"";
+          position:absolute;
+          left:0;right:0;bottom:0;
+          height:58px;
+          background:linear-gradient(180deg,rgba(255,255,255,0) 0%,#fff 78%);
+          pointer-events:none;
+        }
+        .ftx-report-preview{
+          background:#fff;
+          color:#1B2430;
+          padding:14px;
+          font-size:11px;
+          line-height:1.45;
+        }
+        .ftx-report-header{
+          display:flex;align-items:center;justify-content:space-between;
+          gap:10px;padding-bottom:10px;border-bottom:1px solid #DCE4EC;
+          margin-bottom:10px;
+        }
+        .ftx-report-brand{
+          display:flex;align-items:center;gap:8px;
+          font-size:12px;font-weight:700;color:#0F2237;
+        }
+        .ftx-report-logo{
+          width:22px;height:22px;border-radius:6px;
+          background:#E8F8FC;border:1px solid #BCEAF3;
+          display:flex;align-items:center;justify-content:center;
+          color:#0089A0;font-size:12px;
+        }
+        .ftx-report-meta{
+          display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;
+          margin-bottom:10px;
+        }
+        .ftx-report-meta span{display:block;color:#5A6A7D;font-size:10px}
+        .ftx-report-meta strong{font-size:11px;color:#162232}
+        .ftx-report-table{
+          width:100%;border-collapse:collapse;
+          margin-bottom:14px;
+        }
+        .ftx-report-table th,
+        .ftx-report-table td{
+          border:1px solid #DEE6EE;
+          padding:6px 7px;
+          text-align:left;
+          vertical-align:top;
+          font-size:10px;
+        }
+        .ftx-report-table th{
+          background:#F5F8FB;
+          color:#33445A;
+          font-weight:700;
+        }
+        .ftx-signature-mock{
+          margin-top:14px;
+          padding-top:12px;
+          border-top:1px solid #E2E8EF;
+        }
+        .ftx-signature-line{
+          margin-top:18px;
+          border-top:1px dashed #8A98A8;
+          padding-top:6px;
+          font-size:10px;
+          color:#4C5C6E;
+          width:68%;
+        }
+        .ftx-report-copy-bottom{
+          text-align:center;
+          color:#8AAAC8;
+          font-size:13px;
+          margin-bottom:16px;
+        }
       </style>
 
       <div id="ftx-card">
@@ -188,6 +273,7 @@ export const FirstTimeExperience = {
           <div class="ftx-step-dot active" id="ftx-dot-0"></div>
           <div class="ftx-step-dot" id="ftx-dot-1"></div>
           <div class="ftx-step-dot" id="ftx-dot-2"></div>
+          <div class="ftx-step-dot" id="ftx-dot-3"></div>
         </div>
         <div id="ftx-content"></div>
       </div>
@@ -197,11 +283,12 @@ export const FirstTimeExperience = {
 
     let techName = Profile.get()?.nome || '';
     let equipData = {};
+    const todayLabel = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date());
 
     const contentEl = overlay.querySelector('#ftx-content');
 
     const setDots = (current) => {
-      [0, 1, 2].forEach((i) => {
+      [0, 1, 2, 3].forEach((i) => {
         const dot = overlay.querySelector(`#ftx-dot-${i}`);
         dot.className = 'ftx-step-dot' + (i === current ? ' active' : i < current ? ' done' : '');
       });
@@ -224,7 +311,7 @@ export const FirstTimeExperience = {
           </div>
 
           <div class="ftx-eyebrow">BEM-VINDO</div>
-          <div class="ftx-title">Gestão de manutenção para quem trabalha de verdade.</div>
+          <div class="ftx-title">Chega de planilha. Seus relatorios prontos em 30 segundos.</div>
 
           <div class="ftx-value-props">
             <div class="ftx-prop">
@@ -248,7 +335,7 @@ export const FirstTimeExperience = {
             autocomplete="name" />
 
           <button class="ftx-btn-primary" id="ftx-next-0">
-            Continuar →
+            Vamos la →
           </button>
           <div class="ftx-hint">2 minutos para configurar · Sem cartão de crédito</div>
         </div>`;
@@ -283,7 +370,7 @@ export const FirstTimeExperience = {
 
       contentEl.innerHTML = `
         <div class="ftx-step">
-          <div class="ftx-eyebrow">PASSO 1 DE 2</div>
+          <div class="ftx-eyebrow">PASSO 1 DE 3</div>
           <div class="ftx-title">Qual equipamento você quer monitorar, ${Utils.escapeHtml(firstName)}?</div>
           <div class="ftx-desc">Comece com o mais importante — você pode adicionar mais depois.</div>
 
@@ -328,7 +415,7 @@ export const FirstTimeExperience = {
           </div>
 
           <button class="ftx-btn-primary" id="ftx-next-1">
-            Cadastrar equipamento →
+            Salvar e continuar →
           </button>
           <div class="ftx-hint">Você edita ou exclui a qualquer momento</div>
         </div>`;
@@ -371,12 +458,82 @@ export const FirstTimeExperience = {
           tecnicos: prev.tecnicos.includes(techName) ? prev.tecnicos : [...prev.tecnicos, techName],
         }));
 
-        renderStep2();
+        renderStep2Preview();
       });
     };
 
-    const renderStep2 = () => {
+    const renderStep2Preview = () => {
       setDots(2);
+
+      contentEl.innerHTML = `
+        <div class="ftx-step">
+          <div class="ftx-eyebrow">PASSO 2 DE 3</div>
+          <div class="ftx-report-copy-top">Esse e o tipo de relatorio que seus clientes vao receber.</div>
+
+          <div class="ftx-report-preview-wrap" role="presentation">
+            <div class="ftx-report-preview">
+              <div class="ftx-report-header">
+                <div class="ftx-report-brand">
+                  <span class="ftx-report-logo">❄️</span>
+                  <span>CoolTrack Pro — Relatorio de Servico</span>
+                </div>
+              </div>
+
+              <div class="ftx-report-meta">
+                <div><span>Tecnico</span><strong>${Utils.escapeHtml(techName)}</strong></div>
+                <div><span>Data</span><strong>${Utils.escapeHtml(todayLabel)}</strong></div>
+                <div><span>Equipamento</span><strong>${Utils.escapeHtml(equipData.nome)}</strong></div>
+                <div><span>Tipo de servico</span><strong>Manutencao Preventiva</strong></div>
+              </div>
+
+              <table class="ftx-report-table" aria-label="Preview de relatorio">
+                <thead>
+                  <tr>
+                    <th>Servico</th>
+                    <th>Status</th>
+                    <th>Obs</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Limpeza de filtros</td>
+                    <td>Concluido</td>
+                    <td>Fluxo de ar estabilizado</td>
+                  </tr>
+                  <tr>
+                    <td>Inspecao eletrica</td>
+                    <td>Concluido</td>
+                    <td>Sem aquecimento anormal</td>
+                  </tr>
+                  <tr>
+                    <td>Verificacao de dreno</td>
+                    <td>Concluido</td>
+                    <td>Sem obstrucao detectada</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="ftx-signature-mock">
+                <span>Assinatura do cliente</span>
+                <div class="ftx-signature-line">Nome e assinatura</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ftx-report-copy-bottom">Profissional. Automatico. Com a sua marca.</div>
+
+          <button class="ftx-btn-primary" id="ftx-next-2">
+            Quero gerar relatorios assim →
+          </button>
+        </div>`;
+
+      overlay.querySelector('#ftx-next-2').addEventListener('click', () => {
+        renderStep3Success();
+      });
+    };
+
+    const renderStep3Success = () => {
+      setDots(3);
       const icon = TIPO_ICON[equipData.tipo] ?? '⚙️';
       const firstName = techName.split(' ')[0];
 
@@ -394,10 +551,10 @@ export const FirstTimeExperience = {
 
           <div class="ftx-actions">
             <button class="ftx-btn-primary" id="ftx-go-registro">
-              Registrar primeiro serviço →
+              Registrar meu primeiro servico →
             </button>
             <button class="ftx-btn-sec" id="ftx-go-dashboard">
-              Ver o painel primeiro
+              Explorar o painel
             </button>
           </div>
 
