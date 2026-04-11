@@ -218,13 +218,13 @@ export async function saveEquip() {
       limit: 5,
     });
     GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
-    return;
+    return false;
   }
   const nome = Utils.getVal('eq-nome').trim();
   const local = Utils.getVal('eq-local').trim();
   if (!nome || !local) {
     Toast.warning('Preencha nome e localização.');
-    return;
+    return false;
   }
 
   const tipo = Utils.getVal('eq-tipo');
@@ -240,7 +240,7 @@ export async function saveEquip() {
   const { equipamentos } = getState();
   if (normalizedTag && equipamentos.some((e) => (e.tag || '').toUpperCase() === normalizedTag)) {
     Toast.error('Já existe equipamento com esta TAG.');
-    return;
+    return false;
   }
 
   setState((prev) => ({
@@ -302,6 +302,8 @@ export async function saveEquip() {
   if (isGuest) {
     GuestConversionModal.open({ reason: 'save_attempt', source: 'save-equip' });
   }
+
+  return true;
 }
 
 export async function viewEquip(id) {
