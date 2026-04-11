@@ -13,6 +13,8 @@ import { Storage } from './core/storage.js';
 import { Tour } from './ui/components/tour.js';
 import { ErrorCodes, handleError } from './core/errors.js';
 
+const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
+
 {
   const p = new URLSearchParams(window.location.search);
   if (p.has('p')) {
@@ -65,6 +67,18 @@ async function bootstrap() {
     initController();
     initHistory();
     goTo('inicio', {}, { replaceHistory: true });
+    const pendingRedirectRaw = localStorage.getItem(POST_AUTH_REDIRECT_KEY);
+    if (pendingRedirectRaw) {
+      localStorage.removeItem(POST_AUTH_REDIRECT_KEY);
+      try {
+        const pendingRedirect = JSON.parse(pendingRedirectRaw);
+        if (pendingRedirect?.route) {
+          goTo(pendingRedirect.route, pendingRedirect.params || {});
+        }
+      } catch (_error) {
+        // no-op: ignore redirect payload malformatado
+      }
+    }
 
     requestAnimationFrame(() => {
       const { equipamentos } = getState();

@@ -98,7 +98,7 @@ export const UpgradeNudge = {
         <ul class="upgrade-nudge-card__list">
           ${BULLETS.map((bullet) => `<li class="upgrade-nudge-card__item"><span class="upgrade-nudge-card__check">✓</span>${bullet}</li>`).join('')}
         </ul>
-        <button class="upgrade-nudge-card__cta" type="button" data-action="open-upgrade">Ver planos →</button>
+        <button class="upgrade-nudge-card__cta" type="button" data-action="open-upgrade" data-upgrade-source="dashboard">Ver planos →</button>
       </article>
     `;
   },
@@ -129,7 +129,7 @@ export const UpgradeNudge = {
         </style>
 
         <span>🔒 ${safeFeature} disponivel no plano Pro</span>
-        <a href="#" class="upgrade-inline-hint__link" data-action="open-upgrade">Conhecer →</a>
+        <a href="#" class="upgrade-inline-hint__link" data-action="open-upgrade" data-upgrade-source="upgrade_nudge">Conhecer →</a>
       </div>
     `;
   },
