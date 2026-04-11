@@ -25,16 +25,43 @@ function getReportBarColor(percent) {
   return '#00C8E8';
 }
 
+function getUsageState(equipmentCount, reportsThisMonth) {
+  const equipmentOverLimit = equipmentCount > FREE_PLAN_EQUIP_LIMIT;
+  const reportOverLimit = reportsThisMonth > FREE_PLAN_REPORT_LIMIT;
+  const hasOverLimit = equipmentOverLimit || reportOverLimit;
+
+  const equipmentPercent = clampPercent(equipmentCount, FREE_PLAN_EQUIP_LIMIT);
+  const reportPercent = clampPercent(reportsThisMonth, FREE_PLAN_REPORT_LIMIT);
+  const hasNearLimit = !hasOverLimit && (equipmentPercent >= 80 || reportPercent >= 80);
+
+  return {
+    equipmentPercent,
+    reportPercent,
+    equipmentOverLimit,
+    hasOverLimit,
+    hasNearLimit,
+  };
+}
+
 export const UsageMeter = {
   render() {
     const { equipamentos, registros } = getState();
     const equipmentCount = equipamentos.length;
     const reportsThisMonth = countReportsThisMonth(registros);
 
-    const equipmentPercent = clampPercent(equipmentCount, FREE_PLAN_EQUIP_LIMIT);
-    const reportPercent = clampPercent(reportsThisMonth, FREE_PLAN_REPORT_LIMIT);
-    const reportColor = getReportBarColor(reportPercent);
-    const showAlmostLimitBadge = equipmentPercent > 80 || reportPercent > 80;
+    const usageState = getUsageState(equipmentCount, reportsThisMonth);
+    const equipmentBarColor = usageState.equipmentOverLimit ? '#e03040' : '#00C8E8';
+    const reportColor = usageState.hasOverLimit
+      ? '#e03040'
+      : getReportBarColor(usageState.reportPercent);
+    const upgradeText = usageState.hasOverLimit
+      ? 'Voce precisa do plano Pro para continuar →'
+      : 'Desbloquear ilimitado →';
+    const badgeHtml = usageState.hasOverLimit
+      ? '<span class="usage-meter__badge usage-meter__badge--danger">LIMITE ULTRAPASSADO</span>'
+      : usageState.hasNearLimit
+        ? '<span class="usage-meter__badge usage-meter__badge--warn">QUASE NO LIMITE</span>'
+        : '';
 
     return `
       <section class="usage-meter" aria-label="Consumo do plano grátis">
@@ -92,12 +119,20 @@ export const UsageMeter = {
           .usage-meter__badge {
             font-size: 11px;
             font-weight: 700;
-            color: #0b1c29;
-            background: #e8a020;
             border-radius: 999px;
             padding: 4px 8px;
             letter-spacing: 0.04em;
             animation: usage-meter-pulse 1.2s ease-in-out infinite;
+          }
+
+          .usage-meter__badge--warn {
+            background: rgba(232, 160, 32, 0.15);
+            color: #e8a020;
+          }
+
+          .usage-meter__badge--danger {
+            background: rgba(224, 48, 64, 0.15);
+            color: #e03040;
           }
 
           @keyframes usage-meter-pulse {
@@ -110,20 +145,20 @@ export const UsageMeter = {
         <div class="usage-meter__row">
           <div class="usage-meter__label">Equipamentos: <span class="usage-meter__value">${equipmentCount} / ${FREE_PLAN_EQUIP_LIMIT}</span> no plano gratis</div>
           <div class="usage-meter__track">
-            <div class="usage-meter__fill" style="width:${equipmentPercent}%;background:#00C8E8"></div>
+            <div class="usage-meter__fill" style="width:${usageState.equipmentPercent}%;background:${equipmentBarColor}"></div>
           </div>
         </div>
 
         <div class="usage-meter__row">
           <div class="usage-meter__label">Relatorios este mes: <span class="usage-meter__value">${reportsThisMonth} / ${FREE_PLAN_REPORT_LIMIT}</span> no plano gratis</div>
           <div class="usage-meter__track">
-            <div class="usage-meter__fill" style="width:${reportPercent}%;background:${reportColor}"></div>
+            <div class="usage-meter__fill" style="width:${usageState.reportPercent}%;background:${reportColor}"></div>
           </div>
         </div>
 
         <div class="usage-meter__actions">
-          <a class="usage-meter__upgrade" href="#" data-action="open-upgrade">Desbloquear ilimitado →</a>
-          ${showAlmostLimitBadge ? '<span class="usage-meter__badge">QUASE NO LIMITE</span>' : ''}
+          <a class="usage-meter__upgrade" href="#" data-action="open-upgrade">${upgradeText}</a>
+          ${badgeHtml}
         </div>
       </section>
     `;
@@ -134,4 +169,5 @@ export const UsageMeterInternal = {
   clampPercent,
   countReportsThisMonth,
   getReportBarColor,
+  getUsageState,
 };
