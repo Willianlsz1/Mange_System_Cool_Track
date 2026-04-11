@@ -23,12 +23,8 @@ export default defineConfig({
     port: 5173,
     open: true,
     host: true,
-    headers: {
-      'Content-Type': 'text/html; charset=utf-8',
-    },
   },
   build: {
-    charset: 'utf8',
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
