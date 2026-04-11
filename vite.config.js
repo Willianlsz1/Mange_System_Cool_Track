@@ -18,7 +18,7 @@ const vitestConfig = {
 };
 
 export default defineConfig({
-  base: '/Mange_System_Cool_Track/',
+  base: '/',
   server: {
     port: 5173,
     open: true,
