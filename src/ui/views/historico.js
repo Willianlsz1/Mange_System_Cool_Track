@@ -68,12 +68,12 @@ function renderSummaryCard(list) {
         <div class="hist-summary-item__value">${totalServicos}</div>
         <div class="hist-summary-item__label">Serviços registrados</div>
       </div>
-      <div class="hist-summary-item__separator" aria-hidden="true">·</div>
+      <div class="hist-summary-item__separator" aria-hidden="true">&middot;</div>
       <div class="hist-summary-item" role="listitem">
         <div class="hist-summary-item__value">${formatCurrency(custoTotal)}</div>
         <div class="hist-summary-item__label">Custo total</div>
       </div>
-      <div class="hist-summary-item__separator" aria-hidden="true">·</div>
+      <div class="hist-summary-item__separator" aria-hidden="true">&middot;</div>
       <div class="hist-summary-item" role="listitem">
         <div class="hist-summary-item__value">${mediaLabel}</div>
         <div class="hist-summary-item__label">Média entre preventivas</div>
@@ -81,7 +81,7 @@ function renderSummaryCard(list) {
     </div>
     <div class="hist-summary-upsell">
       <span>📊 Economize 3h/semana com relatórios automáticos</span>
-      <button type="button" class="hist-summary-upsell__link" data-action="hist-pricing-link">Ver planos →</button>
+      <button type="button" class="hist-summary-upsell__link" data-action="hist-pricing-link">Ver planos &rarr;</button>
     </div>
   </section>`;
 }
@@ -132,7 +132,7 @@ export function renderHist() {
               <div class="engaging-empty-state__icon">📋</div>
               <h3 class="engaging-empty-state__title">Nenhum serviço registrado ainda</h3>
               <p class="engaging-empty-state__description">Cada serviço registrado vira um relatório profissional pronto para o cliente. Técnicos que registram aqui economizam em média 3 horas por semana.</p>
-              <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar meu primeiro serviço →</button>
+              <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar meu primeiro serviço &rarr;</button>
               <div class="engaging-empty-state__microcopy">Leva menos de 2 minutos</div>
             </section>`;
       el.querySelector('[data-action="hist-pricing-link"]')?.addEventListener('click', () =>
@@ -156,7 +156,7 @@ export function renderHist() {
         <div class="timeline__item-inner">
           <div class="timeline__date">${isToday ? '<span class="timeline__today-badge">Hoje</span> ' : ''}${Utils.formatDatetime(r.data)}</div>
           <div class="timeline__title">${Utils.escapeHtml(r.tipo)}</div>
-          <div class="timeline__equip">${Utils.escapeHtml(eq?.nome ?? '—')} · ${Utils.escapeHtml(eq?.tag ?? eq?.local ?? '')}</div>
+          <div class="timeline__equip">${Utils.escapeHtml(eq?.nome ?? '—')} &middot; ${Utils.escapeHtml(eq?.tag ?? eq?.local ?? '')}</div>
           <div class="timeline__obs">${Utils.escapeHtml(r.obs)}</div>
           ${r.pecas ? `<div class="timeline__parts">Peças: ${Utils.escapeHtml(r.pecas)}</div>` : ''}
           ${r.tecnico ? `<div class="timeline__parts">Técnico: ${Utils.escapeHtml(r.tecnico)}</div>` : ''}

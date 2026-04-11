@@ -57,7 +57,7 @@ export const LandingPage = {
               Entrar com Google
             </button>
           </div>
-          <p class="landing-microcopy">Sem cadastro • Sem cartão • Comece em segundos</p>
+          <p class="landing-microcopy">Sem cadastro &bull; Sem cartão &bull; Comece em segundos</p>
           <article class="landing-mockup" aria-label="Exemplo da tela do CoolTrack">
             <header class="landing-mockup__header">
               <strong>Hospital Central — Chiller 02</strong>

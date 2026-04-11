@@ -111,9 +111,9 @@ export function renderShellModals() {
 
       <div class="btn-group modal__footer">
         <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button>
-        <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento →</button>
+        <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento &rarr;</button>
       </div>
-      <p class="modal-trust-note modal-trust-note--footer">✓ Você pode editar ou excluir a qualquer momento
+      <p class="modal-trust-note modal-trust-note--footer">&#10003; Você pode editar ou excluir a qualquer momento
       </p>
     </div>
   </div>
