@@ -5,13 +5,16 @@ import { Photos } from '../../components/photos.js';
 import { Toast } from '../../../core/toast.js';
 import { Tour } from '../../components/tour.js';
 
+let isHelpOpen = false;
+
 function setHelpMenuState(open) {
   const menu = document.getElementById('header-help-menu');
   const trigger = document.getElementById('header-help-btn');
   if (!menu || !trigger) return;
-  menu.hidden = !open;
-  trigger.setAttribute('aria-expanded', String(open));
-  trigger.classList.toggle('is-active', open);
+  isHelpOpen = Boolean(open);
+  menu.hidden = !isHelpOpen;
+  trigger.setAttribute('aria-expanded', String(isHelpOpen));
+  trigger.classList.toggle('is-active', isHelpOpen);
 }
 
 export function bindNavigationHandlers() {
@@ -19,16 +22,18 @@ export function bindNavigationHandlers() {
     document.body.dataset.helpMenuBound = '1';
     document.addEventListener('click', (event) => {
       const insideHelp = event.target.closest('.header-help');
-      if (!insideHelp) setHelpMenuState(false);
+      if (!insideHelp && isHelpOpen) setHelpMenuState(false);
+    });
+
+    document.addEventListener('app:route-changed', () => {
+      if (isHelpOpen) setHelpMenuState(false);
     });
   }
 
   on('open-modal', (el) => Modal.open(el.dataset.id));
   on('close-modal', (el) => Modal.close(el.dataset.id));
   on('toggle-help-menu', () => {
-    const menu = document.getElementById('header-help-menu');
-    if (!menu) return;
-    setHelpMenuState(menu.hidden);
+    setHelpMenuState(!isHelpOpen);
   });
   on('help-open-tutorial', () => {
     setHelpMenuState(false);
