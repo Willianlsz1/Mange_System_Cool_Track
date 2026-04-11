@@ -94,7 +94,12 @@ export const AuthScreen = {
           </div>
           <div class="auth-hint">Seus dados ficam salvos na nuvem,<br>acessiveis de qualquer dispositivo.</div>
           <div class="auth-guest-panel">
-            <button class="auth-btn-guest" id="btn-guest" type="button">Explorar sem conta &rarr;</button>
+            <button class="auth-btn-guest" id="btn-guest" type="button">Ver demo interativa &rarr;</button>
+            <div id="guest-lead-form" hidden>
+              <label class="auth-label" for="guest-lead-email" style="margin-top:10px">Receba dicas de manutencao + acesso a demo</label>
+              <input class="auth-input" id="guest-lead-email" type="email" placeholder="seu@email.com" autocomplete="email" />
+              <button class="auth-btn-guest" id="btn-guest-start" type="button">Iniciar demo &rarr;</button>
+            </div>
             <div class="auth-hint auth-hint--tight">Dados de exemplo &middot; Nada e salvo</div>
           </div>
         </div>
@@ -205,6 +210,17 @@ export const AuthScreen = {
     });
 
     overlay.querySelector('#btn-guest').addEventListener('click', () => {
+      const guestLeadForm = overlay.querySelector('#guest-lead-form');
+      guestLeadForm.hidden = false;
+      overlay.querySelector('#guest-lead-email')?.focus();
+    });
+
+    overlay.querySelector('#btn-guest-start').addEventListener('click', () => {
+      const email = overlay.querySelector('#guest-lead-email').value.trim();
+      if (!email) return Toast.warning('Informe seu email para acessar a demo.');
+      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email valido.');
+
+      localStorage.setItem('cooltrack-lead-email', email);
       localStorage.setItem('cooltrack-guest-mode', '1');
       overlay.remove();
       window.location.reload();
