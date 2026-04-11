@@ -121,7 +121,7 @@ export const AuthScreen = {
         </div>
       </div>
 
-              <section class="auth-social-proof" aria-label="Benefícios do sistema">
+        <section class="auth-social-proof" aria-label="Benefícios do sistema">
           <p class="auth-social-proof__community">
             Organize equipamentos, registros e relatórios em um só lugar
           </p>
@@ -144,17 +144,6 @@ export const AuthScreen = {
             text-align: center;
           }
         </style>
-
-        @media (max-width: 479px) {
-          .auth-social-proof__testimonials {
-            display: none;
-          }
-
-          .auth-social-proof__community {
-            display: none;
-          }
-        }
-      </style>
     `;
 
     document.body.appendChild(overlay);
