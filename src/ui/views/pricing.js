@@ -3,8 +3,16 @@ import { fetchMyProfileBilling } from '../../core/monetization.js';
 import { PLAN_CODE_FREE, PLAN_CODE_PRO, getEffectivePlan } from '../../core/subscriptionPlans.js';
 import { Utils } from '../../core/utils.js';
 
+const PRICING_REASON_LIMIT_REACHED = 'limit_reached';
+
 function normalizeHighlightPlan(highlightPlan) {
   return String(highlightPlan || '').toLowerCase() === PLAN_CODE_PRO ? PLAN_CODE_PRO : null;
+}
+
+function normalizePricingReason(reason) {
+  return String(reason || '').toLowerCase() === PRICING_REASON_LIMIT_REACHED
+    ? PRICING_REASON_LIMIT_REACHED
+    : null;
 }
 
 async function resolveCurrentPlanCode() {
@@ -21,11 +29,12 @@ async function resolveCurrentPlanCode() {
   }
 }
 
-function getPricingMarkup(planCode, { highlightPlan = null } = {}) {
+function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}) {
   const isPro = planCode === PLAN_CODE_PRO;
   const isFree = !isPro;
   const freeHighlighted = highlightPlan === PLAN_CODE_FREE;
   const proHighlighted = highlightPlan === PLAN_CODE_PRO;
+  const showLimitMessage = reason === PRICING_REASON_LIMIT_REACHED && isFree;
 
   const freeCardClasses = [
     'pricing-card',
@@ -54,6 +63,11 @@ function getPricingMarkup(planCode, { highlightPlan = null } = {}) {
         <p class="pricing-plan-indicator pricing-plan-indicator--${planCode}">
           Seu plano atual: <strong>${planLabel}</strong>
         </p>
+        ${
+          showLimitMessage
+            ? '<p class="pricing-upgrade-reason">Voce atingiu o limite do plano Free. Assine o Pro para continuar sem bloqueios.</p>'
+            : ''
+        }
       </header>
 
       <div class="pricing-grid" role="list" aria-label="Planos disponiveis">
@@ -136,5 +150,6 @@ export async function renderPricing(params = {}) {
 
   const currentPlanCode = await resolveCurrentPlanCode();
   const highlightPlan = normalizeHighlightPlan(params?.highlightPlan);
-  view.innerHTML = getPricingMarkup(currentPlanCode, { highlightPlan });
+  const reason = normalizePricingReason(params?.reason);
+  view.innerHTML = getPricingMarkup(currentPlanCode, { highlightPlan, reason });
 }

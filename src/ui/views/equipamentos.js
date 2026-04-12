@@ -217,7 +217,8 @@ export function renderEquip(filtro = '', options = {}) {
 
 export async function saveEquip() {
   const isGuest = isGuestMode();
-  const planLimit = await checkPlanLimit('equipamentos');
+  const { equipamentos } = getState();
+  const planLimit = await checkPlanLimit('equipamentos', equipamentos.length);
   if (planLimit.blocked) {
     trackEvent('limit_reached', {
       resource: 'equipamentos',
@@ -228,14 +229,13 @@ export async function saveEquip() {
       GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
     } else {
       Toast.warning(
-        `Voce atingiu o limite de ${planLimit.limit} equipamentos do plano Free. Assine o Pro para cadastrar mais.`,
+        `Limite atingido (${planLimit.current}/${planLimit.limit}). Faça upgrade para o plano Pro.`,
       );
       const { goTo } = await import('../../core/router.js');
-      goTo('pricing', { highlightPlan: 'pro' });
+      goTo('pricing', { highlightPlan: 'pro', reason: 'limit_reached' });
     }
     return false;
   }
-  const { equipamentos } = getState();
   const tipo = Utils.getVal('eq-tipo');
   const criticidade = Utils.getVal('eq-criticidade') || 'media';
   const prioridadeOperacional = Utils.getVal('eq-prioridade') || 'normal';

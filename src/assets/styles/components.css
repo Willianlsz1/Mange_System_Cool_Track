@@ -4789,6 +4789,12 @@ mark,
   background: rgba(0, 200, 112, 0.12);
 }
 
+.pricing-upgrade-reason {
+  margin-top: var(--space-2);
+  color: #ffcf66;
+  font-size: 13px;
+}
+
 .pricing-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
