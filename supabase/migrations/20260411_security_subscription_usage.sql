@@ -1,6 +1,62 @@
 -- Security hardening for subscription plan and monthly usage limits.
 -- Date: 2026-04-11
 
+-- Cria a tabela profiles caso ainda não exista (criada pelo trigger de auth ou manualmente)
+create table if not exists public.profiles (
+  id uuid not null references auth.users (id) on delete cascade,
+  nome text,
+  plan_code text not null default 'free',
+  stripe_customer_id text,
+  stripe_subscription_id text,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint profiles_pkey primary key (id),
+  constraint profiles_plan_code_check check (plan_code in ('free', 'pro'))
+);
+
+alter table public.profiles enable row level security;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'profiles'
+      and policyname = 'profiles_select_own'
+  ) then
+    create policy profiles_select_own
+      on public.profiles for select
+      to authenticated
+      using (auth.uid() = id);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'profiles'
+      and policyname = 'profiles_insert_own'
+  ) then
+    create policy profiles_insert_own
+      on public.profiles for insert
+      to authenticated
+      with check (auth.uid() = id);
+  end if;
+
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename = 'profiles'
+      and policyname = 'profiles_update_own'
+  ) then
+    create policy profiles_update_own
+      on public.profiles for update
+      to authenticated
+      using (auth.uid() = id)
+      with check (auth.uid() = id);
+  end if;
+end $$;
+
+-- Adiciona colunas caso a tabela já existisse sem elas
 alter table public.profiles
   add column if not exists plan_code text not null default 'free';
 
