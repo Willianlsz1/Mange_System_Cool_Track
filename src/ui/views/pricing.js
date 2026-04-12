@@ -88,10 +88,33 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
             ${isPro ? 'PLANO ATUAL' : 'MAIS POPULAR'}
           </span>
           <h2 class="pricing-card__title">Pro</h2>
+
+          <!-- Toggle mensal / anual -->
+          ${
+            !isPro
+              ? `<div class="pricing-billing-toggle" role="group" aria-label="Ciclo de cobrança">
+                  <button class="pricing-billing-toggle__btn pricing-billing-toggle__btn--active" data-billing="monthly" type="button">Mensal</button>
+                  <button class="pricing-billing-toggle__btn" data-billing="annual" type="button">
+                    Anual <span class="pricing-billing-toggle__save">-28%</span>
+                  </button>
+                </div>`
+              : ''
+          }
+
           <div class="pricing-card__price-group">
-            <p class="pricing-card__price pricing-card__price--pro">R$ 29 <span class="pricing-card__price-period">/ mês</span></p>
-            <p class="pricing-card__annual">ou R$ 249/ano <span class="pricing-card__annual-save">economize 28%</span></p>
+            <p class="pricing-card__price pricing-card__price--pro" id="pro-price-label">
+              R$ 29 <span class="pricing-card__price-period">/ mês</span>
+            </p>
+            <div id="pro-annual-label" style="display:none">
+              <p class="pricing-card__price pricing-card__price--pro">
+                R$ 20<span class="pricing-card__price-cents">,75</span> <span class="pricing-card__price-period">/ mês</span>
+              </p>
+              <p class="pricing-card__annual-detail">
+                cobrado como R$ 249/ano &nbsp;<span class="pricing-card__annual-save">você economiza R$ 99</span>
+              </p>
+            </div>
           </div>
+
           <ul class="pricing-features" aria-label="Recursos do plano Pro">
             <li>Até 30 equipamentos cadastrados</li>
             <li>Registros de serviço ilimitados</li>
@@ -112,7 +135,7 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
                    data-action="manage-subscription"
                    aria-label="Gerenciar ou cancelar assinatura Pro"
                  >Gerenciar / cancelar assinatura</button>`
-                : `<button class="btn pricing-card__cta pricing-card__cta--pro" type="button" data-action="start-checkout" data-plan="pro" data-upgrade-source="pricing">
+                : `<button class="btn pricing-card__cta pricing-card__cta--pro" id="btn-checkout-pro" type="button" data-action="start-checkout" data-plan="pro" data-upgrade-source="pricing">
                    Assinar Pro &rarr;
                  </button>
                  <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>`
@@ -198,4 +221,34 @@ export async function renderPricing(params = {}) {
   const highlightPlan = normalizeHighlightPlan(params?.highlightPlan);
   const reason = normalizePricingReason(params?.reason);
   view.innerHTML = getPricingMarkup(currentPlanCode, { highlightPlan, reason });
+
+  // ── Toggle mensal/anual ─────────────────────────────────────────────────────
+  const toggleBtns = view.querySelectorAll('.pricing-billing-toggle__btn');
+  const priceLabel = view.querySelector('#pro-price-label');
+  const annualLabel = view.querySelector('#pro-annual-label');
+  const checkoutBtn = view.querySelector('#btn-checkout-pro');
+
+  toggleBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const billing = btn.dataset.billing;
+      toggleBtns.forEach((b) => b.classList.remove('pricing-billing-toggle__btn--active'));
+      btn.classList.add('pricing-billing-toggle__btn--active');
+
+      if (billing === 'annual') {
+        if (priceLabel) priceLabel.style.display = 'none';
+        if (annualLabel) annualLabel.style.display = '';
+        if (checkoutBtn) {
+          checkoutBtn.dataset.plan = 'pro_annual';
+          checkoutBtn.textContent = 'Assinar anual →';
+        }
+      } else {
+        if (priceLabel) priceLabel.style.display = '';
+        if (annualLabel) annualLabel.style.display = 'none';
+        if (checkoutBtn) {
+          checkoutBtn.dataset.plan = 'pro';
+          checkoutBtn.textContent = 'Assinar Pro →';
+        }
+      }
+    });
+  });
 }
