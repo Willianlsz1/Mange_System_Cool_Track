@@ -117,31 +117,49 @@ export function bindNavigationHandlers() {
     event?.preventDefault?.();
     trackEvent('manage_subscription_clicked', {});
 
-    // Feedback visual imediato no botão clicado
     const btn = el instanceof HTMLElement ? el : null;
     const originalText = btn?.textContent ?? '';
     if (btn) btn.textContent = 'Abrindo...';
 
-    try {
+    const tryOpenPortal = async () => {
       const { startBillingPortal } = await import('../../../core/monetization.js');
       const url = await startBillingPortal();
       window.location.href = url;
-    } catch (error) {
-      if (btn) btn.textContent = originalText;
+    };
 
-      if (error?.code === 'NO_SESSION' || error?.code === 'INVALID_JWT') {
-        Toast.warning('Sessão expirada. Faça login novamente para gerenciar sua assinatura.');
+    try {
+      await tryOpenPortal();
+    } catch (firstError) {
+      // Se a sessão está inválida, tenta um refresh silencioso e repete uma vez
+      if (firstError?.code === 'NO_SESSION' || firstError?.code === 'INVALID_JWT') {
+        try {
+          const { supabase } = await import('../../../core/supabase.js');
+          const { data } = await supabase.auth.refreshSession();
+          if (data?.session) {
+            // Sessão renovada — tenta abrir o portal novamente
+            await tryOpenPortal();
+            return;
+          }
+        } catch (_) {
+          // refresh falhou — segue para o fluxo de login abaixo
+        }
+
+        // Refresh não resolveu: pede login explícito
+        if (btn) btn.textContent = originalText;
+        Toast.warning('Sua sessão expirou. Faça login novamente para gerenciar sua assinatura.');
         AuthScreen.show();
         return;
       }
 
-      if (error?.code === 'NO_STRIPE_CUSTOMER') {
-        Toast.warning(error.message || 'Nenhuma assinatura ativa encontrada.');
+      if (btn) btn.textContent = originalText;
+
+      if (firstError?.code === 'NO_STRIPE_CUSTOMER') {
+        Toast.warning(firstError.message || 'Nenhuma assinatura ativa encontrada.');
         return;
       }
 
       Toast.error(
-        error?.message ||
+        firstError?.message ||
           'Não foi possível abrir o portal. Tente novamente ou entre em contato com o suporte.',
       );
     }

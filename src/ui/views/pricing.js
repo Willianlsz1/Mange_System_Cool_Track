@@ -162,8 +162,8 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
         </details>
 
         <details class="pricing-faq__item">
-          <summary>Aceita PIX ou boleto?</summary>
-          <p>No momento aceitamos <strong>cartão de crédito</strong> no checkout. Pagamento por PIX e boleto bancário estão sendo integrados e chegarão em breve.</p>
+          <summary>PIX e boleto estão disponíveis?</summary>
+          <p>Ainda não. No momento o pagamento é feito apenas via <strong>cartão de crédito</strong>. PIX e boleto bancário estão previstos e chegarão em breve.</p>
         </details>
 
         <details class="pricing-faq__item">
