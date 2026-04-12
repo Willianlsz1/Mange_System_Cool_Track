@@ -17,6 +17,7 @@ import { checkGuestLimit, isGuestMode } from '../../core/guestLimits.js';
 import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
 import { withViewSkeleton } from '../components/skeleton.js';
+import { validateRegistroPayload } from '../../core/inputValidation.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
 const QUICK_TEMPLATE_MAP = {
@@ -181,40 +182,40 @@ export async function saveRegistro() {
     GuestConversionModal.open({ reason: 'limit_registros', source: 'save-registro' });
     return false;
   }
-  const equipId = Utils.getVal('r-equip');
-  const data = Utils.getVal('r-data');
-  const tipo = Utils.getVal('r-tipo');
-  const obs = Utils.getVal('r-obs').trim();
-  const tecnico = Utils.getVal('r-tecnico').trim();
   const prioridade = Utils.getVal('r-prioridade') || 'media';
+  const { equipamentos } = getState();
+  const payloadValidation = validateRegistroPayload(
+    {
+      equipId: Utils.getVal('r-equip'),
+      data: Utils.getVal('r-data'),
+      tipo: Utils.getVal('r-tipo'),
+      obs: Utils.getVal('r-obs'),
+      tecnico: Utils.getVal('r-tecnico'),
+      status: Utils.getVal('r-status'),
+      pecas: Utils.getVal('r-pecas'),
+      proxima: Utils.getVal('r-proxima'),
+      custoPecas: Utils.getVal('r-custo-pecas'),
+      custoMaoObra: Utils.getVal('r-custo-mao-obra'),
+    },
+    { existingEquipamentos: equipamentos },
+  );
 
-  const missing = [];
-  if (!equipId) missing.push('Equipamento');
-  if (!data) missing.push('Data');
-  if (!tipo) missing.push('Tipo de Serviço');
-  if (!tecnico) missing.push('Técnico Responsável');
-  if (missing.length) {
-    Toast.warning(`Campos obrigatórios: ${missing.join(', ')}`);
+  if (!payloadValidation.valid) {
+    Toast.warning(payloadValidation.errors[0]);
     return false;
   }
+
+  const { equipId, data, tipo, tecnico, obs, pecas, proxima, status, custoPecas, custoMaoObra } =
+    payloadValidation.value;
 
   const descricaoFinal =
-    obs && obs.length >= 10 ? obs : `Serviço de ${tipo.toLowerCase()} registrado em modo rápido.`;
+    obs && obs.length >= 10 ? obs : `Servico de ${tipo.toLowerCase()} registrado em modo rapido.`;
 
-  const proxima = Utils.getVal('r-proxima');
-  if (proxima && proxima < data.slice(0, 10)) {
-    Toast.error('Próxima manutenção não pode ser anterior ao serviço.');
-    return false;
-  }
-
-  const status = Utils.getVal('r-status');
   const validation = validateOperationalPayload({ data, status });
   if (!validation.valid) {
     Toast.error(validation.errors[0]);
     return false;
   }
-  const custoPecas = parseFloat(Utils.getVal('r-custo-pecas') || '0') || 0;
-  const custoMaoObra = parseFloat(Utils.getVal('r-custo-mao-obra') || '0') || 0;
 
   Profile.saveLastTecnico(tecnico);
 
@@ -234,8 +235,8 @@ export async function saveRegistro() {
               tecnico,
               prioridade,
               status,
-              pecas: Utils.getVal('r-pecas').trim(),
-              proxima: Utils.getVal('r-proxima'),
+              pecas,
+              proxima,
               custoPecas,
               custoMaoObra,
             }
@@ -326,7 +327,7 @@ export async function saveRegistro() {
           tipo,
           obs: descricaoFinal,
           status,
-          pecas: Utils.getVal('r-pecas').trim(),
+          pecas,
           proxima,
           fotos: fotosRegistro,
           tecnico,

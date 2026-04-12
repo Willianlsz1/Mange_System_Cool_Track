@@ -3,8 +3,10 @@ import { Modal } from '../../../core/modal.js';
 import { goTo } from '../../../core/router.js';
 import { trackEvent } from '../../../core/telemetry.js';
 import { Photos } from '../../components/photos.js';
+import { SupportFeedbackModal } from '../../components/supportFeedbackModal.js';
 import { Toast } from '../../../core/toast.js';
 import { Tour } from '../../components/tour.js';
+import { AuthScreen } from '../../components/authscreen.js';
 
 let isHelpOpen = false;
 
@@ -46,7 +48,12 @@ export function bindNavigationHandlers() {
   });
   on('help-support', () => {
     setHelpMenuState(false);
-    Toast.info('Suporte em breve. Use este canal para dúvidas operacionais.');
+    SupportFeedbackModal.open('suporte');
+  });
+
+  on('help-feedback', () => {
+    setHelpMenuState(false);
+    SupportFeedbackModal.open('feedback');
   });
 
   on('go-register-equip', (el) => {
@@ -78,5 +85,65 @@ export function bindNavigationHandlers() {
     trackEvent('upgrade_cta_clicked', { source });
     const { goTo: dynamicGoTo } = await import('../../../core/router.js');
     dynamicGoTo('pricing', { highlightPlan: 'pro' });
+  });
+  on('start-checkout', async (el, event) => {
+    event?.preventDefault?.();
+    const plan = el?.dataset?.plan === 'pro' ? 'pro' : 'pro';
+    const source = el?.dataset?.upgradeSource || 'pricing';
+    trackEvent('checkout_start_clicked', { source, plan });
+
+    try {
+      const { startCheckout } = await import('../../../core/monetization.js');
+      const url = await startCheckout({ plan });
+      window.location.href = url;
+    } catch (error) {
+      if (error?.code === 'NO_SESSION') {
+        Toast.warning('Faça login para assinar o plano Pro.');
+        AuthScreen.show();
+        return;
+      }
+
+      if (error?.code === 'INVALID_JWT') {
+        Toast.warning('Sessão expirada. Faça login novamente.');
+        AuthScreen.show();
+        return;
+      }
+
+      Toast.error(error?.message || 'Não foi possível iniciar o checkout.');
+    }
+  });
+
+  on('manage-subscription', async (el, event) => {
+    event?.preventDefault?.();
+    trackEvent('manage_subscription_clicked', {});
+
+    // Feedback visual imediato no botão clicado
+    const btn = el instanceof HTMLElement ? el : null;
+    const originalText = btn?.textContent ?? '';
+    if (btn) btn.textContent = 'Abrindo...';
+
+    try {
+      const { startBillingPortal } = await import('../../../core/monetization.js');
+      const url = await startBillingPortal();
+      window.location.href = url;
+    } catch (error) {
+      if (btn) btn.textContent = originalText;
+
+      if (error?.code === 'NO_SESSION' || error?.code === 'INVALID_JWT') {
+        Toast.warning('Sessão expirada. Faça login novamente para gerenciar sua assinatura.');
+        AuthScreen.show();
+        return;
+      }
+
+      if (error?.code === 'NO_STRIPE_CUSTOMER') {
+        Toast.warning(error.message || 'Nenhuma assinatura ativa encontrada.');
+        return;
+      }
+
+      Toast.error(
+        error?.message ||
+          'Não foi possível abrir o portal. Tente novamente ou entre em contato com o suporte.',
+      );
+    }
   });
 }

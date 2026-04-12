@@ -17,7 +17,8 @@
     "prepare": "node .husky/install.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.101.1",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.103.0",
     "chart.js": "^4.4.2",
     "jspdf": "^2.5.1",
     "jspdf-autotable": "^3.8.2"
@@ -30,6 +31,7 @@
     "globals": "^17.4.0",
     "jsdom": "^25.0.1",
     "prettier": "^3.8.1",
+    "supabase": "^2.89.1",
     "vite": "^5.4.21",
     "vitest": "^2.1.8"
   }

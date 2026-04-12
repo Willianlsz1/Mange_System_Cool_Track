@@ -2,7 +2,7 @@ import { Utils } from '../../core/utils.js';
 
 const BULLETS = [
   'Equipamentos ilimitados',
-  'Relatorios PDF ilimitados',
+  'Relatórios PDF ilimitados',
   'Compartilhamento WhatsApp direto',
 ];
 
@@ -93,12 +93,12 @@ export const UpgradeNudge = {
         </style>
 
         <span class="upgrade-nudge-card__badge">POPULAR</span>
-        <div class="upgrade-nudge-card__icon" aria-hidden="true">⚡</div>
+        <div class="upgrade-nudge-card__icon" aria-hidden="true">&#9889;</div>
         <h3 class="upgrade-nudge-card__title">Desbloqueie o CoolTrack Pro completo</h3>
         <ul class="upgrade-nudge-card__list">
-          ${BULLETS.map((bullet) => `<li class="upgrade-nudge-card__item"><span class="upgrade-nudge-card__check">✓</span>${bullet}</li>`).join('')}
+          ${BULLETS.map((bullet) => `<li class="upgrade-nudge-card__item"><span class="upgrade-nudge-card__check">&#10003;</span>${bullet}</li>`).join('')}
         </ul>
-        <button class="upgrade-nudge-card__cta" type="button" data-action="open-upgrade" data-upgrade-source="dashboard">Ver planos →</button>
+        <button class="upgrade-nudge-card__cta" type="button" data-action="open-upgrade" data-upgrade-source="dashboard">Ver planos &rarr;</button>
       </article>
     `;
   },
@@ -128,8 +128,8 @@ export const UpgradeNudge = {
           }
         </style>
 
-        <span>🔒 ${safeFeature} disponivel no plano Pro</span>
-        <a href="#" class="upgrade-inline-hint__link" data-action="open-upgrade" data-upgrade-source="upgrade_nudge">Conhecer →</a>
+        <span>&#128274; ${safeFeature} disponível no plano Pro</span>
+        <a href="#" class="upgrade-inline-hint__link" data-action="open-upgrade" data-upgrade-source="upgrade_nudge">Conhecer &rarr;</a>
       </div>
     `;
   },

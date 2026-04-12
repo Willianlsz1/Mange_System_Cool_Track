@@ -1,9 +1,11 @@
 import { Profile } from '../../features/profile.js';
+import { getEffectivePlan, PLAN_CODE_PRO } from '../../core/subscriptionPlans.js';
+import { goTo } from '../../core/router.js';
 
 const ACCOUNT_MODAL_ID = 'account-modal-overlay';
 
 function getInitials(name) {
-  return String(name || 'Tecnico')
+  return String(name || 'T')
     .split(' ')
     .map((part) => part[0] || '')
     .slice(0, 2)
@@ -19,14 +21,27 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
   closeAccountModal();
 
   const profile = Profile.get() || {};
-  const name = profile.nome || 'Tecnico';
+  const name = profile.nome || 'Técnico';
   const email = user?.email || '';
+
+  // Plano: usa getEffectivePlan(null) que já respeita o dev mode e override
+  const planCode = getEffectivePlan(null);
+  const isPro = planCode === PLAN_CODE_PRO;
+
+  const planBadgeClass = isPro
+    ? 'account-modal__plan-badge account-modal__plan-badge--pro'
+    : 'account-modal__plan-badge account-modal__plan-badge--free';
+  const planLabel = isPro ? 'Pro' : 'Free';
 
   const overlay = document.createElement('div');
   overlay.id = ACCOUNT_MODAL_ID;
   overlay.className = 'modal-overlay is-open account-modal-overlay';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-label', 'Menu da conta');
+
   overlay.innerHTML = `
-    <div class="modal account-modal">
+    <div class="modal account-modal" role="menu">
+
       <div class="account-modal__header">
         <div class="account-modal__avatar"></div>
         <div class="account-modal__identity">
@@ -34,6 +49,21 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
           <div class="account-modal__email"></div>
         </div>
       </div>
+
+      <div class="account-modal__plan-row">
+        <span class="account-modal__plan-label">Plano atual</span>
+        ${
+          isPro
+            ? `<span class="${planBadgeClass}">✓ ${planLabel}</span>`
+            : `<div style="display:flex;align-items:center;gap:6px;">
+               <span class="${planBadgeClass}">${planLabel}</span>
+               <button type="button" class="account-modal__upgrade-btn" id="btn-upgrade-plan">
+                 Fazer upgrade →
+               </button>
+             </div>`
+        }
+      </div>
+
       <div class="account-modal__actions">
         <button type="button" class="account-modal__action account-modal__action--neutral" id="btn-edit-profile">
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
@@ -42,6 +72,18 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
           </svg>
           Editar perfil
         </button>
+        ${
+          isPro
+            ? `
+        <button type="button" class="account-modal__action account-modal__action--neutral" id="btn-manage-plan">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+            <rect x="1.5" y="3.5" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.2"></rect>
+            <path d="M1.5 6.5h12" stroke="currentColor" stroke-width="1.2"></path>
+          </svg>
+          Gerenciar assinatura
+        </button>`
+            : ''
+        }
         <button type="button" class="account-modal__action account-modal__action--danger" id="btn-signout">
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
             <path d="M6 2H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"></path>
@@ -51,9 +93,11 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
           Sair da conta
         </button>
       </div>
+
     </div>
   `;
 
+  // Preenche conteúdo dinâmico
   const avatarEl = overlay.querySelector('.account-modal__avatar');
   const nameEl = overlay.querySelector('.account-modal__name');
   const emailEl = overlay.querySelector('.account-modal__email');
@@ -61,13 +105,33 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
   if (nameEl) nameEl.textContent = name;
   if (emailEl) emailEl.textContent = email;
 
+  // Fechar ao clicar fora
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) closeAccountModal();
   });
 
+  // Fechar com Escape
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      closeAccountModal();
+      document.removeEventListener('keydown', onKeyDown);
+    }
+  };
+  document.addEventListener('keydown', onKeyDown);
+
   overlay.querySelector('#btn-edit-profile')?.addEventListener('click', () => {
     closeAccountModal();
     onEditProfile?.();
+  });
+
+  overlay.querySelector('#btn-upgrade-plan')?.addEventListener('click', () => {
+    closeAccountModal();
+    goTo('pricing');
+  });
+
+  overlay.querySelector('#btn-manage-plan')?.addEventListener('click', () => {
+    closeAccountModal();
+    goTo('pricing');
   });
 
   overlay.querySelector('#btn-signout')?.addEventListener('click', () => {

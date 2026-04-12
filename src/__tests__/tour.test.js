@@ -6,43 +6,91 @@ vi.mock('../core/router.js', () => ({
 
 describe('Tour', () => {
   beforeEach(() => {
-    document.body.innerHTML = `
-      <button id="header-help-btn"></button>
-      <button id="nav-registro"></button>
-      <button id="nav-equipamentos"></button>
-      <button id="nav-alertas"></button>
-      <div id="lista-equip"><div class="equip-card"></div></div>
-    `;
+    document.body.innerHTML = '';
     localStorage.clear();
     vi.restoreAllMocks();
-    vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-      cb();
-      return 1;
-    });
-    Element.prototype.scrollIntoView = vi.fn();
   });
 
-  it('renders updated onboarding flow with register CTA first', async () => {
+  it('renders slide-modal tour on start', async () => {
     const { Tour } = await import('../ui/components/tour.js');
 
     Tour.start();
-    await Promise.resolve();
-    await Promise.resolve();
 
-    const progress = document.querySelector('.tour-tooltip__progress')?.textContent;
-    const text = document.querySelector('.tour-tooltip__text')?.textContent;
+    const modal = document.getElementById('tour-modal');
+    expect(modal).not.toBeNull();
 
-    expect(progress).toContain('Passo 1 de 4');
-    expect(text).toContain('Toque aqui para registrar um serviço');
+    const title = modal.querySelector('#tour-title')?.textContent;
+    expect(title).toContain('Bem-vindo ao CoolTrack');
+
+    const icon = modal.querySelector('#tour-icon')?.textContent;
+    expect(icon).toBeTruthy();
   });
 
-  it('binds tutorial restart to header help button', async () => {
+  it('advances to next step when Próximo is clicked', async () => {
     const { Tour } = await import('../ui/components/tour.js');
-    const restartSpy = vi.spyOn(Tour, 'restart').mockImplementation(() => {});
 
-    Tour.bindHelpButton();
-    document.getElementById('header-help-btn')?.click();
+    Tour.start();
 
-    expect(restartSpy).toHaveBeenCalledTimes(1);
+    const nextBtn = document.getElementById('tour-next');
+    nextBtn?.click();
+
+    const title = document.getElementById('tour-title')?.textContent;
+    expect(title).toContain('Registre manutenções');
+  });
+
+  it('goes back to previous step when Anterior is clicked', async () => {
+    const { Tour } = await import('../ui/components/tour.js');
+
+    Tour.start();
+    // advance twice
+    document.getElementById('tour-next')?.click();
+    document.getElementById('tour-next')?.click();
+
+    const titleAfterTwoNexts = document.getElementById('tour-title')?.textContent;
+    expect(titleAfterTwoNexts).toContain('Gerencie equipamentos');
+
+    document.getElementById('tour-prev')?.click();
+    const titleAfterBack = document.getElementById('tour-title')?.textContent;
+    expect(titleAfterBack).toContain('Registre manutenções');
+  });
+
+  it('finishes and marks done when Pular tour is clicked', async () => {
+    const { Tour } = await import('../ui/components/tour.js');
+
+    Tour.start();
+    document.getElementById('tour-skip')?.click();
+
+    expect(localStorage.getItem('cooltrack-tour-done')).toBe('1');
+    expect(document.getElementById('tour-modal')).toBeNull();
+  });
+
+  it('finishes when last step Próximo is clicked', async () => {
+    const { Tour } = await import('../ui/components/tour.js');
+
+    Tour.start();
+    // Click next 3 times to reach last step (4 steps total)
+    for (let i = 0; i < 3; i++) {
+      document.getElementById('tour-next')?.click();
+    }
+    // Now on last step — click "Começar a usar"
+    document.getElementById('tour-next')?.click();
+
+    expect(localStorage.getItem('cooltrack-tour-done')).toBe('1');
+    expect(document.getElementById('tour-modal')).toBeNull();
+  });
+
+  it('keeps bindHelpButton as compatibility no-op', async () => {
+    const { Tour } = await import('../ui/components/tour.js');
+    expect(() => Tour.bindHelpButton()).not.toThrow();
+  });
+
+  it('does not start if tour already done', async () => {
+    localStorage.setItem('cooltrack-tour-done', '1');
+    const { Tour } = await import('../ui/components/tour.js');
+
+    Tour.initIfFirstVisit();
+
+    // Modal should NOT appear since tour is done
+    expect(document.getElementById('tour-modal')).toBeNull();
   });
 });

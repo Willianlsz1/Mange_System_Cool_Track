@@ -9,13 +9,13 @@ describe('UpgradeNudge', () => {
     expect(html).toContain('Equipamentos ilimitados');
     expect(html).toContain('Relatorios PDF ilimitados');
     expect(html).toContain('Compartilhamento WhatsApp direto');
-    expect(html).toContain('Ver planos →');
+    expect(html).toContain('Ver planos &rarr;');
   });
 
   it('escapa feature no hint inline', () => {
     const html = UpgradeNudge.renderInlineHint('<img src=x onerror=alert(1)>');
 
     expect(html).toContain('&lt;img src=x onerror=alert(1)&gt; disponivel no plano Pro');
-    expect(html).toContain('Conhecer →');
+    expect(html).toContain('Conhecer &rarr;');
   });
 });

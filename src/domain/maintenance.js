@@ -7,9 +7,9 @@ import {
 
 export const CRITICIDADE_LABEL = {
   baixa: 'Baixa',
-  media: 'Media',
+  media: 'Média',
   alta: 'Alta',
-  critica: 'Critica',
+  critica: 'Crítica',
 };
 
 export const PRIORIDADE_OPERACIONAL_LABEL = {
@@ -178,7 +178,7 @@ function formatDueLabel(daysToNext) {
   if (daysToNext == null) return 'sem agenda preventiva';
   if (daysToNext < 0) {
     const atraso = Math.abs(daysToNext);
-    return `atrasada ha ${atraso} dia${atraso === 1 ? '' : 's'}`;
+    return `atrasada há ${atraso} dia${atraso === 1 ? '' : 's'}`;
   }
   if (daysToNext === 0) return 'vence hoje';
   return `vence em ${daysToNext} dia${daysToNext === 1 ? '' : 's'}`;
@@ -400,7 +400,7 @@ export function getEquipmentMaintenanceContext(equipamento, registros = []) {
 
 export function evaluateEquipmentHealth(equipamento, registros = []) {
   if (!equipamento) {
-    return { score: 0, reasons: ['Equipamento nao encontrado'], context: null };
+    return { score: 0, reasons: ['Equipamento não encontrado'], context: null };
   }
 
   const context = getEquipmentMaintenanceContext(equipamento, registros);
@@ -409,13 +409,13 @@ export function evaluateEquipmentHealth(equipamento, registros = []) {
 
   if (penalty > 0) {
     reasons.push(
-      context.equipamento.status === 'danger' ? 'fora de operacao' : 'operando com atencao',
+      context.equipamento.status === 'danger' ? 'fora de operação' : 'operando com atenção',
     );
   }
 
   if (!context.ultimoRegistro) {
     penalty += 22;
-    reasons.push('sem historico tecnico');
+    reasons.push('sem histórico técnico');
   } else {
     const agePenalty = getAgePenalty(context.daysSinceLast, context.periodicidadeDias);
     const nextPenalty = getPreventivePenalty(context.daysToNext);
@@ -427,8 +427,8 @@ export function evaluateEquipmentHealth(equipamento, registros = []) {
     if (agePenalty > 0) reasons.push('intervalo acima da rotina preventiva');
     if (nextPenalty > 0 && context.daysToNext != null)
       reasons.push(formatDueLabel(context.daysToNext));
-    if (recentPenalty > 0) reasons.push('ocorrencias recorrentes recentes');
-    if (correctivePenalty > 0) reasons.push('historico corretivo repetitivo');
+    if (recentPenalty > 0) reasons.push('ocorrências recorrentes recentes');
+    if (correctivePenalty > 0) reasons.push('histórico corretivo repetitivo');
   }
 
   const operationalPenalty = getOperationalPenalty(context.equipamento, context);
@@ -436,7 +436,7 @@ export function evaluateEquipmentHealth(equipamento, registros = []) {
   if (operationalPenalty > 0) {
     if (context.equipamento.criticidade === 'critica') reasons.push('ativo de alta criticidade');
     else if (context.equipamento.criticidade === 'alta') {
-      reasons.push('ativo relevante para a operacao');
+      reasons.push('ativo relevante para a operação');
     }
     if (context.equipamento.prioridadeOperacional === 'alta') {
       reasons.push('impacto operacional elevado');
@@ -548,7 +548,7 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
         kind: 'critical',
         severity: 'danger',
         icon: '!!',
-        title: 'Equipamento fora de operacao',
+        title: 'Equipamento fora de operação',
         subtitle: `Prioridade ${PRIORIDADE_OPERACIONAL_LABEL[context.equipamento.prioridadeOperacional]} | criticidade ${CRITICIDADE_LABEL[context.equipamento.criticidade]}`,
         recommendedAction: 'register-now',
         sortScore: 220 + operationalScore,
@@ -566,8 +566,8 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
           ...baseAlert,
           kind: 'no-history',
           icon: 'i',
-          title: 'Equipamento sem historico preventivo',
-          subtitle: `Cadastre a primeira intervencao para iniciar a rotina de ${context.periodicidadeDias} dias`,
+          title: 'Equipamento sem histórico preventivo',
+          subtitle: `Cadastre a primeira intervenção para iniciar a rotina de ${context.periodicidadeDias} dias`,
           recommendedAction: 'start-history',
           sortScore: 120 + operationalScore,
         });
@@ -594,7 +594,7 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
         ...baseAlert,
         kind: 'upcoming',
         icon: '::',
-        title: 'Preventiva proxima',
+        title: 'Preventiva próxima',
         subtitle: `${formatDueLabel(context.daysToNext)} | janela de planejamento ${context.leadAlertDays} dias`,
         recommendedAction: 'schedule',
         sortScore: 120 + operationalScore + (context.leadAlertDays - context.daysToNext),
@@ -616,8 +616,8 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
         title: 'Equipamento exige acompanhamento',
         subtitle:
           context.recentCorrectiveCount >= 2
-            ? 'Historico recente com corretivas repetidas'
-            : 'Ocorrencias recentes indicam monitoramento mais curto',
+            ? 'Histórico recente com corretivas repetidas'
+            : 'Ocorrências recentes indicam monitoramento mais curto',
         recommendedAction: 'inspect',
         sortScore: 90 + operationalScore,
       });

@@ -3,15 +3,15 @@ import { GuestTracker } from '../../../core/guestTracker.js';
 
 function getGuestWarningMessage(count) {
   if (count >= 20) {
-    return `🚨 ${count} acoes perdidas em andamento. Ultima chance de salvar seu trabalho.`;
+    return `🚨 ${count} ações perdidas em andamento. Última chance de salvar seu trabalho.`;
   }
   if (count >= 12) {
-    return `⚠️ ${count} acoes nao salvas. Seus dados vao desaparecer ao fechar o navegador.`;
+    return `⚠️ ${count} ações não salvas. Seus dados vão desaparecer ao fechar o navegador.`;
   }
   if (count >= 7) {
-    return `Voce ja fez ${count} acoes sem salvar. Crie sua conta para nao perder nada.`;
+    return `Você já fez ${count} ações sem salvar. Crie sua conta para não perder nada.`;
   }
-  return `Você já registrou ${count} acoes sem salvar`;
+  return `Você já registrou ${count} ações sem salvar`;
 }
 
 export const GuestCtaModal = {
@@ -39,7 +39,7 @@ export const GuestCtaModal = {
             Você está explorando sem conta.<br>Seus dados não estão sendo salvos.
           </div>
           <div style="font-size:12px;color:#FF8A8A;line-height:1.5;margin-top:8px">
-            Seus dados serao perdidos ao fechar o navegador.
+            Seus dados serão perdidos ao fechar o navegador.
           </div>
         </div>
         <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
@@ -60,7 +60,7 @@ export const GuestCtaModal = {
             border:1px solid rgba(255,255,255,0.08);
             border-radius:8px;padding:12px 16px;
             color:#8AAAC8;font-size:14px;font-family:inherit;cursor:pointer;
-          ">Ja tenho conta</button>
+          ">Já tenho conta</button>
           <button id="guest-continue-btn" style="
             width:100%;background:transparent;border:none;
             color:#4A6880;font-size:12px;font-family:inherit;cursor:pointer;padding:8px;
@@ -91,6 +91,10 @@ export const GuestCtaModal = {
     guestOverlay.querySelector('#guest-signin-btn')?.addEventListener('click', () => {
       guestOverlay.remove();
       AuthScreen.show({ intent: 'guest-save' });
+    });
+
+    guestOverlay.querySelector('#guest-continue-btn')?.addEventListener('click', () => {
+      guestOverlay.remove();
     });
   },
 };

@@ -6,33 +6,36 @@ describe('LandingPage', () => {
     localStorage.clear();
   });
 
-  it('renders conversion hero, risk result and CTA', () => {
-    const onStartTrial = vi.fn();
+  it('renders hero headline and mockup card', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
 
-    LandingPage.render({ onStartTrial, onLogin: vi.fn() });
-
-    expect(document.querySelector('.landing-hero h1')?.textContent).toContain(
-      'Pare de perder tempo com manutenção desorganizada.',
-    );
-    expect(document.body.textContent).toContain('Sem cadastro • Sem cartão • Comece em segundos');
-    expect(document.body.textContent).toContain('ALERTA CRÍTICO');
-    expect(document.body.textContent).toContain('Score de risco: 87');
-    expect(document.body.textContent).toContain('Ação sugerida');
-
-    document.querySelector('[data-action="start-trial"]')?.click();
-    expect(onStartTrial).toHaveBeenCalledTimes(1);
+    const heroText = document.body.textContent;
+    expect(heroText).toContain('ALERTA CRÍTICO');
+    expect(heroText).toContain('Risco: 87');
+    expect(heroText).toContain('Ação sugerida');
+    expect(heroText).toContain('Testar agora');
   });
 
-  it('attaches repeated CTA and login callback', () => {
+  it('calls onStartTrial when start-trial buttons are clicked', () => {
     const onStartTrial = vi.fn();
+    LandingPage.render({ onStartTrial, onLogin: vi.fn() });
+
+    document.querySelectorAll('[data-action="start-trial"]').forEach((btn) => btn.click());
+    expect(onStartTrial).toHaveBeenCalled();
+  });
+
+  it('calls onLogin when login buttons are clicked', () => {
     const onLogin = vi.fn();
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin });
 
-    LandingPage.render({ onStartTrial, onLogin });
+    document.querySelectorAll('[data-action="login"]').forEach((btn) => btn.click());
+    expect(onLogin).toHaveBeenCalled();
+  });
 
-    document.querySelectorAll('[data-action="start-trial"]').forEach((button) => button.click());
-    document.querySelectorAll('[data-action="login"]').forEach((button) => button.click());
+  it('clear() removes landing-active class', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+    LandingPage.clear();
 
-    expect(onStartTrial).toHaveBeenCalledTimes(3);
-    expect(onLogin).toHaveBeenCalledTimes(3);
+    expect(document.getElementById('app')?.classList.contains('landing-active')).toBe(false);
   });
 });

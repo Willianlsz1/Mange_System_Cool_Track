@@ -48,9 +48,9 @@ export function renderAlertas() {
     contextual.innerHTML =
       preventivas7dCount > 0
         ? `<section class="alertas-context-banner" role="status" aria-live="polite">
-            <span class="alertas-context-banner__icon" aria-hidden="true">⚠️</span>
+            <span class="alertas-context-banner__icon" aria-hidden="true">&#9888;</span>
             <div class="alertas-context-banner__text">Você tem ${preventivas7dCount} preventiva(s) nos próximos 7 dias. Agende agora para evitar parada.</div>
-            <button type="button" class="alertas-context-banner__cta" data-action="go-equipamentos-preventiva-7d">Ver equipamentos →</button>
+            <button type="button" class="alertas-context-banner__cta" data-action="go-equipamentos-preventiva-7d">Ver equipamentos &rarr;</button>
           </section>`
         : '';
   }
@@ -69,7 +69,7 @@ export function renderAlertas() {
           <div class="engaging-empty-state__icon">🔧</div>
           <h3 class="engaging-empty-state__title">Cadastre um equipamento para receber alertas</h3>
           <p class="engaging-empty-state__description">Alertas automáticos identificam quando um equipamento precisa de atenção — sem você precisar lembrar.</p>
-          <button class="btn btn--primary engaging-empty-state__cta" data-nav="equipamentos">Cadastrar equipamento →</button>
+          <button class="btn btn--primary engaging-empty-state__cta" data-nav="equipamentos">Cadastrar equipamento &rarr;</button>
         </section>`;
         return;
       }

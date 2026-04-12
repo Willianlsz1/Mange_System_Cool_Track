@@ -102,11 +102,12 @@ export function renderShellViews() {
         <!-- EQUIPAMENTOS -->
         <div class="view" id="view-equipamentos">
           <div class="page-toolbar">
-            <div class="section-title">Parque de Equipamentos</div>
-            <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">+ Novo
-              equipamento</button>
+            <div class="section-title" id="equip-page-title">Parque de Equipamentos</div>
+            <div id="equip-toolbar-actions" style="display:flex;gap:8px;align-items:center">
+              <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">+ Novo equipamento</button>
+            </div>
           </div>
-          <div class="search-bar">
+          <div class="search-bar" id="equip-search-bar">
             <span class="search-bar__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14"
                 fill="none">
                 <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" />
@@ -212,7 +213,7 @@ export function renderShellViews() {
                 <input type="file" accept="image/*" multiple id="input-fotos" aria-label="Adicionar fotos" />
                 <div class="photo-drop__icon" aria-hidden="true">📷</div>
                 <div class="photo-drop__text" id="photo-drop-text">Adicionar fotos do serviço</div>
-                <div class="photo-drop__limit">Antes e depois · Máx. 5 fotos</div>
+                <div class="photo-drop__limit">Antes e depois &middot; Máx. 5 fotos</div>
               </div>
               <div class="photo-grid" id="photo-preview" role="list" aria-label="Fotos adicionadas"></div>
             </div>
@@ -272,6 +273,9 @@ export function renderShellViews() {
                 <input class="form-control search-bar__input" id="hist-busca" type="text"
                   placeholder="Buscar equipamento, tipo, técnico..." aria-label="Buscar no histórico" />
               </div>
+              <select id="hist-setor" class="form-control hist-equip-select" aria-label="Filtrar por setor" style="display:none">
+                <option value="">Todos os setores</option>
+              </select>
               <select id="hist-equip" class="form-control hist-equip-select" aria-label="Filtrar por equipamento">
                 <option value="">Todos</option>
               </select>
@@ -299,7 +303,7 @@ export function renderShellViews() {
           <div class="page-toolbar">
             <div class="section-title">Relatório de Manutenção</div>
             <div class="page-toolbar__actions">
-              <button class="btn btn--outline btn--sm" data-nav="historico">← Voltar</button>
+              <button class="btn btn--outline btn--sm" data-nav="historico">&larr; Voltar</button>
               <button class="btn btn--outline btn--sm" id="btn-print" data-action="print">Imprimir</button>
               <button class="btn btn--outline btn--sm btn--whatsapp" id="btn-whatsapp" data-action="whatsapp-export">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="icon-inline--fixed">
@@ -331,7 +335,7 @@ export function renderShellViews() {
           <div id="relatorio-corpo"></div>
         </div>
 
-        <!-- PRICING -->
+        <!-- PLANOS -->
         <div class="view" id="view-pricing"></div>
 `;
 }

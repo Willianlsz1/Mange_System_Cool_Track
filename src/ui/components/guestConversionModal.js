@@ -26,6 +26,8 @@ function buildReasonMessage(reason) {
     return 'Você gerou 3 relatórios este mês. O plano Pro tem relatórios ilimitados.';
   if (reason === 'limit_whatsapp')
     return 'Você atingiu o limite mensal de compartilhamentos no plano Free.';
+  if (reason === 'limit_pro_equipamentos')
+    return 'Você já cadastrou 30 equipamentos — o limite do plano Pro individual. Para gerenciar frotas maiores, estamos preparando o plano Empresa.';
   return 'Crie sua conta para não perder seus registros e continuar gerenciando seus equipamentos';
 }
 
@@ -55,9 +57,18 @@ export const GuestConversionModal = {
   } = {}) {
     removeModal();
     const trigger = source;
-    const isUpgrade = reason === 'limit_pdf' || reason === 'limit_whatsapp';
+    const isProLimit = reason === 'limit_pro_equipamentos';
+    const isUpgrade =
+      !isProLimit &&
+      (reason === 'limit_pdf' || reason === 'limit_whatsapp' || reason === 'premium_pdf');
+
     const resolvedTitle =
-      title || (isUpgrade ? 'Faça upgrade para o plano Pro' : 'Salve seus dados e continue usando');
+      title ||
+      (isProLimit
+        ? 'Limite do plano Pro atingido'
+        : isUpgrade
+          ? 'Faça upgrade para o plano Pro'
+          : 'Salve seus dados e continue usando');
     const resolvedMessage = message || buildReasonMessage(reason);
 
     const overlay = document.createElement('div');
@@ -67,24 +78,57 @@ export const GuestConversionModal = {
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-labelledby', 'guest-conv-title');
 
+    // Bloco de comparação de planos — não exibe para usuários Pro no limite
+    const planComparisonHtml = isProLimit
+      ? `<div class="guest-conv-pro-limit-info">
+           <div class="guest-conv-pro-limit-info__row">
+             <span class="guest-conv-pro-limit-info__label">Plano atual</span>
+             <span class="guest-conv-pro-limit-info__value guest-conv-pro-limit-info__value--pro">CoolTrack Pro</span>
+           </div>
+           <div class="guest-conv-pro-limit-info__row">
+             <span class="guest-conv-pro-limit-info__label">Equipamentos cadastrados</span>
+             <span class="guest-conv-pro-limit-info__value">30 / 30</span>
+           </div>
+           <div class="guest-conv-pro-limit-info__row">
+             <span class="guest-conv-pro-limit-info__label">Próximo passo</span>
+             <span class="guest-conv-pro-limit-info__value">Plano Empresa <span class="guest-conv-pro-limit-info__badge">Em breve</span></span>
+           </div>
+         </div>`
+      : `<div class="guest-conv-plan">
+           <div class="guest-conv-plan__card">
+             <span class="guest-conv-plan__label">Plano Free</span>
+             <ul class="guest-conv-plan__list">
+               <li>Até 3 equipamentos</li>
+               <li>10 registros de serviço/mês</li>
+               <li>Histórico dos últimos 30 dias</li>
+             </ul>
+           </div>
+           <div class="guest-conv-plan__card guest-conv-plan__card--pro">
+             <span class="guest-conv-plan__label guest-conv-plan__label--pro">Plano Pro</span>
+             <ul class="guest-conv-plan__list">
+               <li>Até 30 equipamentos</li>
+               <li>Registros de serviço ilimitados</li>
+               <li>Todo o histórico de manutenções</li>
+               <li>PDF, WhatsApp e setores</li>
+             </ul>
+           </div>
+         </div>`;
+
     overlay.innerHTML = `
       <div class="guest-conv-card">
         <h3 id="guest-conv-title">${Utils.escapeHtml(resolvedTitle)}</h3>
         <p>${Utils.escapeHtml(resolvedMessage)}</p>
         ${buildPreviewHtml(preview)}
-        <div class="guest-conv-plan">
-          <strong>Plano Free</strong>
-          <span>Até 5 equipamentos • Até 10 registros</span>
-          <strong>Plano Pro</strong>
-          <span>Ilimitado • Histórico completo • Relatórios</span>
-        </div>
+        ${planComparisonHtml}
         <div class="guest-conv-actions">
           ${
-            isUpgrade
-              ? `<button type="button" class="landing-btn landing-btn--primary" data-action="pricing">Ver planos Pro</button>
-                 <button type="button" class="landing-btn landing-btn--ghost" data-action="dismiss">Agora não</button>`
-              : `<button type="button" class="landing-btn landing-btn--primary" data-action="google">Salvar com Google</button>
-                 <button type="button" class="landing-btn landing-btn--ghost" data-action="email">Criar conta com e-mail</button>`
+            isProLimit
+              ? `<button type="button" class="landing-btn landing-btn--ghost" data-action="dismiss">Entendido</button>`
+              : isUpgrade
+                ? `<button type="button" class="landing-btn landing-btn--primary" data-action="pricing">Ver planos Pro</button>
+                   <button type="button" class="landing-btn landing-btn--ghost" data-action="dismiss">Agora não</button>`
+                : `<button type="button" class="landing-btn landing-btn--primary" data-action="google">Salvar com Google</button>
+                   <button type="button" class="landing-btn landing-btn--ghost" data-action="email">Criar conta com e-mail</button>`
           }
         </div>
       </div>
@@ -96,11 +140,15 @@ export const GuestConversionModal = {
       }
     });
 
-    if (isUpgrade) {
+    if (isProLimit) {
+      overlay.querySelector('[data-action="dismiss"]')?.addEventListener('click', () => {
+        closeModal({ converted: false, dismissEvent: 'pro_limit_dismissed', trigger });
+      });
+    } else if (isUpgrade) {
       overlay.querySelector('[data-action="pricing"]')?.addEventListener('click', async () => {
         closeModal({ converted: true, trigger });
         const { goTo } = await import('../../core/router.js');
-        goTo('pricing');
+        goTo('pricing', { highlightPlan: 'pro' });
       });
       overlay.querySelector('[data-action="dismiss"]')?.addEventListener('click', () => {
         closeModal({ converted: false, dismissEvent: 'guest_modal_dismissed', trigger });

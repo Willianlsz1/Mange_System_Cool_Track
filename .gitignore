@@ -5,5 +5,15 @@ coverage/
 .prettiercache
 .env
 .env.local
+.env.production
+.env.staging
 .DS_Store
 *.log
+*.key
+*.pem
+*.cert
+*.p12
+
+# Arquivos temporários de desenvolvimento / preview
+*-preview.html
+pdf_validacao.pdf

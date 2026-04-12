@@ -10,14 +10,21 @@ import { CRITICIDADE_LABEL, PRIORIDADE_OPERACIONAL_LABEL } from '../../domain/ma
 
 export function populateRelatorioSelects() {
   const { equipamentos } = getState();
-  const opts = equipamentos
-    .map(
-      (e) =>
-        `<option value="${Utils.escapeAttr(e.id)}">${Utils.escapeHtml(e.nome)} — ${Utils.escapeHtml(e.local)}</option>`,
-    )
-    .join('');
   const el = Utils.getEl('rel-equip');
-  if (el) el.innerHTML = '<option value="">Todos</option>' + opts;
+  if (!el) return;
+
+  el.textContent = '';
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.textContent = 'Todos';
+  el.appendChild(defaultOption);
+
+  equipamentos.forEach((equipamento) => {
+    const option = document.createElement('option');
+    option.value = String(equipamento.id || '');
+    option.textContent = `${equipamento.nome || '-'} - ${equipamento.local || '-'}`;
+    el.appendChild(option);
+  });
 }
 
 export function renderRelatorio() {
@@ -43,15 +50,15 @@ export function renderRelatorio() {
   const renderContent = () => {
     if (!list.length) {
       el.innerHTML = `<section class="engaging-empty-state" aria-label="Sem dados para relatório">
-        <div class="engaging-empty-state__icon">📋</div>
+        <div class="engaging-empty-state__icon">&#128203;</div>
         <h3 class="engaging-empty-state__title">Sem registros no período selecionado</h3>
         <p class="engaging-empty-state__description">Registre um serviço e veja seu relatório profissional pronto para envio em segundos.</p>
         <div class="report-empty-preview-wrap" role="presentation">
           <div class="report-empty-preview">
             <div class="report-empty-preview__header">
               <div class="report-empty-preview__brand">
-                <span>❄️</span>
-                <span>CoolTrack Pro — Relatório de Serviço</span>
+                <span>&#10052;&#65039;</span>
+                <span>CoolTrack Pro - Relatório de Serviço</span>
               </div>
             </div>
             <div class="report-empty-preview__meta">
@@ -72,15 +79,15 @@ export function renderRelatorio() {
             </table>
           </div>
         </div>
-        <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar serviço para gerar relatório →</button>
+        <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar serviço para gerar relatório &rarr;</button>
       </section>`;
       return;
     }
 
     el.innerHTML = `
       <div class="card">
-        <div class="report-header">RELATÓRIO DE MANUTENÇÃO — COOLTRACK PRO</div>
-        <div class="report-meta">Gerado em ${hoje} · ${list.length} registro(s)${total > 0 ? ` · Total: R$ ${total.toFixed(2).replace('.', ',')}` : ''}</div>
+        <div class="report-header">RELATÓRIO DE MANUTENÇÃO - COOLTRACK PRO</div>
+        <div class="report-meta">Gerado em ${hoje} &middot; ${list.length} registro(s)${total > 0 ? ` &middot; Total: R$ ${total.toFixed(2).replace('.', ',')}` : ''}</div>
       </div>
       ${list
         .map((r) => {
@@ -102,14 +109,14 @@ export function renderRelatorio() {
             <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq?.fluido ?? '—')}</span></div>
             <div class="info-row"><span class="info-row__label">Criticidade</span><span class="info-row__value">${Utils.escapeHtml(CRITICIDADE_LABEL[eq?.criticidade] || CRITICIDADE_LABEL.media)}</span></div>
             <div class="info-row"><span class="info-row__label">Prioridade operacional</span><span class="info-row__value">${Utils.escapeHtml(PRIORIDADE_OPERACIONAL_LABEL[eq?.prioridadeOperacional] || PRIORIDADE_OPERACIONAL_LABEL.normal)}</span></div>
-            <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${Utils.escapeHtml(eq?.periodicidadePreventivaDias ? `${eq.periodicidadePreventivaDias} dias` : '—')}</span></div>
+            <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${eq?.periodicidadePreventivaDias ? `${eq.periodicidadePreventivaDias} dias` : '—'}</span></div>
             <div class="info-row"><span class="info-row__label">Técnico</span><span class="info-row__value">${Utils.escapeHtml(r.tecnico ?? '—')}</span></div>
             ${r.pecas ? `<div class="info-row"><span class="info-row__label">Peças / Materiais</span><span class="info-row__value">${Utils.escapeHtml(r.pecas)}</span></div>` : ''}
             ${r.custoPecas > 0 ? `<div class="info-row"><span class="info-row__label">Custo de Peças</span><span class="info-row__value">R$ ${parseFloat(r.custoPecas).toFixed(2).replace('.', ',')}</span></div>` : ''}
             ${r.custoMaoObra > 0 ? `<div class="info-row"><span class="info-row__label">Mão de Obra</span><span class="info-row__value">R$ ${parseFloat(r.custoMaoObra).toFixed(2).replace('.', ',')}</span></div>` : ''}
             ${custoTotal > 0 ? `<div class="info-row info-row--total"><span class="info-row__label info-row__label--strong">Total do Serviço</span><span class="info-row__value info-row__value--primary">R$ ${custoTotal.toFixed(2).replace('.', ',')}</span></div>` : ''}
             ${r.proxima ? `<div class="info-row"><span class="info-row__label">Próxima Manutenção</span><span class="info-row__value">${Utils.formatDate(r.proxima)}</span></div>` : ''}
-            ${r.assinatura ? `<div class="info-row"><span class="info-row__label">Assinatura</span><span class="info-row__value info-row__value--success">✓ Assinado pelo cliente</span></div>` : ''}
+            ${r.assinatura ? `<div class="info-row"><span class="info-row__label">Assinatura</span><span class="info-row__value info-row__value--success">&#10003; Assinado pelo cliente</span></div>` : ''}
           </div>
           <div class="report-record__obs">${Utils.escapeHtml(r.obs)}</div>
         </div>`;

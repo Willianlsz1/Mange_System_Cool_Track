@@ -4,7 +4,7 @@
  */
 
 import { Utils } from '../../core/utils.js';
-import { getState, findEquip, setState } from '../../core/state.js';
+import { getState, findEquip, setState, findSetor } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Toast } from '../../core/toast.js';
 import { goTo } from '../../core/router.js';
@@ -14,6 +14,9 @@ import { cleanupOrphanSignatures } from '../components/signature.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { updateHeader } from './dashboard.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
+import { isCachedPlanPro } from '../../core/planCache.js';
+
+const HIST_FREE_LIMIT_DAYS = 30;
 
 function toNumber(value) {
   const parsed = parseFloat(value);
@@ -68,12 +71,12 @@ function renderSummaryCard(list) {
         <div class="hist-summary-item__value">${totalServicos}</div>
         <div class="hist-summary-item__label">Serviços registrados</div>
       </div>
-      <div class="hist-summary-item__separator" aria-hidden="true">·</div>
+      <div class="hist-summary-item__separator" aria-hidden="true">&middot;</div>
       <div class="hist-summary-item" role="listitem">
         <div class="hist-summary-item__value">${formatCurrency(custoTotal)}</div>
         <div class="hist-summary-item__label">Custo total</div>
       </div>
-      <div class="hist-summary-item__separator" aria-hidden="true">·</div>
+      <div class="hist-summary-item__separator" aria-hidden="true">&middot;</div>
       <div class="hist-summary-item" role="listitem">
         <div class="hist-summary-item__value">${mediaLabel}</div>
         <div class="hist-summary-item__label">Média entre preventivas</div>
@@ -81,18 +84,71 @@ function renderSummaryCard(list) {
     </div>
     <div class="hist-summary-upsell">
       <span>📊 Economize 3h/semana com relatórios automáticos</span>
-      <button type="button" class="hist-summary-upsell__link" data-action="hist-pricing-link">Ver planos →</button>
+      <button type="button" class="hist-summary-upsell__link" data-action="hist-pricing-link">Ver planos &rarr;</button>
     </div>
   </section>`;
 }
 
+/** Popula o select de setor no histórico e controla sua visibilidade. */
+function syncSetorSelect(currentSetorId) {
+  const { setores, equipamentos } = getState();
+  const el = Utils.getEl('hist-setor');
+  if (!el) return;
+
+  // Só mostra se houver setores cadastrados
+  el.style.display = setores.length ? '' : 'none';
+  if (!setores.length) return;
+
+  // Rebuild options (preserva seleção atual)
+  const prev = currentSetorId ?? el.value;
+  el.textContent = '';
+  const defOpt = document.createElement('option');
+  defOpt.value = '';
+  defOpt.textContent = 'Todos os setores';
+  el.appendChild(defOpt);
+
+  // Agrupa setores que têm pelo menos 1 equipamento com registros
+  const setoresComDados = new Set(equipamentos.map((e) => e.setorId).filter(Boolean));
+  setores.forEach((s) => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.nome + (setoresComDados.has(s.id) ? '' : ' (sem registros)');
+    el.appendChild(opt);
+  });
+
+  if (prev) el.value = prev;
+}
+
 export function renderHist() {
-  const { registros } = getState();
+  const { registros, equipamentos } = getState();
   cleanupOrphanSignatures(registros.map((r) => r.id));
+
+  syncSetorSelect();
+
   const busca = Utils.getVal('hist-busca').toLowerCase();
   const filtEq = Utils.getVal('hist-equip');
+  const filtSetor = Utils.getVal('hist-setor');
 
+  // IDs de equipamentos no setor selecionado
+  const equipIdsNoSetor = filtSetor
+    ? new Set(equipamentos.filter((e) => e.setorId === filtSetor).map((e) => e.id))
+    : null;
+
+  // Plano Free: limita histórico aos últimos 30 dias
+  const isPro = isCachedPlanPro();
+  let histLimitedByPlan = false;
   let list = [...registros].sort((a, b) => b.data.localeCompare(a.data));
+
+  if (!isPro) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - HIST_FREE_LIMIT_DAYS);
+    const cutoffStr = cutoff.toISOString().slice(0, 10); // YYYY-MM-DD
+    const totalBeforeFilter = list.length;
+    list = list.filter((r) => r.data >= cutoffStr);
+    histLimitedByPlan = list.length < totalBeforeFilter;
+  }
+
+  if (filtSetor) list = list.filter((r) => equipIdsNoSetor.has(r.equipId));
   if (filtEq) list = list.filter((r) => r.equipId === filtEq);
   if (busca)
     list = list.filter((r) => {
@@ -120,28 +176,42 @@ export function renderHist() {
   const renderTimeline = () => {
     const summaryCard = renderSummaryCard(list);
 
+    // Banner de limite de plano (plano Free vendo histórico truncado)
+    const planLimitBanner = !isPro
+      ? `<div class="hist-plan-limit-banner">
+           <span class="hist-plan-limit-banner__icon">🔒</span>
+           <span class="hist-plan-limit-banner__text">
+             ${
+               histLimitedByPlan
+                 ? `Você está vendo apenas os serviços dos últimos ${HIST_FREE_LIMIT_DAYS} dias. Registros mais antigos estão disponíveis no <button class="hist-plan-limit-banner__link" data-action="hist-pricing-link">plano Pro</button>.`
+                 : `Plano Free · histórico limitado aos últimos ${HIST_FREE_LIMIT_DAYS} dias. <button class="hist-plan-limit-banner__link" data-action="hist-pricing-link">Ver plano Pro</button>`
+             }
+           </span>
+         </div>`
+      : '';
+
     if (!list.length) {
       el.innerHTML =
-        busca || filtEq
-          ? `${summaryCard}${emptyStateHtml({
+        busca || filtEq || filtSetor
+          ? `${planLimitBanner}${summaryCard}${emptyStateHtml({
               icon: '🔍',
               title: 'Nenhum resultado para esse filtro',
               description: 'Tente outro termo ou remova o filtro.',
             })}`
-          : `${summaryCard}<section class="engaging-empty-state" aria-label="Histórico vazio">
+          : `${planLimitBanner}${summaryCard}<section class="engaging-empty-state" aria-label="Histórico vazio">
               <div class="engaging-empty-state__icon">📋</div>
               <h3 class="engaging-empty-state__title">Nenhum serviço registrado ainda</h3>
               <p class="engaging-empty-state__description">Cada serviço registrado vira um relatório profissional pronto para o cliente. Técnicos que registram aqui economizam em média 3 horas por semana.</p>
-              <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar meu primeiro serviço →</button>
+              <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar meu primeiro serviço &rarr;</button>
               <div class="engaging-empty-state__microcopy">Leva menos de 2 minutos</div>
             </section>`;
-      el.querySelector('[data-action="hist-pricing-link"]')?.addEventListener('click', () =>
-        goTo('pricing'),
+      el.querySelectorAll('[data-action="hist-pricing-link"]').forEach((btn) =>
+        btn.addEventListener('click', () => goTo('pricing', { highlightPlan: 'pro' })),
       );
       return;
     }
 
-    el.innerHTML = `${summaryCard}<div class="timeline">${list
+    el.innerHTML = `${planLimitBanner}${summaryCard}<div class="timeline">${list
       .map((r, idx) => {
         const eq = findEquip(r.equipId);
         const safeStatus = Utils.safeStatus(r.status);
@@ -156,7 +226,10 @@ export function renderHist() {
         <div class="timeline__item-inner">
           <div class="timeline__date">${isToday ? '<span class="timeline__today-badge">Hoje</span> ' : ''}${Utils.formatDatetime(r.data)}</div>
           <div class="timeline__title">${Utils.escapeHtml(r.tipo)}</div>
-          <div class="timeline__equip">${Utils.escapeHtml(eq?.nome ?? '—')} · ${Utils.escapeHtml(eq?.tag ?? eq?.local ?? '')}</div>
+          <div class="timeline__equip">
+            ${Utils.escapeHtml(eq?.nome ?? '—')} &middot; ${Utils.escapeHtml(eq?.tag ?? eq?.local ?? '')}
+            ${eq?.setorId ? `<span class="timeline__setor-tag">${Utils.escapeHtml(findSetor(eq.setorId)?.nome ?? '')}</span>` : ''}
+          </div>
           <div class="timeline__obs">${Utils.escapeHtml(r.obs)}</div>
           ${r.pecas ? `<div class="timeline__parts">Peças: ${Utils.escapeHtml(r.pecas)}</div>` : ''}
           ${r.tecnico ? `<div class="timeline__parts">Técnico: ${Utils.escapeHtml(r.tecnico)}</div>` : ''}
@@ -175,8 +248,8 @@ export function renderHist() {
       </div>`;
       })
       .join('')}</div>`;
-    el.querySelector('[data-action="hist-pricing-link"]')?.addEventListener('click', () =>
-      goTo('pricing'),
+    el.querySelectorAll('[data-action="hist-pricing-link"]').forEach((btn) =>
+      btn.addEventListener('click', () => goTo('pricing', { highlightPlan: 'pro' })),
     );
 
     if (prevScrollTop > 0) {

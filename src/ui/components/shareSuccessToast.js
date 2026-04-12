@@ -34,7 +34,7 @@ function createToast() {
 
   const title = document.createElement('p');
   title.className = 'share-success-toast__title';
-  title.textContent = 'Relatorio enviado! Seu cliente vai adorar.';
+  title.textContent = 'Relatório enviado! Seu cliente vai adorar.';
 
   const subtitle = document.createElement('p');
   subtitle.className = 'share-success-toast__subtitle';
@@ -47,10 +47,23 @@ function createToast() {
 }
 
 export const ShareSuccessToast = {
-  show() {
+  show({ used = null, limit = null } = {}) {
     if (activeToast) removeToast(activeToast);
 
     const toast = createToast();
+
+    // Se o plano tem limite finito, atualiza o subtítulo com o uso atual
+    if (Number.isFinite(limit) && used !== null) {
+      const remaining = Math.max(0, limit - used);
+      const subtitle = toast.querySelector('.share-success-toast__subtitle');
+      if (subtitle) {
+        subtitle.textContent =
+          remaining > 0
+            ? `Você usou ${used} de ${limit} compartilhamentos este mês. Restam ${remaining}.`
+            : `Você usou todos os ${limit} compartilhamentos do mês. Faça upgrade para o Pro para envios ilimitados.`;
+      }
+    }
+
     document.body.appendChild(toast);
     activeToast = toast;
 
@@ -58,7 +71,7 @@ export const ShareSuccessToast = {
       toast.classList.add('share-success-toast--visible');
     });
 
-    const timeoutId = window.setTimeout(() => removeToast(toast), 5000);
+    const timeoutId = window.setTimeout(() => removeToast(toast), 6000);
     toast.dataset.timeoutId = String(timeoutId);
 
     return toast;
