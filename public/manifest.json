@@ -6,12 +6,17 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
   "orientation": "portrait-primary",
   "background_color": "#0F172A",
   "theme_color": "#0F172A",
   "lang": "pt-BR",
+  "dir": "ltr",
   "categories": ["business", "productivity", "utilities"],
-  "iarc_rating_id": "",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "scope_extensions": [{ "origin": "https://cooltrackpro.netlify.app" }],
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
@@ -75,6 +80,13 @@
       "type": "image/png",
       "form_factor": "narrow",
       "label": "CoolTrack Pro - Tela principal"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "CoolTrack Pro - Dashboard"
     }
   ],
   "shortcuts": [
@@ -92,6 +104,5 @@
       "url": "/?shortcut=dashboard",
       "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
-  ],
-  "prefer_related_applications": false
+  ]
 }
