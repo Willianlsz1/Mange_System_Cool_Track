@@ -17,6 +17,11 @@
   "related_applications": [],
   "prefer_related_applications": false,
   "scope_extensions": [{ "origin": "https://cooltrackpro.netlify.app" }],
+  "serviceworker": {
+    "src": "/sw.js",
+    "scope": "/",
+    "update_via_cache": "none"
+  },
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
