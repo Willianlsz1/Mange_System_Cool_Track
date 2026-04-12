@@ -10,6 +10,20 @@
       name="description"
       content="Sistema de gest&atilde;o de manuten&ccedil;&atilde;o para t&eacute;cnicos aut&ocirc;nomos de climatiza&ccedil;&atilde;o e refrigera&ccedil;&atilde;o. Registre servi&ccedil;os, gere relat&oacute;rios PDF e assine digitalmente."
     />
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0F172A" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="CoolTrack" />
+
+    <!-- Ícones -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -27,5 +41,17 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/app.js"></script>
+
+    <!-- Registro do Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then((reg) => console.log('[SW] Registrado:', reg.scope))
+            .catch((err) => console.warn('[SW] Falha no registro:', err));
+        });
+      }
+    </script>
   </body>
 </html>
