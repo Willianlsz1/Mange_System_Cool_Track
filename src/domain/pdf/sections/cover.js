@@ -49,7 +49,7 @@ function listPendencias(filtered) {
 function drawTecnicoCard(doc, pageWidth, margin, profile) {
   const cardY = 64;
   const cardW = pageWidth - margin * 2;
-  const cardH = 42;
+  const cardH = 52;
 
   roundRect(doc, margin, cardY, cardW, cardH, 2, C.surface);
   fillRect(doc, margin, cardY, 4, cardH, C.primary);
@@ -69,6 +69,11 @@ function drawTecnicoCard(doc, pageWidth, margin, profile) {
   if (profile?.telefone)
     txt(doc, profile.telefone, margin + 10, cardY + 36, { size: 9, color: C.text2 });
 
+  txt(doc, 'Plano: CoolTrack PRO', margin + 10, cardY + 47, {
+    size: 7,
+    color: C.primary,
+  });
+
   return { cardY, cardH };
 }
 
@@ -83,7 +88,8 @@ function drawResumoTiles(doc, pageWidth, margin, resumoY, filtered, totalCusto) 
   tiles.forEach((tile, index) => {
     const x = margin + index * (tileW + 4);
     roundRect(doc, x, tileY, tileW, 26, 1.5, C.surface);
-    fillRect(doc, x, tileY, tileW, 3, tile.color);
+    // strip lateral colorido (não barra no topo — evita excesso de tinta na impressão)
+    fillRect(doc, x, tileY + 3, 2.5, 20, tile.color);
     txt(doc, tile.value, x + tileW / 2, tileY + 15, {
       size: 18,
       style: 'bold',

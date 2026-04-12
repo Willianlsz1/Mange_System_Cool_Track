@@ -14,7 +14,11 @@ import { Tour } from './ui/components/tour.js';
 import { ErrorCodes, handleError } from './core/errors.js';
 import { supabase } from './core/supabase.js';
 import { Toast } from './core/toast.js';
-import { sanitizeSessionForCurrentProject, startCheckout } from './core/monetization.js';
+import { sanitizeSessionForCurrentProject, fetchMyProfileBilling } from './core/monetization.js';
+import { DevPlanToggle } from './ui/components/devPlanToggle.js';
+import { DevPlanOverride } from './core/devPlanOverride.js';
+import { setCachedPlan } from './core/planCache.js';
+import { getEffectivePlan } from './core/subscriptionPlans.js';
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 
@@ -66,6 +70,24 @@ async function bootstrap() {
           emit: false,
         });
       }
+
+      // Monta o painel dev: ativa se is_dev === true no Supabase OU se a flag
+      // local 'cooltrack-dev-mode' estiver definida (ativada via console do browser).
+      const localDevMode = localStorage.getItem('cooltrack-dev-mode') === 'true';
+      if (localDevMode) {
+        DevPlanToggle.mount();
+        setCachedPlan(DevPlanOverride.get() || 'pro');
+      } else {
+        try {
+          const { profile } = await fetchMyProfileBilling();
+          setCachedPlan(getEffectivePlan(profile));
+          if (profile?.is_dev === true) {
+            DevPlanToggle.mount();
+          }
+        } catch {
+          // ignora — não bloqueia o boot se o perfil falhar
+        }
+      }
     } else {
       seedIfEmpty();
     }
@@ -95,7 +117,6 @@ async function bootstrap() {
     });
 
     Tour.initIfFirstVisit();
-    document.getElementById('btn-teste-checkout')?.addEventListener('click', testarCheckout);
   } catch (error) {
     handleError(error, {
       code: ErrorCodes.NETWORK_ERROR,
@@ -122,28 +143,4 @@ window.onunhandledrejection = (event) => {
   });
 };
 
-async function testarCheckout() {
-  try {
-    const url = await startCheckout({ plan: 'pro' });
-    window.location.href = url;
-  } catch (error) {
-    if (error?.code === 'NO_SESSION') {
-      Toast.warning('Faça login antes de iniciar o checkout.');
-      AuthScreen.show();
-      return;
-    }
-
-    if (error?.code === 'INVALID_JWT') {
-      Toast.warning('Sua sessão expirou. Faça login novamente.');
-      await supabase.auth.signOut();
-      AuthScreen.show();
-      return;
-    }
-
-    Toast.error(error?.message || 'Falha ao iniciar checkout.');
-  }
-}
-
-window.supabase = supabase;
-window.testarCheckout = testarCheckout;
 bootstrap();

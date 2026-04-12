@@ -73,6 +73,12 @@ function bindHistFilters() {
     };
 
   document.getElementById('hist-busca')?.addEventListener('input', debounce(renderHist));
+  document.getElementById('hist-setor')?.addEventListener('change', () => {
+    // Ao trocar o setor, resetar o filtro de equipamento
+    const equipSel = document.getElementById('hist-equip');
+    if (equipSel) equipSel.value = '';
+    renderHist();
+  });
   document.getElementById('hist-equip')?.addEventListener('change', renderHist);
 }
 

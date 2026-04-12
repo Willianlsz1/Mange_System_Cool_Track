@@ -165,7 +165,7 @@ function renderProMeter(equipmentCount, reportsThisMonth) {
         <div class="usage-meter__label">Equipamentos cadastrados: <span class="usage-meter__value">${equipmentCount}</span></div>
       </div>
       <div class="usage-meter__row">
-        <div class="usage-meter__label">Relatorios neste mes: <span class="usage-meter__value">${reportsThisMonth}</span></div>
+        <div class="usage-meter__label">Relatórios neste mês: <span class="usage-meter__value">${reportsThisMonth}</span></div>
       </div>
     </section>
   `;
@@ -178,7 +178,7 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
     ? '#e03040'
     : getReportBarColor(usageState.reportPercent);
   const upgradeText = usageState.hasOverLimit
-    ? 'Voce precisa do plano Pro para continuar &rarr;'
+    ? 'Você precisa do plano Pro para continuar &rarr;'
     : 'Desbloquear ilimitado &rarr;';
   const badgeHtml = usageState.hasOverLimit
     ? '<span class="usage-meter__badge usage-meter__badge--danger">LIMITE ULTRAPASSADO</span>'
@@ -187,7 +187,7 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
       : '';
 
   return `
-    <section class="usage-meter" aria-label="Consumo do plano gratis">
+    <section class="usage-meter" aria-label="Consumo do plano grátis">
       <style>
         .usage-meter {
           background: rgba(0, 200, 232, 0.05);
@@ -275,14 +275,14 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
       </style>
 
       <div class="usage-meter__row">
-        <div class="usage-meter__label">Equipamentos: <span class="usage-meter__value">${equipmentCount} / ${FREE_PLAN_EQUIP_LIMIT}</span> no plano gratis</div>
+        <div class="usage-meter__label">Equipamentos: <span class="usage-meter__value">${equipmentCount} / ${FREE_PLAN_EQUIP_LIMIT}</span> no plano grátis</div>
         <div class="usage-meter__track">
           <div class="usage-meter__fill" style="width:${usageState.equipmentPercent}%;background:${equipmentBarColor}"></div>
         </div>
       </div>
 
       <div class="usage-meter__row">
-        <div class="usage-meter__label">Relatorios este mes: <span class="usage-meter__value">${reportsThisMonth} / ${FREE_PLAN_REPORT_LIMIT}</span> no plano gratis</div>
+        <div class="usage-meter__label">Relatórios este mês: <span class="usage-meter__value">${reportsThisMonth} / ${FREE_PLAN_REPORT_LIMIT}</span> no plano grátis</div>
         <div class="usage-meter__track">
           <div class="usage-meter__fill" style="width:${usageState.reportPercent}%;background:${reportColor}"></div>
         </div>

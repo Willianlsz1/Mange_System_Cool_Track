@@ -70,7 +70,15 @@ export async function getMonthlyUsageSnapshot(
     .eq('user_id', userId)
     .eq('month_start', normalizedMonth);
 
-  if (error) throw error;
+  // Se a tabela não existir (404) ou qualquer outro erro, retorna contagens zeradas
+  // como fallback seguro em vez de propagar o erro e bloquear a funcionalidade.
+  if (error) {
+    return {
+      monthStart: normalizedMonth,
+      [USAGE_RESOURCE_PDF_EXPORT]: 0,
+      [USAGE_RESOURCE_WHATSAPP_SHARE]: 0,
+    };
+  }
 
   const snapshot = {
     monthStart: normalizedMonth,
@@ -102,7 +110,8 @@ export async function incrementMonthlyUsage(
     p_delta: delta,
   });
 
-  if (error) throw error;
+  // Se a função RPC ainda não existir no banco, ignora silenciosamente
+  if (error) return 0;
 
   if (typeof data === 'number') return normalizeUsageCount(data);
   if (Array.isArray(data) && data.length > 0) {

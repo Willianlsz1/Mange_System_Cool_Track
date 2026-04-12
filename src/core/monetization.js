@@ -5,6 +5,7 @@ import {
   getEffectivePlan,
   hasProAccess,
 } from './subscriptionPlans.js';
+import { DevPlanOverride } from './devPlanOverride.js';
 
 export const PREMIUM_FEATURE_EQUIPAMENTOS = 'equipamentos';
 export const PREMIUM_FEATURE_PDF_EXPORT = 'pdf_export';
@@ -81,32 +82,36 @@ export async function fetchMyProfileBilling({ supabaseClient = supabase } = {}) 
     throw createMonetizationError('NO_SESSION', 'Usuário sem sessão ativa.', userError);
   }
 
-  const { data, error } = await supabaseClient
+  // Usa select('*') para evitar erros 400 por colunas que podem não existir no schema
+  const { data, error: queryError } = await supabaseClient
     .from('profiles')
-    .select(
-      'id,plan_code,plan,subscription_status,is_dev,billing_provider,stripe_customer_id,stripe_subscription_id,trial_ends_at',
-    )
+    .select('*')
     .eq('id', user.id)
     .maybeSingle();
 
-  if (error) {
+  if (queryError) {
     throw createMonetizationError(
       'PROFILE_READ_FAILED',
       'Não foi possível consultar seu plano.',
-      error,
+      queryError,
     );
   }
 
-  return {
-    user,
-    profile: data || {
-      id: user.id,
-      plan_code: PLAN_CODE_FREE,
-      plan: PLAN_CODE_FREE,
-      subscription_status: 'inactive',
-      is_dev: false,
-    },
+  const rawProfile = data || {
+    id: user.id,
+    plan_code: PLAN_CODE_FREE,
+    plan: PLAN_CODE_FREE,
+    subscription_status: 'inactive',
+    is_dev: false,
   };
+
+  // Aplica override de plano para usuários dev (is_dev === true ou flag local ativa)
+  const isDevMode =
+    rawProfile.is_dev === true ||
+    (typeof localStorage !== 'undefined' && localStorage.getItem('cooltrack-dev-mode') === 'true');
+  const profile = isDevMode ? DevPlanOverride.applyToProfile(rawProfile) : rawProfile;
+
+  return { user, profile };
 }
 
 export async function startCheckout({ plan = PLAN_CODE_PRO, supabaseClient = supabase } = {}) {
@@ -149,6 +154,118 @@ export async function startCheckout({ plan = PLAN_CODE_PRO, supabaseClient = sup
 
   if (!data?.url || typeof data.url !== 'string') {
     throw createMonetizationError('CHECKOUT_RESPONSE_INVALID', 'Checkout não retornou URL válida.');
+  }
+
+  return data.url;
+}
+
+/**
+ * Abre o portal de gerenciamento/cancelamento do Stripe.
+ * Usa fetch direto (sem functions.invoke do SDK) para garantir que o token
+ * recém-atualizado seja enviado exatamente como esperado.
+ */
+export async function startBillingPortal({ supabaseClient = supabase } = {}) {
+  // ── 1. Obtém token fresco ─────────────────────────────────────────────────
+  // Tenta refresh primeiro; se falhar, usa a sessão atual
+  let accessToken = null;
+  let refreshError = null;
+
+  try {
+    const { data: refreshData, error: rfErr } = await supabaseClient.auth.refreshSession();
+    accessToken = refreshData?.session?.access_token ?? null;
+    refreshError = rfErr;
+  } catch (e) {
+    refreshError = e;
+  }
+
+  // Fallback: getSession não faz chamada de rede — apenas lê do storage
+  if (!accessToken) {
+    try {
+      const { data: sessionData } = await supabaseClient.auth.getSession();
+      accessToken = sessionData?.session?.access_token ?? null;
+    } catch (_) {
+      // ignora
+    }
+  }
+
+  if (!accessToken) {
+    throw createMonetizationError(
+      'NO_SESSION',
+      'Faça login para gerenciar sua assinatura.',
+      refreshError,
+    );
+  }
+
+  // ── 2. Chama a Edge Function via fetch direto ─────────────────────────────
+  // Evita qualquer interferência do SDK (FunctionsClient armazena headers na
+  // construção e pode enviar um token desatualizado)
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+
+  let response;
+  try {
+    response = await fetch(`${supabaseUrl}/functions/v1/create-portal-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: supabaseKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({}),
+    });
+  } catch (networkError) {
+    throw createMonetizationError(
+      'PORTAL_REQUEST_FAILED',
+      'Erro de rede ao contactar o servidor. Verifique sua conexão.',
+      networkError,
+    );
+  }
+
+  // ── 3. Trata erros HTTP ───────────────────────────────────────────────────
+  if (!response.ok) {
+    let errorBody = {};
+    try {
+      errorBody = await response.json();
+    } catch (_) {
+      /* ignora */
+    }
+
+    const code = errorBody?.code ?? '';
+
+    if (response.status === 401 || code === 'INVALID_JWT' || code === 'AUTH_REQUIRED') {
+      throw createMonetizationError(
+        'INVALID_JWT',
+        'Sua sessão expirou. Faça login novamente e tente outra vez.',
+        errorBody,
+      );
+    }
+
+    if (response.status === 404 || code === 'NO_STRIPE_CUSTOMER') {
+      throw createMonetizationError(
+        'NO_STRIPE_CUSTOMER',
+        errorBody?.message ||
+          'Nenhuma assinatura ativa encontrada. Se você acabou de assinar, aguarde alguns segundos e tente novamente.',
+        errorBody,
+      );
+    }
+
+    throw createMonetizationError(
+      'PORTAL_REQUEST_FAILED',
+      errorBody?.message || 'Não foi possível abrir o portal de assinatura.',
+      errorBody,
+    );
+  }
+
+  // ── 4. Valida resposta ────────────────────────────────────────────────────
+  let data;
+  try {
+    data = await response.json();
+  } catch (_) {
+    data = {};
+  }
+
+  if (!data?.url || typeof data.url !== 'string') {
+    throw createMonetizationError('PORTAL_RESPONSE_INVALID', 'Portal não retornou URL válida.');
   }
 
   return data.url;

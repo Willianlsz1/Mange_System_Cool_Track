@@ -39,9 +39,9 @@ function drawServiceFields(doc, margin, y, registro, equipamento, statusInfo, pr
 
 function drawMissingSignatureText(doc, x, y, width, height) {
   txt(doc, 'Assinatura não coletada', x + width / 2, y + height / 2, {
-    size: 10,
-    style: 'bold',
-    color: C.red,
+    size: 9,
+    style: 'normal',
+    color: [170, 170, 170],
     align: 'center',
   });
 }

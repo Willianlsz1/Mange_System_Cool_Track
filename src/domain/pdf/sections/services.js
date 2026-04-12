@@ -44,15 +44,15 @@ function calculateCardLayout(doc, pageWidth, margin, registro) {
 function drawStatusBadge(doc, pageWidth, margin, y, st) {
   const statusLabel = st.label;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setTextColor(...st.color);
-  const statusWidth = doc.getTextWidth(statusLabel) + 8;
-  fillRect(doc, pageWidth - margin - statusWidth - 2, y + 2, statusWidth + 2, 8, [
-    st.color[0] * 0.15,
-    st.color[1] * 0.15,
-    st.color[2] * 0.15,
-  ]);
-  doc.text(statusLabel, pageWidth - margin - statusWidth / 2 - 1, y + 7.5, { align: 'center' });
+  const statusWidth = doc.getTextWidth(statusLabel) + 10;
+  const bx = pageWidth - margin - statusWidth - 1;
+  const by = y + 2;
+  doc.setDrawColor(...st.color);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(bx, by, statusWidth + 2, 8, 1.5, 1.5, 'S');
+  doc.text(statusLabel, bx + (statusWidth + 2) / 2, by + 5.5, { align: 'center' });
 }
 
 function getImageFormat(dataUrl) {

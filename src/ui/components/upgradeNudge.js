@@ -2,7 +2,7 @@ import { Utils } from '../../core/utils.js';
 
 const BULLETS = [
   'Equipamentos ilimitados',
-  'Relatorios PDF ilimitados',
+  'Relatórios PDF ilimitados',
   'Compartilhamento WhatsApp direto',
 ];
 
@@ -128,7 +128,7 @@ export const UpgradeNudge = {
           }
         </style>
 
-        <span>&#128274; ${safeFeature} disponivel no plano Pro</span>
+        <span>&#128274; ${safeFeature} disponível no plano Pro</span>
         <a href="#" class="upgrade-inline-hint__link" data-action="open-upgrade" data-upgrade-source="upgrade_nudge">Conhecer &rarr;</a>
       </div>
     `;

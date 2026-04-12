@@ -8,7 +8,7 @@ vi.mock('../core/state.js', () => ({
 import { UsageMeter, UsageMeterInternal as UMI } from '../ui/components/usageMeter.js';
 
 function makeReg(data) {
-  return { id: `reg-${Math.random()}`, equipId: 'eq-1', data, tipo: 'Manutencao Preventiva' };
+  return { id: `reg-${Math.random()}`, equipId: 'eq-1', data, tipo: 'Manutenção Preventiva' };
 }
 
 describe('UsageMeter', () => {
@@ -28,10 +28,10 @@ describe('UsageMeter', () => {
     const html = UsageMeter.render({ planCode: 'free' });
 
     expect(html).toContain(
-      'Equipamentos: <span class="usage-meter__value">3 / 3</span> no plano gratis',
+      'Equipamentos: <span class="usage-meter__value">3 / 3</span> no plano grátis',
     );
     expect(html).toContain(
-      'Relatorios este mes: <span class="usage-meter__value">9 / 10</span> no plano gratis',
+      'Relatórios este mês: <span class="usage-meter__value">9 / 10</span> no plano grátis',
     );
     expect(html).toContain('Desbloquear ilimitado &rarr;');
     expect(html).toContain('QUASE NO LIMITE');
@@ -50,12 +50,12 @@ describe('UsageMeter', () => {
     const html = UsageMeter.render({ planCode: 'free' });
 
     expect(html).toContain(
-      'Equipamentos: <span class="usage-meter__value">4 / 3</span> no plano gratis',
+      'Equipamentos: <span class="usage-meter__value">4 / 3</span> no plano grátis',
     );
     expect(html).toContain('width:100%;background:#e03040');
     expect(html).toContain('LIMITE ULTRAPASSADO');
     expect(html).toContain('usage-meter__badge--danger');
-    expect(html).toContain('Voce precisa do plano Pro para continuar &rarr;');
+    expect(html).toContain('Você precisa do plano Pro para continuar &rarr;');
   });
 
   it('renders pro state without upgrade CTA priority', () => {

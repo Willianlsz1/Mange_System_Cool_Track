@@ -6,6 +6,18 @@ import { PasswordRecoveryModal } from './passwordRecoveryModal.js';
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 
+// Keys to wipe when a guest creates / logs into a real account
+const GUEST_DATA_KEYS = [
+  'cooltrack_v3',
+  'cooltrack-sync-dirty-v1',
+  'cooltrack-sync-deletions-v1',
+  'cooltrack-cache-owner-v1',
+];
+
+function clearGuestDemoData() {
+  GUEST_DATA_KEYS.forEach((k) => localStorage.removeItem(k));
+}
+
 function persistPostAuthRedirect(redirect) {
   if (!redirect?.route) return;
   localStorage.setItem(POST_AUTH_REDIRECT_KEY, JSON.stringify(redirect));
@@ -31,6 +43,15 @@ function getDefaultIntentOptions(intent) {
   };
 }
 
+function handleAuthSuccess(overlay, postAuthRedirect) {
+  const wasGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
+  if (wasGuest) clearGuestDemoData();
+  localStorage.removeItem('cooltrack-guest-mode');
+  persistPostAuthRedirect(postAuthRedirect);
+  overlay.remove();
+  window.location.reload();
+}
+
 export const AuthScreen = {
   show(options = {}) {
     const intent = options.intent || 'default';
@@ -51,99 +72,378 @@ export const AuthScreen = {
     overlay.setAttribute('aria-labelledby', 'auth-title');
 
     overlay.innerHTML = `
-      <div class="auth-card">
-        <div class="auth-logo">
-          <div class="auth-logo-icon">
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+      <style>
+        /* ── Auth screen layout ── */
+        .auth-screen {
+          position: fixed; inset: 0; z-index: 9000;
+          display: flex; align-items: stretch;
+          background: #070c14;
+          font-family: var(--font, system-ui, sans-serif);
+        }
+
+        /* ── Left branding panel ── */
+        .auth-brand {
+          flex: 0 0 46%;
+          display: flex; flex-direction: column; justify-content: center;
+          padding: 56px 52px;
+          background: linear-gradient(145deg, #080f1c 0%, #0b1525 60%, #091828 100%);
+          border-right: 1px solid rgba(0,200,232,0.08);
+          position: relative; overflow: hidden;
+        }
+        .auth-brand::before {
+          content: '';
+          position: absolute; top: -80px; right: -80px;
+          width: 380px; height: 380px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(0,200,232,0.07) 0%, transparent 70%);
+          pointer-events: none;
+        }
+        .auth-brand::after {
+          content: '';
+          position: absolute; bottom: -120px; left: -60px;
+          width: 320px; height: 320px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(0,150,180,0.05) 0%, transparent 70%);
+          pointer-events: none;
+        }
+
+        .auth-brand__logo {
+          display: flex; align-items: center; gap: 10px;
+          margin-bottom: 44px;
+        }
+        .auth-brand__logo-icon {
+          width: 36px; height: 36px; border-radius: 8px;
+          background: rgba(0,200,232,0.1); border: 1px solid rgba(0,200,232,0.25);
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .auth-brand__logo-text {
+          font-size: 20px; font-weight: 700; color: #e8f4fc; letter-spacing: -0.3px;
+        }
+        .auth-brand__logo-badge {
+          font-size: 10px; font-weight: 700; color: #00c8e8; letter-spacing: 1px;
+          background: rgba(0,200,232,0.12); border: 1px solid rgba(0,200,232,0.3);
+          padding: 2px 6px; border-radius: 4px; align-self: flex-start; margin-top: 2px;
+        }
+
+        .auth-brand__headline {
+          font-size: 28px; font-weight: 700; color: #e8f4fc;
+          line-height: 1.25; letter-spacing: -0.5px;
+          margin-bottom: 12px;
+        }
+        .auth-brand__headline em {
+          font-style: normal; color: #00c8e8;
+        }
+        .auth-brand__sub {
+          font-size: 15px; color: #5a7a96; line-height: 1.5;
+          margin-bottom: 44px;
+        }
+
+        .auth-brand__features {
+          display: flex; flex-direction: column; gap: 20px;
+          margin-bottom: 48px;
+        }
+        .auth-brand__feat {
+          display: flex; align-items: flex-start; gap: 14px;
+        }
+        .auth-brand__feat-icon {
+          width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+          background: rgba(0,200,232,0.08); border: 1px solid rgba(0,200,232,0.15);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 16px;
+        }
+        .auth-brand__feat-body {}
+        .auth-brand__feat-title {
+          font-size: 14px; font-weight: 600; color: #c8dce8; margin-bottom: 2px;
+        }
+        .auth-brand__feat-desc {
+          font-size: 12px; color: #4a6880; line-height: 1.45;
+        }
+
+        .auth-brand__stats {
+          display: flex; gap: 28px;
+          padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        .auth-brand__stat {}
+        .auth-brand__stat-num {
+          font-size: 22px; font-weight: 700; color: #00c8e8; letter-spacing: -0.5px;
+        }
+        .auth-brand__stat-label {
+          font-size: 11px; color: #3a5870; text-transform: uppercase; letter-spacing: 0.5px;
+          margin-top: 2px;
+        }
+
+        /* ── Right form panel ── */
+        .auth-form-panel {
+          flex: 1;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          padding: 40px 24px;
+          overflow-y: auto;
+          background: #070c14;
+        }
+        .auth-card {
+          width: 100%; max-width: 400px;
+        }
+        .auth-card-header {
+          text-align: center; margin-bottom: 28px;
+          display: none; /* hidden on desktop – logo is on left panel */
+        }
+
+        /* ── Tabs ── */
+        .auth-tabs {
+          display: flex; gap: 0;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 10px; padding: 4px;
+          margin-bottom: 24px;
+        }
+        .auth-tab {
+          flex: 1; padding: 9px 0; border: none; cursor: pointer;
+          background: transparent; color: #4a6880;
+          font-size: 14px; font-weight: 500; font-family: inherit;
+          border-radius: 7px; transition: all .18s;
+        }
+        .auth-tab.active {
+          background: rgba(0,200,232,0.12);
+          color: #00c8e8;
+          border: 1px solid rgba(0,200,232,0.2);
+        }
+
+        /* ── Google button ── */
+        .auth-btn-google {
+          width: 100%; padding: 12px; margin-bottom: 16px;
+          border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(255,255,255,0.04);
+          color: #c8dce8; font-size: 14px; font-weight: 500; font-family: inherit;
+          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+          transition: border-color .18s, background .18s;
+        }
+        .auth-btn-google:hover { border-color: rgba(0,200,232,0.3); background: rgba(0,200,232,0.06); }
+        .auth-btn-google--primary {
+          background: rgba(0,200,232,0.1); border-color: rgba(0,200,232,0.25); color: #00c8e8;
+        }
+        .auth-btn-google--primary:hover { background: rgba(0,200,232,0.16); border-color: rgba(0,200,232,0.4); }
+
+        /* ── Divider ── */
+        .auth-divider {
+          display: flex; align-items: center; gap: 10px;
+          font-size: 12px; color: #2a4258; margin-bottom: 16px;
+        }
+        .auth-divider::before, .auth-divider::after {
+          content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06);
+        }
+
+        /* ── Labels + inputs ── */
+        .auth-label {
+          display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+          color: #3a5870; margin-bottom: 5px; margin-top: 14px;
+          text-transform: uppercase;
+        }
+        .auth-input {
+          width: 100%; box-sizing: border-box;
+          padding: 11px 14px; border-radius: 8px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.03);
+          color: #d8eaf6; font-size: 14px; font-family: inherit;
+          outline: none; transition: border-color .18s;
+        }
+        .auth-input:focus { border-color: rgba(0,200,232,0.35); background: rgba(0,200,232,0.04); }
+        .auth-input::placeholder { color: #2a4258; }
+
+        /* ── Primary CTA ── */
+        .auth-btn {
+          width: 100%; margin-top: 20px; padding: 13px;
+          border-radius: 8px; border: none; cursor: pointer; font-family: inherit;
+          font-size: 15px; font-weight: 600;
+          background: linear-gradient(135deg, #00c8e8 0%, #0090c8 100%);
+          color: #06101e; transition: opacity .18s, transform .12s;
+        }
+        .auth-btn:hover { opacity: .92; transform: translateY(-1px); }
+        .auth-btn:active { transform: translateY(0); }
+
+        /* ── Forgot / hints ── */
+        .auth-actions-center { text-align: center; margin-top: 10px; }
+        .auth-btn-forgot {
+          background: none; border: none; cursor: pointer; font-family: inherit;
+          font-size: 12px; color: #3a5870; padding: 4px 8px;
+        }
+        .auth-btn-forgot:hover { color: #6a9ab8; }
+
+        .auth-hint {
+          font-size: 12px; color: #2a4258; text-align: center;
+          margin-top: 14px; line-height: 1.5;
+        }
+        .auth-hint--tight { margin-top: 4px; }
+
+        /* ── Guest panel ── */
+        .auth-guest-panel {
+          margin-top: 20px; padding-top: 16px;
+          border-top: 1px solid rgba(255,255,255,0.05);
+          text-align: center;
+        }
+        .auth-btn-guest {
+          background: none; border: none; cursor: pointer; font-family: inherit;
+          font-size: 13px; color: #4a6880; padding: 4px 0;
+          transition: color .18s;
+        }
+        .auth-btn-guest:hover { color: #7aaccc; }
+
+        /* ── Responsive: mobile hides left panel ── */
+        @media (max-width: 768px) {
+          .auth-brand { display: none; }
+          .auth-form-panel { padding: 24px 16px; }
+          .auth-card-header { display: block; }
+        }
+      </style>
+
+      <!-- LEFT: Branding panel -->
+      <aside class="auth-brand" aria-hidden="true">
+        <div class="auth-brand__logo">
+          <div class="auth-brand__logo-icon">
+            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
               <rect x="1" y="1" width="14" height="14" rx="2" stroke="#00C8E8" stroke-width="1.2"/>
               <circle cx="8" cy="8" r="2.5" stroke="#00C8E8" stroke-width="1.2"/>
               <path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round"/>
             </svg>
           </div>
-          <span class="auth-logo-text" id="auth-title">CoolTrack</span>
-          <span class="auth-logo-pro">PRO</span>
+          <span class="auth-brand__logo-text">CoolTrack</span>
+          <span class="auth-brand__logo-badge">PRO</span>
         </div>
 
-        <div class="auth-tabs" role="tablist" aria-label="Acesso">
-          <button
-            class="auth-tab active"
-            id="tab-signin"
-            type="button"
-            role="tab"
-            aria-selected="true"
-            aria-controls="auth-form-signin"
-          >
-            Entrar
-          </button>
-          <button
-            class="auth-tab"
-            id="tab-signup"
-            type="button"
-            role="tab"
-            aria-selected="false"
-            aria-controls="auth-form-signup"
-          >
-            Criar conta
-          </button>
-        </div>
+        <h1 class="auth-brand__headline">
+          Controle total sobre<br><em>cada equipamento</em><br>que você atende
+        </h1>
+        <p class="auth-brand__sub">
+          Gestão de manutenção para técnicos de climatização.<br>
+          Do diagnóstico ao relatório PDF — tudo em um só lugar.
+        </p>
 
-        <div id="auth-form-signin" role="tabpanel" aria-labelledby="tab-signin">
-          <button class="auth-btn-google auth-btn-google--primary" id="btn-google-signin" type="button">
-            ${intentOptions.highlightCopy}
-          </button>
-          <div class="auth-divider">ou com email e senha</div>
-          <label class="auth-label" for="signin-email">EMAIL</label>
-          <input class="auth-input" id="signin-email" type="email" placeholder="seu@email.com" autocomplete="email" />
-          <label class="auth-label" for="signin-password">SENHA</label>
-          <input class="auth-input" id="signin-password" type="password" placeholder="********" autocomplete="current-password" />
-          <button class="auth-btn" id="btn-signin" type="button">Acessar meu painel &rarr;</button>
-          <div class="auth-actions-center">
-            <button class="auth-btn-forgot" id="btn-forgot" type="button">Esqueci minha senha</button>
+        <div class="auth-brand__features">
+          <div class="auth-brand__feat">
+            <div class="auth-brand__feat-icon">🧊</div>
+            <div class="auth-brand__feat-body">
+              <div class="auth-brand__feat-title">Histórico completo de cada equipamento</div>
+              <div class="auth-brand__feat-desc">Todas as manutenções, peças trocadas e anomalias — organizadas por equipamento.</div>
+            </div>
           </div>
-          <div class="auth-hint">Seus relatorios, alertas e historico — seguros na nuvem, acessiveis do canteiro de obra.</div>
-          <div class="auth-guest-panel">
-            <button class="auth-btn-guest" id="btn-guest" type="button">Ver demo interativa &rarr;</button>
-            <div class="auth-hint auth-hint--tight">Dados de exemplo &middot; Nada e salvo</div>
+          <div class="auth-brand__feat">
+            <div class="auth-brand__feat-icon">📋</div>
+            <div class="auth-brand__feat-body">
+              <div class="auth-brand__feat-title">Relatórios PDF com sua assinatura</div>
+              <div class="auth-brand__feat-desc">Gere laudos profissionais em segundos, prontos para enviar ao cliente via WhatsApp.</div>
+            </div>
+          </div>
+          <div class="auth-brand__feat">
+            <div class="auth-brand__feat-icon">🚨</div>
+            <div class="auth-brand__feat-body">
+              <div class="auth-brand__feat-title">Alertas inteligentes de preventivas</div>
+              <div class="auth-brand__feat-desc">Nunca perca um prazo. O sistema avisa quais equipamentos precisam de atenção hoje.</div>
+            </div>
           </div>
         </div>
 
-        <div id="auth-form-signup" role="tabpanel" aria-labelledby="tab-signup" hidden>
-          <button class="auth-btn-google" id="btn-google-signup" type="button">Continuar com Google</button>
-          <div class="auth-divider">ou crie com email e senha</div>
-          <label class="auth-label" for="signup-nome">SEU NOME</label>
-          <input class="auth-input" id="signup-nome" type="text" placeholder="Carlos Figueiredo" autocomplete="name" />
-          <label class="auth-label" for="signup-email">EMAIL</label>
-          <input class="auth-input" id="signup-email" type="email" placeholder="seu@email.com" autocomplete="email" />
-          <label class="auth-label" for="signup-password">SENHA</label>
-          <input class="auth-input" id="signup-password" type="password" placeholder="min. 6 caracteres" autocomplete="new-password" />
-          <button class="auth-btn" id="btn-signup" type="button">Comecar a gerar relatorios &rarr;</button>
-          <div class="auth-hint">Gratis para 1 tecnico. Gere ate 10 relatorios/mes. Sem cartao.</div>
+        <div class="auth-brand__stats">
+          <div class="auth-brand__stat">
+            <div class="auth-brand__stat-num">100%</div>
+            <div class="auth-brand__stat-label">Offline ready</div>
+          </div>
+          <div class="auth-brand__stat">
+            <div class="auth-brand__stat-num">PDF</div>
+            <div class="auth-brand__stat-label">Instantâneo</div>
+          </div>
+          <div class="auth-brand__stat">
+            <div class="auth-brand__stat-num">∞</div>
+            <div class="auth-brand__stat-label">Histórico</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- RIGHT: Form panel -->
+      <div class="auth-form-panel">
+        <div class="auth-card">
+
+          <!-- Mobile-only logo -->
+          <div class="auth-card-header">
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px">
+              <div style="width:28px;height:28px;border-radius:6px;background:rgba(0,200,232,0.1);border:1px solid rgba(0,200,232,0.2);display:flex;align-items:center;justify-content:center;">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <rect x="1" y="1" width="14" height="14" rx="2" stroke="#00C8E8" stroke-width="1.2"/>
+                  <circle cx="8" cy="8" r="2.5" stroke="#00C8E8" stroke-width="1.2"/>
+                  <path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <span id="auth-title" style="font-size:17px;font-weight:700;color:#e8f4fc">CoolTrack</span>
+              <span style="font-size:9px;font-weight:700;color:#00c8e8;background:rgba(0,200,232,0.1);border:1px solid rgba(0,200,232,0.25);padding:2px 5px;border-radius:4px;letter-spacing:1px">PRO</span>
+            </div>
+            <div style="font-size:13px;color:#3a5870">Gestão de manutenção para técnicos de climatização</div>
+          </div>
+
+          <div class="auth-tabs" role="tablist" aria-label="Acesso">
+            <button
+              class="auth-tab active"
+              id="tab-signin"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="auth-form-signin"
+            >Entrar</button>
+            <button
+              class="auth-tab"
+              id="tab-signup"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="auth-form-signup"
+            >Criar conta</button>
+          </div>
+
+          <!-- Sign In panel -->
+          <div id="auth-form-signin" role="tabpanel" aria-labelledby="tab-signin">
+            <button class="auth-btn-google auth-btn-google--primary" id="btn-google-signin" type="button">
+              <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+                <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+              </svg>
+              ${intentOptions.highlightCopy}
+            </button>
+            <div class="auth-divider">ou com email e senha</div>
+            <label class="auth-label" for="signin-email">EMAIL</label>
+            <input class="auth-input" id="signin-email" type="email" placeholder="seu@email.com" autocomplete="email" />
+            <label class="auth-label" for="signin-password">SENHA</label>
+            <input class="auth-input" id="signin-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+            <button class="auth-btn" id="btn-signin" type="button">Acessar meu painel →</button>
+            <div class="auth-actions-center">
+              <button class="auth-btn-forgot" id="btn-forgot" type="button">Esqueci minha senha</button>
+            </div>
+            <div class="auth-guest-panel">
+              <button class="auth-btn-guest" id="btn-guest" type="button">Ver demo interativa sem cadastro →</button>
+              <div class="auth-hint auth-hint--tight">Dados de exemplo · Nada é salvo na nuvem</div>
+            </div>
+          </div>
+
+          <!-- Sign Up panel -->
+          <div id="auth-form-signup" role="tabpanel" aria-labelledby="tab-signup" hidden>
+            <button class="auth-btn-google" id="btn-google-signup" type="button">
+              <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+                <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+              </svg>
+              Criar conta com Google
+            </button>
+            <div class="auth-divider">ou com email e senha</div>
+            <label class="auth-label" for="signup-nome">SEU NOME</label>
+            <input class="auth-input" id="signup-nome" type="text" placeholder="Carlos Figueiredo" autocomplete="name" />
+            <label class="auth-label" for="signup-email">EMAIL</label>
+            <input class="auth-input" id="signup-email" type="email" placeholder="seu@email.com" autocomplete="email" />
+            <label class="auth-label" for="signup-password">SENHA</label>
+            <input class="auth-input" id="signup-password" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password" />
+            <button class="auth-btn" id="btn-signup" type="button">Começar a usar gratuitamente →</button>
+            <div class="auth-hint">Plano gratuito · Sem cartão · Cancele quando quiser</div>
+          </div>
+
         </div>
       </div>
-
-        <section class="auth-social-proof" aria-label="Benefícios do sistema">
-          <p class="auth-social-proof__community">
-            Organize equipamentos, registros e relatórios em um só lugar
-          </p>
-        </section>
-
-        <style>
-          .auth-social-proof {
-            margin-top: 14px;
-            padding: 0 16px;
-            display: grid;
-            gap: 10px;
-            justify-items: center;
-          }
-
-          .auth-social-proof__community {
-            margin: 0;
-            font-size: 13px;
-            color: #00c8e8;
-            font-weight: 500;
-            text-align: center;
-          }
-        </style>
     `;
 
     document.body.appendChild(overlay);
@@ -171,12 +471,36 @@ export const AuthScreen = {
       });
 
       await runAsyncAction(button, { loadingLabel: 'Redirecionando...' }, async () => {
+        // Google OAuth faz redirect EXTERNO — o browser sai do app e volta depois.
+        // NÃO podemos chamar overlay.remove() nem window.location.reload() aqui,
+        // porque o Supabase já cuida do redirect. Fazemos apenas o pré-processamento.
+        const wasGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
+
+        // Limpa dados de demo ANTES do redirect para que, ao voltar do Google,
+        // o bootstrap não tente migrar o seed para a conta nova.
+        // Guardamos o flag original para poder restaurar em caso de erro.
+        if (wasGuest) {
+          clearGuestDemoData();
+          localStorage.removeItem('cooltrack-guest-mode');
+        }
+
         const result = await Auth.signInWithGoogle({
           source: intentOptions.source,
           wasGuest: intentOptions.wasGuest,
         });
-        if (!result?.ok && result?.message) Toast.error(result.message);
-        if (result?.ok) persistPostAuthRedirect(postAuthRedirect);
+
+        if (!result?.ok) {
+          // Falha ANTES do redirect externo (ex: Supabase offline).
+          // Restaura o estado de guest para não deixar o usuário sem dados.
+          if (wasGuest) localStorage.setItem('cooltrack-guest-mode', '1');
+          if (result?.message) Toast.error(result.message);
+          return;
+        }
+
+        // Sucesso: o Supabase já redirecionou o browser para o Google.
+        // Persiste o redirect pós-auth para ser consumido pelo bootstrap após retorno.
+        persistPostAuthRedirect(postAuthRedirect);
+        // (não chamamos reload — o redirect externo + volta do Google já faz isso)
       });
     };
 
@@ -202,14 +526,12 @@ export const AuthScreen = {
       const password = overlay.querySelector('#signin-password').value;
 
       if (!email || !password) return Toast.warning('Informe email e senha para entrar.');
-      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email valido.');
+      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email válido.');
 
       await runAsyncAction(btn, { loadingLabel: 'Entrando...' }, async () => {
         const user = await Auth.signIn(email, password);
         if (!user) return;
-        localStorage.removeItem('cooltrack-guest-mode');
-        overlay.remove();
-        window.location.reload();
+        handleAuthSuccess(overlay, postAuthRedirect);
       });
     });
 
@@ -228,19 +550,16 @@ export const AuthScreen = {
       if (!nome || !email || !password) {
         return Toast.warning('Preencha nome, email e senha para criar a conta.');
       }
-      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email valido.');
+      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email válido.');
       if (password.length < 6) {
-        Toast.error('Senha deve ter no minimo 6 caracteres.');
+        Toast.error('Senha deve ter no mínimo 6 caracteres.');
         return;
       }
 
       await runAsyncAction(btn, { loadingLabel: 'Criando conta...' }, async () => {
         const user = await Auth.signUp(email, password, nome);
         if (!user) return;
-        localStorage.removeItem('cooltrack-guest-mode');
-        persistPostAuthRedirect(postAuthRedirect);
-        overlay.remove();
-        window.location.reload();
+        handleAuthSuccess(overlay, postAuthRedirect);
       });
     });
 

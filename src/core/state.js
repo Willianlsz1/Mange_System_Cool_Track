@@ -6,7 +6,7 @@
 import { Utils } from './utils.js';
 import { Storage } from './storage.js';
 
-const INITIAL_STATE = { equipamentos: [], registros: [], tecnicos: [] };
+const INITIAL_STATE = { equipamentos: [], registros: [], tecnicos: [], setores: [] };
 
 const listeners = new Set();
 let state = Storage.load(INITIAL_STATE);
@@ -31,7 +31,12 @@ export function getState() {
     equipamentos: [...state.equipamentos],
     registros: [...state.registros],
     tecnicos: [...(state.tecnicos || [])],
+    setores: [...(state.setores || [])],
   };
+}
+
+export function findSetor(id) {
+  return (state.setores || []).find((s) => s.id === id) ?? null;
 }
 
 export function subscribe(listener) {
