@@ -29,13 +29,18 @@ Deno.serve(async (req) => {
   try {
     const stripeSecretKey = getRequiredEnv('STRIPE_SECRET_KEY');
     const stripePricePro = getRequiredEnv('STRIPE_PRICE_PRO');
+    const stripePriceProAnnual = Deno.env.get('STRIPE_PRICE_PRO_ANNUAL')?.trim() ?? null;
     const appUrl = getRequiredEnv('APP_URL');
     const supabaseUrl = getRequiredEnv('SUPABASE_URL');
     const supabaseAnonKey = getRequiredEnv('SUPABASE_ANON_KEY');
 
     const stripe = new Stripe(stripeSecretKey);
     const body = await req.json().catch(() => ({}));
-    const plan = body?.plan === 'pro' ? 'pro' : 'pro';
+    const plan = body?.plan === 'pro_annual' ? 'pro_annual' : 'pro';
+
+    // Seleciona o Price ID correto conforme o plano escolhido
+    const priceId =
+      plan === 'pro_annual' && stripePriceProAnnual ? stripePriceProAnnual : stripePricePro;
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -72,7 +77,7 @@ Deno.serve(async (req) => {
       client_reference_id: user.id,
       line_items: [
         {
-          price: stripePricePro,
+          price: priceId,
           quantity: 1,
         },
       ],

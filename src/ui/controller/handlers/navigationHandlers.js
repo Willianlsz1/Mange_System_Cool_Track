@@ -88,7 +88,7 @@ export function bindNavigationHandlers() {
   });
   on('start-checkout', async (el, event) => {
     event?.preventDefault?.();
-    const plan = el?.dataset?.plan === 'pro' ? 'pro' : 'pro';
+    const plan = el?.dataset?.plan === 'pro_annual' ? 'pro_annual' : 'pro';
     const source = el?.dataset?.upgradeSource || 'pricing';
     trackEvent('checkout_start_clicked', { source, plan });
 
