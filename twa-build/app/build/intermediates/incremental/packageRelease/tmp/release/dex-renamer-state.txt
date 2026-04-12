@@ -1,0 +1,4 @@
+#Sun Apr 12 14:44:59 BRT 2026
+base.0=C\:\\Users\\KABUM\\Desktop\\willianlsz1-mange_system_cool_track\\twa-build\\app\\build\\intermediates\\dex\\release\\minifyReleaseWithR8\\classes.dex
+renamed.0=classes.dex
+path.0=classes.dex
