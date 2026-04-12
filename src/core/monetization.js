@@ -168,14 +168,12 @@ export async function startBillingPortal({ supabaseClient = supabase } = {}) {
   // ── 1. Obtém token fresco ─────────────────────────────────────────────────
   // Tenta refresh primeiro; se falhar, usa a sessão atual
   let accessToken = null;
-  let refreshError = null;
 
   try {
-    const { data: refreshData, error: rfErr } = await supabaseClient.auth.refreshSession();
+    const { data: refreshData } = await supabaseClient.auth.refreshSession();
     accessToken = refreshData?.session?.access_token ?? null;
-    refreshError = rfErr;
-  } catch (e) {
-    refreshError = e;
+  } catch (_) {
+    // falha silenciosa; fallback abaixo usa getSession
   }
 
   // Fallback: getSession não faz chamada de rede — apenas lê do storage
@@ -267,6 +265,3 @@ export async function startBillingPortal({ supabaseClient = supabase } = {}) {
   if (!data?.url || typeof data.url !== 'string') {
     throw createMonetizationError('PORTAL_RESPONSE_INVALID', 'Portal não retornou URL válida.');
   }
-
-  return data.url;
-}

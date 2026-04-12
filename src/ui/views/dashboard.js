@@ -15,7 +15,12 @@ import { UpgradeNudge } from '../components/upgradeNudge.js';
 import { UsageMeter } from '../components/usageMeter.js';
 import { withViewSkeleton } from '../components/skeleton.js';
 import { fetchMyProfileBilling } from '../../core/monetization.js';
-import { PLAN_CODE_FREE, getEffectivePlan, hasProAccess } from '../../core/subscriptionPlans.js';
+import {
+  PLAN_CODE_FREE,
+  PLAN_CODE_PRO,
+  getEffectivePlan,
+  hasProAccess,
+} from '../../core/subscriptionPlans.js';
 import {
   calculateHealthScore,
   evaluateEquipmentRisk,

@@ -164,7 +164,7 @@ export function equipCardHtml(eq, { showLocal = true } = {}) {
 /** ID do setor atualmente expandido; null = vista de grid de setores. */
 let _activeSectorId = null;
 
-const SETOR_CORES = ['#00bcd4', '#00c853', '#ffab40', '#ff5252', '#7c4dff', '#448aff'];
+const _SETOR_CORES = ['#00bcd4', '#00c853', '#ffab40', '#ff5252', '#7c4dff', '#448aff'];
 
 /** Status "pior" de uma lista de equipamentos: danger > warn > ok. */
 function worstStatus(eqs) {
@@ -177,7 +177,7 @@ function worstStatus(eqs) {
 const STATUS_LABEL = { ok: 'Normal', warn: 'Atenção', danger: 'Crítico' };
 
 /** Próxima preventiva mais próxima dentre os equipamentos do setor. */
-function soonestPreventiva(eqs, registros) {
+function _soonestPreventiva(eqs, _registros) {
   let min = Infinity;
   eqs.forEach((eq) => {
     const regs = regsForEquip(eq.id);
@@ -208,7 +208,7 @@ function lastTecnicoInSetor(eqs) {
   return latestReg?.tecnico ?? null;
 }
 
-function soonestPreventivaLabel(eqs) {
+function _soonestPreventivaLabel(eqs) {
   let min = Infinity;
   eqs.forEach((eq) => {
     const regs = regsForEquip(eq.id);
@@ -759,7 +759,7 @@ export async function viewEquip(id) {
         : context.daysToNext === 0
           ? 'Preventiva vence hoje'
           : `Preventiva em ${context.daysToNext} dia${context.daysToNext > 1 ? 's' : ''}`;
-  const fatorCriticidade = `Criticidade operacional ${prioridadeLabel.toLowerCase()}`;
+  const _fatorCriticidade = `Criticidade operacional ${prioridadeLabel.toLowerCase()}`;
 
   // SVG ring progress
   const ringR = 30;
@@ -1009,19 +1009,4 @@ export function populateEquipSelects() {
     });
   });
 
-  const tecDatalist = Utils.getEl('lista-tecnicos');
-  if (tecDatalist) {
-    tecDatalist.textContent = '';
-    (tecnicos || []).forEach((tecnico) => {
-      const option = document.createElement('option');
-      option.value = String(tecnico || '');
-      tecDatalist.appendChild(option);
-    });
-  }
-
-  const rTecnico = Utils.getEl('r-tecnico');
-  if (rTecnico && !rTecnico.value) {
-    const def = Profile.getDefaultTecnico();
-    if (def) rTecnico.value = def;
-  }
-}
+  co
