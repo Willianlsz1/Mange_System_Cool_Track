@@ -37,9 +37,19 @@ export function checkGuestLimit(resource) {
   };
 }
 
-export async function checkPlanLimit(resource, { supabaseClient = supabase } = {}) {
+export async function checkPlanLimit(resource, currentUsageOrOptions = {}, maybeOptions = {}) {
+  const hasExplicitUsage =
+    typeof currentUsageOrOptions === 'number' || typeof currentUsageOrOptions === 'string';
+  const options = hasExplicitUsage ? maybeOptions : currentUsageOrOptions || {};
+  const { supabaseClient = supabase } = options;
+
   const usage = getUsageSnapshot();
-  const current = usage[resource];
+  const snapshotCurrent = usage[resource];
+  const parsedExplicitCurrent = Number.parseInt(String(currentUsageOrOptions), 10);
+  const current =
+    hasExplicitUsage && Number.isFinite(parsedExplicitCurrent)
+      ? Math.max(0, parsedExplicitCurrent)
+      : snapshotCurrent;
   const isGuest = isGuestMode();
   let planCode = PLAN_CODE_FREE;
   let profile = null;

@@ -45,6 +45,18 @@ describe('guestLimits', () => {
     expect(result.planCode).toBe('free');
   });
 
+  it('supports explicit current equipment count in checkPlanLimit call', async () => {
+    mockState.equipamentos = [];
+
+    const { checkPlanLimit } = await import('../core/guestLimits.js');
+    const result = await checkPlanLimit('equipamentos', 3);
+
+    expect(result.blocked).toBe(true);
+    expect(result.limit).toBe(3);
+    expect(result.current).toBe(3);
+    expect(result.planCode).toBe('free');
+  });
+
   it('does not block logged pro users with active subscription on equipamentos limit', async () => {
     mockState.equipamentos = Array.from({ length: 8 }, (_, i) => ({ id: `e-${i}` }));
     maybeSingle.mockResolvedValue({

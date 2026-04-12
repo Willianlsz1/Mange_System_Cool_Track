@@ -71,4 +71,17 @@ describe('pricing view', () => {
     expect(html).toContain('data-action="start-checkout"');
     expect(html).toContain('pricing-card pricing-card--pro pricing-card--highlighted');
   });
+
+  it('shows limit reached reason when redirected from blocked free action', async () => {
+    const { renderPricing } = await loadPricingModule({
+      user: { id: 'user-1' },
+      profile: { plan: 'free', subscription_status: 'inactive', is_dev: false },
+    });
+
+    await renderPricing({ highlightPlan: 'pro', reason: 'limit_reached' });
+
+    const html = document.getElementById('view-pricing').innerHTML;
+    expect(html).toContain('Voce atingiu o limite do plano Free.');
+    expect(html).toContain('pricing-card pricing-card--pro pricing-card--highlighted');
+  });
 });
