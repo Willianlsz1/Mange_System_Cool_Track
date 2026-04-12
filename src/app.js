@@ -12,7 +12,6 @@ import { PasswordRecoveryModal } from './ui/components/passwordRecoveryModal.js'
 import { Storage } from './core/storage.js';
 import { Tour } from './ui/components/tour.js';
 import { ErrorCodes, handleError } from './core/errors.js';
-import { supabase } from './core/supabase.js';
 import { Toast } from './core/toast.js';
 import { sanitizeSessionForCurrentProject, fetchMyProfileBilling } from './core/monetization.js';
 import { DevPlanToggle } from './ui/components/devPlanToggle.js';

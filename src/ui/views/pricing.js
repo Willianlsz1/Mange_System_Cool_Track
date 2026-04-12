@@ -29,7 +29,7 @@ async function resolveCurrentPlanCode() {
   }
 }
 
-function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}) {
+function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {}) {
   const isPro = planCode === PLAN_CODE_PRO;
   const isFree = !isPro;
   const showLimitMessage = reason === PRICING_REASON_LIMIT_REACHED && isFree;
@@ -196,6 +196,4 @@ export async function renderPricing(params = {}) {
 
   const currentPlanCode = await resolveCurrentPlanCode();
   const highlightPlan = normalizeHighlightPlan(params?.highlightPlan);
-  const reason = normalizePricingReason(params?.reason);
-  view.innerHTML = getPricingMarkup(currentPlanCode, { highlightPlan, reason });
-}
+  const reason = normalizePricingReason(para
