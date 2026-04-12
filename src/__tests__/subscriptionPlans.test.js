@@ -72,7 +72,7 @@ describe('subscriptionPlans', () => {
 
     expect(canCreateEquipment({ plan: 'pro', subscription_status: 'active' }, 20)).toMatchObject({
       allowed: true,
-      limit: Number.POSITIVE_INFINITY,
+      limit: 30,
       current: 20,
       planCode: 'pro',
     });

@@ -196,4 +196,6 @@ export async function renderPricing(params = {}) {
 
   const currentPlanCode = await resolveCurrentPlanCode();
   const highlightPlan = normalizeHighlightPlan(params?.highlightPlan);
-  const reason = normalizePricingReason(para
+  const reason = normalizePricingReason(params?.reason);
+  view.innerHTML = getPricingMarkup(currentPlanCode, { highlightPlan, reason });
+}

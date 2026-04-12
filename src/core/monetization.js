@@ -187,11 +187,7 @@ export async function startBillingPortal({ supabaseClient = supabase } = {}) {
   }
 
   if (!accessToken) {
-    throw createMonetizationError(
-      'NO_SESSION',
-      'Faça login para gerenciar sua assinatura.',
-      refreshError,
-    );
+    throw createMonetizationError('NO_SESSION', 'Faça login para gerenciar sua assinatura.', null);
   }
 
   // ── 2. Chama a Edge Function via fetch direto ─────────────────────────────
@@ -265,3 +261,6 @@ export async function startBillingPortal({ supabaseClient = supabase } = {}) {
   if (!data?.url || typeof data.url !== 'string') {
     throw createMonetizationError('PORTAL_RESPONSE_INVALID', 'Portal não retornou URL válida.');
   }
+
+  return data.url;
+}

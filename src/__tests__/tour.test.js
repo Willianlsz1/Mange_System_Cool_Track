@@ -9,6 +9,7 @@ describe('Tour', () => {
     document.body.innerHTML = '';
     localStorage.clear();
     vi.restoreAllMocks();
+    vi.resetModules();
   });
 
   it('renders slide-modal tour on start', async () => {
