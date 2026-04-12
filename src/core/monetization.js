@@ -166,21 +166,33 @@ export async function startCheckout({ plan = PLAN_CODE_PRO, supabaseClient = sup
  */
 export async function startBillingPortal({ supabaseClient = supabase } = {}) {
   // ── 1. Obtém token fresco ─────────────────────────────────────────────────
-  // Tenta refresh primeiro; se falhar, usa a sessão atual
   let accessToken = null;
+  let refreshFailed = false;
 
+  // Tenta refresh via rede — garante token novo e válido
   try {
     const { data: refreshData } = await supabaseClient.auth.refreshSession();
     accessToken = refreshData?.session?.access_token ?? null;
   } catch (_) {
-    // falha silenciosa; fallback abaixo usa getSession
+    refreshFailed = true;
   }
 
-  // Fallback: getSession não faz chamada de rede — apenas lê do storage
   if (!accessToken) {
+    refreshFailed = true;
+  }
+
+  // Fallback: usa token do storage SOMENTE se ainda não estiver expirado
+  // (getSession não valida via rede — pode retornar token expirado)
+  if (refreshFailed) {
     try {
       const { data: sessionData } = await supabaseClient.auth.getSession();
-      accessToken = sessionData?.session?.access_token ?? null;
+      const token = sessionData?.session?.access_token ?? null;
+      if (token) {
+        // Decodifica o campo exp do JWT para checar validade
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const isValid = payload?.exp && payload.exp * 1000 > Date.now();
+        if (isValid) accessToken = token;
+      }
     } catch (_) {
       // ignora
     }
