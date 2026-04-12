@@ -198,17 +198,17 @@ export function renderShellModals() {
 
         <div class="score-info-bands">
           <div class="score-info-band score-info-band--ok">
-            <span class="score-info-band__range">0 – 34</span>
+            <span class="score-info-band__range">0 – 39</span>
             <span class="score-info-band__label">✅ Baixo risco</span>
             <span class="score-info-band__desc">Equipamento com manutenção em dia e operando normalmente.</span>
           </div>
           <div class="score-info-band score-info-band--warn">
-            <span class="score-info-band__range">35 – 69</span>
+            <span class="score-info-band__range">40 – 74</span>
             <span class="score-info-band__label">⚠️ Médio risco</span>
             <span class="score-info-band__desc">Atenção necessária — preventiva próxima ou algum ponto de atenção.</span>
           </div>
           <div class="score-info-band score-info-band--danger">
-            <span class="score-info-band__range">70 – 100</span>
+            <span class="score-info-band__range">75 – 100</span>
             <span class="score-info-band__label">🔴 Alto risco</span>
             <span class="score-info-band__desc">Intervenção prioritária recomendada.</span>
           </div>

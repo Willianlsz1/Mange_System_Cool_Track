@@ -3,7 +3,7 @@
  * Estratégia: Cache-first para assets estáticos, Network-first para API/Supabase.
  */
 
-const CACHE_NAME = 'cooltrack-pro-v1';
+const CACHE_NAME = 'cooltrack-pro-v3';
 const OFFLINE_PAGE = '/offline.html';
 
 // Assets que sempre ficam em cache
@@ -71,7 +71,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Assets estáticos (JS, CSS, imagens): Cache-first
+  // Assets estáticos (JS, CSS, imagens): Stale-while-revalidate
+  // Serve do cache imediatamente e atualiza em background — nunca trava em versão antiga
   if (
     url.pathname.startsWith('/assets/') ||
     url.pathname.startsWith('/icons/') ||
@@ -81,14 +82,15 @@ self.addEventListener('fetch', (event) => {
     request.destination === 'font'
   ) {
     event.respondWith(
-      caches.match(request).then(
-        (cached) =>
-          cached ||
-          fetch(request).then((response) => {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+      caches.open(CACHE_NAME).then((cache) =>
+        cache.match(request).then((cached) => {
+          const networkFetch = fetch(request).then((response) => {
+            if (response.ok) cache.put(request, response.clone());
             return response;
-          }),
+          });
+          // Retorna cache imediatamente se existir, senão aguarda rede
+          return cached || networkFetch;
+        }),
       ),
     );
     return;

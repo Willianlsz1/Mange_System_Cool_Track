@@ -42,13 +42,22 @@
     <div id="app"></div>
     <script type="module" src="/src/app.js"></script>
 
-    <!-- Registro do Service Worker -->
+    <!-- Registro do Service Worker (apenas em produção) -->
     <script>
-      if ('serviceWorker' in navigator) {
+      const _isDev =
+        location.hostname === 'localhost' ||
+        location.hostname === '127.0.0.1' ||
+        location.hostname.startsWith('192.168.');
+      if ('serviceWorker' in navigator && !_isDev) {
         navigator.serviceWorker
           .register('/sw.js', { scope: '/' })
           .then((reg) => console.log('[SW] Registrado:', reg.scope))
           .catch((err) => console.warn('[SW] Falha no registro:', err));
+      } else if (_isDev && 'serviceWorker' in navigator) {
+        // Em dev: remove SW anterior para não bloquear atualizações
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((r) => r.unregister());
+        });
       }
     </script>
   </body>

@@ -896,6 +896,17 @@
   text-decoration: underline;
 }
 
+.hist-summary-report-btn {
+  width: 100%;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  padding: 9px 16px;
+}
+
 @media (max-width: 760px) {
   .hist-summary-grid {
     grid-template-columns: 1fr;
@@ -1671,7 +1682,7 @@ mark,
   background: var(--surface);
   border: 1px solid var(--border-2);
   border-radius: var(--radius) var(--radius) 0 0;
-  padding: var(--space-5) var(--space-4) var(--space-6);
+  padding: var(--space-5) var(--space-4) 0;
   box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.6);
   animation: modal-up 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
   /* garante que botões ficam dentro do modal */
@@ -4144,7 +4155,7 @@ mark,
   }
   .hist-sticky-header__top .btn {
     display: none;
-  } /* relatório some no mobile */
+  } /* header button escondido no mobile — o card tem o botão */
 }
 
 /* ─── TOUR GUIADO (estilos legados removidos — modal agora usa <style> inline) ─── */
@@ -4399,6 +4410,8 @@ mark,
 }
 
 .modal__body {
+  flex: 1;
+  overflow-y: auto;
   padding: 24px 24px 8px;
 }
 
@@ -4412,6 +4425,10 @@ mark,
   border-top: 1px solid var(--border);
   flex-shrink: 0;
   margin-top: 0;
+  position: sticky;
+  bottom: 0;
+  background: var(--surface);
+  z-index: 2;
 }
 
 .modal-trust-note--footer {
@@ -5387,6 +5404,68 @@ mark,
 
 .pricing-card__price-group {
   margin-top: 10px;
+}
+
+/* Toggle mensal / anual */
+.pricing-billing-toggle {
+  display: flex;
+  gap: 4px;
+  margin: 12px 0 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.pricing-billing-toggle__btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 7px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.pricing-billing-toggle__btn--active {
+  background: var(--accent, #00c8e8);
+  color: #000;
+  font-weight: 700;
+}
+
+.pricing-billing-toggle__save {
+  background: rgba(0, 200, 112, 0.25);
+  color: #00e87a;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.pricing-billing-toggle__btn--active .pricing-billing-toggle__save {
+  background: rgba(0, 0, 0, 0.2);
+  color: #004d2e;
+}
+
+.pricing-card__price-cents {
+  font-size: 0.55em;
+  vertical-align: super;
+  font-weight: 700;
+}
+
+.pricing-card__annual-detail {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 12px;
 }
 
 .pricing-card__annual {
