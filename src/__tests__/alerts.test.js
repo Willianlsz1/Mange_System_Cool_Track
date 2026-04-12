@@ -82,7 +82,7 @@ describe('Alerts.getAll', () => {
       expect.objectContaining({
         kind: 'no-history',
         recommendedAction: 'start-history',
-        title: 'Equipamento sem historico preventivo',
+        title: 'Equipamento sem histórico preventivo',
       }),
     );
   });

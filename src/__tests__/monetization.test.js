@@ -81,7 +81,7 @@ describe('monetization', () => {
       is_dev: false,
     });
 
-    expect(supabaseMock.mocks.select).toHaveBeenCalledWith(expect.stringContaining('is_dev'));
+    expect(supabaseMock.mocks.select).toHaveBeenCalledWith('*');
   });
 
   it('startCheckout fails without session', async () => {

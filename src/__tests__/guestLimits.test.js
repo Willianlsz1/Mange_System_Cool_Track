@@ -69,7 +69,7 @@ describe('guestLimits', () => {
 
     expect(result.blocked).toBe(false);
     expect(result.planCode).toBe('pro');
-    expect(result.limit).toBe(Number.POSITIVE_INFINITY);
+    expect(result.limit).toBe(30);
   });
 
   it('treats is_dev users as pro even without active subscription', async () => {

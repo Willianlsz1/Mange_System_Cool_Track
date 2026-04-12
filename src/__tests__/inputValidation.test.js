@@ -51,7 +51,7 @@ describe('inputValidation', () => {
     );
 
     expect(invalid.valid).toBe(false);
-    expect(invalid.errors.some((error) => error.includes('Equipamento invalido'))).toBe(true);
+    expect(invalid.errors.some((error) => error.includes('Equipamento inválido'))).toBe(true);
 
     const ok = validateRegistroPayload(
       {
