@@ -10,6 +10,10 @@ const buildOutput = {
 const vitestConfig = {
   globals: true,
   environment: 'jsdom',
+  env: {
+    VITE_SUPABASE_URL: 'https://placeholder.supabase.co',
+    VITE_SUPABASE_KEY: 'placeholder-key-for-tests',
+  },
   coverage: {
     provider: 'v8',
     reporter: ['text', 'lcov'],
