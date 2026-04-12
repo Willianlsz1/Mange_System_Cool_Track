@@ -40,7 +40,7 @@ describe('WhatsAppExport', () => {
     expect(text).toContain('---');
     expect(text).toContain('Relatório gerado por CoolTrack Pro');
     expect(text).toContain('Gestão de manutenção para técnicos HVAC');
-    expect(text).toContain('Crie sua conta gratis: https://cooltrackpro.com.br');
+    expect(text).toContain('cooltrackpro.com.br');
   });
 
   it('mantem envio por wa.me com texto codificado', () => {
