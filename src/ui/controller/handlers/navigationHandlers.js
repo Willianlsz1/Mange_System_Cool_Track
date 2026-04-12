@@ -44,7 +44,9 @@ export function bindNavigationHandlers() {
   });
   on('help-score-info', () => {
     setHelpMenuState(false);
-    Modal.open('modal-score-info');
+    // setTimeout garante que o evento de clique terminou de propagar
+    // antes de abrir o modal — necessário no mobile
+    setTimeout(() => Modal.open('modal-score-info'), 80);
   });
   on('help-support', () => {
     setHelpMenuState(false);
