@@ -62,7 +62,10 @@ export function renderShellHeader() {
                 Como funciona o score
               </button>
               <button type="button" class="header-help-menu__item" data-action="help-support">
-                Suporte
+                💬 Suporte
+              </button>
+              <button type="button" class="header-help-menu__item" data-action="help-feedback">
+                ⭐ Enviar feedback
               </button>
             </div>
           </div>

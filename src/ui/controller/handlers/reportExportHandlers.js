@@ -149,11 +149,14 @@ function bindWhatsAppExport() {
           return;
         }
 
-        ShareSuccessToast.show();
-
+        let newUsedCount = whatsappUsed;
         if (Number.isFinite(whatsappLimit)) {
-          await incrementMonthlyUsage(user.id, USAGE_RESOURCE_WHATSAPP_SHARE);
+          newUsedCount = await incrementMonthlyUsage(user.id, USAGE_RESOURCE_WHATSAPP_SHARE);
         }
+
+        ShareSuccessToast.show(
+          Number.isFinite(whatsappLimit) ? { used: newUsedCount, limit: whatsappLimit } : {},
+        );
       });
     } catch (error) {
       handleError(error, {

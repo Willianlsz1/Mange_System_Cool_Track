@@ -62,7 +62,8 @@ export async function checkPlanLimit(resource, currentUsageOrOptions = {}, maybe
       profile = await getPlanProfileForUserId(user?.id, { supabaseClient });
       planCode = getEffectivePlan(profile);
     } catch {
-      planCode = PLAN_CODE_FREE;
+      // Em caso de erro, ainda respeita o dev mode se estiver ativo
+      planCode = getEffectivePlan(null);
       profile = null;
     }
   }

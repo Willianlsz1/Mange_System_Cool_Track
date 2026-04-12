@@ -33,7 +33,7 @@ export const WhatsAppExport = {
       })
       .join('\n\n');
 
-    const resumo = `🧊 *COOLTRACK PRO — Relatório de Manutenção*\n*${tecnico}${empresa}*\nGerado em ${hoje}\n\n${linhas}${filtered.length > 10 ? `\n\n_...e mais ${filtered.length - 10} registro(s)_` : ''}\n\n_Relatório completo gerado pelo CoolTrack Pro_\n\n---\nRelatorio gerado por CoolTrack Pro\nGestao de manutencao para tecnicos HVAC\nCrie sua conta gratis: https://cooltrackpro.com.br`;
+    const resumo = `🧊 *COOLTRACK PRO — Relatório de Manutenção*\n*${tecnico}${empresa}*\nGerado em ${hoje}\n\n${linhas}${filtered.length > 10 ? `\n\n_...e mais ${filtered.length - 10} registro(s)_` : ''}\n\n_Relatório completo gerado pelo CoolTrack Pro_\n\n---\nRelatório gerado por CoolTrack Pro\nGestão de manutenção para técnicos HVAC\nCrie sua conta grátis: https://cooltrackpro.com.br`;
 
     return resumo;
   },

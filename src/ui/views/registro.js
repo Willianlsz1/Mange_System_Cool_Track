@@ -1,6 +1,6 @@
 /**
  * CoolTrack Pro - Registro View v5.0
- * FunÃ§Ãµes: initRegistro, saveRegistro, clearRegistro
+ * Funções: initRegistro, saveRegistro, clearRegistro
  */
 
 import { Utils } from '../../core/utils.js';
@@ -25,31 +25,31 @@ const QUICK_TEMPLATE_MAP = {
     tipo: 'Limpeza de Filtros',
     prioridade: 'media',
     descricao:
-      'Limpeza preventiva realizada no equipamento. Filtros higienizados e operaÃ§Ã£o validada em funcionamento normal.',
+      'Limpeza preventiva realizada no equipamento. Filtros higienizados e operação validada em funcionamento normal.',
   },
   recarga_gas: {
-    tipo: 'Carga de GÃ¡s Refrigerante',
+    tipo: 'Carga de Gás Refrigerante',
     prioridade: 'alta',
     descricao:
-      'Recarga de gÃ¡s refrigerante aplicada apÃ³s verificaÃ§Ã£o de pressÃ£o e vedaÃ§Ã£o. Sistema estabilizado para operaÃ§Ã£o.',
+      'Recarga de gás refrigerante aplicada após verificação de pressão e vedação. Sistema estabilizado para operação.',
   },
   troca_filtro: {
     tipo: 'Limpeza de Filtros',
     prioridade: 'media',
     descricao:
-      'Troca de filtro executada para restabelecer vazÃ£o de ar e qualidade da operaÃ§Ã£o. Equipamento testado apÃ³s a substituiÃ§Ã£o.',
+      'Troca de filtro executada para restabelecer vazão de ar e qualidade da operação. Equipamento testado após a substituição.',
   },
   inspecao: {
-    tipo: 'InspeÃ§Ã£o Geral',
+    tipo: 'Inspeção Geral',
     prioridade: 'baixa',
     descricao:
-      'InspeÃ§Ã£o tÃ©cnica geral concluÃ­da com checklist visual e funcional. Sem anomalias crÃ­ticas no momento.',
+      'Inspeção técnica geral concluída com checklist visual e funcional. Sem anomalias críticas no momento.',
   },
   manutencao_corretiva: {
-    tipo: 'ManutenÃ§Ã£o Corretiva',
+    tipo: 'Manutenção Corretiva',
     prioridade: 'alta',
     descricao:
-      'Atendimento corretivo realizado para falha reportada em campo. CorreÃ§Ã£o aplicada e equipamento reavaliado em funcionamento.',
+      'Atendimento corretivo realizado para falha reportada em campo. Correção aplicada e equipamento reavaliado em funcionamento.',
   },
 };
 
@@ -61,7 +61,7 @@ function resetEditingState() {
   if (formView) formView.dataset.editMode = '0';
 }
 
-// â”€â”€ Barra de progresso do formulÃ¡rio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Barra de progresso do formulário ──────────────────
 const _fields = [
   { id: 'r-equip', validate: (v) => v !== '' },
   { id: 'r-data', validate: (v) => v !== '' },
@@ -91,7 +91,7 @@ function _updateProgressBar() {
   if (cnt) cnt.textContent = `${filled}/${_fields.length}`;
 }
 
-// â”€â”€ Aviso de manutenÃ§Ã£o agendada â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Aviso de manutenção agendada ───────────────────────
 function _bindEquipChangeWarning() {
   const sel = Utils.getEl('r-equip');
   if (!sel) return;
@@ -110,15 +110,15 @@ function _bindEquipChangeWarning() {
       const w = document.createElement('div');
       w.id = 'reg-pending-warning';
       w.className = 'reg-pending-warning';
-      w.textContent = 'âš  ManutenÃ§Ã£o preventiva agendada. Registre apenas em emergÃªncia.';
+      w.textContent = '⚠ Manutenção preventiva agendada. Registre apenas em emergência.';
       sel.parentNode.parentNode.insertBefore(w, sel.parentNode.nextSibling);
     }
   });
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// API PÃšBLICA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════
+// API PÚBLICA
+// ═══════════════════════════════════════════════════════
 
 export function initRegistro(params = {}) {
   const formView = Utils.getEl('view-registro');
@@ -139,17 +139,17 @@ export function initRegistro(params = {}) {
     }
     _updateProgressBar();
 
-    // Data padrÃ£o
+    // Data padrão
     if (!Utils.getVal('r-data')) Utils.setVal('r-data', Utils.nowDatetime());
 
-    // H1: tÃ©cnico padrÃ£o
+    // H1: técnico padrão
     const rTecnico = Utils.getEl('r-tecnico');
     if (rTecnico && !rTecnico.value) {
       const def = Profile.getDefaultTecnico();
       if (def) rTecnico.value = def;
     }
 
-    // PrÃ©-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
+    // Pré-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
     if (!params.editRegistroId) resetEditingState();
     if (params.equipId) Utils.setVal('r-equip', params.equipId);
 
@@ -171,7 +171,7 @@ export function applyQuickTemplate(templateId) {
     if (def) Utils.setVal('r-tecnico', def);
   }
   _updateProgressBar();
-  Toast.success('AÃ§Ã£o rÃ¡pida aplicada. Revise e toque em salvar.');
+  Toast.success('Ação rápida aplicada. Revise e toque em salvar.');
 }
 
 export async function saveRegistro() {
@@ -219,7 +219,7 @@ export async function saveRegistro() {
 
   Profile.saveLastTecnico(tecnico);
 
-  // Modo ediÃ§Ã£o â€” atualiza registro existente
+  // Modo edição — atualiza registro existente
   const editingId = sessionStorage.getItem(EDITING_KEY);
   if (editingId) {
     setState((prev) => ({
@@ -259,7 +259,7 @@ export async function saveRegistro() {
     return true;
   }
 
-  // Modo criaÃ§Ã£o â€” continua fluxo normal
+  // Modo criação — continua fluxo normal
   const novoId = Utils.uid();
   let fotosRegistro = [...Photos.pending];
 
@@ -273,7 +273,7 @@ export async function saveRegistro() {
     handleError(error, {
       code: ErrorCodes.NETWORK_ERROR,
       severity: 'warning',
-      message: 'NÃ£o foi possÃ­vel carregar o mÃ³dulo de assinatura.',
+      message: 'Não foi possível carregar o módulo de assinatura.',
       context: { action: 'registro.saveRegistro.signatureImport' },
     });
   }
@@ -286,7 +286,7 @@ export async function saveRegistro() {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
         severity: 'warning',
-        message: 'NÃ£o foi possÃ­vel registrar a assinatura digital.',
+        message: 'Não foi possível registrar a assinatura digital.',
         context: { action: 'registro.saveRegistro.signatureRequest', registroId: novoId },
       });
     }
@@ -298,14 +298,14 @@ export async function saveRegistro() {
       fotosRegistro = uploadResult.photos;
       if (uploadResult.failedCount > 0) {
         Toast.warning(
-          'Algumas fotos nÃ£o puderam ser enviadas para a nuvem e ficaram salvas localmente.',
+          'Algumas fotos não puderam ser enviadas para a nuvem e ficaram salvas localmente.',
         );
       }
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
-        message: 'Falha no upload das fotos. O registro serÃ¡ salvo com fallback local.',
+        message: 'Falha no upload das fotos. O registro será salvo com fallback local.',
         context: { action: 'registro.saveRegistro.photoUpload', registroId: novoId },
       });
     }
@@ -351,14 +351,14 @@ export async function saveRegistro() {
 
   SavedHighlight.markForHighlight(novoId);
   clearRegistro();
-  Toast.success('ServiÃ§o registrado com sucesso.');
+  Toast.success('Serviço registrado com sucesso.');
 
   const { registros } = getState();
   if (registros.length > 0 && registros.length % 3 === 0) {
     setTimeout(
       () =>
         Toast.info(
-          `ðŸ’¡ VocÃª tem ${registros.length} registros. Gere um relatÃ³rio PDF para enviar ao cliente.`,
+          `💡 Você tem ${registros.length} registros. Gere um relatório PDF para enviar ao cliente.`,
         ),
       1800,
     );
@@ -427,7 +427,7 @@ export function loadRegistroForEdit(id) {
 
   const btn = document.querySelector('[data-action="save-registro"]');
   if (btn) {
-    btn.textContent = 'Salvar alteraÃ§Ãµes';
+    btn.textContent = 'Salvar alterações';
     btn.classList.add('btn--editing');
   }
 

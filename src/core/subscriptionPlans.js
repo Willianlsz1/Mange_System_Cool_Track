@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js';
+import { DevPlanOverride } from './devPlanOverride.js';
 
 export const PLAN_CODE_FREE = 'free';
 export const PLAN_CODE_PRO = 'pro';
@@ -11,16 +12,26 @@ export const PLAN_CATALOG = {
       equipamentos: 3,
       registros: 10,
     },
-    perks: ['Ate 3 equipamentos', 'Ate 10 registros'],
+    perks: [
+      'Até 3 equipamentos cadastrados',
+      'Até 10 registros de serviço/mês',
+      'Histórico dos últimos 30 dias',
+    ],
   },
   [PLAN_CODE_PRO]: {
     key: PLAN_CODE_PRO,
     label: 'Pro',
     limits: {
-      equipamentos: Number.POSITIVE_INFINITY,
+      equipamentos: 30,
       registros: Number.POSITIVE_INFINITY,
     },
-    perks: ['Equipamentos ilimitados', 'Historico completo', 'Relatorios'],
+    perks: [
+      'Até 30 equipamentos cadastrados',
+      'Registros de serviço ilimitados',
+      'Todo o histórico de manutenções',
+      'Relatórios PDF e WhatsApp ilimitados',
+      'Agrupamento por setores',
+    ],
   },
 };
 
@@ -29,6 +40,19 @@ export function normalizePlanCode(planCode) {
 }
 
 export function getEffectivePlan(profile) {
+  // Dev mode local: se 'cooltrack-dev-mode' estiver ativo, aplica o override de plano
+  // diretamente aqui — funciona em todos os caminhos de verificação de plano do app.
+  const isLocalDev =
+    typeof localStorage !== 'undefined' && localStorage.getItem('cooltrack-dev-mode') === 'true';
+  if (isLocalDev) {
+    const devOverride = DevPlanOverride.get();
+    if (devOverride) {
+      return devOverride === PLAN_CODE_PRO ? PLAN_CODE_PRO : PLAN_CODE_FREE;
+    }
+    // Se o override ainda não foi definido, trata como pro por padrão no modo dev
+    return PLAN_CODE_PRO;
+  }
+
   if (profile?.is_dev === true) return PLAN_CODE_PRO;
 
   const planCode = normalizePlanCode(profile?.plan || profile?.plan_code || PLAN_CODE_FREE);
@@ -53,8 +77,8 @@ export function canCreateEquipment(profile, currentEquipmentCount = 0) {
 }
 
 const PREMIUM_FEATURE_MESSAGES = Object.freeze({
-  pdf_export: 'A exportacao em PDF e exclusiva do plano Pro.',
-  equipamentos: 'Equipamentos ilimitados sao exclusivos do plano Pro.',
+  pdf_export: 'A exportação em PDF é exclusiva do plano Pro.',
+  equipamentos: 'Equipamentos ilimitados são exclusivos do plano Pro.',
 });
 
 export function assertProAccess(profile, featureName = 'premium_feature') {
@@ -62,7 +86,7 @@ export function assertProAccess(profile, featureName = 'premium_feature') {
 
   const normalizedFeature = String(featureName || '').toLowerCase();
   const error = new Error(
-    PREMIUM_FEATURE_MESSAGES[normalizedFeature] || 'Este recurso e exclusivo do plano Pro.',
+    PREMIUM_FEATURE_MESSAGES[normalizedFeature] || 'Este recurso é exclusivo do plano Pro.',
   );
   error.code = 'PRO_REQUIRED';
   error.feature = normalizedFeature || featureName;
@@ -78,9 +102,10 @@ export function getPlanForUser({ isGuest, planCode = PLAN_CODE_FREE } = {}) {
 export async function getPlanProfileForUserId(userId, { supabaseClient = supabase } = {}) {
   if (!userId) return null;
 
+  // Usa select('*') para evitar erros 400 por colunas ausentes no schema
   const { data, error } = await supabaseClient
     .from('profiles')
-    .select('plan_code,plan,subscription_status,is_dev')
+    .select('*')
     .eq('id', userId)
     .maybeSingle();
 

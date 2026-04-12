@@ -2,7 +2,15 @@ import { on } from '../../../core/events.js';
 import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
 import { GuestTracker } from '../../../core/guestTracker.js';
-import { saveEquip, viewEquip, deleteEquip } from '../../views/equipamentos.js';
+import {
+  saveEquip,
+  viewEquip,
+  deleteEquip,
+  saveSetor,
+  deleteSetor,
+  setActiveSector,
+  initSetorColorPicker,
+} from '../../views/equipamentos.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
 
 export function bindEquipmentHandlers() {
@@ -55,6 +63,63 @@ export function bindEquipmentHandlers() {
         code: ErrorCodes.VALIDATION_ERROR,
         message: 'Não foi possível confirmar a exclusao do equipamento.',
         context: { action: 'controller.delete-equip', id: el.dataset.id },
+      });
+    }
+  });
+
+  // ── Setores (PRO) ──────────────────────────────────────────────────────────
+
+  on('open-setor', (el) => {
+    setActiveSector(el.dataset.id);
+  });
+
+  on('back-to-setores', () => {
+    setActiveSector(null);
+  });
+
+  on('save-setor', async (el) => {
+    try {
+      await runAsyncAction(el, { loadingLabel: 'Salvando...' }, async () => {
+        await saveSetor();
+      });
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: 'Não foi possível salvar o setor.',
+        context: { action: 'controller.save-setor' },
+      });
+    }
+  });
+
+  on('delete-setor', async (el, event) => {
+    event?.stopPropagation?.(); // evita abrir o setor ao clicar em excluir
+    try {
+      const ok = await CustomConfirm.show(
+        'Excluir Setor',
+        'Os equipamentos deste setor serão movidos para "Sem setor". Esta ação não pode ser desfeita.',
+        { confirmLabel: 'Excluir setor', cancelLabel: 'Cancelar', tone: 'danger' },
+      );
+      if (ok) await deleteSetor(el.dataset.id);
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: 'Não foi possível excluir o setor.',
+        context: { action: 'controller.delete-setor', id: el.dataset.id },
+      });
+    }
+  });
+
+  // Abre modal de criar setor e inicializa color picker
+  on('open-setor-modal', async () => {
+    try {
+      const { Modal: M } = await import('../../../core/modal.js');
+      M.open('modal-add-setor');
+      initSetorColorPicker();
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: 'Não foi possível abrir o modal de setor.',
+        context: { action: 'controller.open-setor-modal' },
       });
     }
   });

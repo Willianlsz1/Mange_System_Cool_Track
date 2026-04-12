@@ -36,7 +36,7 @@ function validateTextField({ name, value, required = false, maxLength, multiline
   const normalized = multiline ? normalizeMultilineText(value) : normalizeInlineText(value);
 
   if (required && !normalized) {
-    return { value: normalized, error: `Campo obrigatorio: ${name}.` };
+    return { value: normalized, error: `Campo obrigatório: ${name}.` };
   }
 
   if (normalized.length > maxLength) {
@@ -55,7 +55,7 @@ function parseCost(value, fieldName) {
 
   const parsed = Number.parseFloat(normalized.replace(',', '.'));
   if (!Number.isFinite(parsed) || parsed < 0) {
-    return { value: 0, error: `${fieldName} invalido.` };
+    return { value: 0, error: `${fieldName} inválido.` };
   }
 
   return { value: parsed, error: null };
@@ -108,7 +108,7 @@ export function validateEquipamentoPayload(
     errors.push(`TAG excede o limite de ${EQUIPMENT_FIELD_LIMITS.tag} caracteres.`);
   }
   if (hasDuplicateTag(tag, existingEquipamentos, editingId)) {
-    errors.push('Ja existe equipamento com esta TAG.');
+    errors.push('Já existe equipamento com esta TAG.');
   }
 
   return {
@@ -140,37 +140,37 @@ export function validateRegistroPayload(
       : '';
 
   const tipo = validateTextField({
-    name: 'Tipo de servico',
+    name: 'Tipo de serviço',
     value: payload?.tipo,
     required: true,
     maxLength: REGISTRO_FIELD_LIMITS.tipo,
   });
   const tecnico = validateTextField({
-    name: 'Tecnico responsavel',
+    name: 'Técnico responsável',
     value: payload?.tecnico,
     required: requireTecnico,
     maxLength: REGISTRO_FIELD_LIMITS.tecnico,
   });
   const obs = validateTextField({
-    name: 'Observacoes',
+    name: 'Observações',
     value: payload?.obs,
     required: false,
     maxLength: REGISTRO_FIELD_LIMITS.obs,
     multiline: true,
   });
   const pecas = validateTextField({
-    name: 'Pecas e materiais',
+    name: 'Peças e materiais',
     value: payload?.pecas,
     required: false,
     maxLength: REGISTRO_FIELD_LIMITS.pecas,
     multiline: true,
   });
 
-  if (!equipId) errors.push('Campo obrigatorio: Equipamento.');
+  if (!equipId) errors.push('Campo obrigatório: Equipamento.');
   if (equipId && !equipamentoIds.has(equipId))
-    errors.push('Equipamento invalido para este registro.');
-  if (!data) errors.push('Campo obrigatorio: Data.');
-  if (!status) errors.push('Status informado nao e permitido.');
+    errors.push('Equipamento inválido para este registro.');
+  if (!data) errors.push('Campo obrigatório: Data.');
+  if (!status) errors.push('Status informado não é permitido.');
   if (tipo.error) errors.push(tipo.error);
   if (tecnico.error) errors.push(tecnico.error);
   if (obs.error) errors.push(obs.error);
@@ -179,16 +179,16 @@ export function validateRegistroPayload(
   if (data) {
     const parsedData = new Date(data);
     if (Number.isNaN(parsedData.getTime())) {
-      errors.push('Data invalida.');
+      errors.push('Data inválida.');
     }
   }
 
   if (proxima && data && proxima < data.slice(0, 10)) {
-    errors.push('Proxima manutencao nao pode ser anterior ao servico.');
+    errors.push('Próxima manutenção não pode ser anterior ao serviço.');
   }
 
-  const custoPecas = parseCost(payload?.custoPecas, 'Custo de pecas');
-  const custoMaoObra = parseCost(payload?.custoMaoObra, 'Custo de mao de obra');
+  const custoPecas = parseCost(payload?.custoPecas, 'Custo de peças');
+  const custoMaoObra = parseCost(payload?.custoMaoObra, 'Custo de mão de obra');
   if (custoPecas.error) errors.push(custoPecas.error);
   if (custoMaoObra.error) errors.push(custoMaoObra.error);
 

@@ -181,7 +181,9 @@ async function resolveDashboardPlanContext() {
       hasPro: hasProAccess(profile),
     };
   } catch {
-    return { planCode: PLAN_CODE_FREE, hasPro: false };
+    // Em caso de erro, ainda respeita o dev mode se estiver ativo
+    const fallbackPlan = getEffectivePlan(null);
+    return { planCode: fallbackPlan, hasPro: fallbackPlan === PLAN_CODE_PRO };
   }
 }
 
@@ -550,7 +552,7 @@ export function updateHeader() {
       statusFalhas.hidden = false;
       _setStatusIndicatorState(statusFalhas, 'danger', { live: true });
       if (statusFalhasTxt)
-        statusFalhasTxt.textContent = `${faultCount} situação${faultCount > 1 ? 'ões' : ''} crítica${faultCount > 1 ? 's' : ''} em aberto`;
+        statusFalhasTxt.textContent = `${faultCount} situaç${faultCount > 1 ? 'ões' : 'ão'} crítica${faultCount > 1 ? 's' : ''} em aberto`;
     } else if (alertCount > 0) {
       statusSistema.innerHTML = `<span class="status-indicator__dot status-indicator__dot--warn"></span><span>Atenção requerida</span>`;
       statusSistema.hidden = false;
@@ -671,7 +673,7 @@ export async function renderDashboard() {
     if (greetEl) {
       greetEl.textContent =
         faults > 0
-          ? `${faults} situação${faults > 1 ? 'ões' : ''} exigindo intervenção`
+          ? `${faults} situaç${faults > 1 ? 'ões' : 'ão'} exigindo intervenção`
           : alerts.length > 0
             ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
             : 'Sistema Operacional';
