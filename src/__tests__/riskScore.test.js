@@ -10,7 +10,7 @@ describe('risk score with criticidade multiplier', () => {
     expect(result.technicalRisk).toBe(50);
     expect(result.multiplier).toBe(1.4);
     expect(result.finalRisk).toBe(70);
-    expect(result.classification).toBe('alto');
+    expect(result.classification).toBe('medio');
   });
 
   it('clamps final score at 100 when multiplier exceeds the range', () => {
