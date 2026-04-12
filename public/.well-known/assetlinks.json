@@ -3,8 +3,10 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "SEU_PACKAGE_NAME_AQUI",
-      "sha256_cert_fingerprints": ["SEU_SHA256_FINGERPRINT_AQUI"]
+      "package_name": "com.cooltrackpro.app",
+      "sha256_cert_fingerprints": [
+        "97:4B:00:74:0A:58:C4:FE:38:B7:A1:94:4F:6A:6A:35:24:7F:45:26:56:91:B3:92:61:E7:01:CB:2C:66:67:79"
+      ]
     }
   }
 ]

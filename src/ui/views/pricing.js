@@ -163,7 +163,7 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
 
         <details class="pricing-faq__item">
           <summary>Aceita PIX ou boleto?</summary>
-          <p>Sim! PIX, cartão de crédito e boleto bancário são aceitos no checkout.</p>
+          <p>No momento aceitamos <strong>cartão de crédito</strong> no checkout. Pagamento por PIX e boleto bancário estão sendo integrados e chegarão em breve.</p>
         </details>
 
         <details class="pricing-faq__item">

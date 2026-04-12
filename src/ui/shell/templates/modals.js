@@ -59,16 +59,27 @@ export function renderShellModals() {
             <div class="form-group">
               <label class="form-label" for="eq-tipo">Tipo de equipamento</label>
               <select id="eq-tipo" class="form-control">
-                <option>Split Hi-Wall</option>
-                <option>Split Cassette</option>
-                <option>Split Piso Teto</option>
-                <option>VRF / VRV</option>
-                <option>Chiller</option>
-                <option>Fan Coil</option>
-                <option>Self Contained</option>
-                <option>Roof Top</option>
-                <option>Câmara Fria</option>
-                <option>Outro</option>
+                <optgroup label="Climatização">
+                  <option>Split Hi-Wall</option>
+                  <option>Split Cassette</option>
+                  <option>Split Piso Teto</option>
+                  <option>VRF / VRV</option>
+                  <option>GHP</option>
+                  <option>Fan Coil</option>
+                  <option>Chiller</option>
+                  <option>Self Contained</option>
+                  <option>Roof Top</option>
+                </optgroup>
+                <optgroup label="Refrigeração">
+                  <option>Câmara Fria</option>
+                  <option>Balcão Frigorífico</option>
+                  <option>Freezer</option>
+                  <option>Geladeira</option>
+                  <option>Bebedouro</option>
+                </optgroup>
+                <optgroup label="Geral">
+                  <option>Outro</option>
+                </optgroup>
               </select>
             </div>
             <div class="form-group">
@@ -174,6 +185,76 @@ export function renderShellModals() {
       <div class="btn-group modal__footer">
         <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-setor">Cancelar</button>
         <button class="btn btn--primary" data-action="save-setor">Criar setor →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Como funciona o Score -->
+  <div class="modal-overlay" id="modal-score-info" role="dialog" aria-modal="true" aria-labelledby="modal-score-info-title">
+    <div class="modal modal--sm">
+      <div class="modal__body">
+        <div class="modal__title" id="modal-score-info-title">📊 Como funciona o Score de Risco</div>
+        <div class="modal__subtitle">O score vai de 0 a 100 e indica o risco operacional do equipamento</div>
+
+        <div class="score-info-bands">
+          <div class="score-info-band score-info-band--ok">
+            <span class="score-info-band__range">0 – 34</span>
+            <span class="score-info-band__label">✅ Baixo risco</span>
+            <span class="score-info-band__desc">Equipamento com manutenção em dia e operando normalmente.</span>
+          </div>
+          <div class="score-info-band score-info-band--warn">
+            <span class="score-info-band__range">35 – 69</span>
+            <span class="score-info-band__label">⚠️ Médio risco</span>
+            <span class="score-info-band__desc">Atenção necessária — preventiva próxima ou algum ponto de atenção.</span>
+          </div>
+          <div class="score-info-band score-info-band--danger">
+            <span class="score-info-band__range">70 – 100</span>
+            <span class="score-info-band__label">🔴 Alto risco</span>
+            <span class="score-info-band__desc">Intervenção prioritária recomendada.</span>
+          </div>
+        </div>
+
+        <div class="score-info-factors">
+          <div class="score-info-factors__title">O que entra no cálculo</div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">📅</span>
+            <div>
+              <strong>Histórico de manutenção</strong>
+              <p>Quantos dias se passaram desde o último registro. Equipamentos sem manutenção recente acumulam mais risco.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">🔧</span>
+            <div>
+              <strong>Próxima preventiva</strong>
+              <p>Distância em dias até a próxima manutenção preventiva planejada. Quanto mais próxima ou vencida, maior o score.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">🔁</span>
+            <div>
+              <strong>Corretivas recentes</strong>
+              <p>Quantidade de manutenções corretivas nos últimos 90 dias. Muitas corretivas indicam instabilidade no equipamento.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">⚡</span>
+            <div>
+              <strong>Criticidade operacional</strong>
+              <p>Multiplica o score base: Baixa ×1.0 · Média ×1.1 · Alta ×1.25 · Crítica ×1.4. Equipamentos críticos têm risco amplificado.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">🚦</span>
+            <div>
+              <strong>Status atual</strong>
+              <p>Se o equipamento está operando com restrições ou fora de operação, isso eleva diretamente o score.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-group modal__footer">
+        <button class="btn btn--primary" data-action="close-modal" data-id="modal-score-info">Entendi</button>
       </div>
     </div>
   </div>
