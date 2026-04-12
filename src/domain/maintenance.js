@@ -23,11 +23,16 @@ const PERIODICIDADE_PREVENTIVA_BASE = {
   split_cassette: 90,
   split_piso_teto: 60,
   vrf_vrv: 45,
+  ghp: 45,
   chiller: 30,
   fan_coil: 60,
   self_contained: 60,
   roof_top: 45,
   camara_fria: 30,
+  balcao_frigorico: 45,
+  freezer: 45,
+  geladeira: 60,
+  bebedouro: 90,
   outro: 60,
 };
 
@@ -36,6 +41,7 @@ export const PERIODICIDADE_PREVENTIVA_POR_TIPO = {
   'Split Cassette': PERIODICIDADE_PREVENTIVA_BASE.split_cassette,
   'Split Piso Teto': PERIODICIDADE_PREVENTIVA_BASE.split_piso_teto,
   'VRF / VRV': PERIODICIDADE_PREVENTIVA_BASE.vrf_vrv,
+  GHP: PERIODICIDADE_PREVENTIVA_BASE.ghp,
   Chiller: PERIODICIDADE_PREVENTIVA_BASE.chiller,
   'Fan Coil': PERIODICIDADE_PREVENTIVA_BASE.fan_coil,
   'Self Contained': PERIODICIDADE_PREVENTIVA_BASE.self_contained,
@@ -43,6 +49,10 @@ export const PERIODICIDADE_PREVENTIVA_POR_TIPO = {
   'Câmara Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
   'Camara Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
   'Camera Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
+  'Balcão Frigorífico': PERIODICIDADE_PREVENTIVA_BASE.balcao_frigorico,
+  Freezer: PERIODICIDADE_PREVENTIVA_BASE.freezer,
+  Geladeira: PERIODICIDADE_PREVENTIVA_BASE.geladeira,
+  Bebedouro: PERIODICIDADE_PREVENTIVA_BASE.bebedouro,
   Outro: PERIODICIDADE_PREVENTIVA_BASE.outro,
 };
 
@@ -108,10 +118,15 @@ function getTipoKey(tipo) {
     'Split Cassette': 'split_cassette',
     'Split Piso Teto': 'split_piso_teto',
     'VRF / VRV': 'vrf_vrv',
+    GHP: 'ghp',
     Chiller: 'chiller',
     'Fan Coil': 'fan_coil',
     'Self Contained': 'self_contained',
     'Roof Top': 'roof_top',
+    'Balcão Frigorífico': 'balcao_frigorico',
+    Freezer: 'freezer',
+    Geladeira: 'geladeira',
+    Bebedouro: 'bebedouro',
   };
 
   return aliases[raw] || 'outro';

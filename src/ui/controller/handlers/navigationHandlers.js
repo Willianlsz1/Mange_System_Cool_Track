@@ -44,7 +44,7 @@ export function bindNavigationHandlers() {
   });
   on('help-score-info', () => {
     setHelpMenuState(false);
-    Toast.info('O score combina criticidade, histórico e recorrência para priorizar o risco.');
+    Modal.open('modal-score-info');
   });
   on('help-support', () => {
     setHelpMenuState(false);

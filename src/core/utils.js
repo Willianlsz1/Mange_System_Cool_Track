@@ -10,15 +10,23 @@ export const MAX_PHOTO_WIDTH = 1200;
 export const PHOTO_QUALITY = 0.7;
 
 export const TIPO_ICON = {
+  // Climatização
   'Split Hi-Wall': '❄️',
   'Split Cassette': '🌀',
   'Split Piso Teto': '📐',
   'Fan Coil': '💨',
   Chiller: '🧊',
-  'Câmara Fria': '🏔️',
   'VRF / VRV': '🔁',
+  GHP: '♨️',
   'Self Contained': '🏭',
   'Roof Top': '🏗️',
+  // Refrigeração
+  'Câmara Fria': '🏔️',
+  'Balcão Frigorífico': '🛒',
+  Freezer: '🌨️',
+  Geladeira: '🚪',
+  Bebedouro: '💧',
+  // Geral
   Outro: '⚙️',
 };
 
