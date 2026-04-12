@@ -1009,4 +1009,19 @@ export function populateEquipSelects() {
     });
   });
 
-  co
+  const tecDatalist = Utils.getEl('tec-datalist');
+  if (tecDatalist) {
+    tecDatalist.textContent = '';
+    (tecnicos || []).forEach((tecnico) => {
+      const option = document.createElement('option');
+      option.value = String(tecnico || '');
+      tecDatalist.appendChild(option);
+    });
+  }
+
+  const rTecnico = Utils.getEl('r-tecnico');
+  if (rTecnico && !rTecnico.value) {
+    const def = Profile.getDefaultTecnico();
+    if (def) rTecnico.value = def;
+  }
+}

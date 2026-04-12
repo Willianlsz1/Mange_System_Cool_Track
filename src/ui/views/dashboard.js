@@ -850,3 +850,6 @@ export async function renderDashboard() {
     _renderStatusChart();
   });
 }
+
+  });
+}
