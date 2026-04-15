@@ -1,11 +1,11 @@
 // @ts-nocheck
-import { corsHeaders } from '../_shared/cors.ts';
+import { getCorsHeaders } from '../_shared/cors.ts';
 import Stripe from 'https://esm.sh/stripe@14?target=denonext';
 
-function jsonResponse(payload: unknown, status = 200) {
+function jsonResponse(req: Request, payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
   });
 }
 
@@ -19,11 +19,11 @@ function getRequiredEnv(name: string) {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: getCorsHeaders(req) });
   }
 
   if (req.method !== 'POST') {
-    return jsonResponse({ code: 'METHOD_NOT_ALLOWED', message: 'Use POST.' }, 405);
+    return jsonResponse(req, { code: 'METHOD_NOT_ALLOWED', message: 'Use POST.' }, 405);
   }
 
   try {
@@ -44,12 +44,16 @@ Deno.serve(async (req) => {
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return jsonResponse({ code: 'AUTH_REQUIRED', message: 'Sem token de autenticação.' }, 401);
+      return jsonResponse(
+        req,
+        { code: 'AUTH_REQUIRED', message: 'Sem token de autenticação.' },
+        401,
+      );
     }
 
     const token = authHeader.replace('Bearer ', '').trim();
     if (!token) {
-      return jsonResponse({ code: 'AUTH_REQUIRED', message: 'Token inválido.' }, 401);
+      return jsonResponse(req, { code: 'AUTH_REQUIRED', message: 'Token inválido.' }, 401);
     }
 
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
@@ -61,12 +65,12 @@ Deno.serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
-      console.error('AUTH DEBUG', { userError });
+      console.error('[create-checkout-session] auth falhou:', userError?.message ?? 'sem usuário');
       return jsonResponse(
+        req,
         {
           code: 'INVALID_JWT',
           message: 'Usuário não autenticado.',
-          details: userError?.message ?? null,
         },
         401,
       );
@@ -89,14 +93,18 @@ Deno.serve(async (req) => {
       },
     });
 
-    return jsonResponse({ url: session.url }, 200);
+    return jsonResponse(req, { url: session.url }, 200);
   } catch (error) {
-    console.error('Stripe checkout error:', error);
+    console.error(
+      '[create-checkout-session] erro interno:',
+      error instanceof Error ? error.message : error,
+    );
 
     const message = error instanceof Error ? error.message : 'Erro interno na função';
     if (message.startsWith('MISSING_ENV_')) {
       const envName = message.replace('MISSING_ENV_', '');
       return jsonResponse(
+        req,
         {
           code: 'MISSING_ENV',
           message: `Falta ${envName} nos secrets da Edge Function.`,
@@ -105,6 +113,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    return jsonResponse({ code: 'INTERNAL_ERROR', message }, 500);
+    return jsonResponse(req, { code: 'INTERNAL_ERROR', message }, 500);
   }
 });

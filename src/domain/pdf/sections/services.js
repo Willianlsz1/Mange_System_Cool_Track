@@ -195,7 +195,7 @@ export async function drawServices(
     }
 
     await drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, layout);
-    y += layout.cardHeight + 6;
+    y += layout.cardHeight + 4;
   }
 
   if (typeof drawFooter === 'function') {

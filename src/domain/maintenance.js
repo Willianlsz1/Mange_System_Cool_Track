@@ -231,10 +231,12 @@ function getRiskStatusFactor(status) {
 
 function getRiskAgeFactor(context) {
   if (!context.ultimoRegistro) {
+    // Equipamento recém cadastrado: risco neutro por falta de histórico.
+    // A ausência de registros não indica problema em equipamentos novos.
     return {
-      points: 30,
-      shortLabel: 'sem histórico de manutenção',
-      detail: 'Não há registro anterior para confirmar rotina de manutenção.',
+      points: 6,
+      shortLabel: 'equipamento novo sem registros',
+      detail: 'Primeiro registro ainda não cadastrado. Agende a primeira preventiva.',
     };
   }
 
@@ -429,8 +431,13 @@ export function evaluateEquipmentHealth(equipamento, registros = []) {
   }
 
   if (!context.ultimoRegistro) {
-    penalty += 22;
-    reasons.push('sem histórico técnico');
+    // Equipamento recém cadastrado: não penaliza por falta de histórico quando o status
+    // está ok. Apenas equipamentos com status warn/danger explícito recebem penalidade,
+    // pois a ausência de registros é esperada em equipamentos novos.
+    if (context.equipamento.status !== 'ok') {
+      penalty += 22;
+      reasons.push('sem histórico técnico');
+    }
   } else {
     const agePenalty = getAgePenalty(context.daysSinceLast, context.periodicidadeDias);
     const nextPenalty = getPreventivePenalty(context.daysToNext);

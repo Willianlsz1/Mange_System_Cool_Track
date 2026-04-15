@@ -43,6 +43,15 @@ async function bootstrap() {
     Auth.finalizeOAuthRedirect(user);
 
     if (user && isGuest) {
+      // Limpa todos os dados de demo do localStorage antes de carregar do Supabase.
+      // Sem isso, migrateIfNeeded() veria dados no cooltrack_v3 e os enviaria para a conta real.
+      const GUEST_DATA_KEYS = [
+        'cooltrack_v3',
+        'cooltrack-sync-dirty-v1',
+        'cooltrack-sync-deletions-v1',
+        'cooltrack-cache-owner-v1',
+      ];
+      GUEST_DATA_KEYS.forEach((k) => localStorage.removeItem(k));
       localStorage.removeItem('cooltrack-guest-mode');
       isGuest = false;
     }

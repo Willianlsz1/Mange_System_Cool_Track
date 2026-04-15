@@ -1,9 +1,16 @@
 /**
  * SupportFeedbackModal — Modal de suporte e feedback do usuário.
  * Acessível via menu de ajuda (?) no header.
+ *
+ * Fluxo de envio:
+ *  1. Salva no localStorage (histórico local, fallback offline)
+ *  2. Insere na tabela `feedback` do Supabase (owner lê no Dashboard)
+ *  3. Envia e-mail de notificação via EmailJS (requer configuração no .env)
  */
 
 import { Toast } from '../../core/toast.js';
+import { supabase } from '../../core/supabase.js';
+import { sendFeedbackEmail } from '../../core/emailNotification.js';
 
 const MODAL_ID = 'support-feedback-modal-overlay';
 const LS_KEY = 'cooltrack-feedback-history';
@@ -11,7 +18,7 @@ const LS_KEY = 'cooltrack-feedback-history';
 const SUPPORT_EMAIL = 'suporte@cooltrackpro.com.br';
 const SUPPORT_WHATSAPP = '5531999999999'; // substitua pelo número real
 
-function saveFeedback(rating, message) {
+function saveToLocalStorage(rating, message) {
   try {
     const history = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
     history.push({ rating, message, date: new Date().toISOString() });
@@ -19,6 +26,22 @@ function saveFeedback(rating, message) {
   } catch (_) {
     /* ignora */
   }
+}
+
+async function saveToSupabase(rating, message) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase.from('feedback').insert({
+    user_id: user?.id ?? null,
+    user_email: user?.email ?? null,
+    rating,
+    message: message || null,
+  });
+  if (error) {
+    console.warn('[Feedback] Supabase insert error:', error.message);
+  }
+  return user?.email ?? null;
 }
 
 function closeModal() {
@@ -173,9 +196,25 @@ export const SupportFeedbackModal = {
     });
 
     // Submit
-    submitBtn.addEventListener('click', () => {
+    submitBtn.addEventListener('click', async () => {
       const message = overlay.querySelector('#sfm-message').value.trim();
-      saveFeedback(selectedRating, message);
+
+      // Feedback visual imediato — não espera as chamadas assíncronas
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Enviando…';
+
+      // 1. Salva localmente (síncrono, nunca falha)
+      saveToLocalStorage(selectedRating, message);
+
+      // 2 + 3. Supabase e e-mail em paralelo (erros não bloqueiam o usuário)
+      Promise.allSettled([
+        saveToSupabase(selectedRating, message).then((userEmail) =>
+          sendFeedbackEmail({ rating: selectedRating, message, userEmail }),
+        ),
+      ]).catch(() => {
+        /* silencioso */
+      });
+
       closeModal();
       Toast.success('Obrigado pelo feedback! 🙏 Sua opinião é muito valiosa.');
     });
