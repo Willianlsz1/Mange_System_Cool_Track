@@ -180,17 +180,17 @@ describe('Auth integration wrapper', () => {
 
     const shortPwd = await Auth.tryHandlePasswordRecovery(async () => '123');
     expect(shortPwd).toBe(true);
-    expect(toastMock.error).toHaveBeenCalledWith('Senha deve ter no mínimo 6 caracteres.');
+    expect(toastMock.error).toHaveBeenCalledWith('Senha deve ter no mínimo 8 caracteres.');
 
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: { message: 'boom' } });
-    const failed = await Auth.tryHandlePasswordRecovery(async () => '123456');
+    const failed = await Auth.tryHandlePasswordRecovery(async () => '1234567890');
     expect(failed).toBe(true);
     expect(toastMock.error).toHaveBeenCalledWith(
       'Não foi possível redefinir a senha. Tente novamente pelo link do email.',
     );
 
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: null });
-    const success = await Auth.tryHandlePasswordRecovery(async () => 'nova123');
+    const success = await Auth.tryHandlePasswordRecovery(async () => 'nova1234');
     expect(success).toBe(true);
     expect(toastMock.success).toHaveBeenCalled();
     expect(replaceSpy).toHaveBeenCalled();

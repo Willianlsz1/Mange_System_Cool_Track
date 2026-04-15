@@ -17,3 +17,6 @@ coverage/
 # Arquivos temporários de desenvolvimento / preview
 *-preview.html
 pdf_validacao.pdf
+
+# Artefatos temporários do Vite (gerados em dev, nunca commitados)
+vite.config.js.timestamp-*

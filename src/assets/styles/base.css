@@ -104,11 +104,11 @@
   --danger-dim: rgba(192, 32, 48, 0.04);
 
   --text: #0a1e32;
-  --text-2: #3a5870;
-  --text-3: #7a9ab8;
-  --text-muted: #5a7a96;
-  --muted: #7a9ab8;
-  --muted-light: #9abaca;
+  --text-2: #2c4a64;
+  --text-3: #3d6080; /* ajustado para contraste WCAG AA ≥ 4.5:1 em fundo branco */
+  --text-muted: #3a5870;
+  --muted: #3d6080;
+  --muted-light: #4a6a88;
 
   --surface-strong: #e8eff6;
   --border-strong: rgba(0, 30, 60, 0.14);

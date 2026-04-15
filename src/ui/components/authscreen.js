@@ -6,7 +6,6 @@ import { PasswordRecoveryModal } from './passwordRecoveryModal.js';
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 
-// Keys to wipe when a guest creates / logs into a real account
 const GUEST_DATA_KEYS = [
   'cooltrack_v3',
   'cooltrack-sync-dirty-v1',
@@ -50,6 +49,48 @@ function handleAuthSuccess(overlay, postAuthRedirect) {
   persistPostAuthRedirect(postAuthRedirect);
   overlay.remove();
   window.location.reload();
+}
+
+/** Ativa o toggle de mostrar/esconder senha em todos os .auth-input-wrap dentro de um container */
+function bindPasswordToggles(container) {
+  container.querySelectorAll('.auth-input-wrap').forEach((wrap) => {
+    const input = wrap.querySelector('input[type="password"], input.auth-pwd-input');
+    const btn = wrap.querySelector('.auth-pwd-toggle');
+    if (!input || !btn) return;
+
+    btn.addEventListener('click', () => {
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+      btn.setAttribute('aria-label', isHidden ? 'Ocultar senha' : 'Mostrar senha');
+      btn.innerHTML = isHidden ? eyeOffSVG() : eyeSVG();
+    });
+  });
+}
+
+function eyeSVG() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+    <circle cx="12" cy="12" r="3"/>
+  </svg>`;
+}
+
+function eyeOffSVG() {
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+    <line x1="1" y1="1" x2="23" y2="23"/>
+  </svg>`;
+}
+
+function passwordInputHTML(id, placeholder, autocomplete) {
+  return `
+    <div class="auth-input-wrap">
+      <input class="auth-input auth-pwd-input" id="${id}" type="password"
+        placeholder="${placeholder}" autocomplete="${autocomplete}" />
+      <button type="button" class="auth-pwd-toggle" aria-label="Mostrar senha" tabindex="-1">
+        ${eyeSVG()}
+      </button>
+    </div>`;
 }
 
 export const AuthScreen = {
@@ -183,7 +224,7 @@ export const AuthScreen = {
         }
         .auth-card-header {
           text-align: center; margin-bottom: 28px;
-          display: none; /* hidden on desktop – logo is on left panel */
+          display: none;
         }
 
         /* ── Tabs ── */
@@ -247,6 +288,21 @@ export const AuthScreen = {
         .auth-input:focus { border-color: rgba(0,200,232,0.35); background: rgba(0,200,232,0.04); }
         .auth-input::placeholder { color: #2a4258; }
 
+        /* ── Password wrap (input + olho) ── */
+        .auth-input-wrap {
+          position: relative; display: flex; align-items: center;
+        }
+        .auth-input-wrap .auth-input {
+          padding-right: 42px;
+        }
+        .auth-pwd-toggle {
+          position: absolute; right: 10px;
+          background: none; border: none; cursor: pointer; padding: 4px;
+          color: #3a5870; display: flex; align-items: center;
+          transition: color .18s;
+        }
+        .auth-pwd-toggle:hover { color: #7aaccc; }
+
         /* ── Primary CTA ── */
         .auth-btn {
           width: 100%; margin-top: 20px; padding: 13px;
@@ -285,7 +341,7 @@ export const AuthScreen = {
         }
         .auth-btn-guest:hover { color: #7aaccc; }
 
-        /* ── Responsive: mobile hides left panel ── */
+        /* ── Responsive ── */
         @media (max-width: 768px) {
           .auth-brand { display: none; }
           .auth-form-panel { padding: 24px 16px; }
@@ -376,22 +432,8 @@ export const AuthScreen = {
           </div>
 
           <div class="auth-tabs" role="tablist" aria-label="Acesso">
-            <button
-              class="auth-tab active"
-              id="tab-signin"
-              type="button"
-              role="tab"
-              aria-selected="true"
-              aria-controls="auth-form-signin"
-            >Entrar</button>
-            <button
-              class="auth-tab"
-              id="tab-signup"
-              type="button"
-              role="tab"
-              aria-selected="false"
-              aria-controls="auth-form-signup"
-            >Criar conta</button>
+            <button class="auth-tab active" id="tab-signin" type="button" role="tab" aria-selected="true" aria-controls="auth-form-signin">Entrar</button>
+            <button class="auth-tab" id="tab-signup" type="button" role="tab" aria-selected="false" aria-controls="auth-form-signup">Criar conta</button>
           </div>
 
           <!-- Sign In panel -->
@@ -409,7 +451,7 @@ export const AuthScreen = {
             <label class="auth-label" for="signin-email">EMAIL</label>
             <input class="auth-input" id="signin-email" type="email" placeholder="seu@email.com" autocomplete="email" />
             <label class="auth-label" for="signin-password">SENHA</label>
-            <input class="auth-input" id="signin-password" type="password" placeholder="••••••••" autocomplete="current-password" />
+            ${passwordInputHTML('signin-password', '••••••••', 'current-password')}
             <button class="auth-btn" id="btn-signin" type="button">Acessar meu painel →</button>
             <div class="auth-actions-center">
               <button class="auth-btn-forgot" id="btn-forgot" type="button">Esqueci minha senha</button>
@@ -437,7 +479,9 @@ export const AuthScreen = {
             <label class="auth-label" for="signup-email">EMAIL</label>
             <input class="auth-input" id="signup-email" type="email" placeholder="seu@email.com" autocomplete="email" />
             <label class="auth-label" for="signup-password">SENHA</label>
-            <input class="auth-input" id="signup-password" type="password" placeholder="mínimo 6 caracteres" autocomplete="new-password" />
+            ${passwordInputHTML('signup-password', 'mínimo 8 caracteres', 'new-password')}
+            <label class="auth-label" for="signup-confirm">CONFIRMAR SENHA</label>
+            ${passwordInputHTML('signup-confirm', 'repita a senha', 'new-password')}
             <button class="auth-btn" id="btn-signup" type="button">Começar a usar gratuitamente →</button>
             <div class="auth-hint">Plano gratuito · Sem cartão · Cancele quando quiser</div>
           </div>
@@ -447,6 +491,9 @@ export const AuthScreen = {
     `;
 
     document.body.appendChild(overlay);
+
+    // Ativa todos os botões de olho
+    bindPasswordToggles(overlay);
 
     const tabSignin = overlay.querySelector('#tab-signin');
     const tabSignup = overlay.querySelector('#tab-signup');
@@ -471,14 +518,8 @@ export const AuthScreen = {
       });
 
       await runAsyncAction(button, { loadingLabel: 'Redirecionando...' }, async () => {
-        // Google OAuth faz redirect EXTERNO — o browser sai do app e volta depois.
-        // NÃO podemos chamar overlay.remove() nem window.location.reload() aqui,
-        // porque o Supabase já cuida do redirect. Fazemos apenas o pré-processamento.
         const wasGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
 
-        // Limpa dados de demo ANTES do redirect para que, ao voltar do Google,
-        // o bootstrap não tente migrar o seed para a conta nova.
-        // Guardamos o flag original para poder restaurar em caso de erro.
         if (wasGuest) {
           clearGuestDemoData();
           localStorage.removeItem('cooltrack-guest-mode');
@@ -490,17 +531,12 @@ export const AuthScreen = {
         });
 
         if (!result?.ok) {
-          // Falha ANTES do redirect externo (ex: Supabase offline).
-          // Restaura o estado de guest para não deixar o usuário sem dados.
           if (wasGuest) localStorage.setItem('cooltrack-guest-mode', '1');
           if (result?.message) Toast.error(result.message);
           return;
         }
 
-        // Sucesso: o Supabase já redirecionou o browser para o Google.
-        // Persiste o redirect pós-auth para ser consumido pelo bootstrap após retorno.
         persistPostAuthRedirect(postAuthRedirect);
-        // (não chamamos reload — o redirect externo + volta do Google já faz isso)
       });
     };
 
@@ -546,13 +582,19 @@ export const AuthScreen = {
       const nome = overlay.querySelector('#signup-nome').value.trim();
       const email = overlay.querySelector('#signup-email').value.trim();
       const password = overlay.querySelector('#signup-password').value;
+      const confirm = overlay.querySelector('#signup-confirm').value;
 
-      if (!nome || !email || !password) {
-        return Toast.warning('Preencha nome, email e senha para criar a conta.');
+      if (!nome || !email || !password || !confirm) {
+        return Toast.warning('Preencha todos os campos para criar a conta.');
       }
       if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email válido.');
-      if (password.length < 6) {
-        Toast.error('Senha deve ter no mínimo 6 caracteres.');
+      if (password.length < 8) {
+        Toast.error('Senha deve ter no mínimo 8 caracteres.');
+        return;
+      }
+      if (password !== confirm) {
+        Toast.error('As senhas não conferem. Verifique e tente novamente.');
+        overlay.querySelector('#signup-confirm').focus();
         return;
       }
 

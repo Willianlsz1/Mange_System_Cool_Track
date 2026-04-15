@@ -289,8 +289,8 @@ export const Auth = {
 
   async updatePassword(newPassword) {
     if (!newPassword) return { ok: false, cancelled: true };
-    if (newPassword.length < 6) {
-      return { ok: false, message: 'Senha deve ter no mínimo 6 caracteres.' };
+    if (newPassword.length < 8) {
+      return { ok: false, message: 'Senha deve ter no mínimo 8 caracteres.' };
     }
 
     try {

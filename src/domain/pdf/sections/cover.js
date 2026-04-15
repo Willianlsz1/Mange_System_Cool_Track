@@ -143,7 +143,7 @@ function drawSituacaoEquipamentos(doc, pageWidth, margin, eqY, filtered, equipam
       color: st.color,
       align: 'right',
     });
-    cursorY += 18;
+    cursorY += 15;
   });
 
   return cursorY;
@@ -174,7 +174,7 @@ function drawPendencias(doc, pageWidth, pageHeight, margin, startY, filtered, eq
         color: C.text,
       });
       txt(doc, acao, margin + 8, py + 12, { size: 8, color: C.text3 });
-      py += 20;
+      py += 18;
     });
     return;
   }
@@ -240,7 +240,7 @@ export function drawCover(
   txt(doc, periodo, margin + 2, 56, { size: 9, color: C.text3 });
 
   const { cardY, cardH } = drawTecnicoCard(doc, pageWidth, margin, profile);
-  const resumoY = cardY + cardH + 16;
+  const resumoY = cardY + cardH + 10;
   const totalCusto = calculateTotalCost(filtered);
   const tileY = drawResumoTiles(doc, pageWidth, margin, resumoY, filtered, totalCusto);
 
