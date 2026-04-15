@@ -54,7 +54,9 @@ describe('dashboard rule functions', () => {
     expect(calcHealthScore('eq-missing')).toBe(0);
   });
 
-  it('applies no-history penalty for low criticality assets without registros', async () => {
+  it('new equipment with status ok and no history scores 100 (no penalty)', async () => {
+    // Equipamento recém cadastrado com status ok não deve sofrer penalidade por
+    // ausência de histórico — evita que apareça como "fora do padrão" logo após cadastro.
     const { calcHealthScore } = await loadDashboardRulesModule({
       equip: {
         id: 'eq-1',
@@ -65,7 +67,22 @@ describe('dashboard rule functions', () => {
       registros: [],
     });
 
-    expect(calcHealthScore('eq-1')).toBe(78);
+    expect(calcHealthScore('eq-1')).toBe(100);
+  });
+
+  it('applies no-history penalty when status is warn and no registros exist', async () => {
+    // warn (16) + sem histórico (22) + criticidade baixa (0) = 38 → score 62
+    const { calcHealthScore } = await loadDashboardRulesModule({
+      equip: {
+        id: 'eq-1',
+        status: 'warn',
+        criticidade: 'baixa',
+        prioridadeOperacional: 'baixa',
+      },
+      registros: [],
+    });
+
+    expect(calcHealthScore('eq-1')).toBe(62);
   });
 
   it('combines status, overdue routine and recent issue penalties', async () => {

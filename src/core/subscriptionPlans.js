@@ -78,7 +78,7 @@ export function canCreateEquipment(profile, currentEquipmentCount = 0) {
 
 const PREMIUM_FEATURE_MESSAGES = Object.freeze({
   pdf_export: 'A exportação em PDF é exclusiva do plano Pro.',
-  equipamentos: 'Equipamentos ilimitados são exclusivos do plano Pro.',
+  equipamentos: 'Mais de 3 equipamentos é exclusivo do plano Pro.',
 });
 
 export function assertProAccess(profile, featureName = 'premium_feature') {

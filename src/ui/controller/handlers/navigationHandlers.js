@@ -75,7 +75,16 @@ export function bindNavigationHandlers() {
     goTo('equipamentos', { statusFilter: 'preventiva-7d' });
   });
 
-  on('print', () => window.print());
+  on('print', () => {
+    // Delega ao botão de exportação PDF existente para reaproveitar todas as
+    // verificações de plano e modo guest; só cai no window.print() como último recurso.
+    const exportBtn = document.querySelector('[data-action="export-pdf"]');
+    if (exportBtn) {
+      exportBtn.click();
+    } else {
+      window.print();
+    }
+  });
   on('close-lightbox', () => Photos.closeLightbox());
   on('open-upgrade', async (el, event) => {
     event?.preventDefault?.();
