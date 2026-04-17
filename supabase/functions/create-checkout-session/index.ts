@@ -17,6 +17,61 @@ function getRequiredEnv(name: string) {
   return value.trim();
 }
 
+function getOptionalEnv(name: string) {
+  return Deno.env.get(name)?.trim() ?? null;
+}
+
+// Planos aceitos pelo endpoint. Cada chave casa com um env var que guarda o Price ID do Stripe.
+// STRIPE_PRICE_PRO é obrigatório (retrocompatibilidade); os demais são opcionais
+// até que você cadastre os Price IDs no Stripe e publique os secrets.
+const PLAN_TO_ENV: Record<string, string> = {
+  pro: 'STRIPE_PRICE_PRO',
+  pro_annual: 'STRIPE_PRICE_PRO_ANNUAL',
+  plus: 'STRIPE_PRICE_PLUS',
+  plus_annual: 'STRIPE_PRICE_PLUS_ANNUAL',
+};
+
+const DEFAULT_PLAN = 'pro';
+
+function normalizeRequestedPlan(raw: unknown): string {
+  const lower = String(raw || '').toLowerCase();
+  return Object.prototype.hasOwnProperty.call(PLAN_TO_ENV, lower) ? lower : DEFAULT_PLAN;
+}
+
+/**
+ * Resolve o Price ID para o plano pedido, com fallback graceful:
+ *   plus_annual → plus → pro_annual → pro
+ *   pro_annual  → pro
+ * Assim, se o Stripe ainda não tem o price anual ou o tier Plus cadastrado,
+ * o checkout cai num preço válido em vez de explodir.
+ */
+function resolvePriceId(plan: string): { priceId: string; resolvedPlan: string } {
+  const fallbackChain: string[] = (() => {
+    switch (plan) {
+      case 'plus_annual':
+        return ['plus_annual', 'plus', 'pro_annual', 'pro'];
+      case 'plus':
+        return ['plus', 'pro'];
+      case 'pro_annual':
+        return ['pro_annual', 'pro'];
+      case 'pro':
+      default:
+        return ['pro'];
+    }
+  })();
+
+  for (const candidate of fallbackChain) {
+    const envName = PLAN_TO_ENV[candidate];
+    const value = getOptionalEnv(envName);
+    if (value) {
+      return { priceId: value, resolvedPlan: candidate };
+    }
+  }
+
+  // Se nem o Pro tem price configurado, estoura com a mensagem padrão de env ausente.
+  throw new Error(`MISSING_ENV_${PLAN_TO_ENV.pro}`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: getCorsHeaders(req) });
@@ -28,19 +83,15 @@ Deno.serve(async (req) => {
 
   try {
     const stripeSecretKey = getRequiredEnv('STRIPE_SECRET_KEY');
-    const stripePricePro = getRequiredEnv('STRIPE_PRICE_PRO');
-    const stripePriceProAnnual = Deno.env.get('STRIPE_PRICE_PRO_ANNUAL')?.trim() ?? null;
     const appUrl = getRequiredEnv('APP_URL');
     const supabaseUrl = getRequiredEnv('SUPABASE_URL');
     const supabaseAnonKey = getRequiredEnv('SUPABASE_ANON_KEY');
 
     const stripe = new Stripe(stripeSecretKey);
     const body = await req.json().catch(() => ({}));
-    const plan = body?.plan === 'pro_annual' ? 'pro_annual' : 'pro';
+    const requestedPlan = normalizeRequestedPlan(body?.plan);
 
-    // Seleciona o Price ID correto conforme o plano escolhido
-    const priceId =
-      plan === 'pro_annual' && stripePriceProAnnual ? stripePriceProAnnual : stripePricePro;
+    const { priceId, resolvedPlan } = resolvePriceId(requestedPlan);
 
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -89,7 +140,20 @@ Deno.serve(async (req) => {
       cancel_url: `${appUrl}/?canceled=true`,
       metadata: {
         supabase_user_id: user.id,
-        requested_plan: plan,
+        requested_plan: requestedPlan,
+        // resolved_plan pode diferir do requested_plan quando caímos em fallback
+        // (ex: pediram plus_annual mas só há Pro cadastrado). O webhook usa esse
+        // valor para gravar o plan_code correto em profiles.
+        resolved_plan: resolvedPlan,
+      },
+      // Duplica no subscription_data para que o webhook receba metadata mesmo
+      // em eventos posteriores (invoice.paid, subscription.updated).
+      subscription_data: {
+        metadata: {
+          supabase_user_id: user.id,
+          requested_plan: requestedPlan,
+          resolved_plan: resolvedPlan,
+        },
       },
     });
 
