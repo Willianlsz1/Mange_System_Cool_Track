@@ -1,14 +1,38 @@
 import { supabase } from './supabase.js';
 import {
   PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
   PLAN_CODE_PRO,
   getEffectivePlan,
   hasProAccess,
+  hasPlusAccess,
+  hasFeature,
+  assertFeature,
+  FEATURE_PDF_EXPORT,
+  FEATURE_EQUIPAMENTOS_EXTRA,
+  FEATURE_HISTORICO_COMPLETO,
+  FEATURE_SETORES,
+  FEATURE_SUPORTE_PRIORITARIO,
 } from './subscriptionPlans.js';
 import { DevPlanOverride } from './devPlanOverride.js';
 
+// Legacy constants — mantidas para back-compat com código que ainda não migrou
+// para a API hasFeature/assertFeature (que usa FEATURE_* em subscriptionPlans).
 export const PREMIUM_FEATURE_EQUIPAMENTOS = 'equipamentos';
 export const PREMIUM_FEATURE_PDF_EXPORT = 'pdf_export';
+
+// Re-export da API nova para permitir `import { hasFeature } from '.../monetization.js'`
+export {
+  hasFeature,
+  assertFeature,
+  hasPlusAccess,
+  FEATURE_PDF_EXPORT,
+  FEATURE_EQUIPAMENTOS_EXTRA,
+  FEATURE_HISTORICO_COMPLETO,
+  FEATURE_SETORES,
+  FEATURE_SUPORTE_PRIORITARIO,
+  PLAN_CODE_PLUS,
+};
 
 function createMonetizationError(code, message, cause = null) {
   const error = new Error(message);
@@ -66,9 +90,16 @@ export function isProUser(profile) {
   return hasProAccess(profile);
 }
 
+// Wrapper legado: traduz as constantes antigas (PREMIUM_FEATURE_*) para a
+// API nova (FEATURE_* + hasFeature). Assim equipamentos e PDF export passam
+// a liberar para Plus+ em vez de só Pro, sem quebrar chamadas existentes.
 export function canUsePremiumFeature(profile, feature) {
-  if (feature === PREMIUM_FEATURE_EQUIPAMENTOS) return hasProAccess(profile);
-  if (feature === PREMIUM_FEATURE_PDF_EXPORT) return hasProAccess(profile);
+  if (feature === PREMIUM_FEATURE_EQUIPAMENTOS) {
+    return hasFeature(profile, FEATURE_EQUIPAMENTOS_EXTRA);
+  }
+  if (feature === PREMIUM_FEATURE_PDF_EXPORT) {
+    return hasFeature(profile, FEATURE_PDF_EXPORT);
+  }
   return false;
 }
 
@@ -276,3 +307,4 @@ export async function startBillingPortal({ supabaseClient = supabase } = {}) {
 
   return data.url;
 }
+                                                                                                                                                                                                                    

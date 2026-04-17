@@ -9,16 +9,18 @@ import { runAsyncAction } from '../../components/actionFeedback.js';
 import { ShareSuccessToast } from '../../components/shareSuccessToast.js';
 import { GuestConversionModal } from '../../components/guestConversionModal.js';
 import {
-  assertProAccess,
+  assertFeature,
+  FEATURE_PDF_EXPORT,
   getEffectivePlan,
   getPlanCodeForUserId,
 } from '../../../core/subscriptionPlans.js';
-import { fetchMyProfileBilling, PREMIUM_FEATURE_PDF_EXPORT } from '../../../core/monetization.js';
+import { fetchMyProfileBilling } from '../../../core/monetization.js';
 import {
   getMonthlyLimitForPlan,
   getMonthlyUsageSnapshot,
   hasReachedMonthlyLimit,
   incrementMonthlyUsage,
+  USAGE_RESOURCE_PDF_EXPORT,
   USAGE_RESOURCE_WHATSAPP_SHARE,
 } from '../../../core/usageLimits.js';
 
@@ -74,23 +76,53 @@ function bindPdfExport() {
         const planCode = getEffectivePlan(profile);
         trackEvent('pdf_export_attempted', { isGuest: false, plan: planCode });
 
+        // ── 1. Feature gate: Free bloqueado, Plus+Pro passam ────────────────
         try {
-          assertProAccess(profile, PREMIUM_FEATURE_PDF_EXPORT);
+          assertFeature(profile, FEATURE_PDF_EXPORT);
         } catch (accessError) {
-          trackEvent('pdf_export_blocked', { reason: 'premium_required' });
+          trackEvent('pdf_export_blocked', { reason: 'feature_not_available' });
           GuestConversionModal.open({
             reason: 'premium_pdf',
             source: 'pdf_export_premium',
-            title: 'Recurso disponivel no plano Pro',
-            message: accessError?.message || 'A exportacao em PDF esta disponivel no plano Pro.',
+            title: 'Recurso disponível a partir do Plus',
+            message:
+              accessError?.message || 'A exportação em PDF está disponível a partir do plano Plus.',
           });
           return;
         }
 
+        // ── 2. Quota mensal: Plus tem limite (100/mês), Pro é ilimitado ─────
+        const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
+        const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
+        const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
+
+        if (
+          hasReachedMonthlyLimit({
+            planCode,
+            resource: USAGE_RESOURCE_PDF_EXPORT,
+            usedCount: pdfUsed,
+          })
+        ) {
+          trackEvent('pdf_export_blocked', { reason: 'limit_reached', plan: planCode });
+          GuestConversionModal.open({
+            reason: 'limit_pdf',
+            source: 'pdf_export_limit',
+            title: 'Limite mensal atingido',
+            message: `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`,
+          });
+          return;
+        }
+
+        // ── 3. Gera o PDF ─────────────────────────────────────────────────
         const fileName = await PDFGenerator.generateMaintenanceReport(filters);
         if (!fileName) {
           Toast.error('Erro ao gerar PDF.');
           return;
+        }
+
+        // ── 4. Incrementa contagem só se o plano tem limite finito (Plus) ─
+        if (Number.isFinite(pdfLimit)) {
+          await incrementMonthlyUsage(user.id, USAGE_RESOURCE_PDF_EXPORT);
         }
 
         Toast.success(`PDF gerado: ${fileName}`);
@@ -133,12 +165,16 @@ function bindWhatsAppExport() {
             usedCount: whatsappUsed,
           })
         ) {
-          trackEvent('whatsapp_share_blocked', { reason: 'limit_reached' });
+          trackEvent('whatsapp_share_blocked', { reason: 'limit_reached', plan: planCode });
+          const upgradeMessage =
+            planCode === 'plus'
+              ? `Voce atingiu ${whatsappLimit} compartilhamentos este mes no Plus. O Pro tem envios ilimitados.`
+              : `Voce atingiu ${whatsappLimit} compartilhamentos este mes. Faca upgrade para Plus ou Pro.`;
           GuestConversionModal.open({
             reason: 'limit_whatsapp',
             source: 'whatsapp_share_limit',
-            title: 'Limite do plano Free atingido',
-            message: `Voce atingiu ${whatsappLimit} compartilhamentos este mes. O plano Pro tem compartilhamentos ilimitados.`,
+            title: 'Limite mensal atingido',
+            message: upgradeMessage,
           });
           return;
         }

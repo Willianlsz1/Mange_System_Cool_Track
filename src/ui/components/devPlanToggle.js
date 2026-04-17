@@ -1,6 +1,7 @@
 /**
- * Dev Plan Toggle — botão flutuante visível apenas para usuários is_dev.
- * Permite alternar entre planos Free e Pro com 1 clique para testar funcionalidades.
+ * Dev Plan Toggle — botão flutuante visível apenas para usuários is_dev
+ * (ou com cooltrack-dev-mode = true). Cicla entre Free → Plus → Pro → Free
+ * para testar funcionalidades dos 3 tiers.
  */
 
 import { DevPlanOverride } from '../../core/devPlanOverride.js';
@@ -8,11 +9,15 @@ import { DevPlanOverride } from '../../core/devPlanOverride.js';
 const TOGGLE_ID = 'dev-plan-toggle';
 
 function getLabel(plan) {
-  return plan === 'pro' ? 'PRO' : 'FREE';
+  if (plan === 'pro') return 'PRO';
+  if (plan === 'plus') return 'PLUS';
+  return 'FREE';
 }
 
 function getBadgeStyle(plan) {
-  return plan === 'pro' ? 'background:#00c870;color:#07111f;' : 'background:#4a6880;color:#e8f2fa;';
+  if (plan === 'pro') return 'background:#00c870;color:#07111f;';
+  if (plan === 'plus') return 'background:#3a8ee6;color:#07111f;';
+  return 'background:#4a6880;color:#e8f2fa;';
 }
 
 export const DevPlanToggle = {
@@ -76,13 +81,13 @@ export const DevPlanToggle = {
       </style>
       <span id="dev-plan-toggle__label">DEV</span>
       <span id="dev-plan-toggle__badge" style="${getBadgeStyle(current)}">${getLabel(current)}</span>
-      <button id="dev-plan-toggle__btn" type="button" title="Alternar plano para testes">trocar</button>
+      <button id="dev-plan-toggle__btn" type="button" title="Alternar plano (Free → Plus → Pro)">ciclar</button>
     `;
 
     document.body.appendChild(el);
 
     el.querySelector('#dev-plan-toggle__btn').addEventListener('click', () => {
-      const next = DevPlanOverride.toggle();
+      const next = DevPlanOverride.cycle();
       el.querySelector('#dev-plan-toggle__badge').textContent = getLabel(next);
       el.querySelector('#dev-plan-toggle__badge').setAttribute('style', getBadgeStyle(next));
       // Recarrega para aplicar o novo plano em todas as telas

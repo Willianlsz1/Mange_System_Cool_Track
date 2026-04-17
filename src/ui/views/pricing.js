@@ -1,12 +1,20 @@
 import { Auth } from '../../core/auth.js';
 import { fetchMyProfileBilling } from '../../core/monetization.js';
-import { PLAN_CODE_FREE, PLAN_CODE_PRO, getEffectivePlan } from '../../core/subscriptionPlans.js';
+import {
+  PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
+  PLAN_CODE_PRO,
+  getEffectivePlan,
+} from '../../core/subscriptionPlans.js';
 import { Utils } from '../../core/utils.js';
 
 const PRICING_REASON_LIMIT_REACHED = 'limit_reached';
 
 function normalizeHighlightPlan(highlightPlan) {
-  return String(highlightPlan || '').toLowerCase() === PLAN_CODE_PRO ? PLAN_CODE_PRO : null;
+  const lower = String(highlightPlan || '').toLowerCase();
+  if (lower === PLAN_CODE_PRO) return PLAN_CODE_PRO;
+  if (lower === PLAN_CODE_PLUS) return PLAN_CODE_PLUS;
+  return null;
 }
 
 function normalizePricingReason(reason) {
@@ -29,10 +37,30 @@ async function resolveCurrentPlanCode() {
   }
 }
 
-function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {}) {
+function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}) {
   const isPro = planCode === PLAN_CODE_PRO;
-  const isFree = !isPro;
+  const isPlus = planCode === PLAN_CODE_PLUS;
+  const isFree = !isPro && !isPlus;
   const showLimitMessage = reason === PRICING_REASON_LIMIT_REACHED && isFree;
+
+  const highlight = highlightPlan || (isPro ? null : PLAN_CODE_PRO);
+
+  // Regra: só mostra botão de checkout pra planos ACIMA do atual. Downgrade é feito
+  // via portal (data-action="manage-subscription"), não criando nova assinatura.
+  const showPlusCheckout = isFree; // Free → Plus (upgrade)
+  const showProCheckout = isFree || isPlus; // Free/Plus → Pro (upgrade)
+
+  const heroSubtitle = isPro
+    ? 'Você está no plano Pro. Obrigado pelo apoio! 🙌'
+    : isPlus
+      ? 'Você está no Plus. Faça upgrade pra Pro quando precisar de mais.'
+      : 'Comece grátis. Faça upgrade quando precisar.';
+
+  const indicator = isPro
+    ? '<svg width="12" height="12" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#00c870" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#00c870" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Plano Pro ativo'
+    : isPlus
+      ? '<svg width="12" height="12" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#3a8ee6" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#3a8ee6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Plano Plus ativo'
+      : '⬡ Plano Gratuito';
 
   return `
     <section class="pricing-view" aria-labelledby="pricing-title">
@@ -40,27 +68,33 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
       <!-- ── Header ── -->
       <header class="pricing-hero">
         <h1 class="pricing-hero__title" id="pricing-title">Planos e assinatura</h1>
-        <p class="pricing-hero__subtitle">
-          ${isPro ? 'Você está no plano Pro. Obrigado pelo apoio! 🙌' : 'Comece grátis. Faça upgrade quando precisar.'}
-        </p>
+        <p class="pricing-hero__subtitle">${heroSubtitle}</p>
         <span class="pricing-plan-indicator pricing-plan-indicator--${planCode}">
-          ${
-            isPro
-              ? '<svg width="12" height="12" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#00c870" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#00c870" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Plano Pro ativo'
-              : '⬡ Plano Gratuito'
-          }
+          ${indicator}
         </span>
         ${
           showLimitMessage
-            ? '<p class="pricing-upgrade-reason">⚠ Você atingiu o limite do plano Gratuito. Assine o Pro para continuar sem bloqueios.</p>'
+            ? '<p class="pricing-upgrade-reason">⚠ Você atingiu o limite do plano Gratuito. Faça upgrade pra Plus ou Pro pra continuar sem bloqueios.</p>'
             : ''
         }
       </header>
 
-      <!-- ── Cards ── -->
-      <div class="pricing-grid" role="list" aria-label="Planos disponíveis">
+      <!-- ── Toggle mensal / anual (só quando há checkout pra tomar ação) ── -->
+      ${
+        showPlusCheckout || showProCheckout
+          ? `<div class="pricing-billing-toggle pricing-billing-toggle--global" role="group" aria-label="Ciclo de cobrança">
+              <button class="pricing-billing-toggle__btn pricing-billing-toggle__btn--active" data-billing="monthly" type="button">Mensal</button>
+              <button class="pricing-billing-toggle__btn" data-billing="annual" type="button">
+                Anual <span class="pricing-billing-toggle__save">-28%</span>
+              </button>
+            </div>`
+          : ''
+      }
 
-        <!-- FREE -->
+      <!-- ── Cards ── -->
+      <div class="pricing-grid pricing-grid--three-col" role="list" aria-label="Planos disponíveis">
+
+        <!-- ═══════ FREE ═══════ -->
         <article class="pricing-card ${isFree ? 'pricing-card--active' : ''}" role="listitem" aria-label="Plano Gratuito">
           <span class="pricing-badge ${isFree ? 'pricing-badge--current' : 'pricing-badge--neutral'}">
             ${isFree ? 'PLANO ATUAL' : 'BASE'}
@@ -70,47 +104,102 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
           <ul class="pricing-features" aria-label="Recursos do plano gratuito">
             <li>Até 3 equipamentos cadastrados</li>
             <li>10 registros de serviço por mês</li>
-            <li>Histórico dos últimos 30 dias de serviços</li>
-            <li>10 envios de relatório via WhatsApp/mês</li>
+            <li>Histórico dos últimos 30 dias</li>
+            <li>10 envios via WhatsApp/mês</li>
             <li>Alertas de manutenção preventiva</li>
             <li>Funciona offline</li>
           </ul>
           <div class="pricing-card__footer">
             <button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">
-              ${isFree ? 'Plano atual' : 'Você está no Pro'}
+              ${isFree ? 'Plano atual' : 'Downgrade disponível no portal'}
             </button>
           </div>
         </article>
 
-        <!-- PRO -->
-        <article class="pricing-card pricing-card--pro ${isPro ? 'pricing-card--active' : ''}" role="listitem" aria-label="Plano Pro">
+        <!-- ═══════ PLUS ═══════ -->
+        <article
+          class="pricing-card pricing-card--plus ${isPlus ? 'pricing-card--active' : ''} ${highlight === PLAN_CODE_PLUS ? 'pricing-card--highlight' : ''}"
+          role="listitem"
+          aria-label="Plano Plus"
+        >
+          <span class="pricing-badge ${isPlus ? 'pricing-badge--current' : 'pricing-badge--plus'}">
+            ${isPlus ? 'PLANO ATUAL' : 'INTERMEDIÁRIO'}
+          </span>
+          <h2 class="pricing-card__title">Plus</h2>
+
+          <div class="pricing-card__price-group">
+            <p class="pricing-card__price pricing-card__price--plus" id="plus-price-monthly">
+              R$ 15 <span class="pricing-card__price-period">/ mês</span>
+            </p>
+            <div id="plus-price-annual" style="display:none">
+              <p class="pricing-card__price pricing-card__price--plus">
+                R$ 10<span class="pricing-card__price-cents">,75</span> <span class="pricing-card__price-period">/ mês</span>
+              </p>
+              <p class="pricing-card__annual-detail">
+                cobrado como R$ 129/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 51</span>
+              </p>
+            </div>
+          </div>
+
+          <ul class="pricing-features" aria-label="Recursos do plano Plus">
+            <li>Até 10 equipamentos cadastrados</li>
+            <li>Registros de serviço ilimitados</li>
+            <li>Todo o histórico de manutenções</li>
+            <li>100 relatórios PDF/mês</li>
+            <li>50 envios via WhatsApp/mês</li>
+            <li>Alertas de manutenção preventiva</li>
+          </ul>
+          <div class="pricing-card__footer">
+            ${
+              isPlus
+                ? `<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Plano atual</button>
+                   <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>
+                   <button
+                     class="pricing-cancel-btn"
+                     type="button"
+                     data-action="manage-subscription"
+                     aria-label="Gerenciar ou cancelar assinatura Plus"
+                   >Gerenciar / cancelar</button>`
+                : showPlusCheckout
+                  ? `<button
+                       class="btn pricing-card__cta pricing-card__cta--plus"
+                       id="btn-checkout-plus"
+                       type="button"
+                       data-action="start-checkout"
+                       data-plan="plus"
+                       data-upgrade-source="pricing"
+                     >
+                       Assinar Plus &rarr;
+                     </button>
+                     <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>`
+                  : `<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">
+                       Downgrade via portal
+                     </button>`
+            }
+          </div>
+        </article>
+
+        <!-- ═══════ PRO ═══════ -->
+        <article
+          class="pricing-card pricing-card--pro ${isPro ? 'pricing-card--active' : ''} ${highlight === PLAN_CODE_PRO && !isPro ? 'pricing-card--highlight' : ''}"
+          role="listitem"
+          aria-label="Plano Pro"
+        >
           <span class="pricing-badge ${isPro ? 'pricing-badge--current' : 'pricing-badge--popular'}">
             ${isPro ? 'PLANO ATUAL' : 'MAIS POPULAR'}
           </span>
           <h2 class="pricing-card__title">Pro</h2>
 
-          <!-- Toggle mensal / anual -->
-          ${
-            !isPro
-              ? `<div class="pricing-billing-toggle" role="group" aria-label="Ciclo de cobrança">
-                  <button class="pricing-billing-toggle__btn pricing-billing-toggle__btn--active" data-billing="monthly" type="button">Mensal</button>
-                  <button class="pricing-billing-toggle__btn" data-billing="annual" type="button">
-                    Anual <span class="pricing-billing-toggle__save">-28%</span>
-                  </button>
-                </div>`
-              : ''
-          }
-
           <div class="pricing-card__price-group">
-            <p class="pricing-card__price pricing-card__price--pro" id="pro-price-label">
+            <p class="pricing-card__price pricing-card__price--pro" id="pro-price-monthly">
               R$ 29 <span class="pricing-card__price-period">/ mês</span>
             </p>
-            <div id="pro-annual-label" style="display:none">
+            <div id="pro-price-annual" style="display:none">
               <p class="pricing-card__price pricing-card__price--pro">
                 R$ 20<span class="pricing-card__price-cents">,75</span> <span class="pricing-card__price-period">/ mês</span>
               </p>
               <p class="pricing-card__annual-detail">
-                cobrado como R$ 249/ano &nbsp;<span class="pricing-card__annual-save">você economiza R$ 99</span>
+                cobrado como R$ 249/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 99</span>
               </p>
             </div>
           </div>
@@ -118,43 +207,54 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
           <ul class="pricing-features" aria-label="Recursos do plano Pro">
             <li>Até 30 equipamentos cadastrados</li>
             <li>Registros de serviço ilimitados</li>
-            <li>Todo o histórico de manutenções sem limite de data</li>
-            <li>Relatórios PDF de serviços realizados</li>
-            <li>Envios ilimitados de relatório via WhatsApp</li>
-            <li>Agrupamento de equipamentos por setores</li>
+            <li>Todo o histórico de manutenções</li>
+            <li>Relatórios PDF <strong>ilimitados</strong></li>
+            <li>Envios de WhatsApp <strong>ilimitados</strong></li>
+            <li>Agrupamento por setores</li>
             <li>Suporte prioritário</li>
           </ul>
           <div class="pricing-card__footer">
             ${
               isPro
                 ? `<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Plano atual</button>
-                 <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>
-                 <button
-                   class="pricing-cancel-btn"
-                   type="button"
-                   data-action="manage-subscription"
-                   aria-label="Gerenciar ou cancelar assinatura Pro"
-                 >Gerenciar / cancelar assinatura</button>`
-                : `<button class="btn pricing-card__cta pricing-card__cta--pro" id="btn-checkout-pro" type="button" data-action="start-checkout" data-plan="pro" data-upgrade-source="pricing">
-                   Assinar Pro &rarr;
-                 </button>
-                 <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>`
+                   <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>
+                   <button
+                     class="pricing-cancel-btn"
+                     type="button"
+                     data-action="manage-subscription"
+                     aria-label="Gerenciar ou cancelar assinatura Pro"
+                   >Gerenciar / cancelar assinatura</button>`
+                : showProCheckout
+                  ? `<button
+                       class="btn pricing-card__cta pricing-card__cta--pro"
+                       id="btn-checkout-pro"
+                       type="button"
+                       data-action="start-checkout"
+                       data-plan="pro"
+                       data-upgrade-source="pricing"
+                     >
+                       Assinar Pro &rarr;
+                     </button>
+                     <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>`
+                  : `<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">
+                       Plano atual ou inferior
+                     </button>`
             }
           </div>
         </article>
 
       </div>
 
-      <!-- ── Management section (Pro only) ── -->
+      <!-- ── Management section (Plus ou Pro) ── -->
       ${
-        isPro
+        isPro || isPlus
           ? `
       <div class="pricing-manage-section">
         <div class="pricing-manage-section__icon">⚙️</div>
         <div class="pricing-manage-section__body">
           <p class="pricing-manage-section__title">Gerenciar assinatura</p>
           <p class="pricing-manage-section__desc">
-            Atualize o método de pagamento, veja histórico de cobranças ou cancele sua assinatura a qualquer momento.
+            Atualize o método de pagamento, troque de plano (Plus ↔ Pro), veja histórico de cobranças ou cancele a qualquer momento.
             Seus dados ficam salvos mesmo após o cancelamento.
           </p>
         </div>
@@ -175,18 +275,31 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
         <h3 class="pricing-faq__title">FAQ</h3>
 
         <details class="pricing-faq__item">
+          <summary>Qual a diferença entre Plus e Pro?</summary>
+          <p>
+            <strong>Plus</strong> é o tier intermediário: até 10 equipamentos, 100 PDFs/mês e 50 envios de WhatsApp/mês — ideal pra técnico autônomo ou pequeno negócio.
+            <strong>Pro</strong> é ilimitado: até 30 equipamentos, PDFs e WhatsApp sem limite, agrupamento por setores e suporte prioritário — pensado pra empresas com operação maior.
+          </p>
+        </details>
+
+        <details class="pricing-faq__item">
+          <summary>Posso trocar de Plus pra Pro (ou vice-versa) depois?</summary>
+          <p>Pode sim, a qualquer momento pelo portal de assinatura. A cobrança é ajustada proporcionalmente pelo Stripe — você paga/recebe a diferença.</p>
+        </details>
+
+        <details class="pricing-faq__item">
           <summary>Posso cancelar a qualquer momento?</summary>
-          <p>Sim. Sem multa, sem burocracia. Clique em <strong>Gerenciar / cancelar assinatura</strong> acima e siga o fluxo no portal de pagamento. O acesso Pro fica ativo até o fim do período já pago.</p>
+          <p>Sim. Sem multa, sem burocracia. Clique em <strong>Gerenciar / cancelar</strong> e siga o fluxo no portal. O acesso pago fica ativo até o fim do período já pago.</p>
         </details>
 
         <details class="pricing-faq__item">
           <summary>O que acontece com meus dados se cancelar?</summary>
-          <p>Seus dados ficam salvos. Você volta ao plano Gratuito com acesso a tudo que já foi registrado — apenas novos cadastros ficam limitados (máx. 3 equipamentos e 10 registros de serviço por mês).</p>
+          <p>Seus dados ficam salvos. Você volta ao plano Gratuito com acesso a tudo que já foi registrado — apenas novos cadastros ficam limitados (máx. 3 equipamentos e 10 registros/mês).</p>
         </details>
 
         <details class="pricing-faq__item">
           <summary>PIX e boleto estão disponíveis?</summary>
-          <p>Ainda não. No momento o pagamento é feito apenas via <strong>cartão de crédito</strong>. PIX e boleto bancário estão previstos e chegarão em breve.</p>
+          <p>Ainda não. No momento o pagamento é feito apenas via <strong>cartão de crédito</strong>. PIX e boleto bancário estão previstos.</p>
         </details>
 
         <details class="pricing-faq__item">
@@ -196,7 +309,7 @@ function getPricingMarkup(planCode, { _highlightPlan = null, reason = null } = {
 
         <details class="pricing-faq__item">
           <summary>Como funciona o plano anual?</summary>
-          <p>Você paga R$ 249 uma vez ao ano e economiza 28% em relação ao mensal. Pode cancelar a qualquer momento — o reembolso proporcional é feito conforme a política do Stripe.</p>
+          <p>Você paga o valor anual de uma vez (Plus R$ 129, Pro R$ 249) e economiza ~28% em relação ao mensal. Pode cancelar a qualquer momento — o reembolso proporcional é feito conforme a política do Stripe.</p>
         </details>
       </section>
 
@@ -222,11 +335,16 @@ export async function renderPricing(params = {}) {
   const reason = normalizePricingReason(params?.reason);
   view.innerHTML = getPricingMarkup(currentPlanCode, { highlightPlan, reason });
 
-  // ── Toggle mensal/anual ─────────────────────────────────────────────────────
-  const toggleBtns = view.querySelectorAll('.pricing-billing-toggle__btn');
-  const priceLabel = view.querySelector('#pro-price-label');
-  const annualLabel = view.querySelector('#pro-annual-label');
-  const checkoutBtn = view.querySelector('#btn-checkout-pro');
+  // ── Toggle mensal/anual (afeta Plus e Pro simultaneamente) ─────────────
+  const toggleBtns = view.querySelectorAll(
+    '.pricing-billing-toggle--global .pricing-billing-toggle__btn',
+  );
+  const plusMonthly = view.querySelector('#plus-price-monthly');
+  const plusAnnual = view.querySelector('#plus-price-annual');
+  const proMonthly = view.querySelector('#pro-price-monthly');
+  const proAnnual = view.querySelector('#pro-price-annual');
+  const plusCheckoutBtn = view.querySelector('#btn-checkout-plus');
+  const proCheckoutBtn = view.querySelector('#btn-checkout-pro');
 
   toggleBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -234,20 +352,20 @@ export async function renderPricing(params = {}) {
       toggleBtns.forEach((b) => b.classList.remove('pricing-billing-toggle__btn--active'));
       btn.classList.add('pricing-billing-toggle__btn--active');
 
-      if (billing === 'annual') {
-        if (priceLabel) priceLabel.style.display = 'none';
-        if (annualLabel) annualLabel.style.display = '';
-        if (checkoutBtn) {
-          checkoutBtn.dataset.plan = 'pro_annual';
-          checkoutBtn.textContent = 'Assinar anual →';
-        }
-      } else {
-        if (priceLabel) priceLabel.style.display = '';
-        if (annualLabel) annualLabel.style.display = 'none';
-        if (checkoutBtn) {
-          checkoutBtn.dataset.plan = 'pro';
-          checkoutBtn.textContent = 'Assinar Pro →';
-        }
+      const showAnnual = billing === 'annual';
+
+      if (plusMonthly) plusMonthly.style.display = showAnnual ? 'none' : '';
+      if (plusAnnual) plusAnnual.style.display = showAnnual ? '' : 'none';
+      if (proMonthly) proMonthly.style.display = showAnnual ? 'none' : '';
+      if (proAnnual) proAnnual.style.display = showAnnual ? '' : 'none';
+
+      if (plusCheckoutBtn) {
+        plusCheckoutBtn.dataset.plan = showAnnual ? 'plus_annual' : 'plus';
+        plusCheckoutBtn.textContent = showAnnual ? 'Assinar Plus anual →' : 'Assinar Plus →';
+      }
+      if (proCheckoutBtn) {
+        proCheckoutBtn.dataset.plan = showAnnual ? 'pro_annual' : 'pro';
+        proCheckoutBtn.textContent = showAnnual ? 'Assinar Pro anual →' : 'Assinar Pro →';
       }
     });
   });

@@ -1,9 +1,36 @@
 import { supabase } from './supabase.js';
 import { DevPlanOverride } from './devPlanOverride.js';
 
+// ── Planos canônicos ───────────────────────────────────────────────────────
 export const PLAN_CODE_FREE = 'free';
+export const PLAN_CODE_PLUS = 'plus';
 export const PLAN_CODE_PRO = 'pro';
 
+// Hierarquia: free < plus < pro. Usada por isAtLeastPlan / hasFeature.
+const PLAN_RANK = {
+  [PLAN_CODE_FREE]: 0,
+  [PLAN_CODE_PLUS]: 1,
+  [PLAN_CODE_PRO]: 2,
+};
+
+// ── Feature flags (gating binário) ─────────────────────────────────────────
+// Cada feature mapeia para o plano MÍNIMO que a libera. assertFeature usa
+// essa matriz em vez de if/else espalhado pelo código.
+export const FEATURE_PDF_EXPORT = 'pdf_export';
+export const FEATURE_EQUIPAMENTOS_EXTRA = 'equipamentos_extra';
+export const FEATURE_HISTORICO_COMPLETO = 'historico_completo';
+export const FEATURE_SETORES = 'setores';
+export const FEATURE_SUPORTE_PRIORITARIO = 'suporte_prioritario';
+
+const FEATURE_MIN_PLAN = {
+  [FEATURE_PDF_EXPORT]: PLAN_CODE_PLUS,
+  [FEATURE_EQUIPAMENTOS_EXTRA]: PLAN_CODE_PLUS,
+  [FEATURE_HISTORICO_COMPLETO]: PLAN_CODE_PLUS,
+  [FEATURE_SETORES]: PLAN_CODE_PRO,
+  [FEATURE_SUPORTE_PRIORITARIO]: PLAN_CODE_PRO,
+};
+
+// ── Catálogo de planos ─────────────────────────────────────────────────────
 export const PLAN_CATALOG = {
   [PLAN_CODE_FREE]: {
     key: PLAN_CODE_FREE,
@@ -16,6 +43,22 @@ export const PLAN_CATALOG = {
       'Até 3 equipamentos cadastrados',
       'Até 10 registros de serviço/mês',
       'Histórico dos últimos 30 dias',
+      '10 envios de relatório via WhatsApp/mês',
+    ],
+  },
+  [PLAN_CODE_PLUS]: {
+    key: PLAN_CODE_PLUS,
+    label: 'Plus',
+    limits: {
+      equipamentos: 10,
+      registros: Number.POSITIVE_INFINITY,
+    },
+    perks: [
+      'Até 10 equipamentos cadastrados',
+      'Registros de serviço ilimitados',
+      'Todo o histórico de manutenções',
+      '100 relatórios PDF/mês',
+      '50 envios via WhatsApp/mês',
     ],
   },
   [PLAN_CODE_PRO]: {
@@ -31,41 +74,98 @@ export const PLAN_CATALOG = {
       'Todo o histórico de manutenções',
       'Relatórios PDF e WhatsApp ilimitados',
       'Agrupamento por setores',
+      'Suporte prioritário',
     ],
   },
 };
 
+// ── Normalizadores ─────────────────────────────────────────────────────────
 export function normalizePlanCode(planCode) {
-  return String(planCode || '').toLowerCase() === PLAN_CODE_PRO ? PLAN_CODE_PRO : PLAN_CODE_FREE;
+  const lower = String(planCode || '').toLowerCase();
+  if (lower === PLAN_CODE_PRO) return PLAN_CODE_PRO;
+  if (lower === PLAN_CODE_PLUS) return PLAN_CODE_PLUS;
+  return PLAN_CODE_FREE;
 }
 
+function isActivePaidStatus(status) {
+  const s = String(status || '').toLowerCase();
+  return s === 'active' || s === 'trialing';
+}
+
+// ── Resolução do plano efetivo ─────────────────────────────────────────────
 export function getEffectivePlan(profile) {
-  // Dev mode local: se 'cooltrack-dev-mode' estiver ativo, aplica o override de plano
-  // diretamente aqui — funciona em todos os caminhos de verificação de plano do app.
+  // Dev mode local: override tem prioridade total
   const isLocalDev =
     typeof localStorage !== 'undefined' && localStorage.getItem('cooltrack-dev-mode') === 'true';
   if (isLocalDev) {
     const devOverride = DevPlanOverride.get();
-    if (devOverride) {
-      return devOverride === PLAN_CODE_PRO ? PLAN_CODE_PRO : PLAN_CODE_FREE;
-    }
-    // Se o override ainda não foi definido, trata como pro por padrão no modo dev
+    if (devOverride === PLAN_CODE_PRO) return PLAN_CODE_PRO;
+    if (devOverride === PLAN_CODE_PLUS) return PLAN_CODE_PLUS;
+    if (devOverride === PLAN_CODE_FREE) return PLAN_CODE_FREE;
+    // Sem override definido no dev mode → Pro por padrão
     return PLAN_CODE_PRO;
   }
 
   if (profile?.is_dev === true) return PLAN_CODE_PRO;
 
   const planCode = normalizePlanCode(profile?.plan || profile?.plan_code || PLAN_CODE_FREE);
-  if (planCode !== PLAN_CODE_PRO) return PLAN_CODE_FREE;
+  if (planCode === PLAN_CODE_FREE) return PLAN_CODE_FREE;
 
-  const subscriptionStatus = String(profile?.subscription_status || '').toLowerCase();
-  return subscriptionStatus === 'active' ? PLAN_CODE_PRO : PLAN_CODE_FREE;
+  // Plus ou Pro: só vale se subscription tá active/trialing.
+  // Fora disso volta pra Free (proteção contra past_due, canceled, etc).
+  return isActivePaidStatus(profile?.subscription_status) ? planCode : PLAN_CODE_FREE;
+}
+
+// ── Helpers de hierarquia ──────────────────────────────────────────────────
+export function planRank(planCode) {
+  return PLAN_RANK[normalizePlanCode(planCode)] ?? 0;
+}
+
+export function isAtLeastPlan(currentPlanCode, requiredPlanCode) {
+  return planRank(currentPlanCode) >= planRank(requiredPlanCode);
 }
 
 export function hasProAccess(profile) {
   return getEffectivePlan(profile) === PLAN_CODE_PRO;
 }
 
+export function hasPlusAccess(profile) {
+  const plan = getEffectivePlan(profile);
+  return plan === PLAN_CODE_PLUS || plan === PLAN_CODE_PRO;
+}
+
+// ── Feature gating ─────────────────────────────────────────────────────────
+export function hasFeature(profile, feature) {
+  const required = FEATURE_MIN_PLAN[feature];
+  if (!required) return false;
+  return isAtLeastPlan(getEffectivePlan(profile), required);
+}
+
+const FEATURE_MESSAGES = Object.freeze({
+  [FEATURE_PDF_EXPORT]: 'A exportação em PDF está disponível a partir do plano Plus.',
+  [FEATURE_EQUIPAMENTOS_EXTRA]: 'Mais de 3 equipamentos está disponível a partir do plano Plus.',
+  [FEATURE_HISTORICO_COMPLETO]:
+    'Histórico completo de manutenções está disponível a partir do plano Plus.',
+  [FEATURE_SETORES]: 'Agrupamento por setores é exclusivo do plano Pro.',
+  [FEATURE_SUPORTE_PRIORITARIO]: 'Suporte prioritário é exclusivo do plano Pro.',
+});
+
+export function assertFeature(profile, feature) {
+  if (hasFeature(profile, feature)) {
+    return { allowed: true, planCode: getEffectivePlan(profile) };
+  }
+  const required = FEATURE_MIN_PLAN[feature] ?? PLAN_CODE_PRO;
+  const error = new Error(
+    FEATURE_MESSAGES[feature] || `Este recurso é exclusivo do plano ${required}.`,
+  );
+  error.code = 'FEATURE_NOT_AVAILABLE';
+  error.feature = feature;
+  error.requiredPlan = required;
+  error.planCode = getEffectivePlan(profile);
+  throw error;
+}
+
+// ── Limites por plano (equipamentos) ───────────────────────────────────────
 export function canCreateEquipment(profile, currentEquipmentCount = 0) {
   const planCode = getEffectivePlan(profile);
   const limit = PLAN_CATALOG[planCode].limits.equipamentos;
@@ -76,15 +176,29 @@ export function canCreateEquipment(profile, currentEquipmentCount = 0) {
   return { allowed, limit, current, planCode };
 }
 
+// ── Legacy: assertProAccess (mantido pra código que ainda não migrou) ──────
 const PREMIUM_FEATURE_MESSAGES = Object.freeze({
-  pdf_export: 'A exportação em PDF é exclusiva do plano Pro.',
-  equipamentos: 'Mais de 3 equipamentos é exclusivo do plano Pro.',
+  pdf_export: 'A exportação em PDF está disponível a partir do plano Plus.',
+  equipamentos: 'Mais de 3 equipamentos está disponível a partir do plano Plus.',
 });
 
+const LEGACY_FEATURE_MAP = {
+  pdf_export: FEATURE_PDF_EXPORT,
+  equipamentos: FEATURE_EQUIPAMENTOS_EXTRA,
+};
+
 export function assertProAccess(profile, featureName = 'premium_feature') {
+  const normalizedFeature = String(featureName || '').toLowerCase();
+
+  // Redireciona para assertFeature se houver mapping
+  const mapped = LEGACY_FEATURE_MAP[normalizedFeature];
+  if (mapped) {
+    return assertFeature(profile, mapped);
+  }
+
+  // Fallback: comportamento antigo (bloqueia não-Pro)
   if (hasProAccess(profile)) return { allowed: true, planCode: PLAN_CODE_PRO };
 
-  const normalizedFeature = String(featureName || '').toLowerCase();
   const error = new Error(
     PREMIUM_FEATURE_MESSAGES[normalizedFeature] || 'Este recurso é exclusivo do plano Pro.',
   );
@@ -94,6 +208,7 @@ export function assertProAccess(profile, featureName = 'premium_feature') {
   throw error;
 }
 
+// ── Fetchers de plano ──────────────────────────────────────────────────────
 export function getPlanForUser({ isGuest, planCode = PLAN_CODE_FREE } = {}) {
   if (isGuest) return PLAN_CATALOG[PLAN_CODE_FREE];
   return PLAN_CATALOG[normalizePlanCode(planCode)];
@@ -102,7 +217,6 @@ export function getPlanForUser({ isGuest, planCode = PLAN_CODE_FREE } = {}) {
 export async function getPlanProfileForUserId(userId, { supabaseClient = supabase } = {}) {
   if (!userId) return null;
 
-  // Usa select('*') para evitar erros 400 por colunas ausentes no schema
   const { data, error } = await supabaseClient
     .from('profiles')
     .select('*')

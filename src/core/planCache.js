@@ -1,5 +1,5 @@
 /**
- * planCache — cache síncrono do plano efectivo do usuário.
+ * planCache — cache síncrono do plano efetivo do usuário.
  * Permite que views síncronas (ex: renderHist) consultem o plano sem fazer
  * chamadas assíncronas ao Supabase em cada render.
  *
@@ -10,7 +10,12 @@
  */
 
 import { DevPlanOverride } from './devPlanOverride.js';
-import { PLAN_CODE_FREE, PLAN_CODE_PRO, normalizePlanCode } from './subscriptionPlans.js';
+import {
+  PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
+  PLAN_CODE_PRO,
+  normalizePlanCode,
+} from './subscriptionPlans.js';
 
 const LS_KEY = 'cooltrack-cached-plan';
 
@@ -30,6 +35,7 @@ export function getCachedPlan() {
   if (isLocalDev) {
     const devOverride = DevPlanOverride.get();
     if (devOverride === PLAN_CODE_PRO) return PLAN_CODE_PRO;
+    if (devOverride === PLAN_CODE_PLUS) return PLAN_CODE_PLUS;
     if (devOverride === PLAN_CODE_FREE) return PLAN_CODE_FREE;
     return PLAN_CODE_PRO; // sem override definido em dev mode → Pro por padrão
   }
@@ -39,4 +45,14 @@ export function getCachedPlan() {
 
 export function isCachedPlanPro() {
   return getCachedPlan() === PLAN_CODE_PRO;
+}
+
+export function isCachedPlanPlus() {
+  return getCachedPlan() === PLAN_CODE_PLUS;
+}
+
+/** True se o plano em cache é Plus OU Pro (ou seja, pagante). */
+export function isCachedPlanPlusOrHigher() {
+  const plan = getCachedPlan();
+  return plan === PLAN_CODE_PLUS || plan === PLAN_CODE_PRO;
 }

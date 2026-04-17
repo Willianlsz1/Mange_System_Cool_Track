@@ -1,15 +1,28 @@
 import { supabase } from './supabase.js';
-import { normalizePlanCode, PLAN_CODE_FREE, PLAN_CODE_PRO } from './subscriptionPlans.js';
+import {
+  normalizePlanCode,
+  PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
+  PLAN_CODE_PRO,
+} from './subscriptionPlans.js';
 
 export const USAGE_RESOURCE_PDF_EXPORT = 'pdf_export';
 export const USAGE_RESOURCE_WHATSAPP_SHARE = 'whatsapp_share';
 
 const VALID_RESOURCES = new Set([USAGE_RESOURCE_PDF_EXPORT, USAGE_RESOURCE_WHATSAPP_SHARE]);
 
+// ── Limites mensais por plano ──────────────────────────────────────────────
+// Free: PDF bloqueado por feature gate (assertFeature), WhatsApp com limite baixo.
+// Plus: cotas generosas pra uso individual/pequeno negócio.
+// Pro: ilimitado em tudo.
 const MONTHLY_LIMITS = {
   [PLAN_CODE_FREE]: {
-    [USAGE_RESOURCE_PDF_EXPORT]: 10,
+    [USAGE_RESOURCE_PDF_EXPORT]: 0,
     [USAGE_RESOURCE_WHATSAPP_SHARE]: 10,
+  },
+  [PLAN_CODE_PLUS]: {
+    [USAGE_RESOURCE_PDF_EXPORT]: 100,
+    [USAGE_RESOURCE_WHATSAPP_SHARE]: 50,
   },
   [PLAN_CODE_PRO]: {
     [USAGE_RESOURCE_PDF_EXPORT]: Number.POSITIVE_INFINITY,
