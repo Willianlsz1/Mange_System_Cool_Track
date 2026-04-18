@@ -1,5 +1,10 @@
 import { Profile } from '../../features/profile.js';
-import { getEffectivePlan, PLAN_CODE_PRO } from '../../core/subscriptionPlans.js';
+import {
+  getEffectivePlan,
+  PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
+  PLAN_CODE_PRO,
+} from '../../core/subscriptionPlans.js';
 import { goTo } from '../../core/router.js';
 
 const ACCOUNT_MODAL_ID = 'account-modal-overlay';
@@ -24,14 +29,21 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
   const name = profile.nome || 'Técnico';
   const email = user?.email || '';
 
-  // Plano: usa getEffectivePlan(null) que já respeita o dev mode e override
-  const planCode = getEffectivePlan(null);
+  // Plano: passa o profile real pra getEffectivePlan, que já respeita o dev
+  // mode e override de localStorage. Antes passava null e ignorava o plano
+  // real do usuário — bug que fazia Plus aparecer como Free.
+  const planCode = getEffectivePlan(profile);
   const isPro = planCode === PLAN_CODE_PRO;
+  const isPlus = planCode === PLAN_CODE_PLUS;
+  const isPaid = isPro || isPlus;
 
-  const planBadgeClass = isPro
-    ? 'account-modal__plan-badge account-modal__plan-badge--pro'
-    : 'account-modal__plan-badge account-modal__plan-badge--free';
-  const planLabel = isPro ? 'Pro' : 'Free';
+  let planBadgeClass = 'account-modal__plan-badge account-modal__plan-badge--free';
+  if (isPro) planBadgeClass = 'account-modal__plan-badge account-modal__plan-badge--pro';
+  else if (isPlus) planBadgeClass = 'account-modal__plan-badge account-modal__plan-badge--plus';
+
+  let planLabel = 'Free';
+  if (isPro) planLabel = 'Pro';
+  else if (isPlus) planLabel = 'Plus';
 
   const overlay = document.createElement('div');
   overlay.id = ACCOUNT_MODAL_ID;
@@ -53,7 +65,7 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
       <div class="account-modal__plan-row">
         <span class="account-modal__plan-label">Plano atual</span>
         ${
-          isPro
+          isPaid
             ? `<span class="${planBadgeClass}">✓ ${planLabel}</span>`
             : `<div style="display:flex;align-items:center;gap:6px;">
                <span class="${planBadgeClass}">${planLabel}</span>
@@ -73,7 +85,7 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
           Editar perfil
         </button>
         ${
-          isPro
+          isPaid
             ? `
         <button type="button" class="account-modal__action account-modal__action--neutral" id="btn-manage-plan">
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
