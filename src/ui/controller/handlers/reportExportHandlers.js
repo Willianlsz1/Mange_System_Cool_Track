@@ -8,42 +8,31 @@ import { trackEvent } from '../../../core/telemetry.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
 import { ShareSuccessToast } from '../../components/shareSuccessToast.js';
 import { GuestConversionModal } from '../../components/guestConversionModal.js';
-
-const PDF_MONTH_LIMIT_FREE = 3;
-const WHATSAPP_MONTH_LIMIT_FREE = 10;
-
-function getCurrentMonthKey(prefix) {
-  const now = new Date();
-  const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  return `${prefix}-${month}`;
-}
-
-function getMonthlyCount(prefix) {
-  const raw = localStorage.getItem(getCurrentMonthKey(prefix));
-  const parsed = Number.parseInt(raw || '0', 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
-}
-
-function bumpMonthlyCount(prefix) {
-  const key = getCurrentMonthKey(prefix);
-  const next = getMonthlyCount(prefix) + 1;
-  localStorage.setItem(key, String(next));
-}
-
-function getPlanFromStorage() {
-  const plan = String(localStorage.getItem('cooltrack-plan') || 'free').toLowerCase();
-  return plan === 'pro' ? 'pro' : 'free';
-}
+import {
+  getEffectivePlan,
+  getPlanCodeForUserId,
+  PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
+} from '../../../core/subscriptionPlans.js';
+import { fetchMyProfileBilling } from '../../../core/monetization.js';
+import {
+  getMonthlyLimitForPlan,
+  getMonthlyUsageSnapshot,
+  hasReachedMonthlyLimit,
+  incrementMonthlyUsage,
+  USAGE_RESOURCE_PDF_EXPORT,
+  USAGE_RESOURCE_WHATSAPP_SHARE,
+} from '../../../core/usageLimits.js';
 
 function buildPdfPreview(filters) {
   return {
-    title: 'Prévia do relatório',
+    title: 'Previa do relatorio',
     items: [
       { label: 'Equipamento', value: filters.filtEq || 'Todos os equipamentos' },
-      { label: 'Período', value: `${filters.de || 'Início'} até ${filters.ate || 'Hoje'}` },
-      { label: 'Serviço #1', value: '••••••••••••••••' },
-      { label: 'Serviço #2', value: '••••••••••••••••' },
-      { label: 'Assinatura', value: '••••••••••••••••' },
+      { label: 'Periodo', value: `${filters.de || 'Inicio'} ate ${filters.ate || 'Hoje'}` },
+      { label: 'Servico #1', value: '................' },
+      { label: 'Servico #2', value: '................' },
+      { label: 'Assinatura', value: '................' },
     ],
   };
 }
@@ -56,6 +45,15 @@ function getReportFilters() {
   };
 }
 
+async function resolvePlanAndUsage(userId) {
+  const [planCode, usageSnapshot] = await Promise.all([
+    getPlanCodeForUserId(userId),
+    getMonthlyUsageSnapshot(userId),
+  ]);
+
+  return { planCode, usageSnapshot };
+}
+
 function bindPdfExport() {
   on('export-pdf', async (el) => {
     const filters = getReportFilters();
@@ -63,10 +61,8 @@ function bindPdfExport() {
       await runAsyncAction(el, { loadingLabel: 'Gerando PDF...' }, async () => {
         const user = await Auth.getUser();
         const isGuest = !user;
-        const plan = isGuest ? 'guest' : getPlanFromStorage();
-        trackEvent('pdf_export_attempted', { isGuest, plan });
-
         if (isGuest) {
+          trackEvent('pdf_export_attempted', { isGuest: true, plan: 'guest' });
           trackEvent('pdf_export_blocked', { reason: 'guest' });
           GuestConversionModal.open({
             reason: 'save_attempt',
@@ -76,23 +72,51 @@ function bindPdfExport() {
           return;
         }
 
-        if (plan === 'free' && getMonthlyCount('cooltrack-pdf-count') >= PDF_MONTH_LIMIT_FREE) {
-          trackEvent('pdf_export_blocked', { reason: 'limit_reached' });
+        const { profile } = await fetchMyProfileBilling();
+        const planCode = getEffectivePlan(profile);
+        trackEvent('pdf_export_attempted', { isGuest: false, plan: planCode });
+
+        // ── 1. Quota mensal: Free=5 (com marca d'água), Plus=100, Pro=ilimitado ─
+        const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
+        const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
+        const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
+
+        if (
+          hasReachedMonthlyLimit({
+            planCode,
+            resource: USAGE_RESOURCE_PDF_EXPORT,
+            usedCount: pdfUsed,
+          })
+        ) {
+          trackEvent('pdf_export_blocked', { reason: 'limit_reached', plan: planCode });
+          const limitMessage =
+            planCode === PLAN_CODE_FREE
+              ? `Você atingiu ${pdfLimit} PDFs este mês no plano Free. Faça upgrade para Plus (100/mês, sem marca d'água) ou Pro (ilimitado).`
+              : planCode === PLAN_CODE_PLUS
+                ? `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`
+                : `Você atingiu o limite mensal de ${pdfLimit} PDFs.`;
           GuestConversionModal.open({
             reason: 'limit_pdf',
             source: 'pdf_export_limit',
-            message: 'Você gerou 3 relatórios este mês. O plano Pro tem relatórios ilimitados.',
+            title: 'Limite mensal atingido',
+            message: limitMessage,
           });
           return;
         }
 
-        const fileName = await PDFGenerator.generateMaintenanceReport(filters);
-        if (fileName) Toast.success(`PDF gerado: ${fileName}`);
-        else {
+        // ── 2. Gera o PDF (planCode controla marca d'água "CoolTrack Free") ──
+        const fileName = await PDFGenerator.generateMaintenanceReport(filters, { planCode });
+        if (!fileName) {
           Toast.error('Erro ao gerar PDF.');
           return;
         }
-        if (plan === 'free') bumpMonthlyCount('cooltrack-pdf-count');
+
+        // ── 3. Incrementa contagem só se o plano tem limite finito (Free/Plus) ─
+        if (Number.isFinite(pdfLimit)) {
+          await incrementMonthlyUsage(user.id, USAGE_RESOURCE_PDF_EXPORT);
+        }
+
+        Toast.success(`PDF gerado: ${fileName}`);
       });
     } catch (error) {
       handleError(error, {
@@ -121,18 +145,27 @@ function bindWhatsAppExport() {
           return;
         }
 
-        const plan = getPlanFromStorage();
+        const { planCode, usageSnapshot } = await resolvePlanAndUsage(user.id);
+        const whatsappUsed = usageSnapshot[USAGE_RESOURCE_WHATSAPP_SHARE];
+        const whatsappLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_WHATSAPP_SHARE);
+
         if (
-          plan === 'free' &&
-          getMonthlyCount('cooltrack-whatsapp-count') >= WHATSAPP_MONTH_LIMIT_FREE
+          hasReachedMonthlyLimit({
+            planCode,
+            resource: USAGE_RESOURCE_WHATSAPP_SHARE,
+            usedCount: whatsappUsed,
+          })
         ) {
-          trackEvent('whatsapp_share_blocked', { reason: 'limit_reached' });
+          trackEvent('whatsapp_share_blocked', { reason: 'limit_reached', plan: planCode });
+          const upgradeMessage =
+            planCode === 'plus'
+              ? `Voce atingiu ${whatsappLimit} compartilhamentos este mes no Plus. O Pro tem envios ilimitados.`
+              : `Voce atingiu ${whatsappLimit} compartilhamentos este mes. Faca upgrade para Plus ou Pro.`;
           GuestConversionModal.open({
             reason: 'limit_whatsapp',
             source: 'whatsapp_share_limit',
-            title: 'Limite do plano Free atingido',
-            message:
-              'Você atingiu 10 compartilhamentos este mês. O plano Pro tem compartilhamentos ilimitados.',
+            title: 'Limite mensal atingido',
+            message: upgradeMessage,
           });
           return;
         }
@@ -142,8 +175,15 @@ function bindWhatsAppExport() {
           Toast.warning('Nenhum registro para enviar.');
           return;
         }
-        ShareSuccessToast.show();
-        if (plan === 'free') bumpMonthlyCount('cooltrack-whatsapp-count');
+
+        let newUsedCount = whatsappUsed;
+        if (Number.isFinite(whatsappLimit)) {
+          newUsedCount = await incrementMonthlyUsage(user.id, USAGE_RESOURCE_WHATSAPP_SHARE);
+        }
+
+        ShareSuccessToast.show(
+          Number.isFinite(whatsappLimit) ? { used: newUsedCount, limit: whatsappLimit } : {},
+        );
       });
     } catch (error) {
       handleError(error, {

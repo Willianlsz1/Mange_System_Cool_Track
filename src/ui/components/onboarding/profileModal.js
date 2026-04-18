@@ -3,6 +3,37 @@ import { Toast } from '../../../core/toast.js';
 import { Profile } from '../../../features/profile.js';
 import { GuestCtaModal } from './guestCtaModal.js';
 
+const AVATAR_COLORS = [
+  ['#0096b4', 'rgba(0,150,180,0.15)'],
+  ['#00c870', 'rgba(0,200,112,0.15)'],
+  ['#e8a020', 'rgba(232,160,32,0.15)'],
+  ['#a855f7', 'rgba(168,85,247,0.15)'],
+  ['#e03040', 'rgba(224,48,64,0.12)'],
+];
+
+function getAvatarColor(name) {
+  const idx =
+    Math.abs([...String(name || 'T')].reduce((a, c) => a + c.charCodeAt(0), 0)) %
+    AVATAR_COLORS.length;
+  return AVATAR_COLORS[idx];
+}
+
+function getInitials(name) {
+  return String(name || 'T')
+    .split(' ')
+    .map((n) => n[0] || '')
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+function formatPhone(raw) {
+  const d = raw.replace(/\D/g, '');
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return raw;
+}
+
 export const ProfileModal = {
   open() {
     document.getElementById('modal-profile-overlay')?.remove();
@@ -14,6 +45,9 @@ export const ProfileModal = {
     }
 
     const profile = Profile.get() || {};
+    const initials = getInitials(profile.nome);
+    const [color, bg] = getAvatarColor(profile.nome);
+
     const overlay = document.createElement('div');
     overlay.id = 'modal-profile-overlay';
     overlay.className = 'modal-overlay is-open';
@@ -22,84 +56,132 @@ export const ProfileModal = {
     overlay.setAttribute('aria-labelledby', 'profile-title');
 
     overlay.innerHTML = `
-  <div class="modal" style="align-self:center;padding:0;overflow:hidden;max-width:420px;width:100%">
+      <div class="modal pm-modal">
 
-    <!-- Header -->
-    <div style="
-      background:linear-gradient(135deg,rgba(0,212,255,0.12),rgba(0,212,255,0.03));
-      border-bottom:1px solid rgba(255,255,255,0.07);
-      padding:28px 28px 24px;
-      display:flex;align-items:center;gap:14px
-    ">
-      <div style="
-        width:48px;height:48px;border-radius:50%;
-        background:rgba(0,212,255,0.15);
-        border:1.5px solid rgba(0,212,255,0.3);
-        display:flex;align-items:center;justify-content:center;
-        font-size:17px;font-weight:700;color:#00D4FF;flex-shrink:0
-      ">
-        ${Utils.escapeHtml(
-          (profile.nome || 'T')
-            .split(' ')
-            .map((n) => n[0])
-            .slice(0, 2)
-            .join('')
-            .toUpperCase(),
-        )}
-      </div>
-      <div>
-        <div style="font-size:16px;font-weight:600;color:#E8F2FA;margin-bottom:2px">Meu Perfil</div>
-        <div style="font-size:12px;color:#4A6880">Seus dados aparecem nos relatórios PDF</div>
-      </div>
-    </div>
+        <!-- Header com avatar -->
+        <div class="pm-header">
+          <div class="pm-avatar" style="color:${color};background:${bg};border-color:${color}40">
+            ${Utils.escapeHtml(initials)}
+          </div>
+          <div class="pm-header__info">
+            <div class="pm-header__title" id="profile-title">Meu Perfil</div>
+            <div class="pm-header__sub">Seus dados aparecem nos relatórios PDF</div>
+          </div>
+          <button type="button" class="pm-close" aria-label="Fechar">✕</button>
+        </div>
 
-    <!-- Formulário -->
-    <div style="padding:20px 28px 24px">
-      <div class="form-group">
-        <label class="form-label" for="prof-nome">Seu nome *</label>
-        <input id="prof-nome" class="form-control" type="text"
-          value="${Utils.escapeAttr(profile.nome || '')}"
-          placeholder="Ex: Carlos Figueiredo" />
+        <!-- Campos -->
+        <div class="pm-body">
+
+          <div class="pm-section-label">Identificação</div>
+
+          <div class="pm-field">
+            <label class="pm-label" for="prof-nome">
+              Nome completo <span class="pm-required">*</span>
+            </label>
+            <input id="prof-nome" class="form-control" type="text"
+              value="${Utils.escapeAttr(profile.nome || '')}"
+              placeholder="Ex: Carlos Figueiredo"
+              autocomplete="name" />
+          </div>
+
+          <div class="pm-field">
+            <label class="pm-label" for="prof-crea">
+              CREA / Registro profissional
+            </label>
+            <input id="prof-crea" class="form-control" type="text"
+              value="${Utils.escapeAttr(profile.crea || '')}"
+              placeholder="Ex: CREA-MG 123456/D"
+              autocomplete="off" />
+          </div>
+
+          <div class="pm-section-label" style="margin-top:16px">Empresa</div>
+
+          <div class="pm-field">
+            <label class="pm-label" for="prof-empresa">Empresa / CNPJ</label>
+            <input id="prof-empresa" class="form-control" type="text"
+              value="${Utils.escapeAttr(profile.empresa || '')}"
+              placeholder="Ex: Frio Total Refrigeração"
+              autocomplete="organization" />
+          </div>
+
+          <div class="pm-field">
+            <label class="pm-label" for="prof-telefone">Telefone / WhatsApp</label>
+            <div class="pm-input-icon">
+              <span class="pm-input-icon__icon">📱</span>
+              <input id="prof-telefone" class="form-control pm-input-icon__input" type="tel"
+                value="${Utils.escapeAttr(profile.telefone || '')}"
+                placeholder="(31) 99999-0000"
+                autocomplete="tel" />
+            </div>
+          </div>
+
+          <!-- Ações -->
+          <div class="pm-actions">
+            <button class="btn btn--outline" id="prof-cancel" type="button">Cancelar</button>
+            <button class="btn btn--primary" id="prof-save" type="button">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" style="flex-shrink:0">
+                <path d="M2 7l4 4 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Salvar perfil
+            </button>
+          </div>
+        </div>
+
       </div>
-      <div class="form-group">
-        <label class="form-label" for="prof-empresa">Empresa / CNPJ</label>
-        <input id="prof-empresa" class="form-control" type="text"
-          value="${Utils.escapeAttr(profile.empresa || '')}"
-          placeholder="Ex: Frio Total Refrigeração" />
-      </div>
-      <div class="form-group">
-        <label class="form-label" for="prof-telefone">Telefone / WhatsApp</label>
-        <input id="prof-telefone" class="form-control" type="text"
-          value="${Utils.escapeAttr(profile.telefone || '')}"
-          placeholder="(31) 99999-0000" />
-      </div>
-      <div class="btn-group" style="margin-top:8px">
-        <button class="btn btn--outline" id="prof-cancel">Cancelar</button>
-        <button class="btn btn--primary" id="prof-save">Salvar perfil</button>
-      </div>
-    </div>
-  </div>`;
+    `;
 
     document.body.appendChild(overlay);
 
-    overlay.addEventListener('click', (e) => {
-      if (e.target === overlay) overlay.remove();
+    // Auto-update avatar preview ao digitar o nome
+    const nomeInput = overlay.querySelector('#prof-nome');
+    const avatarEl = overlay.querySelector('.pm-avatar');
+    nomeInput?.addEventListener('input', () => {
+      const v = nomeInput.value.trim();
+      avatarEl.textContent = getInitials(v);
+      const [c, b] = getAvatarColor(v);
+      avatarEl.style.color = c;
+      avatarEl.style.background = b;
+      avatarEl.style.borderColor = c + '40';
     });
 
-    document.getElementById('prof-cancel')?.addEventListener('click', () => overlay.remove());
-    document.getElementById('prof-save')?.addEventListener('click', () => {
-      const nome = document.getElementById('prof-nome')?.value.trim();
+    // Formata telefone ao sair do campo
+    const telInput = overlay.querySelector('#prof-telefone');
+    telInput?.addEventListener('blur', () => {
+      if (telInput.value) telInput.value = formatPhone(telInput.value);
+    });
+
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
+    overlay.querySelector('#prof-cancel')?.addEventListener('click', close);
+    overlay.querySelector('.pm-close')?.addEventListener('click', close);
+
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') {
+        close();
+        document.removeEventListener('keydown', esc);
+      }
+    });
+
+    overlay.querySelector('#prof-save')?.addEventListener('click', () => {
+      const nome = nomeInput?.value.trim();
       if (!nome) {
         Toast.warning('Digite seu nome para continuar.');
+        nomeInput?.focus();
         return;
       }
       Profile.save({
         nome,
-        empresa: document.getElementById('prof-empresa')?.value.trim(),
-        telefone: document.getElementById('prof-telefone')?.value.trim(),
+        crea: overlay.querySelector('#prof-crea')?.value.trim(),
+        empresa: overlay.querySelector('#prof-empresa')?.value.trim(),
+        telefone: overlay.querySelector('#prof-telefone')?.value.trim(),
       });
-      overlay.remove();
-      Toast.success('Perfil salvo.');
+      close();
+      Toast.success('Perfil salvo com sucesso.');
     });
+
+    nomeInput?.focus();
   },
 };

@@ -1,17 +1,9 @@
+# Configuração mínima para Netlify.
+#
+# Headers de segurança e redirect SPA ficam em `public/_headers` e
+# `public/_redirects` — o mesmo formato funciona também no Cloudflare Pages.
+# Manter a fonte única evita divergência entre as duas plataformas.
+
 [build]
   command = "npm run build"
   publish = "dist"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "DENY"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-    Content-Security-Policy = "default-src 'self'; frame-ancestors 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:;"
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200

@@ -1,58 +1,42 @@
+import autoTable from 'jspdf-autotable';
 import { Utils } from '../../../core/utils.js';
 import { resolvePhotoDataUrlForPdf } from '../../../core/photoStorage.js';
-import { PDF_COLORS as C, STATUS_CLIENTE } from '../constants.js';
-import { accentLine, fillPage, fillRect, roundRect, txt } from '../primitives.js';
+import { PDF_COLORS as C, PDF_TYPO as T, STATUS_CLIENTE } from '../constants.js';
+import { accentLine, fillPage, fillRect, txt } from '../primitives.js';
 
-function drawServicesPageHeader(doc, pageWidth, margin, profile) {
-  fillRect(doc, 0, 0, pageWidth, 18, C.bg2);
-  fillRect(doc, 0, 0, pageWidth, 3, C.primary);
-  txt(doc, 'COOLTRACK PRO', margin + 2, 8, { size: 7, style: 'bold', color: C.primary });
-  txt(doc, 'DETALHES DOS SERVIÇOS REALIZADOS', margin + 40, 8, {
+// Cabeçalho fixo que aparece no topo de cada página de serviço.
+// Identifica produto + OS + empresa do técnico — alinhado ao ASHRAE 180,
+// que exige identificação do emitente em cada folha.
+function drawServicesPageHeader(doc, pageWidth, margin, profile, context = {}) {
+  fillRect(doc, 0, 0, pageWidth, 14, C.bg2);
+  fillRect(doc, 0, 14, pageWidth, 0.3, C.borderStrong);
+  fillRect(doc, 0, 0, pageWidth, 2, C.primary);
+
+  txt(doc, 'COOLTRACK PRO', margin, 7.5, {
+    size: 7,
+    style: 'bold',
+    color: C.primary,
+  });
+
+  const midParts = ['DETALHES DOS SERVIÇOS'];
+  if (context.osNumber) midParts.push(`OS ${context.osNumber}`);
+  txt(doc, midParts.join('  ·  '), margin + 40, 7.5, {
     size: 7,
     style: 'bold',
     color: C.text,
   });
 
   if (profile?.empresa) {
-    txt(doc, profile.empresa, pageWidth - margin, 8, { size: 7, color: C.text3, align: 'right' });
+    txt(doc, profile.empresa, pageWidth - margin, 7.5, {
+      size: 7,
+      color: C.text3,
+      align: 'right',
+    });
   }
-
-  accentLine(doc, 0, 18, pageWidth);
 }
 
 function getRecordPhotos(registro) {
   return Array.isArray(registro.fotos) ? registro.fotos.filter(Boolean).slice(0, 4) : [];
-}
-
-function calculateCardLayout(doc, pageWidth, margin, registro) {
-  doc.setFontSize(8);
-  const obsLines = doc.splitTextToSize(registro.obs || '', pageWidth - margin * 2 - 16);
-  const obsHeight = Math.max(obsLines.length, 1) * 4.5;
-  const photos = getRecordPhotos(registro);
-  const photoRows = Math.ceil(photos.length / 2);
-  const photosHeight = photos.length ? photoRows * 26 + 10 : 0;
-  const custo = parseFloat(registro.custoPecas || 0) + parseFloat(registro.custoMaoObra || 0);
-
-  const cardHeight = Math.max(
-    34,
-    28 + obsHeight + (registro.pecas ? 8 : 0) + (custo > 0 ? 8 : 0) + photosHeight,
-  );
-
-  return { cardHeight, custo, photos };
-}
-
-function drawStatusBadge(doc, pageWidth, margin, y, st) {
-  const statusLabel = st.label;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.5);
-  doc.setTextColor(...st.color);
-  const statusWidth = doc.getTextWidth(statusLabel) + 8;
-  fillRect(doc, pageWidth - margin - statusWidth - 2, y + 2, statusWidth + 2, 8, [
-    st.color[0] * 0.15,
-    st.color[1] * 0.15,
-    st.color[2] * 0.15,
-  ]);
-  doc.text(statusLabel, pageWidth - margin - statusWidth / 2 - 1, y + 7.5, { align: 'center' });
 }
 
 function getImageFormat(dataUrl) {
@@ -62,98 +46,109 @@ function getImageFormat(dataUrl) {
   return formatRaw.toUpperCase();
 }
 
-async function drawPhotosGrid(doc, pageWidth, margin, startY, photos) {
-  const photoW = (pageWidth - margin * 2 - 20) / 2;
-  const photoH = 22;
+// Desenha observação + materiais + custo + fotos de um serviço específico
+// abaixo da linha da tabela. Retorna a altura usada.
+async function drawServiceDetails(doc, pageWidth, margin, startY, registro) {
+  const innerX = margin + 4;
+  const maxW = pageWidth - margin * 2 - 8;
+  let y = startY + 2;
 
-  for (let index = 0; index < photos.length; index += 1) {
-    const photo = photos[index];
-    const row = Math.floor(index / 2);
-    const col = index % 2;
-    const px = margin + 8 + col * (photoW + 4);
-    const py = startY + row * (photoH + 4);
-    roundRect(doc, px, py, photoW, photoH, 1.5, [250, 250, 250]);
-
-    try {
-      const imageData = await resolvePhotoDataUrlForPdf(photo);
-      if (!imageData) throw new Error('Foto indisponível para o PDF.');
-
-      const format = getImageFormat(imageData);
-      doc.addImage(imageData, format, px + 1, py + 1, photoW - 2, photoH - 2);
-    } catch (_imgErr) {
-      txt(doc, 'Foto indisponível', px + photoW / 2, py + photoH / 2 + 1, {
-        size: 7,
-        color: C.text3,
-        align: 'center',
-      });
-    }
+  // Observação
+  const obs = (registro.obs || '').trim();
+  if (obs) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(...C.text2);
+    const lines = doc.splitTextToSize(obs, maxW);
+    doc.text(lines, innerX, y);
+    y += lines.length * 4 + 2;
   }
-}
 
-async function drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, layout) {
-  const cardWidth = pageWidth - margin * 2;
-  const { cardHeight, custo, photos } = layout;
-
-  if (cardHeight >= 4) {
-    roundRect(doc, margin, y, cardWidth, cardHeight, 2, C.bg2);
-  } else {
-    fillRect(doc, margin, y, cardWidth, cardHeight, C.bg2);
-  }
-  fillRect(doc, margin, y, 4, cardHeight, st.color);
-
-  txt(doc, Utils.formatDatetime(registro.data), margin + 8, y + 7, { size: 7, color: C.text3 });
-  drawStatusBadge(doc, pageWidth, margin, y, st);
-  txt(doc, registro.tipo, margin + 8, y + 16, { size: 11, style: 'bold', color: C.text });
-  txt(
-    doc,
-    (equipamento?.nome || '—') + (equipamento?.local ? '  ·  ' + equipamento.local : ''),
-    margin + 8,
-    y + 23,
-    {
-      size: 8,
-      color: C.text3,
-    },
-  );
-  accentLine(doc, margin + 6, y + 26, pageWidth - margin - 4, C.border);
-
-  let contentY = y + 32;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(...C.text2);
-  const obsText = doc.splitTextToSize(registro.obs || '—', pageWidth - margin * 2 - 16);
-  doc.text(obsText, margin + 8, contentY);
-  contentY += obsText.length * 4.5 + 3;
-
-  if (registro.pecas) {
-    txt(doc, 'Materiais utilizados: ' + registro.pecas, margin + 8, contentY, {
+  // Materiais utilizados
+  if (registro.pecas?.trim()) {
+    txt(doc, `Materiais: ${registro.pecas.trim()}`, innerX, y, {
       size: 7.5,
       color: C.text3,
     });
-    contentY += 7;
+    y += 5;
   }
 
+  // Custo
+  const custo = parseFloat(registro.custoPecas || 0) + parseFloat(registro.custoMaoObra || 0);
   if (custo > 0) {
-    txt(doc, `Custo do serviço: R$ ${custo.toFixed(2).replace('.', ',')}`, margin + 8, contentY, {
+    txt(doc, `Custo do serviço: R$ ${custo.toFixed(2).replace('.', ',')}`, innerX, y, {
       size: 8,
       style: 'bold',
       color: C.text,
     });
-    contentY += 7;
+    y += 5;
   }
 
+  // Fotos
+  const photos = getRecordPhotos(registro);
   if (photos.length) {
-    txt(doc, 'Fotos anexadas', margin + 8, contentY, { size: 8, style: 'bold', color: C.text3 });
-    contentY += 3;
-    await drawPhotosGrid(doc, pageWidth, margin, contentY, photos);
+    txt(doc, 'Fotos anexadas', innerX, y, {
+      size: 7,
+      style: 'bold',
+      color: C.text3,
+    });
+    y += 3;
+
+    const photoW = (maxW - 4) / 2;
+    const photoH = 22;
+    for (let i = 0; i < photos.length; i += 1) {
+      const row = Math.floor(i / 2);
+      const col = i % 2;
+      const px = innerX + col * (photoW + 4);
+      const py = y + row * (photoH + 3);
+      doc.setDrawColor(...C.border);
+      doc.setFillColor(250, 250, 250);
+      doc.roundedRect(px, py, photoW, photoH, 1, 1, 'FD');
+
+      try {
+        const imageData = await resolvePhotoDataUrlForPdf(photos[i]);
+        if (!imageData) throw new Error('Foto indisponível');
+        const format = getImageFormat(imageData);
+        doc.addImage(imageData, format, px + 1, py + 1, photoW - 2, photoH - 2);
+      } catch (_err) {
+        txt(doc, 'Foto indisponível', px + photoW / 2, py + photoH / 2 + 1, {
+          size: 7,
+          color: C.text3,
+          align: 'center',
+        });
+      }
+    }
+    const photoRows = Math.ceil(photos.length / 2);
+    y += photoRows * (photoH + 3) + 2;
   }
 
-  if (registro.tecnico) {
-    txt(doc, 'Técnico: ' + registro.tecnico, pageWidth - margin - 4, y + cardHeight - 5, {
-      size: 7,
-      color: C.text3,
-      align: 'right',
-    });
+  return y - startY;
+}
+
+// Calcula altura do bloco de detalhes para reservar espaço antes da tabela desenhar.
+function estimateDetailsHeight(doc, pageWidth, margin, registro) {
+  const maxW = pageWidth - margin * 2 - 8;
+  let h = 2;
+
+  const obs = (registro.obs || '').trim();
+  if (obs) {
+    doc.setFontSize(8);
+    const lines = doc.splitTextToSize(obs, maxW);
+    h += lines.length * 4 + 2;
   }
+  if (registro.pecas?.trim()) h += 5;
+  const custo = parseFloat(registro.custoPecas || 0) + parseFloat(registro.custoMaoObra || 0);
+  if (custo > 0) h += 5;
+
+  const photos = getRecordPhotos(registro);
+  if (photos.length) {
+    h += 3; // label
+    h += Math.ceil(photos.length / 2) * 25 + 2;
+  }
+
+  // Linha separadora abaixo do bloco
+  if (h > 2) h += 4;
+  return h;
 }
 
 export async function drawServices(
@@ -164,41 +159,140 @@ export async function drawServices(
   filtered,
   equipamentos,
   profile,
-  drawFooter,
+  _drawFooter, // compatibilidade — rodapé é aplicado por stampFooterTotals
+  context = {},
 ) {
-  drawServicesPageHeader(doc, pageWidth, margin, profile);
+  if (!filtered.length) return;
 
-  let y = 26;
-  const pageBottom = pageHeight - 20;
+  drawServicesPageHeader(doc, pageWidth, margin, profile, context);
 
-  for (const registro of filtered) {
+  // Linha de título dentro da página
+  let titleY = 22;
+  txt(doc, 'REGISTROS DE SERVIÇO', margin, titleY, {
+    size: T.h1.size,
+    style: T.h1.style,
+    color: C.primary,
+  });
+  txt(
+    doc,
+    `${filtered.length} ${filtered.length === 1 ? 'registro' : 'registros'} no período`,
+    pageWidth - margin,
+    titleY,
+    { size: 8, color: C.text3, align: 'right' },
+  );
+  accentLine(doc, margin, titleY + 2, pageWidth - margin, C.border);
+
+  // Monta body da tabela: cada linha = 1 serviço, identificado pelo index.
+  // Detalhes longos (obs/materiais/fotos) são desenhados manualmente abaixo
+  // da linha via didDrawRow, para manter tabela densa e sem quebrar paginação.
+  const body = filtered.map((registro) => {
     const equipamento = equipamentos.find((item) => item.id === registro.equipId);
     const st = STATUS_CLIENTE[registro.status] || STATUS_CLIENTE.ok;
-    const layout = calculateCardLayout(doc, pageWidth, margin, registro);
+    const custo = parseFloat(registro.custoPecas || 0) + parseFloat(registro.custoMaoObra || 0);
+    return {
+      data: Utils.formatDatetime(registro.data),
+      equip: equipamento
+        ? `${equipamento.nome}${equipamento.local ? ' · ' + equipamento.local : ''}`
+        : '—',
+      tipo: registro.tipo || '—',
+      tecnico: registro.tecnico || profile?.nome || '—',
+      custo: custo > 0 ? `R$ ${custo.toFixed(2).replace('.', ',')}` : '—',
+      status: st.label,
+      statusColor: st.color,
+      _registro: registro,
+    };
+  });
 
-    if (y + layout.cardHeight > pageBottom) {
-      doc.addPage();
-      fillPage(doc, pageWidth, pageHeight);
-      drawServicesPageHeader(doc, pageWidth, margin, profile);
-      y = 26;
+  // autoTable não consegue inserir linhas filhas com altura dinâmica
+  // assincronamente (imagens). Solução: desenha tabela primeiro sem detalhes,
+  // depois, pra cada row com detalhes, reserva espaço via `minCellHeight` na
+  // coluna 1 (equipamento) usando estimateDetailsHeight — e no didDrawRow
+  // guarda coordenadas para pintar detalhes depois de forma async.
+  const rowDetails = body.map((r) => ({
+    registro: r._registro,
+    height: estimateDetailsHeight(doc, pageWidth, margin, r._registro),
+  }));
 
-      if (typeof drawFooter === 'function') {
-        drawFooter(
-          doc,
-          pageWidth,
-          pageHeight,
-          margin,
-          profile,
-          doc.getCurrentPageInfo().pageNumber,
-        );
+  const drawCoords = []; // { pageNumber, y, rowIndex }
+
+  autoTable(doc, {
+    startY: titleY + 5,
+    head: [['Data', 'Equipamento', 'Tipo', 'Técnico', 'Custo', 'Status']],
+    body: body.map((r) => [r.data, r.equip, r.tipo, r.tecnico, r.custo, r.status]),
+    theme: 'plain',
+    margin: { top: 18, left: margin, right: margin, bottom: 22 },
+    styles: {
+      font: 'helvetica',
+      fontSize: 8,
+      cellPadding: 2.5,
+      textColor: C.text2,
+      lineColor: C.border,
+      lineWidth: 0.15,
+      valign: 'top',
+    },
+    headStyles: {
+      fillColor: C.bg2,
+      textColor: C.text3,
+      fontStyle: 'bold',
+      fontSize: 7,
+      lineColor: C.borderStrong,
+      lineWidth: 0.3,
+    },
+    alternateRowStyles: { fillColor: [252, 252, 253] },
+    columnStyles: {
+      0: { cellWidth: 26 },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 24 },
+      3: { cellWidth: 28, textColor: C.text3 },
+      4: { cellWidth: 22, halign: 'right', fontStyle: 'bold', textColor: C.text },
+      5: { halign: 'right', fontStyle: 'bold' },
+    },
+    didParseCell(data) {
+      if (data.section === 'body' && data.column.index === 5) {
+        const row = body[data.row.index];
+        if (row?.statusColor) data.cell.styles.textColor = row.statusColor;
       }
-    }
+      // Reserva altura extra na linha para o bloco de detalhes
+      if (data.section === 'body' && data.column.index === 0) {
+        const extra = rowDetails[data.row.index]?.height || 0;
+        if (extra > 2) data.cell.styles.minCellHeight = Math.max(data.cell.height, 6) + extra;
+      }
+    },
+    didDrawRow(data) {
+      if (data.section !== 'body') return;
+      const extra = rowDetails[data.row.index]?.height || 0;
+      if (extra <= 2) return;
 
-    await drawServiceCard(doc, pageWidth, margin, y, registro, equipamento, st, layout);
-    y += layout.cardHeight + 6;
-  }
+      // Coordenada do ponto onde começa o bloco de detalhes (logo após a linha
+      // da tabela). Como a célula foi inflada via minCellHeight, os detalhes
+      // ficam dentro do retângulo da linha.
+      const rowBottom = data.row.y + data.row.height;
+      const detailY = rowBottom - extra; // topo do espaço extra reservado
+      drawCoords.push({
+        pageNumber: doc.internal.getCurrentPageInfo().pageNumber,
+        y: detailY,
+        rowIndex: data.row.index,
+      });
+    },
+    willDrawPage() {
+      // Redesenha header em cada página nova da tabela
+      fillPage(doc, pageWidth, pageHeight);
+      drawServicesPageHeader(doc, pageWidth, margin, profile, context);
+    },
+  });
 
-  if (typeof drawFooter === 'function') {
-    drawFooter(doc, pageWidth, pageHeight, margin, profile, doc.getCurrentPageInfo().pageNumber);
+  // Segundo passo: desenha os blocos de detalhe async em cima das coordenadas
+  // reservadas. Isso roda depois da tabela e pode ser async sem problema.
+  for (const coord of drawCoords) {
+    doc.setPage(coord.pageNumber);
+    await drawServiceDetails(doc, pageWidth, margin, coord.y, body[coord.rowIndex]._registro);
+    // Linha separadora entre registros para legibilidade
+    accentLine(
+      doc,
+      margin + 4,
+      coord.y + rowDetails[coord.rowIndex].height - 2,
+      pageWidth - margin - 4,
+      C.border,
+    );
   }
 }

@@ -65,13 +65,14 @@ describe('AuthScreen guest-mode hygiene', () => {
 
     document.getElementById('signup-nome').value = 'Teste';
     document.getElementById('signup-email').value = 'novo@mail.com';
-    document.getElementById('signup-password').value = '123456';
+    document.getElementById('signup-password').value = '12345678';
+    document.getElementById('signup-confirm').value = '12345678';
     document.getElementById('btn-signup').click();
 
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(Auth.signUp).toHaveBeenCalledWith('novo@mail.com', '123456', 'Teste');
+    expect(Auth.signUp).toHaveBeenCalledWith('novo@mail.com', '12345678', 'Teste');
     expect(localStorage.getItem('cooltrack-guest-mode')).toBeNull();
   });
 

@@ -43,8 +43,8 @@ export function registerAppRoutes() {
     updateHeader();
   });
 
-  registerRoute('pricing', () => {
-    renderPricing();
+  registerRoute('pricing', (params = {}) => {
+    renderPricing(params);
     updateHeader();
   });
 }

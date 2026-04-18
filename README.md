@@ -177,15 +177,22 @@ npm run test:coverage
 
 ## Deploy
 
-- **Netlify (recomendado)**:
+Os headers de segurança e o redirect SPA ficam em `public/_headers` e `public/_redirects` — formato compatível com Netlify e Cloudflare Pages, então o mesmo repositório roda nas duas plataformas sem alteração.
+
+- **Cloudflare Pages (recomendado — build ilimitado + banda ilimitada no Free)**:
+  1. Em `dash.cloudflare.com` → Workers & Pages → Create → Pages → Connect to Git.
+  2. Selecionar o repositório. Framework preset: `None`.
+  3. Build command: `npm run build`. Build output directory: `dist`.
+  4. Em Environment variables, definir: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `VITE_AUTH_REDIRECT_URL`, e (opcional) `VITE_EMAILJS_SERVICE_ID`, `VITE_EMAILJS_TEMPLATE_ID`, `VITE_EMAILJS_PUBLIC_KEY`.
+  5. Salvar e fazer o primeiro deploy. Cloudflare lê automaticamente `_redirects` e `_headers` do `dist/`.
+  6. Configurar domínio custom em Custom domains (ou usar `*.pages.dev`). Atualizar `VITE_AUTH_REDIRECT_URL` e adicionar a nova URL nas Redirect URLs do Supabase Auth.
+- **Netlify**:
   1. Conectar o repositório em `app.netlify.com`.
-  2. Definir as env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`, `VITE_AUTH_REDIRECT_URL`.
-  3. Confirmar `Build command`: `npm run build`.
-  4. Confirmar `Publish directory`: `dist`.
-  5. O arquivo `netlify.toml` já inclui headers de segurança e redirect SPA.
+  2. Definir as env vars (mesmas da lista acima).
+  3. `Build command`: `npm run build`. `Publish directory`: `dist`. O `netlify.toml` já traz esses valores.
 - **GitHub Pages (fallback)**:
   - `deploy.yml` continua publicando em `push` para `main`.
-- `vite.config.js` está com `base: '/'` para deploy em domínio customizado (ex.: Netlify + domínio próprio).
+- `vite.config.js` está com `base: '/'` para deploy em domínio customizado.
 
 ## Limitações atuais
 

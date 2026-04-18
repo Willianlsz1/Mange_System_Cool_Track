@@ -17,9 +17,9 @@ describe('ShareSuccessToast', () => {
     expect(toast).toBeTruthy();
     expect(toast.getAttribute('role')).toBe('status');
     expect(toast.getAttribute('aria-live')).toBe('polite');
-    expect(toast.textContent).toContain('Relatorio enviado! Seu cliente vai adorar.');
+    expect(toast.textContent).toContain('Relatório enviado! Seu cliente vai adorar.');
 
-    vi.advanceTimersByTime(5000);
+    vi.advanceTimersByTime(6000);
     toast.dispatchEvent(new Event('transitionend'));
 
     expect(document.querySelector('.share-success-toast')).toBeNull();

@@ -1,21 +1,31 @@
 /**
- * CoolTrack Pro - PDF Generator v7.0
- * Orquestrador de geração: filtra dados, monta contexto e delega para builders de seção.
+ * CoolTrack Pro - PDF Generator v8.0
+ * Orquestrador de geração: filtra dados, monta contexto (OS, cliente, emissão)
+ * e delega para os builders de seção. O rodapé com paginação X/Y é carimbado
+ * por último, depois de todas as páginas terem sido criadas.
  */
 
 import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+// v5 do jspdf-autotable não anexa mais `doc.autoTable` por side-effect;
+// a função é importada e chamada como autoTable(doc, options). As sections
+// (cover, services) fazem esse import diretamente.
 import { getState } from '../core/state.js';
 import { Profile } from '../features/profile.js';
 import { getSignatureForRecord } from '../ui/components/signature.js';
-import { fillPage } from './pdf/primitives.js';
-import { buildReportFileName, filterRegistrosForReport } from './pdf/reportModel.js';
+import { drawWatermarkAllPages } from './pdf/primitives.js';
+import {
+  buildOsNumber,
+  buildReportFileName,
+  extractClientBlock,
+  filterRegistrosForReport,
+} from './pdf/reportModel.js';
 import { drawCover } from './pdf/sections/cover.js';
-import { drawFooter } from './pdf/sections/footer.js';
+import { stampFooterTotals } from './pdf/sections/footer.js';
 import { drawServices } from './pdf/sections/services.js';
 import { drawSignaturePages } from './pdf/sections/signatures.js';
+import { PLAN_CODE_FREE } from '../core/subscriptionPlans.js';
 
-const PAGE_MARGIN = 18;
+const PAGE_MARGIN = 15;
 
 function createPdfDocument() {
   return new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -29,17 +39,24 @@ function getPdfDimensions(doc) {
 }
 
 export const PDFGenerator = {
-  async generateMaintenanceReport(options = {}) {
+  async generateMaintenanceReport(options = {}, context = {}) {
     try {
       const { registros, equipamentos } = getState();
       const { filtEq = '', de = '', ate = '' } = options;
+      const { planCode } = context;
       const profile = Profile.get();
       const filtered = filterRegistrosForReport(registros, { filtEq, de, ate });
+
+      const now = new Date();
+      const osNumber = buildOsNumber(now);
+      const emitido = now.toLocaleDateString('pt-BR');
+      const cliente = extractClientBlock(filtered);
+      const reportContext = { osNumber, emitido, cliente };
 
       const doc = createPdfDocument();
       const { pageWidth, pageHeight } = getPdfDimensions(doc);
 
-      this._drawCover(
+      drawCover(
         doc,
         pageWidth,
         pageHeight,
@@ -50,12 +67,13 @@ export const PDFGenerator = {
         ate,
         filtered,
         equipamentos,
+        null,
+        reportContext,
       );
 
       if (filtered.length > 0) {
         doc.addPage();
-        fillPage(doc, pageWidth, pageHeight);
-        await this._drawServicos(
+        await drawServices(
           doc,
           pageWidth,
           pageHeight,
@@ -63,8 +81,10 @@ export const PDFGenerator = {
           filtered,
           equipamentos,
           profile,
+          null,
+          reportContext,
         );
-        this._drawSignaturePages(
+        drawSignaturePages(
           doc,
           pageWidth,
           pageHeight,
@@ -72,63 +92,33 @@ export const PDFGenerator = {
           filtered,
           equipamentos,
           profile,
+          getSignatureForRecord,
+          null,
+          reportContext,
         );
+      }
+
+      // Rodapé final com paginação X/Y. Tem que rodar depois de todas as
+      // páginas estarem criadas (inclusive as de assinatura) pra que o total
+      // seja correto em cada folha.
+      stampFooterTotals(doc, pageWidth, pageHeight, PAGE_MARGIN, profile, {
+        osNumber,
+        emitido,
+      });
+
+      // Marca d'água "CoolTrack Free" por último. No plano Free aparece em
+      // malha diagonal atrás de todo o conteúdo. Plus/Pro geram PDF limpo.
+      if (planCode === PLAN_CODE_FREE) {
+        drawWatermarkAllPages(doc, pageWidth, pageHeight);
       }
 
       const fileName = buildReportFileName(profile);
       doc.save(fileName);
       return fileName;
     } catch (err) {
-      console.error('[PDF v7]', err);
+      console.error('[PDF v8]', err);
       return null;
     }
-  },
-
-  _drawCover(doc, pageWidth, pageHeight, margin, profile, filtEq, de, ate, filtered, equipamentos) {
-    drawCover(
-      doc,
-      pageWidth,
-      pageHeight,
-      margin,
-      profile,
-      filtEq,
-      de,
-      ate,
-      filtered,
-      equipamentos,
-      this._drawFooter.bind(this),
-    );
-  },
-
-  async _drawServicos(doc, pageWidth, pageHeight, margin, filtered, equipamentos, profile) {
-    await drawServices(
-      doc,
-      pageWidth,
-      pageHeight,
-      margin,
-      filtered,
-      equipamentos,
-      profile,
-      this._drawFooter.bind(this),
-    );
-  },
-
-  _drawSignaturePages(doc, pageWidth, pageHeight, margin, filtered, equipamentos, profile) {
-    drawSignaturePages(
-      doc,
-      pageWidth,
-      pageHeight,
-      margin,
-      filtered,
-      equipamentos,
-      profile,
-      getSignatureForRecord,
-      this._drawFooter.bind(this),
-    );
-  },
-
-  _drawFooter(doc, pageWidth, pageHeight, margin, profile, pageNum) {
-    drawFooter(doc, pageWidth, pageHeight, margin, profile, pageNum);
   },
 };
 

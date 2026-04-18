@@ -36,7 +36,7 @@ export const SignatureModal = {
         <div class="sig-canvas-wrapper">
           <canvas id="sig-canvas" class="sig-canvas" width="480" height="180"
             aria-label="Área de assinatura"></canvas>
-          <div class="sig-placeholder" id="sig-placeholder">← Assine aqui</div>
+          <div class="sig-placeholder" id="sig-placeholder">&larr; Assine aqui</div>
         </div>
         <div class="sig-actions">
           <button class="btn btn--outline btn--sm" id="sig-clear">Limpar</button>

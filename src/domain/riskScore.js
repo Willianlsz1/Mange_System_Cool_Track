@@ -14,8 +14,8 @@ export function getCriticidadeMultiplier(criticidade = 'media') {
 }
 
 export function classifyRiskScore(score) {
-  if (score >= 70) return 'alto';
-  if (score >= 35) return 'medio';
+  if (score >= 75) return 'alto';
+  if (score >= 40) return 'medio';
   return 'baixo';
 }
 

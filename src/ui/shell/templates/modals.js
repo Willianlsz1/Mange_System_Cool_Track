@@ -30,6 +30,13 @@ export function renderShellModals() {
             <input id="eq-local" class="form-control" type="text"
               placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..." required autocomplete="off" />
           </div>
+          <div class="form-group" id="eq-setor-wrapper" style="display:none">
+            <label class="form-label" for="eq-setor">Setor <span class="pro-badge">PRO</span></label>
+            <select id="eq-setor" class="form-control">
+              <option value="">Sem setor</option>
+            </select>
+            <div class="form-hint">Agrupe este equipamento em um setor para visualização organizada</div>
+          </div>
           <button class="eq-expand-btn" id="eq-expand-details" type="button" aria-expanded="false"
             aria-controls="eq-step-2">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" id="eq-expand-icon">
@@ -52,16 +59,27 @@ export function renderShellModals() {
             <div class="form-group">
               <label class="form-label" for="eq-tipo">Tipo de equipamento</label>
               <select id="eq-tipo" class="form-control">
-                <option>Split Hi-Wall</option>
-                <option>Split Cassette</option>
-                <option>Split Piso Teto</option>
-                <option>VRF / VRV</option>
-                <option>Chiller</option>
-                <option>Fan Coil</option>
-                <option>Self Contained</option>
-                <option>Roof Top</option>
-                <option>Câmara Fria</option>
-                <option>Outro</option>
+                <optgroup label="Climatização">
+                  <option>Split Hi-Wall</option>
+                  <option>Split Cassette</option>
+                  <option>Split Piso Teto</option>
+                  <option>VRF / VRV</option>
+                  <option>GHP</option>
+                  <option>Fan Coil</option>
+                  <option>Chiller</option>
+                  <option>Self Contained</option>
+                  <option>Roof Top</option>
+                </optgroup>
+                <optgroup label="Refrigeração">
+                  <option>Câmara Fria</option>
+                  <option>Balcão Frigorífico</option>
+                  <option>Freezer</option>
+                  <option>Geladeira</option>
+                  <option>Bebedouro</option>
+                </optgroup>
+                <optgroup label="Geral">
+                  <option>Outro</option>
+                </optgroup>
               </select>
             </div>
             <div class="form-group">
@@ -111,9 +129,9 @@ export function renderShellModals() {
 
       <div class="btn-group modal__footer">
         <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button>
-        <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento →</button>
+        <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento &rarr;</button>
       </div>
-      <p class="modal-trust-note modal-trust-note--footer">✓ Você pode editar ou excluir a qualquer momento
+      <p class="modal-trust-note modal-trust-note--footer">&#10003; Você pode editar ou excluir a qualquer momento
       </p>
     </div>
   </div>
@@ -135,6 +153,108 @@ export function renderShellModals() {
       <div class="btn-group btn-group--tight">
         <button class="btn btn--outline" id="confirm-no">Cancelar</button>
         <button class="btn btn--danger" id="confirm-yes">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Criar / Editar Setor (PRO) -->
+  <div class="modal-overlay" id="modal-add-setor" role="dialog" aria-modal="true" aria-labelledby="modal-add-setor-title">
+    <div class="modal modal--sm">
+      <div class="modal__handle"></div>
+      <div class="modal__body">
+        <div class="modal__title" id="modal-add-setor-title">Novo setor</div>
+        <div class="modal__subtitle">Agrupe equipamentos por local ou área de trabalho</div>
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label" for="setor-nome">Nome do setor *</label>
+          <input id="setor-nome" class="form-control" type="text"
+            placeholder="Ex: Bloco Cirúrgico, UTI, Recepção, Galpão A..." autocomplete="off" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Cor do setor</label>
+          <div class="setor-color-picker" id="setor-color-picker" role="group" aria-label="Escolha a cor do setor">
+            <button type="button" class="setor-color-btn setor-color-btn--selected" data-cor="#00bcd4" style="background:#00bcd4" aria-label="Ciano" aria-pressed="true"></button>
+            <button type="button" class="setor-color-btn" data-cor="#00c853" style="background:#00c853" aria-label="Verde" aria-pressed="false"></button>
+            <button type="button" class="setor-color-btn" data-cor="#ffab40" style="background:#ffab40" aria-label="Âmbar" aria-pressed="false"></button>
+            <button type="button" class="setor-color-btn" data-cor="#ff5252" style="background:#ff5252" aria-label="Vermelho" aria-pressed="false"></button>
+            <button type="button" class="setor-color-btn" data-cor="#7c4dff" style="background:#7c4dff" aria-label="Roxo" aria-pressed="false"></button>
+            <button type="button" class="setor-color-btn" data-cor="#448aff" style="background:#448aff" aria-label="Azul" aria-pressed="false"></button>
+          </div>
+          <input type="hidden" id="setor-cor" value="#00bcd4" />
+        </div>
+      </div>
+      <div class="btn-group modal__footer">
+        <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-setor">Cancelar</button>
+        <button class="btn btn--primary" data-action="save-setor">Criar setor →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Como funciona o Score -->
+  <div class="modal-overlay" id="modal-score-info" role="dialog" aria-modal="true" aria-labelledby="modal-score-info-title">
+    <div class="modal modal--sm">
+      <div class="modal__body">
+        <div class="modal__title" id="modal-score-info-title">📊 Como funciona o Score de Risco</div>
+        <div class="modal__subtitle">O score vai de 0 a 100 e indica o risco operacional do equipamento</div>
+
+        <div class="score-info-bands">
+          <div class="score-info-band score-info-band--ok">
+            <span class="score-info-band__range">0 – 39</span>
+            <span class="score-info-band__label">✅ Baixo risco</span>
+            <span class="score-info-band__desc">Equipamento com manutenção em dia e operando normalmente.</span>
+          </div>
+          <div class="score-info-band score-info-band--warn">
+            <span class="score-info-band__range">40 – 74</span>
+            <span class="score-info-band__label">⚠️ Médio risco</span>
+            <span class="score-info-band__desc">Atenção necessária — preventiva próxima ou algum ponto de atenção.</span>
+          </div>
+          <div class="score-info-band score-info-band--danger">
+            <span class="score-info-band__range">75 – 100</span>
+            <span class="score-info-band__label">🔴 Alto risco</span>
+            <span class="score-info-band__desc">Intervenção prioritária recomendada.</span>
+          </div>
+        </div>
+
+        <div class="score-info-factors">
+          <div class="score-info-factors__title">O que entra no cálculo</div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">📅</span>
+            <div>
+              <strong>Histórico de manutenção</strong>
+              <p>Quantos dias se passaram desde o último registro. Equipamentos sem manutenção recente acumulam mais risco.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">🔧</span>
+            <div>
+              <strong>Próxima preventiva</strong>
+              <p>Distância em dias até a próxima manutenção preventiva planejada. Quanto mais próxima ou vencida, maior o score.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">🔁</span>
+            <div>
+              <strong>Corretivas recentes</strong>
+              <p>Quantidade de manutenções corretivas nos últimos 90 dias. Muitas corretivas indicam instabilidade no equipamento.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">⚡</span>
+            <div>
+              <strong>Criticidade operacional</strong>
+              <p>Multiplica o score base: Baixa ×1.0 · Média ×1.1 · Alta ×1.25 · Crítica ×1.4. Equipamentos críticos têm risco amplificado.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">🚦</span>
+            <div>
+              <strong>Status atual</strong>
+              <p>Se o equipamento está operando com restrições ou fora de operação, isso eleva diretamente o score.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-group modal__footer">
+        <button class="btn btn--primary" data-action="close-modal" data-id="modal-score-info">Entendi</button>
       </div>
     </div>
   </div>

@@ -1,6 +1,9 @@
+import autoTable from 'jspdf-autotable';
 import { Utils } from '../../../core/utils.js';
-import { PDF_COLORS as C, STATUS_CLIENTE } from '../constants.js';
+import { PDF_COLORS as C, PDF_TYPO as T, STATUS_CLIENTE } from '../constants.js';
 import { accentLine, fillPage, fillRect, roundRect, txt } from '../primitives.js';
+
+// -------------------------------- helpers --------------------------------
 
 function countByStatus(registros, status) {
   return registros.filter((registro) => registro.status === status).length;
@@ -14,17 +17,10 @@ function calculateTotalCost(registros) {
   );
 }
 
-function buildResumoTiles(filtered) {
-  const ok = countByStatus(filtered, 'ok');
-  const warn = countByStatus(filtered, 'warn');
-  const danger = countByStatus(filtered, 'danger');
-
-  return [
-    { label: 'Serviços', value: String(filtered.length), color: C.text2 },
-    { label: 'Operando', value: String(ok), color: C.green },
-    { label: 'Atenção', value: String(warn), color: C.amber },
-    { label: 'Fora de op.', value: String(danger), color: C.red },
-  ];
+function formatMoney(value) {
+  return `R$ ${Number(value || 0)
+    .toFixed(2)
+    .replace('.', ',')}`;
 }
 
 function listEquipamentosUnicos(filtered, equipamentos) {
@@ -32,7 +28,7 @@ function listEquipamentosUnicos(filtered, equipamentos) {
     ...new Map(
       filtered.map((registro) => {
         const equipamento = equipamentos.find((item) => item.id === registro.equipId);
-        return [registro.equipId, { eq: equipamento, status: registro.status }];
+        return [registro.equipId, { eq: equipamento, lastRegistro: registro }];
       }),
     ).values(),
   ].filter((item) => item.eq);
@@ -46,153 +42,303 @@ function listPendencias(filtered) {
   });
 }
 
-function drawTecnicoCard(doc, pageWidth, margin, profile) {
-  const cardY = 64;
-  const cardW = pageWidth - margin * 2;
-  const cardH = 42;
+// ------------------------------- masthead -------------------------------
 
-  roundRect(doc, margin, cardY, cardW, cardH, 2, C.surface);
-  fillRect(doc, margin, cardY, 4, cardH, C.primary);
+function drawMasthead(doc, pageWidth, margin, profile) {
+  const mastheadH = 20;
+  // Faixa sutil bg2 dá identidade sem "cartão dashboard". Linha fina inferior
+  // separa do conteúdo como masthead de invoice formal.
+  fillRect(doc, 0, 0, pageWidth, mastheadH, C.bg2);
+  fillRect(doc, 0, mastheadH, pageWidth, 0.4, C.borderStrong);
+  fillRect(doc, 0, 0, pageWidth, 2.5, C.primary);
 
-  txt(doc, 'TÉCNICO RESPONSÁVEL', margin + 10, cardY + 9, {
-    size: 7,
-    style: 'bold',
-    color: C.text3,
-  });
-  txt(doc, profile?.nome || 'Técnico', margin + 10, cardY + 19, {
-    size: 14,
-    style: 'bold',
-    color: C.text,
-  });
-  if (profile?.empresa)
-    txt(doc, profile.empresa, margin + 10, cardY + 28, { size: 9, color: C.text2 });
-  if (profile?.telefone)
-    txt(doc, profile.telefone, margin + 10, cardY + 36, { size: 9, color: C.text2 });
-
-  return { cardY, cardH };
-}
-
-function drawResumoTiles(doc, pageWidth, margin, resumoY, filtered, totalCusto) {
-  txt(doc, 'RESUMO GERAL', margin, resumoY, { size: 8, style: 'bold', color: C.text3 });
-  accentLine(doc, margin, resumoY + 3, pageWidth - margin);
-
-  const tiles = buildResumoTiles(filtered);
-  const tileW = (pageWidth - margin * 2 - 12) / 4;
-  const tileY = resumoY + 8;
-
-  tiles.forEach((tile, index) => {
-    const x = margin + index * (tileW + 4);
-    roundRect(doc, x, tileY, tileW, 26, 1.5, C.surface);
-    fillRect(doc, x, tileY, tileW, 3, tile.color);
-    txt(doc, tile.value, x + tileW / 2, tileY + 15, {
-      size: 18,
-      style: 'bold',
-      color: tile.color,
-      align: 'center',
-    });
-    txt(doc, tile.label, x + tileW / 2, tileY + 22, {
-      size: 7,
-      color: C.text3,
-      align: 'center',
-    });
-  });
-
-  if (totalCusto > 0) {
-    txt(
-      doc,
-      `Custo total dos serviços: R$ ${totalCusto.toFixed(2).replace('.', ',')}`,
-      margin,
-      tileY + 36,
-      {
-        size: 9,
-        style: 'bold',
-        color: C.text2,
-      },
-    );
-  }
-
-  return tileY;
-}
-
-function drawSituacaoEquipamentos(doc, pageWidth, margin, eqY, filtered, equipamentos) {
-  txt(doc, 'SITUAÇÃO ATUAL DOS EQUIPAMENTOS', margin, eqY, {
+  // Lado esquerdo: produto que gerou o PDF (pequeno, discreto — não rouba cena)
+  txt(doc, 'COOLTRACK PRO', margin, 10, {
     size: 8,
     style: 'bold',
+    color: C.primary,
+  });
+  txt(doc, 'Sistema de Gestão de Manutenção', margin, 15, {
+    size: 7,
     color: C.text3,
   });
-  accentLine(doc, margin, eqY + 3, pageWidth - margin);
 
-  const equipamentosUnicos = listEquipamentosUnicos(filtered, equipamentos);
-  let cursorY = eqY + 10;
+  // Lado direito: IDENTIDADE DO PRESTADOR — quem assina o serviço.
+  // Esse é o bloco que legitima o documento pro cliente do Willian.
+  const empresa = profile?.empresa?.trim() || profile?.nome?.trim() || 'Prestador de Serviço';
+  const contatoParts = [profile?.telefone?.trim(), profile?.email?.trim()].filter(Boolean);
 
-  equipamentosUnicos.forEach(({ eq, status }) => {
-    const st = STATUS_CLIENTE[status] || STATUS_CLIENTE.ok;
-    roundRect(doc, margin, cursorY, pageWidth - margin * 2, 14, 1.5, C.surface);
-    fillRect(doc, margin, cursorY, 4, 14, st.color);
-    txt(doc, eq.nome, margin + 8, cursorY + 6, { size: 10, style: 'bold', color: C.text });
-    txt(doc, eq.local, margin + 8, cursorY + 11, { size: 8, color: C.text3 });
-    txt(doc, st.label, pageWidth - margin - 4, cursorY + 9, {
-      size: 9,
-      style: 'bold',
-      color: st.color,
+  txt(doc, empresa, pageWidth - margin, 10, {
+    size: 10,
+    style: 'bold',
+    color: C.text,
+    align: 'right',
+  });
+  if (contatoParts.length) {
+    txt(doc, contatoParts.join('  ·  '), pageWidth - margin, 15, {
+      size: 7.5,
+      color: C.text3,
       align: 'right',
     });
-    cursorY += 18;
+  }
+}
+
+// -------------------------- title & meta line --------------------------
+
+function drawTitleBlock(doc, pageWidth, margin, startY, context = {}) {
+  let y = startY;
+
+  txt(doc, 'RELATÓRIO DE MANUTENÇÃO', margin, y, {
+    size: T.title.size,
+    style: T.title.style,
+    color: C.text,
   });
 
-  return cursorY;
-}
-
-function drawPendencias(doc, pageWidth, pageHeight, margin, startY, filtered, equipamentos) {
-  const pendentesY = startY + 6;
-  const pendentes = listPendencias(filtered);
-
-  if (pendentes.length > 0) {
-    txt(doc, 'AÇÕES NECESSÁRIAS', margin, pendentesY, { size: 8, style: 'bold', color: C.text3 });
-    accentLine(doc, margin, pendentesY + 3, pageWidth - margin, C.amber);
-
-    let py = pendentesY + 10;
-    pendentes.forEach((registro) => {
-      const equipamento = equipamentos.find((item) => item.id === registro.equipId);
-      const isUrgent = registro.status === 'danger';
-      const cor = isUrgent ? C.red : C.amber;
-      const acao = isUrgent
-        ? 'Requer intervenção imediata'
-        : `Preventiva recomendada${registro.proxima ? ` até ${Utils.formatDate(registro.proxima)}` : ''}`;
-
-      roundRect(doc, margin, py, pageWidth - margin * 2, 16, 1.5, C.surface);
-      fillRect(doc, margin, py, 4, 16, cor);
-      txt(doc, equipamento?.nome || '—', margin + 8, py + 6, {
-        size: 10,
-        style: 'bold',
-        color: C.text,
-      });
-      txt(doc, acao, margin + 8, py + 12, { size: 8, color: C.text3 });
-      py += 20;
-    });
-    return;
-  }
-
-  if (pendentesY < pageHeight - 40) {
-    roundRect(doc, margin, pendentesY, pageWidth - margin * 2, 16, 1.5, C.surface);
-    fillRect(doc, margin, pendentesY, 4, 16, C.green);
-    txt(doc, 'Nenhuma ação necessária no momento.', margin + 8, pendentesY + 7, {
+  if (context.osNumber) {
+    txt(doc, `OS ${context.osNumber}`, pageWidth - margin, y, {
       size: 10,
       style: 'bold',
-      color: C.green,
+      color: C.primary,
+      align: 'right',
     });
-    txt(
-      doc,
-      'Todos os equipamentos estão dentro do prazo de manutenção.',
-      margin + 8,
-      pendentesY + 13,
-      {
-        size: 8,
-        color: C.text2,
-      },
-    );
   }
+  y += 7;
+
+  const emitido = context.emitido
+    ? `Emitido em ${context.emitido}`
+    : `Emitido em ${new Date().toLocaleDateString('pt-BR')}`;
+  const periodo = context.periodoTexto ? `  ·  ${context.periodoTexto}` : '';
+  txt(doc, `${emitido}${periodo}`, margin, y, { size: T.meta.size, color: C.text3 });
+
+  y += 4;
+  accentLine(doc, margin, y, pageWidth - margin, C.border);
+  return y + 6;
 }
+
+// --------------------------- técnico + cliente ---------------------------
+
+function drawInfoBlocks(doc, pageWidth, margin, startY, profile, cliente) {
+  const colGap = 6;
+  const blockW = (pageWidth - margin * 2 - colGap) / 2;
+  const blockH = 30;
+  const leftX = margin;
+  const rightX = margin + blockW + colGap;
+
+  // Caixa técnico (esquerda)
+  drawLabeledBlock(doc, leftX, startY, blockW, blockH, 'TÉCNICO RESPONSÁVEL', [
+    { value: profile?.nome?.trim() || 'Técnico', bold: true, size: 11 },
+    { value: profile?.empresa?.trim() || '', size: 8.5, color: C.text2 },
+    { value: profile?.telefone?.trim() || '', size: 8, color: C.text3 },
+  ]);
+
+  // Caixa cliente (direita) — só aparece quando extractClientBlock retorna algo
+  if (cliente) {
+    const clienteLines = [];
+    if (cliente.nome) clienteLines.push({ value: cliente.nome, bold: true, size: 11 });
+    if (cliente.documento) clienteLines.push({ value: cliente.documento, size: 8, color: C.text3 });
+    if (cliente.local) clienteLines.push({ value: cliente.local, size: 8.5, color: C.text2 });
+    if (cliente.contato) clienteLines.push({ value: cliente.contato, size: 8, color: C.text3 });
+
+    drawLabeledBlock(doc, rightX, startY, blockW, blockH, 'CLIENTE / LOCAL', clienteLines);
+  } else {
+    // Bloco placeholder discreto — cliente não identificado no registro
+    drawLabeledBlock(doc, rightX, startY, blockW, blockH, 'CLIENTE / LOCAL', [
+      { value: 'Cliente não identificado', size: 9, color: C.text3, italic: true },
+      { value: 'Preencha no modal de registro', size: 7.5, color: C.text3 },
+    ]);
+  }
+
+  return startY + blockH + 8;
+}
+
+function drawLabeledBlock(doc, x, y, w, h, label, lines) {
+  doc.setDrawColor(...C.border);
+  doc.setLineWidth(0.3);
+  doc.rect(x, y, w, h, 'S');
+  fillRect(doc, x, y, 2.5, h, C.primary);
+
+  txt(doc, label, x + 6, y + 5.5, {
+    size: 6.5,
+    style: 'bold',
+    color: C.text3,
+  });
+
+  let cursorY = y + 12;
+  lines.forEach((line) => {
+    if (!line?.value) return;
+    txt(doc, line.value, x + 6, cursorY, {
+      size: line.size || 9,
+      style: line.bold ? 'bold' : 'normal',
+      color: line.color || C.text,
+    });
+    cursorY += (line.size || 9) * 0.5 + 2;
+  });
+}
+
+// ------------------------- resumo executivo -------------------------
+
+function drawResumoExecutivo(doc, pageWidth, margin, startY, filtered, equipamentos) {
+  const totalServicos = filtered.length;
+  const totalCusto = calculateTotalCost(filtered);
+  const ok = countByStatus(filtered, 'ok');
+  const warn = countByStatus(filtered, 'warn');
+  const danger = countByStatus(filtered, 'danger');
+  const equipCount = listEquipamentosUnicos(filtered, equipamentos).length;
+
+  let y = startY;
+  txt(doc, 'RESUMO EXECUTIVO', margin, y, {
+    size: T.h2.size,
+    style: T.h2.style,
+    color: C.text3,
+  });
+  y += 2;
+  accentLine(doc, margin, y + 1, pageWidth - margin, C.border);
+  y += 6;
+
+  // Prosa curta, sem tiles. Cliente lê como documento formal.
+  const bulletX = margin + 2;
+  const items = [];
+
+  if (totalServicos === 0) {
+    items.push('Nenhum serviço executado no período selecionado.');
+  } else {
+    items.push(
+      `${totalServicos} ${totalServicos === 1 ? 'serviço executado' : 'serviços executados'} em ${equipCount} ${equipCount === 1 ? 'equipamento' : 'equipamentos'}.`,
+    );
+    const statusParts = [];
+    if (ok) statusParts.push(`${ok} operando normalmente`);
+    if (warn) statusParts.push(`${warn} em atenção`);
+    if (danger) statusParts.push(`${danger} fora de operação`);
+    if (statusParts.length) items.push(`Status atual: ${statusParts.join(', ')}.`);
+    if (totalCusto > 0) items.push(`Custo total dos serviços: ${formatMoney(totalCusto)}.`);
+  }
+
+  items.forEach((line) => {
+    txt(doc, '•', bulletX, y, { size: T.body.size, color: C.primary, style: 'bold' });
+    const textLines = doc.splitTextToSize(line, pageWidth - margin * 2 - 6);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(T.body.size);
+    doc.setTextColor(...C.text2);
+    doc.text(textLines, bulletX + 4, y);
+    y += textLines.length * 4.5 + 1.5;
+  });
+
+  return y + 4;
+}
+
+// ---------------------- tabela de equipamentos ----------------------
+
+function drawEquipamentosTable(doc, pageWidth, margin, startY, filtered, equipamentos) {
+  const equipamentosUnicos = listEquipamentosUnicos(filtered, equipamentos);
+  if (!equipamentosUnicos.length) return startY;
+
+  let y = startY;
+  txt(doc, 'EQUIPAMENTOS ATENDIDOS', margin, y, {
+    size: T.h2.size,
+    style: T.h2.style,
+    color: C.text3,
+  });
+  y += 2;
+  accentLine(doc, margin, y + 1, pageWidth - margin, C.border);
+  y += 3;
+
+  const rows = equipamentosUnicos.map(({ eq, lastRegistro }) => {
+    const st = STATUS_CLIENTE[lastRegistro.status] || STATUS_CLIENTE.ok;
+    const ultimo = lastRegistro.data ? Utils.formatDate(lastRegistro.data) : '—';
+    const proxima = lastRegistro.proxima ? Utils.formatDate(lastRegistro.proxima) : '—';
+    return {
+      tag: eq.codigo || eq.tag || '—',
+      nome: eq.nome || '—',
+      local: eq.local || '—',
+      ultimo,
+      proxima,
+      statusLabel: st.label,
+      statusColor: st.color,
+    };
+  });
+
+  autoTable(doc, {
+    startY: y + 2,
+    head: [['Tag', 'Equipamento', 'Localização', 'Último', 'Próximo', 'Status']],
+    body: rows.map((r) => [r.tag, r.nome, r.local, r.ultimo, r.proxima, r.statusLabel]),
+    theme: 'plain',
+    margin: { left: margin, right: margin },
+    styles: {
+      font: 'helvetica',
+      fontSize: 8,
+      cellPadding: 2.5,
+      textColor: C.text2,
+      lineColor: C.border,
+      lineWidth: 0.15,
+    },
+    headStyles: {
+      fillColor: C.bg2,
+      textColor: C.text3,
+      fontStyle: 'bold',
+      fontSize: 7,
+      lineColor: C.borderStrong,
+      lineWidth: 0.3,
+    },
+    alternateRowStyles: { fillColor: [252, 252, 253] },
+    columnStyles: {
+      0: { cellWidth: 18, fontStyle: 'bold', textColor: C.text },
+      1: { cellWidth: 44 },
+      2: { cellWidth: 40, textColor: C.text3 },
+      3: { cellWidth: 20, halign: 'center' },
+      4: { cellWidth: 20, halign: 'center' },
+      5: { halign: 'right', fontStyle: 'bold' },
+    },
+    didParseCell(data) {
+      if (data.section === 'body' && data.column.index === 5) {
+        const row = rows[data.row.index];
+        if (row?.statusColor) data.cell.styles.textColor = row.statusColor;
+      }
+    },
+  });
+
+  return doc.lastAutoTable.finalY + 6;
+}
+
+// --------------------------- pendências ---------------------------
+
+function drawPendencias(doc, pageWidth, pageHeight, margin, startY, filtered, equipamentos) {
+  const pendentes = listPendencias(filtered);
+  if (!pendentes.length) return; // Sem fallback "nada pendente" — redundante com o resumo
+
+  let y = startY;
+  if (y > pageHeight - 50) return; // Sem espaço na capa, pendências migram pra próxima seção
+
+  txt(doc, 'AÇÕES RECOMENDADAS', margin, y, {
+    size: T.h2.size,
+    style: T.h2.style,
+    color: C.amber,
+  });
+  y += 2;
+  accentLine(doc, margin, y + 1, pageWidth - margin, C.amber);
+  y += 5;
+
+  pendentes.forEach((registro) => {
+    if (y > pageHeight - 25) return;
+    const equipamento = equipamentos.find((item) => item.id === registro.equipId);
+    const isUrgent = registro.status === 'danger';
+    const cor = isUrgent ? C.red : C.amber;
+    const acao = isUrgent
+      ? 'Requer intervenção imediata'
+      : `Preventiva recomendada${registro.proxima ? ` até ${Utils.formatDate(registro.proxima)}` : ''}`;
+
+    roundRect(doc, margin, y, pageWidth - margin * 2, 14, 1.5, C.surface);
+    fillRect(doc, margin, y, 2.5, 14, cor);
+    txt(doc, equipamento?.nome || '—', margin + 6, y + 6, {
+      size: 9.5,
+      style: 'bold',
+      color: C.text,
+    });
+    txt(doc, acao, margin + 6, y + 11, { size: 7.5, color: C.text3 });
+    y += 16;
+  });
+}
+
+// ------------------------------- entry -------------------------------
 
 export function drawCover(
   doc,
@@ -205,51 +351,26 @@ export function drawCover(
   ate,
   filtered,
   equipamentos,
-  drawFooter,
+  _drawFooter, // assinatura mantida pra compatibilidade; footer final é feito em stampFooterTotals
+  context = {},
 ) {
   fillPage(doc, pageWidth, pageHeight);
 
-  fillRect(doc, 0, 0, pageWidth, 3, C.primary);
-  fillRect(doc, 0, 0, pageWidth, 52, C.bg2);
-  accentLine(doc, margin, 52, pageWidth - margin, C.border);
+  drawMasthead(doc, pageWidth, margin, profile);
 
-  txt(doc, 'COOLTRACK', margin + 2, 28, { size: 28, style: 'bold', color: C.text });
-  doc.setFontSize(28);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...C.primary);
-  const cooltrackTextWidth = doc.getTextWidth('COOLTRACK');
-  doc.text('PRO', margin + 2 + cooltrackTextWidth + 3, 28);
+  const periodoTexto =
+    de || ate
+      ? `Período ${de ? Utils.formatDate(de) : 'início'} – ${ate ? Utils.formatDate(ate) : 'atual'}`
+      : '';
 
-  txt(doc, 'Sistema de Gestão de Manutenção', margin + 2, 37, { size: 9, color: C.text3 });
-  txt(doc, 'RELATÓRIO DE SERVIÇOS REALIZADOS', margin + 2, 48, {
-    size: 14,
-    style: 'bold',
-    color: C.text,
+  let y = drawTitleBlock(doc, pageWidth, margin, 32, {
+    osNumber: context.osNumber,
+    emitido: context.emitido,
+    periodoTexto,
   });
 
-  const periodo =
-    de || ate
-      ? `Período: ${de ? Utils.formatDate(de) : 'início'} a ${ate ? Utils.formatDate(ate) : 'atual'}`
-      : `Gerado em: ${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}`;
-  txt(doc, periodo, margin + 2, 56, { size: 9, color: C.text3 });
-
-  const { cardY, cardH } = drawTecnicoCard(doc, pageWidth, margin, profile);
-  const resumoY = cardY + cardH + 16;
-  const totalCusto = calculateTotalCost(filtered);
-  const tileY = drawResumoTiles(doc, pageWidth, margin, resumoY, filtered, totalCusto);
-
-  const eqY = tileY + (totalCusto > 0 ? 50 : 42);
-  const situacaoEndY = drawSituacaoEquipamentos(
-    doc,
-    pageWidth,
-    margin,
-    eqY,
-    filtered,
-    equipamentos,
-  );
-  drawPendencias(doc, pageWidth, pageHeight, margin, situacaoEndY, filtered, equipamentos);
-
-  if (typeof drawFooter === 'function') {
-    drawFooter(doc, pageWidth, pageHeight, margin, profile, 1);
-  }
+  y = drawInfoBlocks(doc, pageWidth, margin, y, profile, context.cliente);
+  y = drawResumoExecutivo(doc, pageWidth, margin, y, filtered, equipamentos);
+  y = drawEquipamentosTable(doc, pageWidth, margin, y, filtered, equipamentos);
+  drawPendencias(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
 }

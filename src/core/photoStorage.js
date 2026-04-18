@@ -2,7 +2,17 @@ import { supabase } from './supabase.js';
 import { AppError, ErrorCodes } from './errors.js';
 
 const DEFAULT_BUCKET = import.meta.env.VITE_SUPABASE_PHOTOS_BUCKET || 'registro-fotos';
-const SIGNED_URL_TTL_SECONDS = Number(import.meta.env.VITE_SUPABASE_PHOTO_URL_TTL || 60 * 60 * 24);
+const DEFAULT_SIGNED_URL_TTL_SECONDS = 60 * 60 * 24;
+
+function parseSignedUrlTtlSeconds(rawValue) {
+  const parsed = Number.parseInt(String(rawValue || ''), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_SIGNED_URL_TTL_SECONDS;
+  return parsed;
+}
+
+const SIGNED_URL_TTL_SECONDS = parseSignedUrlTtlSeconds(
+  import.meta.env.VITE_SUPABASE_PHOTO_URL_TTL,
+);
 const PHOTO_REF_VERSION = 1;
 
 function isString(value) {
@@ -42,11 +52,36 @@ function blobToDataUrl(blob) {
 }
 
 async function dataUrlToBlob(dataUrl) {
-  const response = await fetch(dataUrl);
-  if (!response.ok) {
-    throw new Error(`Falha ao converter data URL para blob: ${response.status}`);
+  const match = /^data:([^;,]+)?(?:;charset=[^;,]+)?(;base64)?,(.*)$/i.exec(
+    String(dataUrl || '').trim(),
+  );
+  if (!match) {
+    throw new Error('Data URL invalida para upload de foto.');
   }
-  return response.blob();
+
+  const mimeType = match[1] || 'application/octet-stream';
+  const encodedPayload = match[3] || '';
+  const isBase64 = Boolean(match[2]);
+
+  let binary;
+  if (isBase64) {
+    if (typeof atob === 'function') {
+      binary = atob(encodedPayload);
+    } else if (typeof globalThis.Buffer !== 'undefined') {
+      binary = globalThis.Buffer.from(encodedPayload, 'base64').toString('binary');
+    } else {
+      throw new Error('Ambiente sem decodificador base64 para data URL.');
+    }
+  } else {
+    binary = decodeURIComponent(encodedPayload);
+  }
+
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([bytes], { type: mimeType });
 }
 
 async function createSignedUrl(bucket, path, ttlSeconds = SIGNED_URL_TTL_SECONDS) {

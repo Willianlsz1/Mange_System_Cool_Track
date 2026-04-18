@@ -25,8 +25,8 @@ describe('shell bootstrap', () => {
     expect(document.getElementById('tour-help-btn')).toBeNull();
     expect(document.body.querySelectorAll('.app-nav .nav-btn')).toHaveLength(5);
     expect(
-      document.getElementById('nav-registro')?.querySelector('.nav-btn__icon')?.textContent,
-    ).toBe('+');
+      document.getElementById('nav-registro')?.querySelector('.nav-btn__icon svg'),
+    ).not.toBeNull();
   });
 
   it('syncs shell metrics into global layout variables', async () => {

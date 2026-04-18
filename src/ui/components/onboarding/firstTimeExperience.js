@@ -325,9 +325,9 @@ export const FirstTimeExperience = {
             autocomplete="name" />
 
           <button class="ftx-btn-primary" id="ftx-next-0">
-            Vamos la →
+            Vamos la &rarr;
           </button>
-          <div class="ftx-hint">2 minutos para configurar · Sem cartão de crédito</div>
+          <div class="ftx-hint">2 minutos para configurar &middot; Sem cartão de crédito</div>
         </div>`;
 
       const input = overlay.querySelector('#ftx-nome');
@@ -409,7 +409,7 @@ export const FirstTimeExperience = {
           </div>
 
           <button class="ftx-btn-primary" id="ftx-next-1">
-            Salvar e continuar →
+            Salvar e continuar &rarr;
           </button>
           <div class="ftx-hint">Você edita ou exclui a qualquer momento</div>
         </div>`;
@@ -523,7 +523,7 @@ export const FirstTimeExperience = {
           <div class="ftx-report-copy-bottom">Profissional. Automatico. Com a sua marca.</div>
 
           <button class="ftx-btn-primary" id="ftx-next-2">
-            Quero gerar relatorios assim →
+            Quero gerar relatorios assim &rarr;
           </button>
         </div>`;
 
@@ -551,7 +551,7 @@ export const FirstTimeExperience = {
 
           <div class="ftx-actions">
             <button class="ftx-btn-primary" id="ftx-go-registro">
-              Registrar meu primeiro servico →
+              Registrar meu primeiro servico &rarr;
             </button>
             <button class="ftx-btn-sec" id="ftx-go-dashboard">
               Explorar o painel

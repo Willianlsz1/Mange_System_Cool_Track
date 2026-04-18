@@ -7,9 +7,9 @@ import {
 
 export const CRITICIDADE_LABEL = {
   baixa: 'Baixa',
-  media: 'Media',
+  media: 'Média',
   alta: 'Alta',
-  critica: 'Critica',
+  critica: 'Crítica',
 };
 
 export const PRIORIDADE_OPERACIONAL_LABEL = {
@@ -23,11 +23,16 @@ const PERIODICIDADE_PREVENTIVA_BASE = {
   split_cassette: 90,
   split_piso_teto: 60,
   vrf_vrv: 45,
+  ghp: 45,
   chiller: 30,
   fan_coil: 60,
   self_contained: 60,
   roof_top: 45,
   camara_fria: 30,
+  balcao_frigorico: 45,
+  freezer: 45,
+  geladeira: 60,
+  bebedouro: 90,
   outro: 60,
 };
 
@@ -36,6 +41,7 @@ export const PERIODICIDADE_PREVENTIVA_POR_TIPO = {
   'Split Cassette': PERIODICIDADE_PREVENTIVA_BASE.split_cassette,
   'Split Piso Teto': PERIODICIDADE_PREVENTIVA_BASE.split_piso_teto,
   'VRF / VRV': PERIODICIDADE_PREVENTIVA_BASE.vrf_vrv,
+  GHP: PERIODICIDADE_PREVENTIVA_BASE.ghp,
   Chiller: PERIODICIDADE_PREVENTIVA_BASE.chiller,
   'Fan Coil': PERIODICIDADE_PREVENTIVA_BASE.fan_coil,
   'Self Contained': PERIODICIDADE_PREVENTIVA_BASE.self_contained,
@@ -43,6 +49,10 @@ export const PERIODICIDADE_PREVENTIVA_POR_TIPO = {
   'Câmara Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
   'Camara Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
   'Camera Fria': PERIODICIDADE_PREVENTIVA_BASE.camara_fria,
+  'Balcão Frigorífico': PERIODICIDADE_PREVENTIVA_BASE.balcao_frigorico,
+  Freezer: PERIODICIDADE_PREVENTIVA_BASE.freezer,
+  Geladeira: PERIODICIDADE_PREVENTIVA_BASE.geladeira,
+  Bebedouro: PERIODICIDADE_PREVENTIVA_BASE.bebedouro,
   Outro: PERIODICIDADE_PREVENTIVA_BASE.outro,
 };
 
@@ -108,10 +118,15 @@ function getTipoKey(tipo) {
     'Split Cassette': 'split_cassette',
     'Split Piso Teto': 'split_piso_teto',
     'VRF / VRV': 'vrf_vrv',
+    GHP: 'ghp',
     Chiller: 'chiller',
     'Fan Coil': 'fan_coil',
     'Self Contained': 'self_contained',
     'Roof Top': 'roof_top',
+    'Balcão Frigorífico': 'balcao_frigorico',
+    Freezer: 'freezer',
+    Geladeira: 'geladeira',
+    Bebedouro: 'bebedouro',
   };
 
   return aliases[raw] || 'outro';
@@ -178,7 +193,7 @@ function formatDueLabel(daysToNext) {
   if (daysToNext == null) return 'sem agenda preventiva';
   if (daysToNext < 0) {
     const atraso = Math.abs(daysToNext);
-    return `atrasada ha ${atraso} dia${atraso === 1 ? '' : 's'}`;
+    return `atrasada há ${atraso} dia${atraso === 1 ? '' : 's'}`;
   }
   if (daysToNext === 0) return 'vence hoje';
   return `vence em ${daysToNext} dia${daysToNext === 1 ? '' : 's'}`;
@@ -216,10 +231,12 @@ function getRiskStatusFactor(status) {
 
 function getRiskAgeFactor(context) {
   if (!context.ultimoRegistro) {
+    // Equipamento recém cadastrado: risco neutro por falta de histórico.
+    // A ausência de registros não indica problema em equipamentos novos.
     return {
-      points: 30,
-      shortLabel: 'sem histórico de manutenção',
-      detail: 'Não há registro anterior para confirmar rotina de manutenção.',
+      points: 6,
+      shortLabel: 'equipamento novo sem registros',
+      detail: 'Primeiro registro ainda não cadastrado. Agende a primeira preventiva.',
     };
   }
 
@@ -400,7 +417,7 @@ export function getEquipmentMaintenanceContext(equipamento, registros = []) {
 
 export function evaluateEquipmentHealth(equipamento, registros = []) {
   if (!equipamento) {
-    return { score: 0, reasons: ['Equipamento nao encontrado'], context: null };
+    return { score: 0, reasons: ['Equipamento não encontrado'], context: null };
   }
 
   const context = getEquipmentMaintenanceContext(equipamento, registros);
@@ -409,13 +426,18 @@ export function evaluateEquipmentHealth(equipamento, registros = []) {
 
   if (penalty > 0) {
     reasons.push(
-      context.equipamento.status === 'danger' ? 'fora de operacao' : 'operando com atencao',
+      context.equipamento.status === 'danger' ? 'fora de operação' : 'operando com atenção',
     );
   }
 
   if (!context.ultimoRegistro) {
-    penalty += 22;
-    reasons.push('sem historico tecnico');
+    // Equipamento recém cadastrado: não penaliza por falta de histórico quando o status
+    // está ok. Apenas equipamentos com status warn/danger explícito recebem penalidade,
+    // pois a ausência de registros é esperada em equipamentos novos.
+    if (context.equipamento.status !== 'ok') {
+      penalty += 22;
+      reasons.push('sem histórico técnico');
+    }
   } else {
     const agePenalty = getAgePenalty(context.daysSinceLast, context.periodicidadeDias);
     const nextPenalty = getPreventivePenalty(context.daysToNext);
@@ -427,8 +449,8 @@ export function evaluateEquipmentHealth(equipamento, registros = []) {
     if (agePenalty > 0) reasons.push('intervalo acima da rotina preventiva');
     if (nextPenalty > 0 && context.daysToNext != null)
       reasons.push(formatDueLabel(context.daysToNext));
-    if (recentPenalty > 0) reasons.push('ocorrencias recorrentes recentes');
-    if (correctivePenalty > 0) reasons.push('historico corretivo repetitivo');
+    if (recentPenalty > 0) reasons.push('ocorrências recorrentes recentes');
+    if (correctivePenalty > 0) reasons.push('histórico corretivo repetitivo');
   }
 
   const operationalPenalty = getOperationalPenalty(context.equipamento, context);
@@ -436,7 +458,7 @@ export function evaluateEquipmentHealth(equipamento, registros = []) {
   if (operationalPenalty > 0) {
     if (context.equipamento.criticidade === 'critica') reasons.push('ativo de alta criticidade');
     else if (context.equipamento.criticidade === 'alta') {
-      reasons.push('ativo relevante para a operacao');
+      reasons.push('ativo relevante para a operação');
     }
     if (context.equipamento.prioridadeOperacional === 'alta') {
       reasons.push('impacto operacional elevado');
@@ -548,7 +570,7 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
         kind: 'critical',
         severity: 'danger',
         icon: '!!',
-        title: 'Equipamento fora de operacao',
+        title: 'Equipamento fora de operação',
         subtitle: `Prioridade ${PRIORIDADE_OPERACIONAL_LABEL[context.equipamento.prioridadeOperacional]} | criticidade ${CRITICIDADE_LABEL[context.equipamento.criticidade]}`,
         recommendedAction: 'register-now',
         sortScore: 220 + operationalScore,
@@ -566,8 +588,8 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
           ...baseAlert,
           kind: 'no-history',
           icon: 'i',
-          title: 'Equipamento sem historico preventivo',
-          subtitle: `Cadastre a primeira intervencao para iniciar a rotina de ${context.periodicidadeDias} dias`,
+          title: 'Equipamento sem histórico preventivo',
+          subtitle: `Cadastre a primeira intervenção para iniciar a rotina de ${context.periodicidadeDias} dias`,
           recommendedAction: 'start-history',
           sortScore: 120 + operationalScore,
         });
@@ -594,7 +616,7 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
         ...baseAlert,
         kind: 'upcoming',
         icon: '::',
-        title: 'Preventiva proxima',
+        title: 'Preventiva próxima',
         subtitle: `${formatDueLabel(context.daysToNext)} | janela de planejamento ${context.leadAlertDays} dias`,
         recommendedAction: 'schedule',
         sortScore: 120 + operationalScore + (context.leadAlertDays - context.daysToNext),
@@ -616,8 +638,8 @@ export function buildMaintenanceAlerts(equipamentos = [], registros = []) {
         title: 'Equipamento exige acompanhamento',
         subtitle:
           context.recentCorrectiveCount >= 2
-            ? 'Historico recente com corretivas repetidas'
-            : 'Ocorrencias recentes indicam monitoramento mais curto',
+            ? 'Histórico recente com corretivas repetidas'
+            : 'Ocorrências recentes indicam monitoramento mais curto',
         recommendedAction: 'inspect',
         sortScore: 90 + operationalScore,
       });

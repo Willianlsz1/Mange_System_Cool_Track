@@ -1102,3 +1102,99 @@ mark,
     background: var(--surface-card);
   }
 }
+
+/* ════════════════════════════════════════════════════════
+   LIGHT THEME — Overrides de todos os valores dark hardcoded
+   Garante que [data-theme='light'] funcione corretamente
+   ════════════════════════════════════════════════════════ */
+[data-theme='light'] {
+  /* Premium variables adaptadas para o light */
+  --surface-premium: var(--surface);
+  --surface-card: var(--surface);
+  --surface-card-hover: var(--surface-2);
+  --surface-elevated: var(--surface-2);
+  --border-premium: var(--border);
+  --border-premium-hover: var(--border-2);
+}
+
+[data-theme='light'] body {
+  background: var(--bg);
+}
+
+[data-theme='light'] body::before {
+  display: none;
+}
+
+[data-theme='light'] .app-header {
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 1px 0 var(--border-2);
+  border-bottom: 1px solid var(--border-2);
+}
+
+[data-theme='light'] .app-logo {
+  color: var(--text);
+}
+
+[data-theme='light'] .app-logo__icon {
+  background: var(--primary-soft);
+  border-color: var(--border-2);
+}
+
+[data-theme='light'] .header-icon-btn {
+  color: var(--text-2);
+}
+
+[data-theme='light'] .header-icon-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+[data-theme='light'] .nav-bar {
+  background: var(--surface);
+  border-top: 1px solid var(--border-2);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 -1px 0 var(--border-2);
+}
+
+[data-theme='light'] .nav-btn {
+  color: var(--text-3);
+}
+
+[data-theme='light'] .nav-btn.is-active,
+[data-theme='light'] .nav-btn:hover {
+  color: var(--primary);
+}
+
+[data-theme='light'] .card,
+[data-theme='light'] .modal,
+[data-theme='light'] .dash-section,
+[data-theme='light'] .alert-card,
+[data-theme='light'] .next-action-card {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-image: none;
+}
+
+[data-theme='light'] .critical-incident {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+
+[data-theme='light'] .header-stats-bar {
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme='light'] .stat-item__label {
+  color: var(--text-3);
+}
+
+[data-theme='light'] .stat-item__value {
+  color: var(--text);
+}

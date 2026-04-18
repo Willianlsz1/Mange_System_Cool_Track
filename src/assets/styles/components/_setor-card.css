@@ -1,0 +1,371 @@
+/* ── Grid ──────────────────────────────────────────────── */
+.setor-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  padding: 4px 0 24px;
+}
+
+@media (min-width: 520px) {
+  .setor-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 960px) {
+  .setor-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ── Card base ─────────────────────────────────────────── */
+.setor-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border-2);
+  border-top: 3px solid var(--setor-cor, var(--primary));
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    box-shadow 0.18s,
+    transform 0.14s,
+    border-color 0.15s;
+  outline: none;
+  box-shadow: 0 4px 18px rgba(3, 8, 16, 0.22);
+}
+
+.setor-card:hover,
+.setor-card:focus-visible {
+  box-shadow:
+    0 8px 32px rgba(3, 8, 16, 0.32),
+    0 0 0 1px var(--setor-cor, var(--primary));
+  transform: translateY(-3px);
+  border-top-color: var(--setor-cor, var(--primary));
+}
+
+/* ── Cabeçalho do card ─────────────────────────────────── */
+.setor-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 16px 12px;
+}
+
+.setor-card__info {
+  min-width: 0;
+}
+
+.setor-card__nome {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setor-card__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  margin-top: 5px;
+}
+
+.setor-card__count-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--setor-cor, var(--primary));
+  flex-shrink: 0;
+}
+
+/* ── Badge de status ───────────────────────────────────── */
+.setor-card__status {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 4px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.setor-card__status--ok {
+  background: var(--success-soft);
+  color: var(--success);
+}
+.setor-card__status--warn {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+.setor-card__status--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+/* ── Métricas ──────────────────────────────────────────── */
+.setor-card__metrics {
+  display: flex;
+  border-top: 1px solid var(--border-2);
+  margin: 0 16px;
+  padding: 11px 0 14px;
+  gap: 0;
+}
+
+.setor-card__metric {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.setor-card__metric + .setor-card__metric {
+  padding-left: 14px;
+  border-left: 1px solid var(--border-2);
+  margin-left: 14px;
+}
+
+.setor-card__lbl {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setor-card__val {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.setor-card__val--warn {
+  color: var(--warning);
+}
+.setor-card__val--danger {
+  color: var(--danger);
+}
+
+/* ── CTA "Ver equipamentos" ────────────────────────────── */
+.setor-card__cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 10px 16px;
+  margin-top: auto;
+  border-top: 1px solid var(--border-2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.setor-card__cta svg {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.setor-card:hover .setor-card__cta,
+.setor-card:focus-visible .setor-card__cta {
+  color: var(--setor-cor, var(--primary));
+  background: color-mix(in srgb, var(--setor-cor, var(--primary)) 5%, transparent);
+}
+
+.setor-card:hover .setor-card__cta svg,
+.setor-card:focus-visible .setor-card__cta svg {
+  transform: translateX(3px);
+}
+
+/* ── Botão excluir ─────────────────────────────────────── */
+.setor-card__delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--card);
+  border: 1px solid var(--border-2);
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  opacity: 0;
+  line-height: 0;
+  transition:
+    opacity 0.15s,
+    color 0.12s,
+    background 0.12s,
+    border-color 0.12s;
+  z-index: 2;
+}
+
+.setor-card:hover .setor-card__delete,
+.setor-card:focus-within .setor-card__delete {
+  opacity: 1;
+}
+
+.setor-card__delete:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* ── Color picker de setor ─────────────────────────────────────────────────── */
+
+.setor-color-picker {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.setor-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    transform 0.12s,
+    border-color 0.12s;
+  flex-shrink: 0;
+}
+
+.setor-color-btn:hover {
+  transform: scale(1.15);
+}
+
+.setor-color-btn--selected {
+  border-color: var(--text);
+  box-shadow:
+    0 0 0 2px var(--surface-1),
+    0 0 0 4px currentColor;
+}
+
+/* ── Badge PRO inline ───────────────────────────────────────────────────────── */
+.pro-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: linear-gradient(90deg, #00bcd4, #7c4dff);
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+
+/* ── Modal Score Info ───────────────────────────────────────────────────────── */
+.score-info-bands {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.score-info-band {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  grid-template-rows: auto auto;
+  gap: 2px 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+}
+
+.score-info-band--ok {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: #22c55e;
+}
+.score-info-band--warn {
+  background: rgba(234, 179, 8, 0.08);
+  border-color: #eab308;
+}
+.score-info-band--danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: #ef4444;
+}
+
+.score-info-band__range {
+  grid-row: 1;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-info-band__label {
+  grid-row: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.score-info-band__desc {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.score-info-factors {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.score-info-factors__title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+
+.score-info-factor {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.score-info-factor__icon {
+  font-size: 20px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.score-info-factor strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.score-info-factor p {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+}

@@ -1,9 +1,55 @@
 node_modules/
+# Saídas do Vite — a única "verdadeira" é `dist/`. Qualquer outra pasta
+# `dist-<qualquer-coisa>/` é artefato de build ou verificação local e
+# nunca deve ser commitada.
 dist/
+dist-*/
 coverage/
 .eslintcache
 .prettiercache
 .env
 .env.local
+.env.production
+.env.staging
 .DS_Store
 *.log
+*.key
+*.pem
+*.cert
+*.p12
+
+# Arquivos temporários de desenvolvimento / preview
+*-preview.html
+pdf_validacao.pdf
+
+# Artefatos temporários do Vite (gerados em dev, nunca commitados)
+vite.config.js.timestamp-*
+
+# Credenciais Android (keystore — NUNCA commitar)
+*.keystore
+*.jks
+
+# Android / TWA build outputs
+twa-build/.gradle/
+twa-build/build/
+twa-build/app/build/
+twa-build/app-release-*
+twa-build/*.apk
+twa-build/*.aab
+twa-build/*.idsig
+twa-build/local.properties
+twa-build/manifest-checksum.txt
+
+# TWA duplicado por engano (subpasta que nunca deveria ter existido)
+twa-build/twa-build/
+
+# Supabase CLI — estado local, não pra versionar
+supabase/.temp/
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+
+# OS
+Thumbs.db

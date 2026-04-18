@@ -17,6 +17,8 @@ import { checkGuestLimit, isGuestMode } from '../../core/guestLimits.js';
 import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
 import { withViewSkeleton } from '../components/skeleton.js';
+import { validateRegistroPayload } from '../../core/inputValidation.js';
+import { isCachedPlanPlusOrHigher } from '../../core/planCache.js';
 
 const CONTAINER_ID = 'form-progress-container-v5';
 const QUICK_TEMPLATE_MAP = {
@@ -53,6 +55,28 @@ const QUICK_TEMPLATE_MAP = {
 };
 
 const EDITING_KEY = 'cooltrack-editing-id';
+// Persiste o último cliente preenchido para auto-prefill no próximo registro —
+// técnico que atende o mesmo cliente em sequência não precisa digitar de novo.
+const LAST_CLIENT_KEY = 'cooltrack-last-client';
+
+function _loadLastClient() {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_CLIENT_KEY) || 'null');
+  } catch (_err) {
+    return null;
+  }
+}
+
+function _saveLastClient(cliente) {
+  try {
+    // Só persiste se algum campo estiver preenchido — evita sobrescrever com
+    // registros salvos "no modo rápido" que não tocam os campos do cliente.
+    if (!cliente || (!cliente.clienteNome && !cliente.localAtendimento)) return;
+    localStorage.setItem(LAST_CLIENT_KEY, JSON.stringify(cliente));
+  } catch (_err) {
+    // localStorage indisponível — ignora
+  }
+}
 
 function resetEditingState() {
   sessionStorage.removeItem(EDITING_KEY);
@@ -181,40 +205,58 @@ export async function saveRegistro() {
     GuestConversionModal.open({ reason: 'limit_registros', source: 'save-registro' });
     return false;
   }
-  const equipId = Utils.getVal('r-equip');
-  const data = Utils.getVal('r-data');
-  const tipo = Utils.getVal('r-tipo');
-  const obs = Utils.getVal('r-obs').trim();
-  const tecnico = Utils.getVal('r-tecnico').trim();
   const prioridade = Utils.getVal('r-prioridade') || 'media';
+  const { equipamentos } = getState();
+  const payloadValidation = validateRegistroPayload(
+    {
+      equipId: Utils.getVal('r-equip'),
+      data: Utils.getVal('r-data'),
+      tipo: Utils.getVal('r-tipo'),
+      obs: Utils.getVal('r-obs'),
+      tecnico: Utils.getVal('r-tecnico'),
+      status: Utils.getVal('r-status'),
+      pecas: Utils.getVal('r-pecas'),
+      proxima: Utils.getVal('r-proxima'),
+      custoPecas: Utils.getVal('r-custo-pecas'),
+      custoMaoObra: Utils.getVal('r-custo-mao-obra'),
+      clienteNome: Utils.getVal('r-cliente-nome'),
+      clienteDocumento: Utils.getVal('r-cliente-documento'),
+      localAtendimento: Utils.getVal('r-local-atendimento'),
+      clienteContato: Utils.getVal('r-cliente-contato'),
+    },
+    { existingEquipamentos: equipamentos },
+  );
 
-  const missing = [];
-  if (!equipId) missing.push('Equipamento');
-  if (!data) missing.push('Data');
-  if (!tipo) missing.push('Tipo de Serviço');
-  if (!tecnico) missing.push('Técnico Responsável');
-  if (missing.length) {
-    Toast.warning(`Campos obrigatórios: ${missing.join(', ')}`);
+  if (!payloadValidation.valid) {
+    Toast.warning(payloadValidation.errors[0]);
     return false;
   }
+
+  const {
+    equipId,
+    data,
+    tipo,
+    tecnico,
+    obs,
+    pecas,
+    proxima,
+    status,
+    custoPecas,
+    custoMaoObra,
+    clienteNome,
+    clienteDocumento,
+    localAtendimento,
+    clienteContato,
+  } = payloadValidation.value;
 
   const descricaoFinal =
-    obs && obs.length >= 10 ? obs : `Serviço de ${tipo.toLowerCase()} registrado em modo rápido.`;
+    obs && obs.length >= 10 ? obs : `Servico de ${tipo.toLowerCase()} registrado em modo rapido.`;
 
-  const proxima = Utils.getVal('r-proxima');
-  if (proxima && proxima < data.slice(0, 10)) {
-    Toast.error('Próxima manutenção não pode ser anterior ao serviço.');
-    return false;
-  }
-
-  const status = Utils.getVal('r-status');
   const validation = validateOperationalPayload({ data, status });
   if (!validation.valid) {
     Toast.error(validation.errors[0]);
     return false;
   }
-  const custoPecas = parseFloat(Utils.getVal('r-custo-pecas') || '0') || 0;
-  const custoMaoObra = parseFloat(Utils.getVal('r-custo-mao-obra') || '0') || 0;
 
   Profile.saveLastTecnico(tecnico);
 
@@ -234,10 +276,14 @@ export async function saveRegistro() {
               tecnico,
               prioridade,
               status,
-              pecas: Utils.getVal('r-pecas').trim(),
-              proxima: Utils.getVal('r-proxima'),
+              pecas,
+              proxima,
               custoPecas,
               custoMaoObra,
+              clienteNome,
+              clienteDocumento,
+              localAtendimento,
+              clienteContato,
             }
           : r,
       ),
@@ -251,6 +297,7 @@ export async function saveRegistro() {
         };
       }),
     }));
+    _saveLastClient({ clienteNome, clienteDocumento, localAtendimento, clienteContato });
     resetEditingState();
     clearRegistro();
     Toast.success('Registro atualizado.');
@@ -262,22 +309,26 @@ export async function saveRegistro() {
   const novoId = Utils.uid();
   let fotosRegistro = [...Photos.pending];
 
-  // D1: assinatura digital
+  // D1: assinatura digital — recurso exclusivo Plus+ (diferencial pago).
+  // Para Free, pulamos silenciosamente o modal para não interromper o fluxo.
   let assinatura = null;
+  const canUseSignature = isCachedPlanPlusOrHigher();
   let SignatureModal;
   let saveSignatureForRecord;
-  try {
-    ({ SignatureModal, saveSignatureForRecord } = await import('../components/signature.js'));
-  } catch (error) {
-    handleError(error, {
-      code: ErrorCodes.NETWORK_ERROR,
-      severity: 'warning',
-      message: 'Não foi possível carregar o módulo de assinatura.',
-      context: { action: 'registro.saveRegistro.signatureImport' },
-    });
+  if (canUseSignature) {
+    try {
+      ({ SignatureModal, saveSignatureForRecord } = await import('../components/signature.js'));
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        severity: 'warning',
+        message: 'Não foi possível carregar o módulo de assinatura.',
+        context: { action: 'registro.saveRegistro.signatureImport' },
+      });
+    }
   }
   const eq = findEquip(equipId);
-  if (SignatureModal?.request) {
+  if (canUseSignature && SignatureModal?.request) {
     try {
       assinatura = await SignatureModal.request(novoId, eq?.nome || 'Equipamento');
       if (assinatura && saveSignatureForRecord) saveSignatureForRecord(novoId, assinatura);
@@ -326,13 +377,17 @@ export async function saveRegistro() {
           tipo,
           obs: descricaoFinal,
           status,
-          pecas: Utils.getVal('r-pecas').trim(),
+          pecas,
           proxima,
           fotos: fotosRegistro,
           tecnico,
           prioridade,
           custoPecas,
           custoMaoObra,
+          clienteNome,
+          clienteDocumento,
+          localAtendimento,
+          clienteContato,
           assinatura: assinatura ? true : false,
         },
       ],
@@ -349,6 +404,7 @@ export async function saveRegistro() {
   });
 
   SavedHighlight.markForHighlight(novoId);
+  _saveLastClient({ clienteNome, clienteDocumento, localAtendimento, clienteContato });
   clearRegistro();
   Toast.success('Serviço registrado com sucesso.');
 
@@ -382,6 +438,10 @@ export function clearRegistro(preserveEquip = false) {
     'r-custo-pecas',
     'r-custo-mao-obra',
     'r-prioridade',
+    'r-cliente-nome',
+    'r-cliente-documento',
+    'r-local-atendimento',
+    'r-cliente-contato',
   ];
   if (!preserveEquip) toClear.push('r-equip');
   Utils.clearVals(...toClear);
@@ -394,6 +454,19 @@ export function clearRegistro(preserveEquip = false) {
 
   const rTecnico = Utils.getEl('r-tecnico');
   if (rTecnico) rTecnico.value = Profile.getDefaultTecnico();
+
+  // Auto-prefill do último cliente — técnico que atende o mesmo cliente em
+  // sequência (ex.: manutenção de várias unidades no mesmo prédio) não precisa
+  // redigitar. O usuário pode apagar os campos se for para outro cliente.
+  const lastClient = _loadLastClient();
+  if (lastClient) {
+    if (lastClient.clienteNome) Utils.setVal('r-cliente-nome', lastClient.clienteNome);
+    if (lastClient.clienteDocumento)
+      Utils.setVal('r-cliente-documento', lastClient.clienteDocumento);
+    if (lastClient.localAtendimento)
+      Utils.setVal('r-local-atendimento', lastClient.localAtendimento);
+    if (lastClient.clienteContato) Utils.setVal('r-cliente-contato', lastClient.clienteContato);
+  }
 
   const saveBtn = document.querySelector('[data-action="save-registro"]');
   if (saveBtn) {
@@ -423,6 +496,10 @@ export function loadRegistroForEdit(id) {
   Utils.setVal('r-custo-mao-obra', String(r.custoMaoObra || ''));
   Utils.setVal('r-proxima', r.proxima || '');
   Utils.setVal('r-status', r.status);
+  Utils.setVal('r-cliente-nome', r.clienteNome || '');
+  Utils.setVal('r-cliente-documento', r.clienteDocumento || '');
+  Utils.setVal('r-local-atendimento', r.localAtendimento || '');
+  Utils.setVal('r-cliente-contato', r.clienteContato || '');
 
   const btn = document.querySelector('[data-action="save-registro"]');
   if (btn) {

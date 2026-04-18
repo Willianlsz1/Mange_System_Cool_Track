@@ -1,0 +1,279 @@
+const VALID_STATUS = new Set(['ok', 'warn', 'danger']);
+
+export const EQUIPMENT_FIELD_LIMITS = Object.freeze({
+  nome: 120,
+  local: 160,
+  tag: 40,
+  modelo: 120,
+});
+
+export const REGISTRO_FIELD_LIMITS = Object.freeze({
+  tipo: 120,
+  obs: 2000,
+  pecas: 800,
+  tecnico: 120,
+  // Dados do cliente — opcionais. Vão para a capa do PDF (bloco CLIENTE/LOCAL)
+  // e para a página de assinatura (nome + documento).
+  clienteNome: 200,
+  clienteDocumento: 30,
+  localAtendimento: 300,
+  clienteContato: 120,
+});
+
+function normalizeInlineText(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizeMultilineText(value) {
+  return String(value ?? '')
+    .normalize('NFKC')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[^\S\n]+/g, ' ')
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
+    .trim();
+}
+
+function validateTextField({ name, value, required = false, maxLength, multiline = false }) {
+  const normalized = multiline ? normalizeMultilineText(value) : normalizeInlineText(value);
+
+  if (required && !normalized) {
+    return { value: normalized, error: `Campo obrigatório: ${name}.` };
+  }
+
+  if (normalized.length > maxLength) {
+    return {
+      value: normalized,
+      error: `${name} excede o limite de ${maxLength} caracteres.`,
+    };
+  }
+
+  return { value: normalized, error: null };
+}
+
+function parseCost(value, fieldName) {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return { value: 0, error: null };
+
+  const parsed = Number.parseFloat(normalized.replace(',', '.'));
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return { value: 0, error: `${fieldName} inválido.` };
+  }
+
+  return { value: parsed, error: null };
+}
+
+function normalizeTag(value) {
+  return normalizeInlineText(value).toUpperCase();
+}
+
+function hasDuplicateTag(tag, existingEquipamentos = [], editingId = null) {
+  if (!tag) return false;
+
+  return existingEquipamentos.some((equipamento) => {
+    if (!equipamento || typeof equipamento !== 'object') return false;
+    if (editingId && String(equipamento.id || '') === String(editingId)) return false;
+    return normalizeTag(equipamento.tag) === tag;
+  });
+}
+
+export function validateEquipamentoPayload(
+  payload,
+  { existingEquipamentos = [], editingId = null } = {},
+) {
+  const errors = [];
+  const nome = validateTextField({
+    name: 'Nome',
+    value: payload?.nome,
+    required: true,
+    maxLength: EQUIPMENT_FIELD_LIMITS.nome,
+  });
+  const local = validateTextField({
+    name: 'Local',
+    value: payload?.local,
+    required: true,
+    maxLength: EQUIPMENT_FIELD_LIMITS.local,
+  });
+  const modelo = validateTextField({
+    name: 'Modelo',
+    value: payload?.modelo,
+    required: false,
+    maxLength: EQUIPMENT_FIELD_LIMITS.modelo,
+  });
+
+  if (nome.error) errors.push(nome.error);
+  if (local.error) errors.push(local.error);
+  if (modelo.error) errors.push(modelo.error);
+
+  const tag = normalizeTag(payload?.tag);
+  if (tag.length > EQUIPMENT_FIELD_LIMITS.tag) {
+    errors.push(`TAG excede o limite de ${EQUIPMENT_FIELD_LIMITS.tag} caracteres.`);
+  }
+  if (hasDuplicateTag(tag, existingEquipamentos, editingId)) {
+    errors.push('Já existe equipamento com esta TAG.');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    value: {
+      nome: nome.value,
+      local: local.value,
+      tag,
+      modelo: modelo.value,
+    },
+  };
+}
+
+export function validateRegistroPayload(
+  payload,
+  { existingEquipamentos = [], requireTecnico = true, allowMissingStatus = false } = {},
+) {
+  const errors = [];
+  const equipamentoIds = new Set(existingEquipamentos.map((equipamento) => String(equipamento.id)));
+
+  const equipId = String(payload?.equipId || '').trim();
+  const data = String(payload?.data || '').trim();
+  const proxima = String(payload?.proxima || '').trim();
+  const status = VALID_STATUS.has(payload?.status)
+    ? payload.status
+    : allowMissingStatus
+      ? 'ok'
+      : '';
+
+  const tipo = validateTextField({
+    name: 'Tipo de serviço',
+    value: payload?.tipo,
+    required: true,
+    maxLength: REGISTRO_FIELD_LIMITS.tipo,
+  });
+  const tecnico = validateTextField({
+    name: 'Técnico responsável',
+    value: payload?.tecnico,
+    required: requireTecnico,
+    maxLength: REGISTRO_FIELD_LIMITS.tecnico,
+  });
+  const obs = validateTextField({
+    name: 'Observações',
+    value: payload?.obs,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.obs,
+    multiline: true,
+  });
+  const pecas = validateTextField({
+    name: 'Peças e materiais',
+    value: payload?.pecas,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.pecas,
+    multiline: true,
+  });
+
+  // Campos opcionais do cliente (capa do PDF + página de assinatura)
+  const clienteNome = validateTextField({
+    name: 'Nome do cliente',
+    value: payload?.clienteNome,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.clienteNome,
+  });
+  const clienteDocumento = validateTextField({
+    name: 'Documento do cliente',
+    value: payload?.clienteDocumento,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.clienteDocumento,
+  });
+  const localAtendimento = validateTextField({
+    name: 'Local do atendimento',
+    value: payload?.localAtendimento,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.localAtendimento,
+  });
+  const clienteContato = validateTextField({
+    name: 'Contato do cliente',
+    value: payload?.clienteContato,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.clienteContato,
+  });
+
+  if (clienteNome.error) errors.push(clienteNome.error);
+  if (clienteDocumento.error) errors.push(clienteDocumento.error);
+  if (localAtendimento.error) errors.push(localAtendimento.error);
+  if (clienteContato.error) errors.push(clienteContato.error);
+
+  if (!equipId) errors.push('Campo obrigatório: Equipamento.');
+  if (equipId && !equipamentoIds.has(equipId))
+    errors.push('Equipamento inválido para este registro.');
+  if (!data) errors.push('Campo obrigatório: Data.');
+  if (!status) errors.push('Status informado não é permitido.');
+  if (tipo.error) errors.push(tipo.error);
+  if (tecnico.error) errors.push(tecnico.error);
+  if (obs.error) errors.push(obs.error);
+  if (pecas.error) errors.push(pecas.error);
+
+  if (data) {
+    const parsedData = new Date(data);
+    if (Number.isNaN(parsedData.getTime())) {
+      errors.push('Data inválida.');
+    }
+  }
+
+  if (proxima && data && proxima < data.slice(0, 10)) {
+    errors.push('Próxima manutenção não pode ser anterior ao serviço.');
+  }
+
+  const custoPecas = parseCost(payload?.custoPecas, 'Custo de peças');
+  const custoMaoObra = parseCost(payload?.custoMaoObra, 'Custo de mão de obra');
+  if (custoPecas.error) errors.push(custoPecas.error);
+  if (custoMaoObra.error) errors.push(custoMaoObra.error);
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    value: {
+      equipId,
+      data,
+      proxima,
+      status,
+      tipo: tipo.value,
+      tecnico: tecnico.value,
+      obs: obs.value,
+      pecas: pecas.value,
+      custoPecas: custoPecas.value,
+      custoMaoObra: custoMaoObra.value,
+      clienteNome: clienteNome.value,
+      clienteDocumento: clienteDocumento.value,
+      localAtendimento: localAtendimento.value,
+      clienteContato: clienteContato.value,
+    },
+  };
+}
+
+export function sanitizePersistedEquipamento(payload) {
+  const result = validateEquipamentoPayload(payload, { existingEquipamentos: [] });
+  if (!result.valid) return null;
+
+  return {
+    nome: result.value.nome,
+    local: result.value.local,
+    tag: result.value.tag,
+    modelo: result.value.modelo,
+  };
+}
+
+export function sanitizePersistedRegistro(payload, { existingEquipamentos = [] } = {}) {
+  const result = validateRegistroPayload(payload, {
+    existingEquipamentos,
+    requireTecnico: false,
+    allowMissingStatus: true,
+  });
+  if (!result.valid) return null;
+  return result.value;
+}
+
+export const InputValidation = {
+  normalizeInlineText,
+  normalizeMultilineText,
+};

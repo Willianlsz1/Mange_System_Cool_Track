@@ -102,7 +102,7 @@ describe('Auth integration wrapper', () => {
     expect(supabaseMock.auth.signInWithOAuth).toHaveBeenCalledWith({
       provider: 'google',
       options: expect.objectContaining({
-        redirectTo: expect.stringContaining(window.location.origin),
+        redirectTo: expect.stringMatching(/^https?:\/\/localhost:\d+\/?/),
       }),
     });
     expect(localStorage.getItem('cooltrack-oauth-pending-v1')).toContain('auth-screen');
@@ -160,7 +160,9 @@ describe('Auth integration wrapper', () => {
     expect(ok).toEqual({ ok: true });
     expect(supabaseMock.auth.resetPasswordForEmail).toHaveBeenCalledWith(
       'user@mail.com',
-      expect.objectContaining({ redirectTo: expect.stringContaining(window.location.origin) }),
+      expect.objectContaining({
+        redirectTo: expect.stringMatching(/^https?:\/\/localhost:\d+\/?/),
+      }),
     );
 
     supabaseMock.auth.resetPasswordForEmail.mockResolvedValueOnce({
@@ -178,17 +180,17 @@ describe('Auth integration wrapper', () => {
 
     const shortPwd = await Auth.tryHandlePasswordRecovery(async () => '123');
     expect(shortPwd).toBe(true);
-    expect(toastMock.error).toHaveBeenCalledWith('Senha deve ter no mínimo 6 caracteres.');
+    expect(toastMock.error).toHaveBeenCalledWith('Senha deve ter no mínimo 8 caracteres.');
 
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: { message: 'boom' } });
-    const failed = await Auth.tryHandlePasswordRecovery(async () => '123456');
+    const failed = await Auth.tryHandlePasswordRecovery(async () => '1234567890');
     expect(failed).toBe(true);
     expect(toastMock.error).toHaveBeenCalledWith(
       'Não foi possível redefinir a senha. Tente novamente pelo link do email.',
     );
 
     supabaseMock.auth.updateUser.mockResolvedValueOnce({ error: null });
-    const success = await Auth.tryHandlePasswordRecovery(async () => 'nova123');
+    const success = await Auth.tryHandlePasswordRecovery(async () => 'nova1234');
     expect(success).toBe(true);
     expect(toastMock.success).toHaveBeenCalled();
     expect(replaceSpy).toHaveBeenCalled();
