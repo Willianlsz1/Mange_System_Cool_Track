@@ -120,7 +120,25 @@ function isValidPhotoRefObject(photo) {
 export function normalizePhotoEntry(photo) {
   if (isString(photo)) {
     const value = photo.trim();
-    return value || null;
+    if (!value) return null;
+
+    // Legacy fallback: quando a coluna `registros.fotos` foi criada como
+    // `text[]` em vez de `jsonb`, o PostgREST serializa cada objeto como
+    // string JSON ao inserir. Ao ler de volta recebemos uma string que
+    // parece JSON ao invés do objeto original. Detectamos e reidratamos
+    // aqui pra o app funcionar mesmo antes da migração da coluna.
+    if (value.startsWith('{') && value.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(value);
+        if (parsed && typeof parsed === 'object') {
+          return normalizePhotoEntry(parsed);
+        }
+      } catch (_err) {
+        /* string não era JSON válido — trata como URL/path bruto abaixo */
+      }
+    }
+
+    return value;
   }
 
   if (!isValidPhotoRefObject(photo)) return null;
