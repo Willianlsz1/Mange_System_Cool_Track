@@ -22,10 +22,17 @@ export const FEATURE_HISTORICO_COMPLETO = 'historico_completo';
 export const FEATURE_SETORES = 'setores';
 export const FEATURE_SUPORTE_PRIORITARIO = 'suporte_prioritario';
 
+// PDF export agora é liberado para TODOS os planos (inclusive Free), mas com
+// cotas mensais diferenciadas e marca d'água no Free. O gating passou de
+// "feature binária" pra "quota mensal" — ver MONTHLY_LIMITS em usageLimits.js.
+// Assinatura digital do cliente no PDF é exclusiva de Plus+ (diferencial pago).
+export const FEATURE_DIGITAL_SIGNATURE = 'digital_signature';
+
 const FEATURE_MIN_PLAN = {
-  [FEATURE_PDF_EXPORT]: PLAN_CODE_PLUS,
+  [FEATURE_PDF_EXPORT]: PLAN_CODE_FREE,
   [FEATURE_EQUIPAMENTOS_EXTRA]: PLAN_CODE_PLUS,
   [FEATURE_HISTORICO_COMPLETO]: PLAN_CODE_PLUS,
+  [FEATURE_DIGITAL_SIGNATURE]: PLAN_CODE_PLUS,
   [FEATURE_SETORES]: PLAN_CODE_PRO,
   [FEATURE_SUPORTE_PRIORITARIO]: PLAN_CODE_PRO,
 };
@@ -50,30 +57,32 @@ export const PLAN_CATALOG = {
     key: PLAN_CODE_PLUS,
     label: 'Plus',
     limits: {
-      equipamentos: 10,
+      equipamentos: 25,
       registros: Number.POSITIVE_INFINITY,
     },
     perks: [
-      'Até 10 equipamentos cadastrados',
+      'Até 25 equipamentos cadastrados',
       'Registros de serviço ilimitados',
       'Todo o histórico de manutenções',
-      '100 relatórios PDF/mês',
+      '100 relatórios PDF/mês sem marca d\u2019água',
       '50 envios via WhatsApp/mês',
+      'Assinatura digital do cliente no PDF',
     ],
   },
   [PLAN_CODE_PRO]: {
     key: PLAN_CODE_PRO,
     label: 'Pro',
     limits: {
-      equipamentos: 30,
+      equipamentos: Number.POSITIVE_INFINITY,
       registros: Number.POSITIVE_INFINITY,
     },
     perks: [
-      'Até 30 equipamentos cadastrados',
+      'Equipamentos ilimitados',
       'Registros de serviço ilimitados',
       'Todo o histórico de manutenções',
       'Relatórios PDF e WhatsApp ilimitados',
       'Agrupamento por setores',
+      'Assinatura digital do cliente no PDF',
       'Suporte prioritário',
     ],
   },
@@ -142,10 +151,12 @@ export function hasFeature(profile, feature) {
 }
 
 const FEATURE_MESSAGES = Object.freeze({
-  [FEATURE_PDF_EXPORT]: 'A exportação em PDF está disponível a partir do plano Plus.',
+  [FEATURE_PDF_EXPORT]: 'A exportação em PDF está disponível em todos os planos.',
   [FEATURE_EQUIPAMENTOS_EXTRA]: 'Mais de 3 equipamentos está disponível a partir do plano Plus.',
   [FEATURE_HISTORICO_COMPLETO]:
     'Histórico completo de manutenções está disponível a partir do plano Plus.',
+  [FEATURE_DIGITAL_SIGNATURE]:
+    'Assinatura digital do cliente no PDF está disponível a partir do plano Plus.',
   [FEATURE_SETORES]: 'Agrupamento por setores é exclusivo do plano Pro.',
   [FEATURE_SUPORTE_PRIORITARIO]: 'Suporte prioritário é exclusivo do plano Pro.',
 });

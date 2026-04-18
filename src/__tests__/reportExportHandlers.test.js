@@ -52,17 +52,17 @@ vi.mock('../ui/components/shareSuccessToast.js', () => ({
 
 const fetchMyProfileBilling = vi.fn();
 vi.mock('../core/monetization.js', () => ({
-  PREMIUM_FEATURE_PDF_EXPORT: 'pdf_export',
   fetchMyProfileBilling,
 }));
 
 const getPlanCodeForUserId = vi.fn();
 const getEffectivePlan = vi.fn();
-const assertProAccess = vi.fn();
 vi.mock('../core/subscriptionPlans.js', () => ({
   getPlanCodeForUserId,
   getEffectivePlan,
-  assertProAccess,
+  PLAN_CODE_FREE: 'free',
+  PLAN_CODE_PLUS: 'plus',
+  PLAN_CODE_PRO: 'pro',
 }));
 
 const getMonthlyUsageSnapshot = vi.fn();
@@ -71,6 +71,7 @@ const hasReachedMonthlyLimit = vi.fn();
 const incrementMonthlyUsage = vi.fn();
 
 vi.mock('../core/usageLimits.js', () => ({
+  USAGE_RESOURCE_PDF_EXPORT: 'pdf_export',
   USAGE_RESOURCE_WHATSAPP_SHARE: 'whatsapp_share',
   getMonthlyUsageSnapshot,
   getMonthlyLimitForPlan,
@@ -86,9 +87,6 @@ describe('reportExportHandlers', () => {
 
     getPlanCodeForUserId.mockResolvedValue('free');
     getEffectivePlan.mockReturnValue('free');
-    assertProAccess.mockImplementation(() => {
-      throw new Error('A exportacao em PDF e exclusiva do plano Pro.');
-    });
 
     fetchMyProfileBilling.mockResolvedValue({
       profile: { id: 'u1', plan_code: 'free', subscription_status: 'inactive', is_dev: false },
@@ -96,11 +94,22 @@ describe('reportExportHandlers', () => {
 
     getMonthlyUsageSnapshot.mockResolvedValue({
       monthStart: '2026-04-01',
+      pdf_export: 0,
       whatsapp_share: 0,
     });
-    getMonthlyLimitForPlan.mockImplementation((_planCode, resource) =>
-      resource === 'whatsapp_share' ? 10 : Number.POSITIVE_INFINITY,
-    );
+    getMonthlyLimitForPlan.mockImplementation((planCode, resource) => {
+      if (resource === 'pdf_export') {
+        if (planCode === 'free') return 5;
+        if (planCode === 'plus') return 100;
+        return Number.POSITIVE_INFINITY;
+      }
+      if (resource === 'whatsapp_share') {
+        if (planCode === 'free') return 10;
+        if (planCode === 'plus') return 50;
+        return Number.POSITIVE_INFINITY;
+      }
+      return Number.POSITIVE_INFINITY;
+    });
     hasReachedMonthlyLimit.mockReturnValue(false);
     incrementMonthlyUsage.mockResolvedValue(1);
 
@@ -129,37 +138,57 @@ describe('reportExportHandlers', () => {
     expect(trackEvent).toHaveBeenCalledWith('pdf_export_blocked', { reason: 'guest' });
   });
 
-  it('blocks PDF for authenticated free users with friendly pro feedback', async () => {
+  it('allows Free users under the monthly PDF quota and passes planCode to generator', async () => {
     getUser.mockResolvedValueOnce({ id: 'u1' });
-
-    await handlers.get('export-pdf')({});
-
-    expect(assertProAccess).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'u1' }),
-      'pdf_export',
-    );
-    expect(generateMaintenanceReport).not.toHaveBeenCalled();
-    expect(open).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reason: 'premium_pdf',
-        source: 'pdf_export_premium',
-      }),
-    );
-    expect(trackEvent).toHaveBeenCalledWith('pdf_export_blocked', { reason: 'premium_required' });
-  });
-
-  it('allows authenticated pro users to export PDF', async () => {
-    getUser.mockResolvedValueOnce({ id: 'u1' });
-    getEffectivePlan.mockReturnValueOnce('pro');
-    fetchMyProfileBilling.mockResolvedValueOnce({
-      profile: { id: 'u1', plan: 'pro', subscription_status: 'active', is_dev: false },
-    });
-    assertProAccess.mockImplementationOnce(() => ({ allowed: true, planCode: 'pro' }));
     generateMaintenanceReport.mockResolvedValueOnce('relatorio.pdf');
 
     await handlers.get('export-pdf')({});
 
     expect(generateMaintenanceReport).toHaveBeenCalledTimes(1);
+    // planCode passado como contexto pra o PDF aplicar marca d'água no Free
+    expect(generateMaintenanceReport).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ planCode: 'free' }),
+    );
+    expect(incrementMonthlyUsage).toHaveBeenCalledWith('u1', 'pdf_export');
+    expect(success).toHaveBeenCalledWith('PDF gerado: relatorio.pdf');
+  });
+
+  it('blocks Free users once they hit the monthly PDF quota with Plus/Pro nudge', async () => {
+    getUser.mockResolvedValueOnce({ id: 'u1' });
+    hasReachedMonthlyLimit.mockImplementation(({ resource }) => resource === 'pdf_export');
+
+    await handlers.get('export-pdf')({});
+
+    expect(generateMaintenanceReport).not.toHaveBeenCalled();
+    expect(open).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'limit_pdf',
+        source: 'pdf_export_limit',
+      }),
+    );
+    // Mensagem deve guiar Free → Plus/Pro, não "plano Plus" genérico
+    const callArg = open.mock.calls[0][0];
+    expect(callArg.message).toMatch(/Plus/);
+  });
+
+  it('allows authenticated Pro users to export PDF without incrementing quota', async () => {
+    getUser.mockResolvedValueOnce({ id: 'u1' });
+    getEffectivePlan.mockReturnValueOnce('pro');
+    fetchMyProfileBilling.mockResolvedValueOnce({
+      profile: { id: 'u1', plan: 'pro', subscription_status: 'active', is_dev: false },
+    });
+    generateMaintenanceReport.mockResolvedValueOnce('relatorio.pdf');
+
+    await handlers.get('export-pdf')({});
+
+    expect(generateMaintenanceReport).toHaveBeenCalledTimes(1);
+    expect(generateMaintenanceReport).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({ planCode: 'pro' }),
+    );
+    // Pro é ilimitado → não incrementa contagem
+    expect(incrementMonthlyUsage).not.toHaveBeenCalled();
     expect(success).toHaveBeenCalledWith('PDF gerado: relatorio.pdf');
   });
 
@@ -176,7 +205,10 @@ describe('reportExportHandlers', () => {
         source: 'whatsapp_share_limit',
       }),
     );
-    expect(trackEvent).toHaveBeenCalledWith('whatsapp_share_blocked', { reason: 'limit_reached' });
+    expect(trackEvent).toHaveBeenCalledWith(
+      'whatsapp_share_blocked',
+      expect.objectContaining({ reason: 'limit_reached' }),
+    );
     expect(incrementMonthlyUsage).not.toHaveBeenCalledWith('u1', 'whatsapp_share');
   });
 });

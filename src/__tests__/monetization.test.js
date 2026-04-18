@@ -50,20 +50,28 @@ describe('monetization', () => {
     const mod = await loadMonetizationWithMock(createSupabaseMock());
 
     expect(mod.isProUser({ plan_code: 'pro', subscription_status: 'active' })).toBe(true);
-    expect(mod.isProUser({ plan: 'pro', subscription_status: 'trialing' })).toBe(false);
+    // trialing conta como status pago ativo (checkout Stripe com trial)
+    expect(mod.isProUser({ plan: 'pro', subscription_status: 'trialing' })).toBe(true);
     expect(mod.isProUser({ plan_code: 'pro', subscription_status: 'past_due' })).toBe(false);
     expect(mod.isProUser({ plan_code: 'free', subscription_status: 'active' })).toBe(false);
     expect(mod.isProUser({ is_dev: true })).toBe(true);
   });
 
-  it('canUsePremiumFeature gates pdf and equipamentos by effective pro access', async () => {
+  it('canUsePremiumFeature: PDF liberado para todos (quota controla), equipamentos extra gated Plus+', async () => {
     const mod = await loadMonetizationWithMock(createSupabaseMock());
     const proProfile = { plan_code: 'pro', subscription_status: 'active' };
+    const plusProfile = { plan_code: 'plus', subscription_status: 'active' };
     const freeProfile = { plan_code: 'free', subscription_status: 'active' };
 
+    // PDF export: Phase 1 libera pra Free também (com marca d'água + cota de 5/mês).
+    // A quota vive em usageLimits, não mais como feature binária.
     expect(mod.canUsePremiumFeature(proProfile, mod.PREMIUM_FEATURE_PDF_EXPORT)).toBe(true);
+    expect(mod.canUsePremiumFeature(plusProfile, mod.PREMIUM_FEATURE_PDF_EXPORT)).toBe(true);
+    expect(mod.canUsePremiumFeature(freeProfile, mod.PREMIUM_FEATURE_PDF_EXPORT)).toBe(true);
+
+    // Equipamentos extras continuam gated Plus+
     expect(mod.canUsePremiumFeature(proProfile, mod.PREMIUM_FEATURE_EQUIPAMENTOS)).toBe(true);
-    expect(mod.canUsePremiumFeature(freeProfile, mod.PREMIUM_FEATURE_PDF_EXPORT)).toBe(false);
+    expect(mod.canUsePremiumFeature(plusProfile, mod.PREMIUM_FEATURE_EQUIPAMENTOS)).toBe(true);
     expect(mod.canUsePremiumFeature(freeProfile, mod.PREMIUM_FEATURE_EQUIPAMENTOS)).toBe(false);
   });
 

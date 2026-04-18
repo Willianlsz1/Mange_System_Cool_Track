@@ -140,6 +140,34 @@ export function renderShellViews() {
               </div>
             </div>
             <div class="registro-bloco">
+              <div class="registro-bloco__label">CLIENTE DO SERVIÇO <span
+                  class="registro-bloco__opcional">(opcional — aparece na capa do PDF)</span></div>
+              <div class="registro-bloco__desc">Nome, documento, local e contato do cliente que recebeu o serviço. Usamos esses dados no cabeçalho do relatório e na página de assinatura.</div>
+              <div class="form-group">
+                <label class="form-label" for="r-cliente-nome">Nome ou razão social</label>
+                <input id="r-cliente-nome" class="form-control" type="text"
+                  maxlength="200" placeholder="Ex: Supermercado Boa Compra LTDA" autocomplete="organization" />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="r-cliente-documento">CPF / CNPJ</label>
+                  <input id="r-cliente-documento" class="form-control" type="text"
+                    maxlength="30" placeholder="00.000.000/0000-00" autocomplete="off" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="r-cliente-contato">Telefone / contato</label>
+                  <input id="r-cliente-contato" class="form-control" type="text"
+                    maxlength="120" placeholder="(11) 9 0000-0000" autocomplete="tel" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="r-local-atendimento">Local do atendimento</label>
+                <input id="r-local-atendimento" class="form-control" type="text"
+                  maxlength="300" placeholder="Endereço completo — rua, número, bairro, cidade/UF" autocomplete="street-address" />
+                <div class="form-hint">Pode ser diferente do local cadastrado no equipamento</div>
+              </div>
+            </div>
+            <div class="registro-bloco">
               <div class="registro-bloco__label">O SERVIÇO</div>
               <div class="form-group">
                 <label class="form-label" for="r-equip">Em qual equipamento? *</label>

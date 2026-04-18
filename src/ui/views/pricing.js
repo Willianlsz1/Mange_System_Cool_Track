@@ -105,6 +105,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             <li>Até 3 equipamentos cadastrados</li>
             <li>10 registros de serviço por mês</li>
             <li>Histórico dos últimos 30 dias</li>
+            <li>5 relatórios PDF/mês <span style="color:var(--text-3);font-size:12px">(com marca d'água CoolTrack)</span></li>
             <li>10 envios via WhatsApp/mês</li>
             <li>Alertas de manutenção preventiva</li>
             <li>Funciona offline</li>
@@ -129,23 +130,24 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
           <div class="pricing-card__price-group">
             <p class="pricing-card__price pricing-card__price--plus" id="plus-price-monthly">
-              R$ 15 <span class="pricing-card__price-period">/ mês</span>
+              R$ 29 <span class="pricing-card__price-period">/ mês</span>
             </p>
             <div id="plus-price-annual" style="display:none">
               <p class="pricing-card__price pricing-card__price--plus">
-                R$ 10<span class="pricing-card__price-cents">,75</span> <span class="pricing-card__price-period">/ mês</span>
+                R$ 20<span class="pricing-card__price-cents">,75</span> <span class="pricing-card__price-period">/ mês</span>
               </p>
               <p class="pricing-card__annual-detail">
-                cobrado como R$ 129/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 51</span>
+                cobrado como R$ 249/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 99</span>
               </p>
             </div>
           </div>
 
           <ul class="pricing-features" aria-label="Recursos do plano Plus">
-            <li>Até 10 equipamentos cadastrados</li>
+            <li>Até 25 equipamentos cadastrados</li>
             <li>Registros de serviço ilimitados</li>
             <li>Todo o histórico de manutenções</li>
-            <li>100 relatórios PDF/mês</li>
+            <li>100 relatórios PDF/mês <strong>sem marca d'água</strong></li>
+            <li>Assinatura digital do cliente no PDF</li>
             <li>50 envios via WhatsApp/mês</li>
             <li>Alertas de manutenção preventiva</li>
           </ul>
@@ -192,23 +194,24 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
           <div class="pricing-card__price-group">
             <p class="pricing-card__price pricing-card__price--pro" id="pro-price-monthly">
-              R$ 29 <span class="pricing-card__price-period">/ mês</span>
+              R$ 49 <span class="pricing-card__price-period">/ mês</span>
             </p>
             <div id="pro-price-annual" style="display:none">
               <p class="pricing-card__price pricing-card__price--pro">
-                R$ 20<span class="pricing-card__price-cents">,75</span> <span class="pricing-card__price-period">/ mês</span>
+                R$ 34<span class="pricing-card__price-cents">,92</span> <span class="pricing-card__price-period">/ mês</span>
               </p>
               <p class="pricing-card__annual-detail">
-                cobrado como R$ 249/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 99</span>
+                cobrado como R$ 419/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 169</span>
               </p>
             </div>
           </div>
 
           <ul class="pricing-features" aria-label="Recursos do plano Pro">
-            <li>Até 30 equipamentos cadastrados</li>
+            <li><strong>Equipamentos ilimitados</strong></li>
             <li>Registros de serviço ilimitados</li>
             <li>Todo o histórico de manutenções</li>
-            <li>Relatórios PDF <strong>ilimitados</strong></li>
+            <li>Relatórios PDF <strong>ilimitados</strong> sem marca d'água</li>
+            <li>Assinatura digital do cliente no PDF</li>
             <li>Envios de WhatsApp <strong>ilimitados</strong></li>
             <li>Agrupamento por setores</li>
             <li>Suporte prioritário</li>
@@ -277,8 +280,8 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
         <details class="pricing-faq__item">
           <summary>Qual a diferença entre Plus e Pro?</summary>
           <p>
-            <strong>Plus</strong> é o tier intermediário: até 10 equipamentos, 100 PDFs/mês e 50 envios de WhatsApp/mês — ideal pra técnico autônomo ou pequeno negócio.
-            <strong>Pro</strong> é ilimitado: até 30 equipamentos, PDFs e WhatsApp sem limite, agrupamento por setores e suporte prioritário — pensado pra empresas com operação maior.
+            <strong>Plus</strong> é o tier intermediário: até 25 equipamentos, 100 PDFs/mês sem marca d'água, assinatura digital do cliente e 50 envios de WhatsApp/mês — ideal pra técnico autônomo ou pequeno negócio.
+            <strong>Pro</strong> é ilimitado: equipamentos, PDFs e WhatsApp sem limite, agrupamento por setores e suporte prioritário — pensado pra empresas com operação maior.
           </p>
         </details>
 
@@ -309,7 +312,12 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
         <details class="pricing-faq__item">
           <summary>Como funciona o plano anual?</summary>
-          <p>Você paga o valor anual de uma vez (Plus R$ 129, Pro R$ 249) e economiza ~28% em relação ao mensal. Pode cancelar a qualquer momento — o reembolso proporcional é feito conforme a política do Stripe.</p>
+          <p>Você paga o valor anual de uma vez (Plus R$ 249, Pro R$ 419) e economiza ~28% em relação ao mensal. Pode cancelar a qualquer momento — o reembolso proporcional é feito conforme a política do Stripe.</p>
+        </details>
+
+        <details class="pricing-faq__item">
+          <summary>Já sou assinante — o reajuste de preços me afeta?</summary>
+          <p>Não. Assinaturas ativas continuam nos valores originais (Plus R$ 15/mês e Pro R$ 29/mês). Os novos valores (Plus R$ 29, Pro R$ 49) valem apenas pra novas contratações. Seu preço travado continua enquanto a assinatura estiver ativa.</p>
         </details>
       </section>
 

@@ -7,6 +7,7 @@ import { SupportFeedbackModal } from '../../components/supportFeedbackModal.js';
 import { Toast } from '../../../core/toast.js';
 import { Tour } from '../../components/tour.js';
 import { AuthScreen } from '../../components/authscreen.js';
+import { clearEditingState as clearEquipEditingState } from '../../views/equipamentos.js';
 
 let isHelpOpen = false;
 
@@ -33,8 +34,18 @@ export function bindNavigationHandlers() {
     });
   }
 
-  on('open-modal', (el) => Modal.open(el.dataset.id));
-  on('close-modal', (el) => Modal.close(el.dataset.id));
+  on('open-modal', (el) => {
+    const id = el.dataset.id;
+    // Ao abrir o modal de equipamento via "+ Novo", garante que não estamos em modo edição
+    if (id === 'modal-add-eq') clearEquipEditingState();
+    Modal.open(id);
+  });
+  on('close-modal', (el) => {
+    const id = el.dataset.id;
+    Modal.close(id);
+    // Ao fechar o modal de equipamento via Cancelar, reseta estado de edição
+    if (id === 'modal-add-eq') clearEquipEditingState();
+  });
   on('toggle-help-menu', () => {
     setHelpMenuState(!isHelpOpen);
   });
@@ -93,9 +104,11 @@ export function bindNavigationHandlers() {
     )
       ? el.dataset.upgradeSource
       : 'dashboard';
-    trackEvent('upgrade_cta_clicked', { source });
+    const rawHighlight = el?.dataset?.highlightPlan;
+    const highlightPlan = rawHighlight === 'plus' || rawHighlight === 'pro' ? rawHighlight : 'pro';
+    trackEvent('upgrade_cta_clicked', { source, highlight_plan: highlightPlan });
     const { goTo: dynamicGoTo } = await import('../../../core/router.js');
-    dynamicGoTo('pricing', { highlightPlan: 'pro' });
+    dynamicGoTo('pricing', { highlightPlan });
   });
   on('start-checkout', async (el, event) => {
     event?.preventDefault?.();

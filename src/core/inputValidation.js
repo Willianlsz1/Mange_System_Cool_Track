@@ -12,6 +12,12 @@ export const REGISTRO_FIELD_LIMITS = Object.freeze({
   obs: 2000,
   pecas: 800,
   tecnico: 120,
+  // Dados do cliente — opcionais. Vão para a capa do PDF (bloco CLIENTE/LOCAL)
+  // e para a página de assinatura (nome + documento).
+  clienteNome: 200,
+  clienteDocumento: 30,
+  localAtendimento: 300,
+  clienteContato: 120,
 });
 
 function normalizeInlineText(value) {
@@ -166,6 +172,37 @@ export function validateRegistroPayload(
     multiline: true,
   });
 
+  // Campos opcionais do cliente (capa do PDF + página de assinatura)
+  const clienteNome = validateTextField({
+    name: 'Nome do cliente',
+    value: payload?.clienteNome,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.clienteNome,
+  });
+  const clienteDocumento = validateTextField({
+    name: 'Documento do cliente',
+    value: payload?.clienteDocumento,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.clienteDocumento,
+  });
+  const localAtendimento = validateTextField({
+    name: 'Local do atendimento',
+    value: payload?.localAtendimento,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.localAtendimento,
+  });
+  const clienteContato = validateTextField({
+    name: 'Contato do cliente',
+    value: payload?.clienteContato,
+    required: false,
+    maxLength: REGISTRO_FIELD_LIMITS.clienteContato,
+  });
+
+  if (clienteNome.error) errors.push(clienteNome.error);
+  if (clienteDocumento.error) errors.push(clienteDocumento.error);
+  if (localAtendimento.error) errors.push(localAtendimento.error);
+  if (clienteContato.error) errors.push(clienteContato.error);
+
   if (!equipId) errors.push('Campo obrigatório: Equipamento.');
   if (equipId && !equipamentoIds.has(equipId))
     errors.push('Equipamento inválido para este registro.');
@@ -206,6 +243,10 @@ export function validateRegistroPayload(
       pecas: pecas.value,
       custoPecas: custoPecas.value,
       custoMaoObra: custoMaoObra.value,
+      clienteNome: clienteNome.value,
+      clienteDocumento: clienteDocumento.value,
+      localAtendimento: localAtendimento.value,
+      clienteContato: clienteContato.value,
     },
   };
 }

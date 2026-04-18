@@ -3082,7 +3082,28 @@ mark,
   margin-top: var(--space-4);
   padding-top: var(--space-3);
   border-top: 1px solid var(--border);
-  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.eq-modal-footer__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .eq-modal-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .eq-modal-footer__btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* ── WhatsApp button ── */
@@ -5874,9 +5895,6 @@ mark,
   background: var(--surface-3);
 }
 
-.sfm-contact-card--whatsapp:hover {
-  border-color: rgba(0, 200, 112, 0.4);
-}
 .sfm-contact-card--email:hover {
   border-color: var(--primary);
 }

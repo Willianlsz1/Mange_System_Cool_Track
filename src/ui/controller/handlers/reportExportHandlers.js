@@ -9,10 +9,10 @@ import { runAsyncAction } from '../../components/actionFeedback.js';
 import { ShareSuccessToast } from '../../components/shareSuccessToast.js';
 import { GuestConversionModal } from '../../components/guestConversionModal.js';
 import {
-  assertFeature,
-  FEATURE_PDF_EXPORT,
   getEffectivePlan,
   getPlanCodeForUserId,
+  PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
 } from '../../../core/subscriptionPlans.js';
 import { fetchMyProfileBilling } from '../../../core/monetization.js';
 import {
@@ -76,22 +76,7 @@ function bindPdfExport() {
         const planCode = getEffectivePlan(profile);
         trackEvent('pdf_export_attempted', { isGuest: false, plan: planCode });
 
-        // ── 1. Feature gate: Free bloqueado, Plus+Pro passam ────────────────
-        try {
-          assertFeature(profile, FEATURE_PDF_EXPORT);
-        } catch (accessError) {
-          trackEvent('pdf_export_blocked', { reason: 'feature_not_available' });
-          GuestConversionModal.open({
-            reason: 'premium_pdf',
-            source: 'pdf_export_premium',
-            title: 'Recurso disponível a partir do Plus',
-            message:
-              accessError?.message || 'A exportação em PDF está disponível a partir do plano Plus.',
-          });
-          return;
-        }
-
-        // ── 2. Quota mensal: Plus tem limite (100/mês), Pro é ilimitado ─────
+        // ── 1. Quota mensal: Free=5 (com marca d'água), Plus=100, Pro=ilimitado ─
         const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
         const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
         const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
@@ -104,23 +89,29 @@ function bindPdfExport() {
           })
         ) {
           trackEvent('pdf_export_blocked', { reason: 'limit_reached', plan: planCode });
+          const limitMessage =
+            planCode === PLAN_CODE_FREE
+              ? `Você atingiu ${pdfLimit} PDFs este mês no plano Free. Faça upgrade para Plus (100/mês, sem marca d'água) ou Pro (ilimitado).`
+              : planCode === PLAN_CODE_PLUS
+                ? `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`
+                : `Você atingiu o limite mensal de ${pdfLimit} PDFs.`;
           GuestConversionModal.open({
             reason: 'limit_pdf',
             source: 'pdf_export_limit',
             title: 'Limite mensal atingido',
-            message: `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`,
+            message: limitMessage,
           });
           return;
         }
 
-        // ── 3. Gera o PDF ─────────────────────────────────────────────────
-        const fileName = await PDFGenerator.generateMaintenanceReport(filters);
+        // ── 2. Gera o PDF (planCode controla marca d'água "CoolTrack Free") ──
+        const fileName = await PDFGenerator.generateMaintenanceReport(filters, { planCode });
         if (!fileName) {
           Toast.error('Erro ao gerar PDF.');
           return;
         }
 
-        // ── 4. Incrementa contagem só se o plano tem limite finito (Plus) ─
+        // ── 3. Incrementa contagem só se o plano tem limite finito (Free/Plus) ─
         if (Number.isFinite(pdfLimit)) {
           await incrementMonthlyUsage(user.id, USAGE_RESOURCE_PDF_EXPORT);
         }

@@ -33,7 +33,12 @@ describe('subscriptionPlans', () => {
 
     expect(getEffectivePlan({ is_dev: true })).toBe(PLAN_CODE_PRO);
     expect(getEffectivePlan({ plan: 'pro', subscription_status: 'active' })).toBe(PLAN_CODE_PRO);
+    // trialing é tratado como paid ativo (trial de checkout Stripe)
     expect(getEffectivePlan({ plan_code: 'pro', subscription_status: 'trialing' })).toBe(
+      PLAN_CODE_PRO,
+    );
+    // past_due / canceled / incomplete fazem degradar pra Free
+    expect(getEffectivePlan({ plan_code: 'pro', subscription_status: 'past_due' })).toBe(
       PLAN_CODE_FREE,
     );
     expect(getEffectivePlan({ plan: 'free', subscription_status: 'active' })).toBe(PLAN_CODE_FREE);
@@ -44,13 +49,15 @@ describe('subscriptionPlans', () => {
     const { assertProAccess, hasProAccess } = await loadSubscriptionPlans();
 
     expect(hasProAccess({ plan: 'pro', subscription_status: 'active' })).toBe(true);
-    expect(() => assertProAccess({ plan: 'pro', subscription_status: 'active' }, 'pdf_export')).not
-      .toThrow;
+    expect(() =>
+      assertProAccess({ plan: 'pro', subscription_status: 'active' }, 'premium_feature'),
+    ).not.toThrow();
 
     expect(hasProAccess({ plan: 'pro', subscription_status: 'past_due' })).toBe(false);
+    // Feature não mapeada → cai no fallback que exige Pro
     expect(() =>
-      assertProAccess({ plan: 'pro', subscription_status: 'past_due' }, 'pdf_export'),
-    ).toThrow(/exclusiva do plano Pro/i);
+      assertProAccess({ plan: 'pro', subscription_status: 'past_due' }, 'premium_feature'),
+    ).toThrow(/exclusivo do plano Pro/i);
   });
 
   it('enforces free equipment limit at 3 and keeps pro unlimited', async () => {
@@ -72,8 +79,17 @@ describe('subscriptionPlans', () => {
 
     expect(canCreateEquipment({ plan: 'pro', subscription_status: 'active' }, 20)).toMatchObject({
       allowed: true,
-      limit: 30,
+      limit: Number.POSITIVE_INFINITY,
       current: 20,
+      planCode: 'pro',
+    });
+
+    // Pro é ilimitado — mesmo com 10k equipamentos ainda libera cadastro
+    expect(
+      canCreateEquipment({ plan: 'pro', subscription_status: 'active' }, 10_000),
+    ).toMatchObject({
+      allowed: true,
+      limit: Number.POSITIVE_INFINITY,
       planCode: 'pro',
     });
   });

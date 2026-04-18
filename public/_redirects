@@ -1,0 +1,3 @@
+# SPA fallback — todas as rotas não-arquivo entregam index.html
+# Formato compatível com Netlify e Cloudflare Pages.
+/*    /index.html    200

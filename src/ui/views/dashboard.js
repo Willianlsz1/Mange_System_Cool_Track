@@ -705,7 +705,7 @@ export async function renderDashboard() {
     }
     upgradeCardHost.innerHTML = planContext.hasPro
       ? _renderProStatusCard()
-      : UpgradeNudge.renderDashboardCard();
+      : UpgradeNudge.renderDashboardCard({ planCode: planContext.planCode });
 
     if (!equipamentos.length) {
       bento.innerHTML = `<div class="dash-empty-shell">${emptyStateHtml({
@@ -815,7 +815,10 @@ export async function renderDashboard() {
       }
       inlineHintHost.innerHTML = planContext.hasPro
         ? ''
-        : UpgradeNudge.renderInlineHint('Exportar relatorio em lote');
+        : UpgradeNudge.renderInlineHint('Exportar relatorio em lote', {
+            planCode: planContext.planCode,
+            requiredPlan: 'plus',
+          });
     }
 
     const recentEl = Utils.getEl('dash-recentes');

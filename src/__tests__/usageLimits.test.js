@@ -31,8 +31,16 @@ describe('usageLimits', () => {
     const { getMonthlyLimitForPlan, hasReachedMonthlyLimit, USAGE_RESOURCE_PDF_EXPORT } =
       await loadUsageLimits();
 
-    expect(getMonthlyLimitForPlan('free', USAGE_RESOURCE_PDF_EXPORT)).toBe(10);
+    expect(getMonthlyLimitForPlan('free', USAGE_RESOURCE_PDF_EXPORT)).toBe(5);
+    expect(getMonthlyLimitForPlan('plus', USAGE_RESOURCE_PDF_EXPORT)).toBe(100);
     expect(getMonthlyLimitForPlan('pro', USAGE_RESOURCE_PDF_EXPORT)).toBe(Number.POSITIVE_INFINITY);
+    expect(
+      hasReachedMonthlyLimit({
+        planCode: 'free',
+        resource: 'pdf_export',
+        usedCount: 5,
+      }),
+    ).toBe(true);
     expect(
       hasReachedMonthlyLimit({
         planCode: 'free',

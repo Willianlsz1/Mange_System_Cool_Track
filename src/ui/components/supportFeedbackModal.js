@@ -2,21 +2,23 @@
  * SupportFeedbackModal — Modal de suporte e feedback do usuário.
  * Acessível via menu de ajuda (?) no header.
  *
- * Fluxo de envio:
+ * Aba Suporte: link direto para o e-mail do CoolTrack (mailto:).
+ * Aba Feedback — fluxo de envio:
  *  1. Salva no localStorage (histórico local, fallback offline)
  *  2. Insere na tabela `feedback` do Supabase (owner lê no Dashboard)
- *  3. Envia e-mail de notificação via EmailJS (requer configuração no .env)
+ *  3. Envia via EmailJS para o e-mail do CoolTrack (automático, silencioso)
+ *  4. Se EmailJS não estiver configurado ou falhar, abre `mailto:` com a
+ *     mensagem pré-preenchida — garante que o feedback chegue ao time.
  */
 
 import { Toast } from '../../core/toast.js';
 import { supabase } from '../../core/supabase.js';
-import { sendFeedbackEmail } from '../../core/emailNotification.js';
+import { buildFeedbackMailtoUrl, sendFeedbackEmail } from '../../core/emailNotification.js';
 
 const MODAL_ID = 'support-feedback-modal-overlay';
 const LS_KEY = 'cooltrack-feedback-history';
 
 const SUPPORT_EMAIL = 'suporte@cooltrackpro.com.br';
-const SUPPORT_WHATSAPP = '5531999999999'; // substitua pelo número real
 
 function saveToLocalStorage(rating, message) {
   try {
@@ -87,16 +89,6 @@ export const SupportFeedbackModal = {
           </div>
 
           <div class="sfm-contact-cards">
-            <a class="sfm-contact-card sfm-contact-card--whatsapp"
-               href="https://wa.me/${SUPPORT_WHATSAPP}?text=Ol%C3%A1%2C+preciso+de+ajuda+com+o+CoolTrack+Pro"
-               target="_blank" rel="noopener">
-              <span class="sfm-contact-card__icon">📱</span>
-              <div>
-                <div class="sfm-contact-card__title">WhatsApp</div>
-                <div class="sfm-contact-card__desc">Resposta mais rápida</div>
-              </div>
-              <span class="sfm-contact-card__arrow">→</span>
-            </a>
             <a class="sfm-contact-card sfm-contact-card--email"
                href="mailto:${SUPPORT_EMAIL}?subject=Suporte%20CoolTrack%20Pro"
                target="_blank" rel="noopener">
@@ -206,17 +198,46 @@ export const SupportFeedbackModal = {
       // 1. Salva localmente (síncrono, nunca falha)
       saveToLocalStorage(selectedRating, message);
 
-      // 2 + 3. Supabase e e-mail em paralelo (erros não bloqueiam o usuário)
-      Promise.allSettled([
-        saveToSupabase(selectedRating, message).then((userEmail) =>
-          sendFeedbackEmail({ rating: selectedRating, message, userEmail }),
-        ),
-      ]).catch(() => {
-        /* silencioso */
-      });
+      // 2. Persiste em Supabase e tenta enviar via EmailJS. Se EmailJS estiver
+      //    configurado, chega automaticamente no e-mail do CoolTrack.
+      //    Se não estiver, caímos para o fallback `mailto:` — abre o cliente
+      //    de e-mail do usuário já com assunto e corpo preenchidos, garantindo
+      //    que a mensagem chegue ao time mesmo sem backend de e-mail.
+      let userEmail = 'anônimo';
+      try {
+        userEmail = (await saveToSupabase(selectedRating, message)) || 'anônimo';
+      } catch (_err) {
+        /* Supabase offline ou sem sessão — segue o fluxo */
+      }
+
+      let delivered = false;
+      try {
+        delivered = await sendFeedbackEmail({
+          rating: selectedRating,
+          message,
+          userEmail,
+        });
+      } catch (_err) {
+        delivered = false;
+      }
 
       closeModal();
-      Toast.success('Obrigado pelo feedback! 🙏 Sua opinião é muito valiosa.');
+
+      if (delivered) {
+        Toast.success('Obrigado pelo feedback! 🙏 Sua opinião é muito valiosa.');
+      } else {
+        // Fallback: abre o cliente de e-mail do usuário pra enviar direto ao CoolTrack
+        const mailtoUrl = buildFeedbackMailtoUrl({
+          rating: selectedRating,
+          message,
+          userEmail,
+        });
+        Toast.info('Abrindo seu e-mail para concluir o envio ao CoolTrack…');
+        // Pequeno delay para o Toast renderizar antes do navegador focar o cliente de e-mail
+        setTimeout(() => {
+          window.location.href = mailtoUrl;
+        }, 150);
+      }
     });
 
     document.body.appendChild(overlay);

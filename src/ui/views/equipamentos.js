@@ -43,6 +43,25 @@ const CONDICAO_OBSERVADA = {
 const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
 const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'Alto risco' };
 
+// ── Edit mode tracking ─────────────────────────────────────────────────────
+// Quando preenchido, saveEquip() atualiza o equipamento existente em vez de criar um novo.
+let _editingEquipId = null;
+export function getEditingEquipId() {
+  return _editingEquipId;
+}
+export function clearEditingState() {
+  _editingEquipId = null;
+  const titleEl = Utils.getEl('modal-add-eq-title');
+  if (titleEl) titleEl.textContent = 'Qual equipamento você quer monitorar?';
+  const saveBtn = document.querySelector('[data-action="save-equip"]');
+  if (saveBtn) saveBtn.textContent = 'Cadastrar equipamento →';
+  const detailsPanel = Utils.getEl('eq-step-2');
+  if (detailsPanel) {
+    detailsPanel.style.display = '';
+    detailsPanel.setAttribute('aria-hidden', 'true');
+  }
+}
+
 export function equipCardHtml(eq, { showLocal = true } = {}) {
   const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
   const context = getEquipmentMaintenanceContext(eq, regsForEquip(eq.id));
@@ -492,10 +511,24 @@ export async function renderEquip(filtro = '', options = {}) {
   }
 
   const searchBar = Utils.getEl('equip-search-bar');
+  const { setores } = getState();
 
   if (isPro && _activeSectorId === null) {
-    // Vista PRO: grade de setores
-    renderSetorGrid();
+    // Pro COM setores → grade de setores (organização por grupo).
+    // Pro SEM setores ainda → lista flat igual Free, mas com CTA "+ Novo setor"
+    // na toolbar. O usuário escolhe quando começar a organizar por setor —
+    // a gente não bloqueia o acesso aos equipamentos só pra forçar a criação.
+    if (setores.length) {
+      renderSetorGrid();
+      return;
+    }
+
+    if (searchBar) searchBar.style.display = '';
+    _setToolbar({
+      title: 'Parque de Equipamentos',
+      extraBtn: `<button class="btn btn--outline btn--sm" data-action="open-setor-modal">+ Novo setor</button>`,
+    });
+    renderFlatList(filtro, options, null);
     return;
   }
 
@@ -612,28 +645,91 @@ export function assignEquipToSetor(equipId, setorId) {
   renderEquip(); // atualiza os cards de setor em background
 }
 
+export async function openEditEquip(id) {
+  const eq = findEquip(id);
+  if (!eq) return;
+
+  _editingEquipId = id;
+
+  // Pre-popula os campos do modal com os dados do equipamento
+  Utils.setVal('eq-nome', eq.nome || '');
+  Utils.setVal('eq-local', eq.local || '');
+  Utils.setVal('eq-tag', eq.tag || '');
+  Utils.setVal('eq-tipo', eq.tipo || 'Split Hi-Wall');
+  Utils.setVal('eq-fluido', eq.fluido || 'R-410A');
+  Utils.setVal('eq-modelo', eq.modelo || '');
+  Utils.setVal('eq-criticidade', eq.criticidade || 'media');
+  Utils.setVal('eq-prioridade', eq.prioridadeOperacional || 'normal');
+  Utils.setVal('eq-periodicidade', String(eq.periodicidadePreventivaDias || 90));
+
+  // Marca periodicidade como manual para não ser sobrescrita pelo auto-sugestão
+  const periodicidadeInput = Utils.getEl('eq-periodicidade');
+  if (periodicidadeInput) periodicidadeInput.dataset.manual = '1';
+
+  // Abre o painel de detalhes direto (pula o step 1 de escolha de tipo)
+  const detailsPanel = Utils.getEl('eq-step-2');
+  if (detailsPanel) {
+    detailsPanel.style.display = 'block';
+    detailsPanel.setAttribute('aria-hidden', 'false');
+  }
+
+  // Popula o select de setor (apenas Pro) e seleciona o atual
+  try {
+    const { fetchMyProfileBilling } = await import('../../core/monetization.js');
+    const { hasProAccess } = await import('../../core/subscriptionPlans.js');
+    const { profile } = await fetchMyProfileBilling();
+    populateSetorSelect(hasProAccess(profile));
+  } catch {
+    populateSetorSelect(false);
+  }
+  if (eq.setorId) Utils.setVal('eq-setor', eq.setorId);
+
+  // Atualiza textos do modal
+  const titleEl = Utils.getEl('modal-add-eq-title');
+  if (titleEl) titleEl.textContent = 'Editar equipamento';
+  const saveBtn = document.querySelector('[data-action="save-equip"]');
+  if (saveBtn) saveBtn.textContent = 'Salvar alterações →';
+
+  // Fecha o modal de detalhes e abre o de edição
+  try {
+    const { Modal: M } = await import('../../core/modal.js');
+    M.close('modal-eq-det');
+    M.open('modal-add-eq');
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.NETWORK_ERROR,
+      message: 'Não foi possível abrir o modal de edição.',
+      context: { action: 'equipamentos.openEditEquip', id },
+    });
+  }
+}
+
 export async function saveEquip() {
   const isGuest = isGuestMode();
   const { equipamentos } = getState();
-  const planLimit = await checkPlanLimit('equipamentos', equipamentos.length);
-  if (planLimit.blocked) {
-    trackEvent('limit_reached', {
-      resource: 'equipamentos',
-      current: planLimit.current,
-      limit: planLimit.limit,
-      planCode: planLimit.planCode,
-    });
-    if (planLimit.isGuest) {
-      // Usuário não logado — convite para criar conta
-      GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
-    } else if (planLimit.planCode === 'pro') {
-      // Usuário Pro que atingiu o teto de 30 equipamentos
-      GuestConversionModal.open({ reason: 'limit_pro_equipamentos', source: 'save-equip-pro' });
-    } else {
-      // Usuário Free logado — convite para fazer upgrade
-      GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
+
+  // Pula a verificação de limite quando está editando (não cria novo registro)
+  if (!_editingEquipId) {
+    const planLimit = await checkPlanLimit('equipamentos', equipamentos.length);
+    if (planLimit.blocked) {
+      trackEvent('limit_reached', {
+        resource: 'equipamentos',
+        current: planLimit.current,
+        limit: planLimit.limit,
+        planCode: planLimit.planCode,
+      });
+      if (planLimit.isGuest) {
+        // Usuário não logado — convite para criar conta
+        GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
+      } else if (planLimit.planCode === 'pro') {
+        // Usuário Pro que atingiu o teto de 30 equipamentos
+        GuestConversionModal.open({ reason: 'limit_pro_equipamentos', source: 'save-equip-pro' });
+      } else {
+        // Usuário Free logado — convite para fazer upgrade
+        GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
+      }
+      return false;
     }
-    return false;
   }
   const tipo = Utils.getVal('eq-tipo');
   const criticidade = Utils.getVal('eq-criticidade') || 'media';
@@ -645,7 +741,7 @@ export async function saveEquip() {
       tag: Utils.getVal('eq-tag'),
       modelo: Utils.getVal('eq-modelo'),
     },
-    { existingEquipamentos: equipamentos },
+    { existingEquipamentos: equipamentos, editingId: _editingEquipId },
   );
 
   if (!payloadValidation.valid) {
@@ -661,26 +757,55 @@ export async function saveEquip() {
 
   const setorId = Utils.getVal('eq-setor') || null;
 
-  setState((prev) => ({
-    ...prev,
-    equipamentos: [
-      ...prev.equipamentos,
-      {
-        id: Utils.uid(),
-        nome: payloadValidation.value.nome,
-        local: payloadValidation.value.local,
-        status: 'ok',
-        tag: payloadValidation.value.tag,
-        tipo,
-        modelo: payloadValidation.value.modelo,
-        fluido: Utils.getVal('eq-fluido'),
-        criticidade,
-        prioridadeOperacional,
-        periodicidadePreventivaDias,
-        setorId,
-      },
-    ],
-  }));
+  if (_editingEquipId) {
+    // ── UPDATE: atualiza equipamento existente ──────────────────────────────
+    const editingId = _editingEquipId;
+    setState((prev) => ({
+      ...prev,
+      equipamentos: prev.equipamentos.map((e) =>
+        e.id === editingId
+          ? {
+              ...e,
+              nome: payloadValidation.value.nome,
+              local: payloadValidation.value.local,
+              tag: payloadValidation.value.tag,
+              tipo,
+              modelo: payloadValidation.value.modelo,
+              fluido: Utils.getVal('eq-fluido'),
+              criticidade,
+              prioridadeOperacional,
+              periodicidadePreventivaDias,
+              setorId,
+            }
+          : e,
+      ),
+    }));
+  } else {
+    // ── CREATE: novo equipamento ────────────────────────────────────────────
+    setState((prev) => ({
+      ...prev,
+      equipamentos: [
+        ...prev.equipamentos,
+        {
+          id: Utils.uid(),
+          nome: payloadValidation.value.nome,
+          local: payloadValidation.value.local,
+          status: 'ok',
+          tag: payloadValidation.value.tag,
+          tipo,
+          modelo: payloadValidation.value.modelo,
+          fluido: Utils.getVal('eq-fluido'),
+          criticidade,
+          prioridadeOperacional,
+          periodicidadePreventivaDias,
+          setorId,
+        },
+      ],
+    }));
+  }
+
+  const wasEditing = Boolean(_editingEquipId);
+
   try {
     const { Modal: M } = await import('../../core/modal.js');
     M.close('modal-add-eq');
@@ -702,6 +827,9 @@ export async function saveEquip() {
   const periodicidadeInput = Utils.getEl('eq-periodicidade');
   if (periodicidadeInput) periodicidadeInput.dataset.manual = '0';
 
+  // Reset do estado de edição e UI do modal
+  clearEditingState();
+
   OnboardingBanner.remove();
   try {
     const { renderDashboard } = await import('./dashboard.js');
@@ -716,9 +844,9 @@ export async function saveEquip() {
   }
   renderEquip();
   updateHeader();
-  Toast.success('Equipamento cadastrado.');
+  Toast.success(wasEditing ? 'Equipamento atualizado.' : 'Equipamento cadastrado.');
 
-  if (isGuest) {
+  if (isGuest && !wasEditing) {
     GuestConversionModal.open({ reason: 'save_attempt', source: 'save-equip' });
   }
 
@@ -926,8 +1054,15 @@ export async function viewEquip(id) {
 
       <!-- ── Footer ── -->
       <div class="eq-modal-footer">
-        <button class="eq-delete-link" data-action="delete-equip" data-id="${safeId}">
-          <svg class="eq-delete-link__icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button class="btn btn--outline btn--sm eq-modal-footer__btn" data-action="edit-equip" data-id="${safeId}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Editar identificação
+        </button>
+        <button class="btn btn--danger btn--sm eq-modal-footer__btn" data-action="delete-equip" data-id="${safeId}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
             <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
           </svg>

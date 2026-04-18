@@ -28,20 +28,55 @@ export function roundRect(doc, x, y, w, h, r, color) {
   doc.roundedRect(x, y, w, h, r, r, 'FD');
 }
 
-export function drawSignaturePageHeader(doc, pageWidth, margin) {
-  fillRect(doc, 0, 0, pageWidth, 18, PDF_COLORS.bg2);
-  fillRect(doc, 0, 0, pageWidth, 3, PDF_COLORS.primary);
-  txt(doc, 'COOLTRACK PRO', margin + 2, 8, {
-    size: 7,
-    style: 'bold',
-    color: PDF_COLORS.primary,
-  });
-  txt(doc, 'COMPROVANTE DE SERVIÇO', margin + 40, 8, {
-    size: 7,
-    style: 'bold',
-    color: PDF_COLORS.text,
-  });
-  accentLine(doc, 0, 18, pageWidth);
+// Marca d'água diagonal aplicada em todas as páginas. Usada no plano Free
+// para que clientes do técnico vejam "CoolTrack Free" e descubram o produto.
+//
+// Implementação em malha: o texto se repete em diagonal por toda a página com
+// opacidade baixa. Esse é o padrão de documentos "SAMPLE"/"DRAFT" em escritórios
+// jurídicos e contábeis — diluído o bastante pra não obscurecer dado algum.
+export function drawWatermarkAllPages(doc, pageWidth, pageHeight, options = {}) {
+  const text = options.text || 'COOLTRACK FREE';
+  const opacity = typeof options.opacity === 'number' ? options.opacity : 0.08;
+  const angle = typeof options.angle === 'number' ? options.angle : -30;
+  const fontSize = typeof options.fontSize === 'number' ? options.fontSize : 22;
+  const color = options.color || PDF_COLORS.primary;
+
+  // Espaçamento da malha (mm). Menor = mais denso; ajuste equilibra saturação
+  // com densidade visual pra não parecer texto no meio da página.
+  const stepX = typeof options.stepX === 'number' ? options.stepX : 70;
+  const stepY = typeof options.stepY === 'number' ? options.stepY : 40;
+
+  const totalPages = doc.internal.getNumberOfPages();
+  const supportsGState = typeof doc.GState === 'function' && typeof doc.setGState === 'function';
+
+  for (let i = 1; i <= totalPages; i += 1) {
+    doc.setPage(i);
+
+    if (supportsGState) {
+      const gs = doc.GState({ opacity });
+      doc.setGState(gs);
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(fontSize);
+    doc.setTextColor(...color);
+
+    // Malha: começa fora da página (negativo) pra garantir cobertura nas bordas
+    // mesmo com rotação diagonal.
+    for (let y = -stepY; y <= pageHeight + stepY; y += stepY) {
+      // Linhas alternadas em offset horizontal (padrão "tijolo") evita alinhamento
+      // rígido e melhora a aparência de textura.
+      const rowOffset = (Math.round(y / stepY) % 2) * (stepX / 2);
+      for (let x = -stepX; x <= pageWidth + stepX; x += stepX) {
+        doc.text(text, x + rowOffset, y, { align: 'center', angle });
+      }
+    }
+
+    if (supportsGState) {
+      const gsReset = doc.GState({ opacity: 1 });
+      doc.setGState(gsReset);
+    }
+  }
 }
 
 export function getSignatureImagePayload(signatureData) {

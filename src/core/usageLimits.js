@@ -12,12 +12,13 @@ export const USAGE_RESOURCE_WHATSAPP_SHARE = 'whatsapp_share';
 const VALID_RESOURCES = new Set([USAGE_RESOURCE_PDF_EXPORT, USAGE_RESOURCE_WHATSAPP_SHARE]);
 
 // ── Limites mensais por plano ──────────────────────────────────────────────
-// Free: PDF bloqueado por feature gate (assertFeature), WhatsApp com limite baixo.
-// Plus: cotas generosas pra uso individual/pequeno negócio.
-// Pro: ilimitado em tudo.
+// Free: 5 PDFs/mês COM marca d'água "CoolTrack Free" (conversão orgânica B2B),
+//       WhatsApp com limite baixo.
+// Plus: cotas generosas pra uso individual/pequeno negócio, PDF sem marca.
+// Pro:  ilimitado em tudo.
 const MONTHLY_LIMITS = {
   [PLAN_CODE_FREE]: {
-    [USAGE_RESOURCE_PDF_EXPORT]: 0,
+    [USAGE_RESOURCE_PDF_EXPORT]: 5,
     [USAGE_RESOURCE_WHATSAPP_SHARE]: 10,
   },
   [PLAN_CODE_PLUS]: {

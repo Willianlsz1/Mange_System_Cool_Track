@@ -18,13 +18,46 @@
 
 const EMAILJS_API = 'https://api.emailjs.com/api/v1.0/email/send';
 
+// Destino único: todo feedback/suporte vai para este endereço.
+export const COOLTRACK_SUPPORT_EMAIL = 'suporte@cooltrackpro.com.br';
+
 function buildStars(rating) {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating);
 }
 
+function formatDate() {
+  return new Date().toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 /**
+ * Monta o corpo em texto puro do e-mail de feedback. Usado tanto para registrar
+ * log como para alimentar o fallback `mailto:` quando o EmailJS não responder.
+ */
+export function buildFeedbackEmailBody({ rating, message, userEmail = 'anônimo' }) {
+  return [
+    `App: CoolTrack PRO`,
+    `Data: ${formatDate()}`,
+    `Nota: ${rating}/5 ${buildStars(rating)}`,
+    `Usuário: ${userEmail}`,
+    ``,
+    `Mensagem:`,
+    message || '(sem mensagem)',
+  ].join('\n');
+}
+
+/**
+ * Envia e-mail de feedback via EmailJS (quando configurado).
+ * Retorna `true` se o e-mail foi enviado com sucesso, `false` caso contrário —
+ * o chamador pode usar esse retorno para acionar o fallback `mailto:`.
+ *
  * @param {{ rating: number, message: string, userEmail?: string }} opts
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>}
  */
 export async function sendFeedbackEmail({ rating, message, userEmail = 'anônimo' }) {
   const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
@@ -40,7 +73,7 @@ export async function sendFeedbackEmail({ rating, message, userEmail = 'anônimo
         userEmail,
       });
     }
-    return;
+    return false;
   }
 
   const body = {
@@ -53,28 +86,41 @@ export async function sendFeedbackEmail({ rating, message, userEmail = 'anônimo
       stars: buildStars(rating),
       message: message || '(sem mensagem)',
       user_email: userEmail,
-      date: new Date().toLocaleString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      date: formatDate(),
     },
   };
 
-  const res = await fetch(EMAILJS_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  try {
+    const res = await fetch(EMAILJS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
 
-  if (!res.ok) {
-    // Não bloqueia o fluxo do usuário — apenas loga o erro
-    console.warn(
-      '[EmailNotification] Falha ao enviar e-mail via EmailJS:',
-      res.status,
-      await res.text(),
-    );
+    if (!res.ok) {
+      // Não bloqueia o fluxo do usuário — apenas loga o erro
+      console.warn(
+        '[EmailNotification] Falha ao enviar e-mail via EmailJS:',
+        res.status,
+        await res.text(),
+      );
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[EmailNotification] Erro de rede ao enviar feedback:', err);
+    return false;
   }
+}
+
+/**
+ * Monta a URL `mailto:` com o feedback pré-preenchido. Usado como fallback
+ * quando o EmailJS não está configurado ou falha — garante que a mensagem
+ * do usuário chegue ao e-mail do CoolTrack mesmo sem backend de e-mail.
+ */
+export function buildFeedbackMailtoUrl({ rating, message, userEmail = 'anônimo' }) {
+  const subject = `Feedback CoolTrack Pro — ${rating}/5`;
+  const body = buildFeedbackEmailBody({ rating, message, userEmail });
+  const qs = new URLSearchParams({ subject, body }).toString();
+  return `mailto:${COOLTRACK_SUPPORT_EMAIL}?${qs}`;
 }

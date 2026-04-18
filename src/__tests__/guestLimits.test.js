@@ -69,7 +69,7 @@ describe('guestLimits', () => {
 
     expect(result.blocked).toBe(false);
     expect(result.planCode).toBe('pro');
-    expect(result.limit).toBe(30);
+    expect(result.limit).toBe(Number.POSITIVE_INFINITY);
   });
 
   it('treats is_dev users as pro even without active subscription', async () => {
@@ -86,10 +86,10 @@ describe('guestLimits', () => {
     expect(result.planCode).toBe('pro');
   });
 
-  it('keeps pro without active status on free rule fallback', async () => {
+  it('degrada pro com status past_due pra regras do Free (proteção contra inadimplência)', async () => {
     mockState.equipamentos = Array.from({ length: 3 }, (_, i) => ({ id: `e-${i}` }));
     maybeSingle.mockResolvedValue({
-      data: { plan: 'pro', subscription_status: 'trialing', is_dev: false },
+      data: { plan: 'pro', subscription_status: 'past_due', is_dev: false },
       error: null,
     });
 

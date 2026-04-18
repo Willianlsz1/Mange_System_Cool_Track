@@ -6,6 +6,7 @@ import {
   saveEquip,
   viewEquip,
   deleteEquip,
+  openEditEquip,
   saveSetor,
   deleteSetor,
   setActiveSector,
@@ -42,6 +43,18 @@ export function bindEquipmentHandlers() {
         code: ErrorCodes.NETWORK_ERROR,
         message: 'Não foi possível abrir o equipamento selecionado.',
         context: { action: 'controller.view-equip', id: el.dataset.id },
+      });
+    }
+  });
+
+  on('edit-equip', async (el) => {
+    try {
+      await openEditEquip(el.dataset.id);
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: 'Não foi possível abrir a edição do equipamento.',
+        context: { action: 'controller.edit-equip', id: el.dataset.id },
       });
     }
   });
