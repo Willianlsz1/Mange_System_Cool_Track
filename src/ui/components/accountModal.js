@@ -1,7 +1,6 @@
 import { Profile } from '../../features/profile.js';
 import {
   getEffectivePlan,
-  PLAN_CODE_FREE,
   PLAN_CODE_PLUS,
   PLAN_CODE_PRO,
 } from '../../core/subscriptionPlans.js';
