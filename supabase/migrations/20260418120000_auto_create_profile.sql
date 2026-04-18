@@ -7,6 +7,22 @@
 -- SECURITY DEFINER roda a função com privilégios do owner (postgres),
 -- ignorando RLS. Seguro porque a função só insere com id do próprio user.
 
+-- ------------------------------------------------------------------
+-- Sincroniza colunas de profiles que existem em produção mas nunca
+-- foram capturadas em migration (criadas via SQL Editor antes do
+-- versionamento). Necessário pra CI rodar sem quebrar na shadow DB,
+-- que só tem as colunas criadas em 20260411_security_subscription_usage.sql.
+-- Em produção, vira no-op (IF NOT EXISTS).
+-- ------------------------------------------------------------------
+alter table public.profiles
+  add column if not exists plan text not null default 'free';
+
+alter table public.profiles
+  add column if not exists subscription_status text not null default 'inactive';
+
+alter table public.profiles
+  add column if not exists is_dev boolean not null default false;
+
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
