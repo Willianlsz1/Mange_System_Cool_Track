@@ -112,7 +112,9 @@ export function bindNavigationHandlers() {
   });
   on('start-checkout', async (el, event) => {
     event?.preventDefault?.();
-    const plan = el?.dataset?.plan === 'pro_annual' ? 'pro_annual' : 'pro';
+    const ALLOWED_PLANS = ['plus', 'plus_annual', 'pro', 'pro_annual'];
+    const rawPlan = el?.dataset?.plan;
+    const plan = ALLOWED_PLANS.includes(rawPlan) ? rawPlan : 'pro';
     const source = el?.dataset?.upgradeSource || 'pricing';
     trackEvent('checkout_start_clicked', { source, plan });
 
