@@ -24,7 +24,6 @@ async function deleteAllFromTable(table, userId) {
   const { error } = await supabase.from(table).delete().eq('user_id', userId);
   if (error) {
     // Alguns ambientes podem não ter `usage_monthly` ainda; loga mas não quebra
-    // eslint-disable-next-line no-console
     console.warn(`[DevWipe] erro ao limpar ${table}:`, error.message);
     return false;
   }
@@ -80,14 +79,12 @@ export async function wipeAllUserData() {
 
     const failures = results.filter((r) => r.status === 'rejected');
     if (failures.length) {
-      // eslint-disable-next-line no-console
       console.warn('[DevWipe] algumas tabelas falharam:', failures);
     }
 
     clearLocalData();
     return { ok: true, localOnly: false };
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('[DevWipe] falha:', error);
     return { ok: false, error: error?.message || 'unknown' };
   }

@@ -218,7 +218,7 @@ export const SupportFeedbackModal = {
           userEmail,
         });
       } catch (_err) {
-        delivered = false;
+        // `delivered` já é `false` — cai no fallback mailto
       }
 
       closeModal();

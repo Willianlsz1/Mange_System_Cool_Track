@@ -127,7 +127,6 @@ async function drawServiceDetails(doc, pageWidth, margin, startY, registro) {
 
 // Calcula altura do bloco de detalhes para reservar espaço antes da tabela desenhar.
 function estimateDetailsHeight(doc, pageWidth, margin, registro) {
-  const innerX = margin + 4;
   const maxW = pageWidth - margin * 2 - 8;
   let h = 2;
 
