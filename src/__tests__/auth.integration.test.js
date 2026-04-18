@@ -42,19 +42,24 @@ describe('Auth integration wrapper', () => {
     history.replaceState(null, '', '/');
   });
 
-  it('handles signUp happy path and profile creation', async () => {
+  it('handles signUp happy path delegating profile creation to DB trigger', async () => {
     const { Auth, supabaseMock } = await loadAuthModule();
     supabaseMock.auth.signUp.mockResolvedValue({ data: { user: { id: 'new-1' } }, error: null });
 
     const user = await Auth.signUp('new@user.com', 'secret123', 'Novo Usuário');
 
     expect(user).toEqual({ id: 'new-1' });
+    // Agora o nome vai via raw_user_meta_data; o trigger on_auth_user_created
+    // cria o profile no banco, então não fazemos mais INSERT manual aqui.
     expect(supabaseMock.auth.signUp).toHaveBeenCalledWith({
       email: 'new@user.com',
       password: 'secret123',
+      options: {
+        data: { nome: 'Novo Usuário' },
+      },
     });
-    expect(supabaseMock.from).toHaveBeenCalledWith('profiles');
-    expect(supabaseMock.profilesInsert).toHaveBeenCalledWith({ id: 'new-1', nome: 'Novo Usuário' });
+    expect(supabaseMock.from).not.toHaveBeenCalledWith('profiles');
+    expect(supabaseMock.profilesInsert).not.toHaveBeenCalled();
   });
 
   it('returns current user from session', async () => {
