@@ -98,7 +98,17 @@ export const Auth = {
 
   async signUp(email, password, nome) {
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      // Passa o nome via raw_user_meta_data; o trigger on_auth_user_created
+      // no banco lê dele pra criar o profile. Antes a gente fazia INSERT
+      // manual aqui depois do signUp — mas com o trigger ativo isso dá
+      // unique violation. O trigger é a fonte única da verdade agora.
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { nome },
+        },
+      });
       if (error) {
         handleError(
           new AppError('Não foi possível criar sua conta.', ErrorCodes.AUTH_FAILED, 'warning', {
@@ -109,12 +119,6 @@ export const Auth = {
         return null;
       }
 
-      if (data.user) {
-        await supabase.from('profiles').insert({
-          id: data.user.id,
-          nome,
-        });
-      }
       return data.user;
     } catch (error) {
       handleError(error, {
