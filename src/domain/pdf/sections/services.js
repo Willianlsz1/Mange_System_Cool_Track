@@ -46,6 +46,41 @@ function getImageFormat(dataUrl) {
   return formatRaw.toUpperCase();
 }
 
+// Carrega a imagem para descobrir as dimensões naturais. Precisamos disso
+// para preservar a proporção ao desenhar dentro do box do PDF — sem isso
+// fotos 4:3 (1200x900) ficam esticadas como panorama dentro do box 84x20mm.
+function loadImageDimensions(dataUrl) {
+  return new Promise((resolve) => {
+    if (typeof Image === 'undefined') {
+      resolve(null);
+      return;
+    }
+    const img = new Image();
+    img.onload = () =>
+      resolve({
+        width: img.naturalWidth || img.width || 0,
+        height: img.naturalHeight || img.height || 0,
+      });
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
+// Centraliza a imagem no box preservando a proporção (contain).
+function fitImageInBox(imgDims, boxWidth, boxHeight) {
+  if (!imgDims || imgDims.width <= 0 || imgDims.height <= 0) {
+    return { drawW: boxWidth, drawH: boxHeight, offsetX: 0, offsetY: 0 };
+  }
+  const boxRatio = boxWidth / boxHeight;
+  const imgRatio = imgDims.width / imgDims.height;
+  if (imgRatio > boxRatio) {
+    const drawH = boxWidth / imgRatio;
+    return { drawW: boxWidth, drawH, offsetX: 0, offsetY: (boxHeight - drawH) / 2 };
+  }
+  const drawW = boxHeight * imgRatio;
+  return { drawW, drawH: boxHeight, offsetX: (boxWidth - drawW) / 2, offsetY: 0 };
+}
+
 // Desenha observação + materiais + custo + fotos de um serviço específico
 // abaixo da linha da tabela. Retorna a altura usada.
 async function drawServiceDetails(doc, pageWidth, margin, startY, registro) {
@@ -95,7 +130,7 @@ async function drawServiceDetails(doc, pageWidth, margin, startY, registro) {
     y += 3;
 
     const photoW = (maxW - 4) / 2;
-    const photoH = 22;
+    const photoH = 55; // altura generosa para caber 4:3 sem esticar
     for (let i = 0; i < photos.length; i += 1) {
       const row = Math.floor(i / 2);
       const col = i % 2;
@@ -109,7 +144,11 @@ async function drawServiceDetails(doc, pageWidth, margin, startY, registro) {
         const imageData = await resolvePhotoDataUrlForPdf(photos[i]);
         if (!imageData) throw new Error('Foto indisponível');
         const format = getImageFormat(imageData);
-        doc.addImage(imageData, format, px + 1, py + 1, photoW - 2, photoH - 2);
+        const imgDims = await loadImageDimensions(imageData);
+        const boxInnerW = photoW - 2;
+        const boxInnerH = photoH - 2;
+        const { drawW, drawH, offsetX, offsetY } = fitImageInBox(imgDims, boxInnerW, boxInnerH);
+        doc.addImage(imageData, format, px + 1 + offsetX, py + 1 + offsetY, drawW, drawH);
       } catch (_err) {
         txt(doc, 'Foto indisponível', px + photoW / 2, py + photoH / 2 + 1, {
           size: 7,
@@ -143,7 +182,11 @@ function estimateDetailsHeight(doc, pageWidth, margin, registro) {
   const photos = getRecordPhotos(registro);
   if (photos.length) {
     h += 3; // label
-    h += Math.ceil(photos.length / 2) * 25 + 2;
+    // 55mm (photoH) + 3mm (gap) = 58mm por linha de fotos.
+    // Precisa bater com o photoH usado em drawServiceDetails — senão o
+    // espaço reservado via minCellHeight sai diferente do desenho e o
+    // layout perde alinhamento.
+    h += Math.ceil(photos.length / 2) * 58 + 2;
   }
 
   // Linha separadora abaixo do bloco
@@ -252,10 +295,21 @@ export async function drawServices(
         const row = body[data.row.index];
         if (row?.statusColor) data.cell.styles.textColor = row.statusColor;
       }
-      // Reserva altura extra na linha para o bloco de detalhes
+      // Reserva altura extra na linha para o bloco de detalhes.
+      //
+      // IMPORTANTE: durante didParseCell o autoTable AINDA não calculou
+      // data.cell.height — ele vem undefined. Usar Math.max(undefined, 6)
+      // produz NaN e a linha nunca infla, fazendo com que o cálculo de
+      // detailY no didDrawRow caia fora da área da linha e o bloco de
+      // observação/materiais/fotos seja desenhado sobre o header ou fora
+      // da página. Usar um baseHeight fixo conservador (consistente com
+      // uma linha de texto 8pt + cellPadding) resolve.
       if (data.section === 'body' && data.column.index === 0) {
         const extra = rowDetails[data.row.index]?.height || 0;
-        if (extra > 2) data.cell.styles.minCellHeight = Math.max(data.cell.height, 6) + extra;
+        if (extra > 2) {
+          const baseRowHeight = 7; // 1 linha de 8pt + cellPadding 2.5*2
+          data.cell.styles.minCellHeight = baseRowHeight + extra;
+        }
       }
     },
     didDrawRow(data) {
