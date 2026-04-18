@@ -84,6 +84,10 @@ function fitImageInBox(imgDims, boxWidth, boxHeight) {
 // Desenha observação + materiais + custo + fotos de um serviço específico
 // abaixo da linha da tabela. Retorna a altura usada.
 async function drawServiceDetails(doc, pageWidth, margin, startY, registro) {
+  // Guarda: se startY for NaN/undefined (ex: data.row.y em v5 do autoTable
+  // não existe), evita explodir dentro de jsPDF.text com mensagem vaga.
+  if (!Number.isFinite(startY)) return 0;
+
   const innerX = margin + 4;
   const maxW = pageWidth - margin * 2 - 8;
   let y = startY + 2;
@@ -246,14 +250,51 @@ export async function drawServices(
     };
   });
 
+  // Larguras efetivas de cada coluna (em mm). O bloco precisa bater com
+  // `columnStyles` abaixo — uso aqui pra estimar quebra de linha por coluna
+  // e compor a altura natural da linha via splitTextToSize.
+  const COL_WIDTHS_MM = [26, 50, 24, 28, 22];
+  const statusWidth = pageWidth - margin * 2 - COL_WIDTHS_MM.reduce((a, b) => a + b, 0);
+  const columnWidths = [...COL_WIDTHS_MM, statusWidth];
+
+  // Calcula a altura NATURAL de uma linha da tabela, considerando quebra de
+  // texto em cada célula. Precisamos disso pra:
+  //   (a) dimensionar minCellHeight = natural + extra (detalhes) sem que os
+  //       detalhes fiquem sobrepostos ao texto padrão da linha, e
+  //   (b) posicionar detailY = row.y + naturalHeight, garantindo que os
+  //       detalhes começam LOGO ABAIXO do último baseline da linha.
+  function computeRowBaseHeight(bodyRow) {
+    const texts = [
+      bodyRow.data,
+      bodyRow.equip,
+      bodyRow.tipo,
+      bodyRow.tecnico,
+      bodyRow.custo,
+      bodyRow.status,
+    ];
+    const prevSize = doc.internal.getFontSize();
+    doc.setFontSize(8); // mesmo fontSize do body no autoTable
+    let maxLines = 1;
+    for (let i = 0; i < texts.length; i += 1) {
+      const innerMm = Math.max(columnWidths[i] - 5, 5); // -5 = cellPadding 2.5 de cada lado
+      const lines = doc.splitTextToSize(String(texts[i] || ''), innerMm);
+      if (lines.length > maxLines) maxLines = lines.length;
+    }
+    doc.setFontSize(prevSize);
+    // 8pt ~= 2.82mm; linha ~4mm com espaçamento; +5mm de padding vertical
+    return maxLines * 4 + 5;
+  }
+
   // autoTable não consegue inserir linhas filhas com altura dinâmica
   // assincronamente (imagens). Solução: desenha tabela primeiro sem detalhes,
   // depois, pra cada row com detalhes, reserva espaço via `minCellHeight` na
-  // coluna 1 (equipamento) usando estimateDetailsHeight — e no didDrawRow
-  // guarda coordenadas para pintar detalhes depois de forma async.
+  // coluna 1 (equipamento) usando estimateDetailsHeight — e no didDrawCell
+  // (última coluna) guarda coordenadas para pintar detalhes depois de forma
+  // async.
   const rowDetails = body.map((r) => ({
     registro: r._registro,
     height: estimateDetailsHeight(doc, pageWidth, margin, r._registro),
+    baseHeight: computeRowBaseHeight(r),
   }));
 
   const drawCoords = []; // { pageNumber, y, rowIndex }
@@ -297,31 +338,46 @@ export async function drawServices(
       }
       // Reserva altura extra na linha para o bloco de detalhes.
       //
-      // IMPORTANTE: durante didParseCell o autoTable AINDA não calculou
-      // data.cell.height — ele vem undefined. Usar Math.max(undefined, 6)
-      // produz NaN e a linha nunca infla, fazendo com que o cálculo de
-      // detailY no didDrawRow caia fora da área da linha e o bloco de
-      // observação/materiais/fotos seja desenhado sobre o header ou fora
-      // da página. Usar um baseHeight fixo conservador (consistente com
-      // uma linha de texto 8pt + cellPadding) resolve.
+      // baseHeight é calculado por `computeRowBaseHeight` usando
+      // splitTextToSize em cada coluna (ver acima). Isso garante que a
+      // inflação via minCellHeight comporta o texto natural da linha sem
+      // que os detalhes fiquem sobrepostos a "07:25" ou "Funcionando
+      // normalmente" quando as células naturalmente precisam de 2 linhas.
       if (data.section === 'body' && data.column.index === 0) {
-        const extra = rowDetails[data.row.index]?.height || 0;
+        const entry = rowDetails[data.row.index];
+        const extra = entry?.height || 0;
         if (extra > 2) {
-          const baseRowHeight = 7; // 1 linha de 8pt + cellPadding 2.5*2
+          const baseRowHeight = entry?.baseHeight || 9;
           data.cell.styles.minCellHeight = baseRowHeight + extra;
         }
       }
     },
-    didDrawRow(data) {
+    // IMPORTANTE: jspdf-autotable v5 NÃO expõe um hook `didDrawRow`, e a
+    // classe Row da v5 não tem `y` — só `Cell` tem x/y/height (ver
+    // dist/index.d.ts do pacote). API disponível: didParseCell |
+    // willDrawCell | didDrawCell | willDrawPage | didDrawPage.
+    //
+    // Para saber quando uma linha terminou de ser desenhada usamos
+    // didDrawCell filtrando pela ÚLTIMA coluna (index 5 = Status). Nesse
+    // ponto a célula já foi pintada e `data.cell.y + data.cell.height` dá
+    // o bottom da linha — todas as células compartilham a mesma altura
+    // final por causa do minCellHeight aplicado em didParseCell.
+    didDrawCell(data) {
       if (data.section !== 'body') return;
-      const extra = rowDetails[data.row.index]?.height || 0;
+      if (data.column.index !== 5) return; // dispara 1 vez por linha
+      const entry = rowDetails[data.row.index];
+      const extra = entry?.height || 0;
       if (extra <= 2) return;
 
-      // Coordenada do ponto onde começa o bloco de detalhes (logo após a linha
-      // da tabela). Como a célula foi inflada via minCellHeight, os detalhes
-      // ficam dentro do retângulo da linha.
-      const rowBottom = data.row.y + data.row.height;
-      const detailY = rowBottom - extra; // topo do espaço extra reservado
+      const cellY = Number(data.cell?.y);
+      if (!Number.isFinite(cellY)) return;
+
+      // detailY = topo da célula + altura natural da linha. Assim os
+      // detalhes começam LOGO ABAIXO do último baseline do texto
+      // padrão (evita sobrepor "07:25" da coluna Data ou "Funcionando
+      // normalmente" da coluna Status com a 1a linha de obs).
+      const baseHeight = entry?.baseHeight || 9;
+      const detailY = cellY + baseHeight;
       drawCoords.push({
         pageNumber: doc.internal.getCurrentPageInfo().pageNumber,
         y: detailY,
