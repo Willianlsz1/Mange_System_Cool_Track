@@ -1,4 +1,4 @@
-import { PLAN_CODE_FREE, PLAN_CODE_PRO } from '../../core/subscriptionPlans.js';
+import { PLAN_CODE_FREE, PLAN_CODE_PLUS, PLAN_CODE_PRO } from '../../core/subscriptionPlans.js';
 import { getState } from '../../core/state.js';
 
 const FREE_PLAN_EQUIP_LIMIT = 3;
@@ -10,7 +10,10 @@ function clampPercent(value, total) {
 }
 
 function normalizePlanCode(planCode) {
-  return String(planCode || '').toLowerCase() === PLAN_CODE_PRO ? PLAN_CODE_PRO : PLAN_CODE_FREE;
+  const lower = String(planCode || '').toLowerCase();
+  if (lower === PLAN_CODE_PRO) return PLAN_CODE_PRO;
+  if (lower === PLAN_CODE_PLUS) return PLAN_CODE_PLUS;
+  return PLAN_CODE_FREE;
 }
 
 function countReportsThisMonth(registros = []) {
@@ -48,9 +51,13 @@ function getUsageState(equipmentCount, reportsThisMonth) {
   };
 }
 
-function renderProMeter(equipmentCount, reportsThisMonth) {
+function renderPaidMeter(
+  equipmentCount,
+  reportsThisMonth,
+  { planLabel = 'Pro', planCopy = 'Recursos premium e limites expandidos liberados.' } = {},
+) {
   return `
-    <section class="usage-meter usage-meter--pro" aria-label="Consumo do plano Pro">
+    <section class="usage-meter usage-meter--pro" aria-label="Consumo do plano ${planLabel}">
       <style>
         .usage-meter {
           background: rgba(0, 200, 232, 0.05);
@@ -159,8 +166,8 @@ function renderProMeter(equipmentCount, reportsThisMonth) {
         }
       </style>
 
-      <span class="usage-meter__pro-badge">PLANO PRO ATIVO</span>
-      <div class="usage-meter__pro-copy">Recursos premium e limites expandidos liberados.</div>
+      <span class="usage-meter__pro-badge">PLANO ${planLabel.toUpperCase()} ATIVO</span>
+      <div class="usage-meter__pro-copy">${planCopy}</div>
       <div class="usage-meter__row">
         <div class="usage-meter__label">Equipamentos cadastrados: <span class="usage-meter__value">${equipmentCount}</span></div>
       </div>
@@ -304,7 +311,17 @@ export const UsageMeter = {
     const normalizedPlanCode = normalizePlanCode(planCode);
 
     if (normalizedPlanCode === PLAN_CODE_PRO) {
-      return renderProMeter(equipmentCount, reportsThisMonth);
+      return renderPaidMeter(equipmentCount, reportsThisMonth, {
+        planLabel: 'Pro',
+        planCopy: 'Recursos premium e limites expandidos liberados.',
+      });
+    }
+
+    if (normalizedPlanCode === PLAN_CODE_PLUS) {
+      return renderPaidMeter(equipmentCount, reportsThisMonth, {
+        planLabel: 'Plus',
+        planCopy: 'Até 25 equipamentos, registros e histórico ilimitados.',
+      });
     }
 
     return renderFreeMeter(equipmentCount, reportsThisMonth);
