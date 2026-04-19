@@ -22,6 +22,19 @@ cp .env.example .env.local
 npm run dev
 ```
 
+### Desenvolvimento cross-platform (Windows, macOS, Linux)
+
+O Vite usa `rollup`, que tem binários nativos diferentes por plataforma (`win32-x64`, `linux-x64`, `darwin-arm64`, `darwin-x64`). Pra evitar o bug [npm/cli#4828](https://github.com/npm/cli/issues/4828) — onde um `package-lock.json` gerado numa plataforma não baixa os binários das outras — o `package.json` declara as quatro plataformas principais em `optionalDependencies`. Cada ambiente baixa só o binário compatível com o seu OS/arch.
+
+Se você tiver que trocar de máquina (ex.: dev em Windows, CI/sandbox em Linux) e der erro do tipo `Cannot find module @rollup/rollup-<plataforma>`, faça reset limpo do `node_modules`:
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+```
+
+Não commite um `package-lock.json` gerado com `npm install --no-save` ou instalações pontuais de binários de outra plataforma — isso suja o lockfile e quebra o time.
+
 ## Fluxo de branches
 
 - `main` — branch de produção. Só recebe merge via Pull Request vindo de `staging`.
