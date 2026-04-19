@@ -253,6 +253,36 @@
   color: var(--text);
 }
 
+/* Escape hatch: link-style skip button embaixo do CTA principal.
+   Sutil de propósito — não queremos competir com o fluxo guiado,
+   só dar saída limpa pra quem não quer configurar agora. */
+.ftx-btn-skip {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 10px 0;
+  font-size: 13px;
+  color: var(--text-3, rgba(255, 255, 255, 0.55));
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: rgba(255, 255, 255, 0.2);
+  transition:
+    color 0.15s,
+    text-decoration-color 0.15s;
+  margin-top: 6px;
+}
+.ftx-btn-skip:hover {
+  color: var(--text-2);
+  text-decoration-color: rgba(255, 255, 255, 0.4);
+}
+.ftx-btn-skip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 .ftx-value-props {
   display: flex;
   flex-direction: column;

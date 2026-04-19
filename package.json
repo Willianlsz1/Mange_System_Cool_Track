@@ -36,5 +36,11 @@
     "supabase": "^2.89.1",
     "vite": "^5.4.21",
     "vitest": "^2.1.8"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.60.2",
+    "@rollup/rollup-darwin-x64": "^4.60.2",
+    "@rollup/rollup-linux-x64-gnu": "^4.60.2",
+    "@rollup/rollup-win32-x64-gnu": "^4.60.2"
   }
 }

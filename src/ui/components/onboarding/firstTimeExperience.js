@@ -8,23 +8,47 @@ import { trackEvent } from '../../../core/telemetry.js';
 import './firstTimeExperience.css';
 
 const FTX_KEY = 'cooltrack-ftx-done';
+// Flag intermediária: usuário pulou o onboarding antes de terminar. Diferente
+// de FTX_KEY porque o dashboard mostra um banner de "continuar cadastro"
+// enquanto só essa flag estiver setada (e o usuário ainda não tiver nenhum
+// equipamento). Uma vez que `FTX_KEY` é setada (completou) ou o usuário
+// cadastra equipamento por outro caminho, esse estado é resolvido.
+const FTX_SKIP_KEY = 'cooltrack-ftx-skipped';
 
-function dismiss(overlay, { reason = 'completed' } = {}) {
-  // Só emite onboarding_completed quando o usuário realmente terminou o fluxo
-  // (reason === 'completed'). Se sair antes, emitimos onboarding_abandoned.
+function dismiss(overlay, { reason = 'completed', step = null } = {}) {
+  // Eventos do funil são emitidos apenas na primeira dismiss (FTX ainda
+  // não marcado como done). `onboarding_completed` → fluxo completo;
+  // `onboarding_skipped` → usuário optou por sair voluntariamente num passo
+  // específico; `onboarding_abandoned` → qualquer outro caminho.
   if (!localStorage.getItem(FTX_KEY)) {
-    trackEvent(reason === 'completed' ? 'onboarding_completed' : 'onboarding_abandoned', {
-      reason,
-    });
+    if (reason === 'completed') {
+      trackEvent('onboarding_completed', {});
+    } else if (reason === 'skipped') {
+      trackEvent('onboarding_skipped', { step });
+    } else {
+      trackEvent('onboarding_abandoned', { reason });
+    }
   }
-  localStorage.setItem(FTX_KEY, '1');
+  if (reason === 'completed') {
+    // Só marca como "done" quando o fluxo foi realmente concluído. Em caso
+    // de skip, mantemos FTX_KEY vazio e gravamos FTX_SKIP_KEY para o banner
+    // poder oferecer retomada.
+    localStorage.setItem(FTX_KEY, '1');
+    localStorage.removeItem(FTX_SKIP_KEY);
+  } else if (reason === 'skipped') {
+    localStorage.setItem(FTX_SKIP_KEY, '1');
+  }
   overlay.style.animation = 'ftx-fade-in .2s ease reverse';
   setTimeout(() => overlay.remove(), 200);
 }
 
 export const FirstTimeExperience = {
   show(equipamentos) {
-    if (equipamentos.length || localStorage.getItem(FTX_KEY)) return;
+    if (equipamentos.length) return;
+    if (localStorage.getItem(FTX_KEY)) return;
+    // Se o usuário pulou, não reabrimos automaticamente em reload —
+    // só pelo banner de retomada (FirstTimeExperience.reopen).
+    if (localStorage.getItem(FTX_SKIP_KEY)) return;
 
     // Primeira vez que o overlay vai aparecer — marca início da ativação.
     trackEvent('onboarding_started', {});
@@ -120,6 +144,9 @@ export const FirstTimeExperience = {
           <button class="ftx-btn-primary" id="ftx-next-0">
             Vamos la &rarr;
           </button>
+          <button class="ftx-btn-skip" id="ftx-skip-0" type="button">
+            Explorar o app primeiro
+          </button>
           <div class="ftx-hint">2 minutos para configurar &middot; Sem cartão de crédito</div>
         </div>`;
 
@@ -148,6 +175,10 @@ export const FirstTimeExperience = {
         Profile.save({ ...Profile.get(), nome });
         Profile.saveLastTecnico(nome);
         renderStep1();
+      });
+
+      overlay.querySelector('#ftx-skip-0')?.addEventListener('click', () => {
+        dismiss(overlay, { reason: 'skipped', step: 0 });
       });
     };
 
@@ -204,12 +235,19 @@ export const FirstTimeExperience = {
           <button class="ftx-btn-primary" id="ftx-next-1">
             Salvar e continuar &rarr;
           </button>
+          <button class="ftx-btn-skip" id="ftx-skip-1" type="button">
+            Explorar o app primeiro
+          </button>
           <div class="ftx-hint">Você edita ou exclui a qualquer momento</div>
         </div>`;
 
       const nomeInput = overlay.querySelector('#ftx-eq-nome');
       const localInput = overlay.querySelector('#ftx-eq-local');
       const btn = overlay.querySelector('#ftx-next-1');
+
+      overlay.querySelector('#ftx-skip-1')?.addEventListener('click', () => {
+        dismiss(overlay, { reason: 'skipped', step: 1 });
+      });
 
       setTimeout(() => nomeInput?.focus(), 100);
       nomeInput?.addEventListener('input', () => {
@@ -326,10 +364,17 @@ export const FirstTimeExperience = {
           <button class="ftx-btn-primary" id="ftx-next-2">
             Quero gerar relatorios assim &rarr;
           </button>
+          <button class="ftx-btn-skip" id="ftx-skip-2" type="button">
+            Pular e ir pro app
+          </button>
         </div>`;
 
       overlay.querySelector('#ftx-next-2').addEventListener('click', () => {
         renderStep3Success();
+      });
+
+      overlay.querySelector('#ftx-skip-2')?.addEventListener('click', () => {
+        dismiss(overlay, { reason: 'skipped', step: 2 });
       });
     };
 
@@ -390,5 +435,12 @@ export const FirstTimeExperience = {
     };
 
     renderStep0();
+  },
+
+  // Chamado quando o usuário pulou e clica no banner "Complete seu cadastro".
+  // Limpa a flag de skip pra que `show()` abra o overlay normalmente de novo.
+  reopen(equipamentos) {
+    localStorage.removeItem(FTX_SKIP_KEY);
+    this.show(equipamentos);
   },
 };
