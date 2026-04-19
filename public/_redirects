@@ -1,8 +1,10 @@
-# Pretty URLs para páginas legais estáticas (servidas de /public/legal/*.html)
-/legal/termos         /legal/termos.html         200
-/legal/privacidade    /legal/privacidade.html    200
-/legal/lgpd           /legal/lgpd.html           200
+# Páginas legais estáticas ficam em /public/legal/*.html e são servidas
+# pelo próprio runtime da plataforma em /legal/<slug> (sem `.html`), via
+# pretty-URL nativa do Cloudflare Pages / Netlify. Não declarar rewrite
+# explícito aqui — no Cloudflare Pages ele colide com o auto-strip-html
+# e gera ERR_TOO_MANY_REDIRECTS em /legal/privacidade, /legal/termos, etc.
 
-# SPA fallback — todas as rotas não-arquivo entregam index.html
-# Formato compatível com Netlify e Cloudflare Pages.
+# SPA fallback — todas as rotas não-arquivo entregam index.html.
+# Arquivos estáticos (incluindo /legal/*.html) são resolvidos antes desta
+# regra, então as páginas legais continuam funcionando.
 /*    /index.html    200
