@@ -7,6 +7,7 @@ import { Utils, STATUS_LABEL } from '../../core/utils.js';
 import { getState, findEquip } from '../../core/state.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { CRITICIDADE_LABEL, PRIORIDADE_OPERACIONAL_LABEL } from '../../domain/maintenance.js';
+import { PdfQuotaBadge } from '../components/pdfQuotaBadge.js';
 
 export function populateRelatorioSelects() {
   const { equipamentos } = getState();
@@ -32,6 +33,11 @@ export function renderRelatorio() {
   const filtEq = Utils.getVal('rel-equip');
   const de = Utils.getVal('rel-de');
   const ate = Utils.getVal('rel-ate');
+
+  // Badge de quota mensal de PDFs ao lado do botão "Exportar PDF". Só aparece
+  // em Free/Plus (Pro é ilimitado e guest não tem cota). Fire-and-forget — não
+  // bloqueia o render do relatório.
+  PdfQuotaBadge.refresh();
 
   let list = [...registros].sort((a, b) => b.data.localeCompare(a.data));
   if (filtEq) list = list.filter((r) => r.equipId === filtEq);
@@ -86,8 +92,8 @@ export function renderRelatorio() {
 
     el.innerHTML = `
       <div class="card">
-        <div class="report-header">RELATÓRIO DE MANUTENÇÃO - COOLTRACK PRO</div>
-        <div class="report-meta">Gerado em ${hoje} &middot; ${list.length} registro(s)${total > 0 ? ` &middot; Total: R$ ${total.toFixed(2).replace('.', ',')}` : ''}</div>
+        <div class="report-header">Relatório de serviços — CoolTrack Pro</div>
+        <div class="report-meta">Gerado em ${hoje} &middot; ${list.length} serviço(s)${total > 0 ? ` &middot; Total: R$ ${total.toFixed(2).replace('.', ',')}` : ''}</div>
       </div>
       ${list
         .map((r) => {

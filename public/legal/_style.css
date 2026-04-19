@@ -1,0 +1,333 @@
+/*
+ * CoolTrack Pro — Páginas Legais (Termos / Privacidade / LGPD)
+ * Tipografia longa em tema escuro, alinhada ao design da landing.
+ */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
+  color: #d8e4f0;
+  background:
+    radial-gradient(ellipse 900px 600px at 20% 0%, rgba(232, 185, 74, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 900px 600px at 80% 30%, rgba(0, 200, 232, 0.04) 0%, transparent 60%),
+    #06101e;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ─── TOPBAR ─── */
+.legal-topbar {
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 880px;
+  margin: 0 auto;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.legal-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.legal-brand__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  background: rgba(0, 200, 232, 0.1);
+  border: 1px solid rgba(0, 200, 232, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.legal-brand__name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #e8f2fa;
+  letter-spacing: -0.2px;
+}
+
+.legal-brand__badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: #00c8e8;
+  letter-spacing: 1px;
+  background: rgba(0, 200, 232, 0.12);
+  border: 1px solid rgba(0, 200, 232, 0.28);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.legal-back {
+  font-size: 13px;
+  color: #8aaac8;
+  text-decoration: none;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legal-back:hover {
+  color: #00c8e8;
+  border-color: rgba(0, 200, 232, 0.3);
+}
+
+/* ─── CONTEÚDO ─── */
+main.legal {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+}
+
+.legal__kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #00c8e8;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 200, 232, 0.08);
+  border: 1px solid rgba(0, 200, 232, 0.22);
+}
+
+.legal__updated {
+  font-size: 13px;
+  color: #6a8ba8;
+  margin: 0 0 32px;
+}
+
+h1.legal__title {
+  font-size: clamp(2rem, 5vw, 2.6rem);
+  font-weight: 700;
+  color: #e8f2fa;
+  margin: 0 0 14px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.legal__lead {
+  font-size: 17px;
+  color: #b0c4da;
+  margin: 0 0 40px;
+  line-height: 1.6;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e8f2fa;
+  margin: 44px 0 14px;
+  letter-spacing: -0.01em;
+  scroll-margin-top: 24px;
+}
+
+h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e8f2fa;
+  margin: 28px 0 10px;
+  letter-spacing: -0.005em;
+}
+
+p {
+  margin: 0 0 16px;
+}
+
+ul,
+ol {
+  padding-left: 22px;
+  margin: 0 0 20px;
+}
+
+li {
+  margin-bottom: 8px;
+}
+
+li::marker {
+  color: #00c8e8;
+}
+
+a {
+  color: #00c8e8;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0, 200, 232, 0.3);
+  transition: border-color 0.15s;
+}
+
+a:hover {
+  border-bottom-color: rgba(0, 200, 232, 0.8);
+}
+
+strong {
+  color: #e8f2fa;
+  font-weight: 600;
+}
+
+code {
+  font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #00c8e8;
+}
+
+/* Caixa de destaque (contato/ações principais) */
+.legal-callout {
+  margin: 28px 0;
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: rgba(0, 200, 232, 0.05);
+  border: 1px solid rgba(0, 200, 232, 0.2);
+}
+
+.legal-callout p {
+  margin: 0;
+  font-size: 14.5px;
+}
+
+/* Tabela de direitos / bases legais */
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 24px;
+  font-size: 14px;
+}
+
+.legal-table th,
+.legal-table td {
+  text-align: left;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  vertical-align: top;
+}
+
+.legal-table th {
+  font-weight: 600;
+  color: #e8f2fa;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 13px;
+}
+
+.legal-table td:first-child {
+  font-weight: 500;
+  color: #e8f2fa;
+  white-space: nowrap;
+  width: 200px;
+}
+
+/* Sumário (TOC) */
+.legal-toc {
+  margin: 0 0 40px;
+  padding: 18px 22px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legal-toc__title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #8aaac8;
+  margin: 0 0 10px;
+}
+
+.legal-toc ol {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
+
+.legal-toc li {
+  margin-bottom: 4px;
+}
+
+.legal-toc a {
+  color: #b0c4da;
+  border-bottom: none;
+}
+
+.legal-toc a:hover {
+  color: #00c8e8;
+}
+
+/* Footer mínimo */
+.legal-footer {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: #6a8ba8;
+}
+
+.legal-footer a {
+  color: #8aaac8;
+  border-bottom: none;
+}
+
+.legal-footer a:hover {
+  color: #00c8e8;
+}
+
+/* Responsivo */
+@media (max-width: 600px) {
+  main.legal {
+    padding: 32px 18px 60px;
+  }
+  .legal-topbar {
+    padding: 14px 18px;
+  }
+  h1.legal__title {
+    font-size: 1.85rem;
+  }
+  .legal-table td:first-child {
+    width: auto;
+    white-space: normal;
+  }
+  .legal-footer {
+    padding: 20px 18px;
+    flex-direction: column;
+    gap: 6px;
+  }
+}

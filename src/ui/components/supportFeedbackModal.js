@@ -18,9 +18,12 @@
 import { Toast } from '../../core/toast.js';
 import { supabase } from '../../core/supabase.js';
 import { buildFeedbackEmailBody, sendFeedbackEmail } from '../../core/emailNotification.js';
+import { attachDialogA11y } from '../../core/modal.js';
 
 const MODAL_ID = 'support-feedback-modal-overlay';
 const LS_KEY = 'cooltrack-feedback-history';
+// Handle do cleanup do focus trap / Escape do overlay atual.
+let _a11yCleanup = null;
 
 const SUPPORT_EMAIL = 'suporte@cooltrackpro.com.br';
 const SUPPORT_SUBJECT = 'Suporte CoolTrack Pro';
@@ -122,12 +125,11 @@ async function saveToSupabase(rating, message) {
 }
 
 function closeModal() {
+  if (_a11yCleanup) {
+    _a11yCleanup();
+    _a11yCleanup = null;
+  }
   document.getElementById(MODAL_ID)?.remove();
-  document.removeEventListener('keydown', _escHandler);
-}
-
-function _escHandler(e) {
-  if (e.key === 'Escape') closeModal();
 }
 
 export const SupportFeedbackModal = {
@@ -239,7 +241,6 @@ export const SupportFeedbackModal = {
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) closeModal();
     });
-    document.addEventListener('keydown', _escHandler);
 
     // Ações do painel de Suporte — copiar e-mail / abrir Gmail / Outlook / mailto
     overlay.querySelector('[data-action="copy-email"]')?.addEventListener('click', async () => {
@@ -365,5 +366,6 @@ export const SupportFeedbackModal = {
     });
 
     document.body.appendChild(overlay);
+    _a11yCleanup = attachDialogA11y(overlay, { onDismiss: closeModal });
   },
 };

@@ -6,6 +6,7 @@
 import { Utils } from '../../core/utils.js';
 import { getState } from '../../core/state.js';
 import { Alerts, getPreventivaDueEquipmentIds } from '../../domain/alerts.js';
+import { emptyStateHtml } from '../components/emptyState.js';
 import { withSkeleton } from '../components/skeleton.js';
 
 function getAlertActionMeta(alert) {
@@ -65,21 +66,27 @@ export function renderAlertas() {
       }
 
       if (!equipamentos.length) {
-        el.innerHTML = `<section class="engaging-empty-state" aria-label="Sem equipamentos">
-          <div class="engaging-empty-state__icon">🔧</div>
-          <h3 class="engaging-empty-state__title">Cadastre um equipamento para receber alertas</h3>
-          <p class="engaging-empty-state__description">Alertas automáticos identificam quando um equipamento precisa de atenção — sem você precisar lembrar.</p>
-          <button class="btn btn--primary engaging-empty-state__cta" data-nav="equipamentos">Cadastrar equipamento &rarr;</button>
-        </section>`;
+        el.innerHTML = emptyStateHtml({
+          variant: 'engaging',
+          ariaLabel: 'Sem equipamentos',
+          icon: '🔧',
+          title: 'Cadastre um equipamento para receber alertas',
+          description:
+            'Alertas automáticos identificam quando um equipamento precisa de atenção — sem você precisar lembrar.',
+          cta: { label: 'Cadastrar equipamento →', nav: 'equipamentos' },
+        });
         return;
       }
 
-      el.innerHTML = `<section class="engaging-empty-state" aria-label="Sem alertas">
-        <div class="engaging-empty-state__icon">✅</div>
-        <h3 class="engaging-empty-state__title">Tudo em dia!</h3>
-        <p class="engaging-empty-state__description">Nenhum equipamento precisa de atenção agora. Continue registrando serviços para manter o histórico atualizado.</p>
-        <button class="btn btn--outline engaging-empty-state__cta" data-nav="equipamentos">Ver todos os equipamentos</button>
-      </section>`;
+      el.innerHTML = emptyStateHtml({
+        variant: 'engaging',
+        ariaLabel: 'Sem alertas',
+        icon: '✅',
+        title: 'Tudo em dia!',
+        description:
+          'Nenhum equipamento precisa de atenção agora. Continue registrando serviços para manter o histórico atualizado.',
+        cta: { label: 'Ver todos os equipamentos', nav: 'equipamentos', tone: 'outline' },
+      });
     },
   );
 }

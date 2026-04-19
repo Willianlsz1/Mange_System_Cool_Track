@@ -38,7 +38,7 @@ export function setorCardHtml(setor, equipamentosDoSetor) {
   const count = equipamentosDoSetor.length;
   const ws = worstStatus(equipamentosDoSetor);
   const wsLabel = STATUS_LABEL[ws];
-  const cor = setor.cor || '#00bcd4';
+  const cor = setor.cor || '#00c8e8';
   const safeId = Utils.escapeAttr(setor.id);
 
   // Próxima preventiva

@@ -4,6 +4,8 @@
  * slide with icon, title, description and optional tip.
  */
 
+import { attachDialogA11y } from '../../core/modal.js';
+
 const TOUR_DONE_KEY = 'cooltrack-tour-done';
 
 const STEPS = [
@@ -11,37 +13,64 @@ const STEPS = [
     icon: '🧊',
     title: 'Bem-vindo ao CoolTrack',
     description:
-      'Seu sistema de gestão de manutenção para técnicos de climatização. ' +
-      'Este tour rápido mostra as 3 funções principais do app.',
+      'Este é o seu controle de manutenções de climatização, pensado pra quem vive no campo. ' +
+      'Funciona <strong>online e offline</strong>, então dá pra registrar serviços no meio de uma casa de máquinas ' +
+      'sem sinal — tudo sincroniza quando você voltar pra uma área com internet. ' +
+      'Em menos de 1 minuto, você vai conhecer os 5 recursos principais do app.',
     tip: null,
     color: '#00c8e8',
   },
   {
     icon: '📋',
-    title: 'Registre manutenções',
+    title: 'Registre cada atendimento',
     description:
-      'Toque em <strong>+ Registrar</strong> (barra inferior) para registrar qualquer serviço: ' +
-      'corretiva, preventiva ou visita técnica. Adicione fotos, peças e assinatura do cliente.',
-    tip: '💡 Você pode gerar um relatório PDF direto do registro, pronto para enviar pelo WhatsApp.',
+      'Use o botão <strong>+ Registrar</strong> (na barra inferior) sempre que terminar um serviço — ' +
+      'seja uma <strong>corretiva</strong>, uma <strong>preventiva</strong> ou só uma visita técnica. ' +
+      'Você anexa fotos, lista as peças usadas e colhe a assinatura do cliente ali mesmo, no celular.',
+    tip: '💡 Depois de salvar, gere um PDF do registro com um toque e mande pelo WhatsApp — o cliente recebe tudo formatado, com logo, fotos e assinatura.',
     color: '#00c8e8',
   },
   {
     icon: '⚙️',
-    title: 'Gerencie equipamentos',
+    title: 'Organize os equipamentos',
     description:
-      'Em <strong>Equip.</strong> você cadastra todos os equipamentos do seu cliente: splits, ' +
-      'chillers, câmaras frias e mais. Cada equipamento tem histórico completo e score de risco.',
-    tip: '💡 O score sobe quando há anomalias ou preventivas vencidas — assim você prioriza o que importa.',
+      'Na aba <strong>Equip.</strong>, cadastre splits, chillers, câmaras frias e VRFs de cada cliente. ' +
+      'Cada equipamento acumula seu <strong>histórico completo</strong> e permite configurar a ' +
+      '<strong>periodicidade preventiva</strong> (ex: a cada 90 dias), pra o app te avisar antes de vencer.',
+    tip: '💡 Marca, modelo e número de série ficam a um clique — útil quando o cliente liga perguntando qual peça de reposição pedir.',
     color: '#f59e0b',
   },
   {
-    icon: '🚨',
-    title: 'Fique de olho nos alertas',
+    icon: '🎯',
+    title: 'Entenda o Score de Risco',
     description:
-      'A aba <strong>Alertas</strong> mostra equipamentos com falhas críticas ou preventivas ' +
-      'próximas do vencimento. O painel já abre com os mais urgentes em destaque.',
-    tip: '💡 Configure a periodicidade preventiva de cada equipamento para nunca perder um prazo.',
+      'Cada equipamento recebe uma nota de <strong>0 a 100</strong> — quanto <strong>maior, pior</strong>. ' +
+      'O score sobe com anomalias recentes, preventivas vencidas e tempo sem manutenção. ' +
+      'Ele cai com um <strong>bônus de histórico bom</strong> (até −18 pts por constância) e vem acompanhado da ' +
+      'tendência dos últimos 30 dias: <strong>↓</strong> melhorando, <strong>→</strong> estável, <strong>↑</strong> piorando.',
+    tip: '💡 Comece pelos equipamentos em vermelho — o app já mostra os fatores que mais pesaram no cálculo, então você sabe onde agir primeiro.',
     color: '#ef4444',
+  },
+  {
+    icon: '🚨',
+    title: 'Não perca prazos com os Alertas',
+    description:
+      'A aba <strong>Alertas</strong> reúne tudo que precisa da sua atenção: preventivas perto de vencer, ' +
+      'equipamentos com falhas recentes e clientes há muito tempo sem atendimento. ' +
+      'O painel abre com os casos mais urgentes em destaque e sugere a <strong>próxima ação</strong> recomendada.',
+    tip: '💡 Abra o CoolTrack no começo da semana — os alertas viram sua agenda de visitas de forma natural.',
+    color: '#ef4444',
+  },
+  {
+    icon: '🚀',
+    title: 'Tudo pronto pra começar',
+    description:
+      'Você entra no plano <strong>Free</strong> já com o essencial pra rodar o dia a dia. ' +
+      'Quando precisar de relatórios avançados, múltiplos técnicos ou exportação em massa, dá pra subir pra ' +
+      '<strong>Plus</strong> ou <strong>Pro</strong> direto no seu perfil — e voltar atrás a qualquer momento. ' +
+      'Se quiser rever este tour depois, ele fica disponível na tela de ajuda.',
+    tip: null,
+    color: '#10b981',
   },
 ];
 
@@ -49,6 +78,7 @@ export const Tour = {
   stepIndex: 0,
   active: false,
   modalEl: null,
+  _a11yCleanup: null,
 
   initIfFirstVisit() {
     if (localStorage.getItem(TOUR_DONE_KEY) === '1') return;
@@ -74,6 +104,10 @@ export const Tour = {
 
   stop({ keepDoneFlag = false } = {}) {
     this.active = false;
+    if (this._a11yCleanup) {
+      this._a11yCleanup();
+      this._a11yCleanup = null;
+    }
     this.modalEl?.remove();
     this.modalEl = null;
     if (!keepDoneFlag) {
@@ -195,17 +229,17 @@ export const Tour = {
           border: none; transition: all .18s;
         }
         .tour-btn--ghost {
-          background: transparent; color: #3a5870;
+          background: transparent; color: var(--muted);
         }
-        .tour-btn--ghost:hover { color: #6a9ab8; }
+        .tour-btn--ghost:hover { color: var(--text-2); }
         .tour-btn--outline {
           background: transparent;
           border: 1px solid rgba(255,255,255,0.1);
-          color: #8aaac8;
+          color: var(--text-2);
         }
-        .tour-btn--outline:hover { border-color: rgba(255,255,255,0.2); color: #c8dce8; }
+        .tour-btn--outline:hover { border-color: rgba(255,255,255,0.2); color: var(--text); }
         .tour-btn--primary {
-          background: linear-gradient(135deg, var(--tour-color, #00c8e8), #0090c8);
+          background: linear-gradient(135deg, var(--tour-color, var(--primary)), var(--primary-strong));
           color: #06101e; font-weight: 600; padding: 10px 24px;
         }
         .tour-btn--primary:hover { opacity: .9; transform: translateY(-1px); }
@@ -242,6 +276,11 @@ export const Tour = {
     el.querySelector('#tour-skip').addEventListener('click', () => this.finish());
     el.querySelector('#tour-prev').addEventListener('click', () => this._prev());
     el.querySelector('#tour-next').addEventListener('click', () => this._next());
+
+    // A11y: Escape fecha o tour (equivale a "Pular"), e Tab fica preso no modal.
+    // Tem tabindex="-1" no el pra aceitar foco programático se nada mais for focável.
+    el.tabIndex = -1;
+    this._a11yCleanup = attachDialogA11y(el, { onDismiss: () => this.finish() });
   },
 
   _render() {

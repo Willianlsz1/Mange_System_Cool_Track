@@ -16,7 +16,7 @@ describe('priority engine', () => {
 
     expect(result.priorityLevel).toBe(PRIORITY_LEVEL.URGENTE);
     expect(result.priorityLabel).toBe('Urgente');
-    expect(result.suggestedAction).toContain('corretiva');
+    expect(result.suggestedAction).toContain('corretivo');
     expect(result.priorityReasons).toContain('Equipamento fora de operação');
   });
 
@@ -30,7 +30,7 @@ describe('priority engine', () => {
     });
 
     expect(result.priorityLevel).toBe(PRIORITY_LEVEL.MONITORAR);
-    expect(result.suggestedAction).toBe('Programar preventiva');
+    expect(result.suggestedAction).toBe('Programar serviço preventivo');
   });
 
   it('evaluates equipment priority from context and risk', () => {

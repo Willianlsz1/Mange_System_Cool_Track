@@ -1,7 +1,11 @@
 import { Utils } from '../../../core/utils.js';
 import { Toast } from '../../../core/toast.js';
 import { Profile } from '../../../features/profile.js';
+import { attachDialogA11y } from '../../../core/modal.js';
 import { GuestCtaModal } from './guestCtaModal.js';
+
+// Handle do cleanup do focus trap / Escape para o overlay atual.
+let _a11yCleanup = null;
 
 const AVATAR_COLORS = [
   ['#0096b4', 'rgba(0,150,180,0.15)'],
@@ -151,19 +155,20 @@ export const ProfileModal = {
       if (telInput.value) telInput.value = formatPhone(telInput.value);
     });
 
-    const close = () => overlay.remove();
+    const close = () => {
+      if (typeof _a11yCleanup === 'function') {
+        _a11yCleanup();
+        _a11yCleanup = null;
+      }
+      overlay.remove();
+    };
     overlay.addEventListener('click', (e) => {
       if (e.target === overlay) close();
     });
     overlay.querySelector('#prof-cancel')?.addEventListener('click', close);
     overlay.querySelector('.pm-close')?.addEventListener('click', close);
 
-    document.addEventListener('keydown', function esc(e) {
-      if (e.key === 'Escape') {
-        close();
-        document.removeEventListener('keydown', esc);
-      }
-    });
+    _a11yCleanup = attachDialogA11y(overlay, { onDismiss: () => close() });
 
     overlay.querySelector('#prof-save')?.addEventListener('click', () => {
       const nome = nomeInput?.value.trim();
@@ -182,6 +187,10 @@ export const ProfileModal = {
       Toast.success('Perfil salvo com sucesso.');
     });
 
-    nomeInput?.focus();
+    // attachDialogA11y foca o primeiro elemento focável (.pm-close) no próximo
+    // frame — sobrescrevemos aqui para priorizar o input principal (nome).
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => nomeInput?.focus());
+    });
   },
 };

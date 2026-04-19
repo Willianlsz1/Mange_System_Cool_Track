@@ -1,6 +1,11 @@
 /**
  * CoolTrack Pro - Service Worker
  * Estratégia: Cache-first para assets estáticos, Network-first para API/Supabase.
+ *
+ * Fluxo de atualização: o SW NÃO chama skipWaiting() automaticamente —
+ * entra em estado "waiting" até o cliente postar a mensagem SKIP_WAITING
+ * (tipicamente após o usuário confirmar "Nova versão disponível").
+ * Isso evita mismatch entre o JS rodando no tab e os chunks no cache.
  */
 
 const CACHE_NAME = 'cooltrack-pro-v7';
@@ -23,7 +28,17 @@ self.addEventListener('install', (event) => {
       });
     }),
   );
-  self.skipWaiting();
+  // NÃO chama skipWaiting() aqui — aguarda confirmação do cliente via
+  // postMessage({ type: 'SKIP_WAITING' }) para permitir UX de "Recarregar
+  // para atualizar".
+});
+
+// Permite o cliente forçar a ativação da nova versão quando o usuário
+// aceitar o toast/banner de atualização.
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // ──────────────────────────────────────────────

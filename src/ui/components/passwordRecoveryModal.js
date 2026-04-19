@@ -33,10 +33,10 @@ function createOverlay(id, title, bodyHtml) {
       .auth-pwd-toggle {
         position: absolute; right: 10px;
         background: none; border: none; cursor: pointer; padding: 4px;
-        color: #3a5870; display: flex; align-items: center;
+        color: var(--muted); display: flex; align-items: center;
         transition: color .18s;
       }
-      .auth-pwd-toggle:hover { color: #7aaccc; }
+      .auth-pwd-toggle:hover { color: var(--text-2); }
     </style>
     <div class="modal auth-recovery-modal">
       <div class="auth-recovery-modal__header">
@@ -99,7 +99,7 @@ export function openPasswordResetEmailModal(initialEmail = '') {
     RESET_EMAIL_MODAL_ID,
     'Recuperar senha',
     `
-      <label class="auth-label" for="reset-email-input">EMAIL</label>
+      <label class="auth-label" for="reset-email-input">Email</label>
       <input class="auth-input" id="reset-email-input" type="email" placeholder="seu@email.com" autocomplete="email" />
       <div class="auth-recovery-modal__actions">
         <button type="button" class="btn btn--outline" id="btn-reset-cancel">Cancelar</button>
@@ -155,9 +155,9 @@ export function openPasswordRecoveryModal() {
       NEW_PASSWORD_MODAL_ID,
       'Definir nova senha',
       `
-        <label class="auth-label" for="recovery-password-input">NOVA SENHA</label>
+        <label class="auth-label" for="recovery-password-input">Nova senha</label>
         ${passwordWrapHTML('recovery-password-input', 'mínimo 8 caracteres', 'new-password')}
-        <label class="auth-label" for="recovery-confirm-input">CONFIRMAR NOVA SENHA</label>
+        <label class="auth-label" for="recovery-confirm-input">Confirmar nova senha</label>
         ${passwordWrapHTML('recovery-confirm-input', 'repita a nova senha', 'new-password')}
         <div class="auth-recovery-modal__actions">
           <button type="button" class="btn btn--outline" id="btn-recovery-cancel">Cancelar</button>

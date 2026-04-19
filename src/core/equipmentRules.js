@@ -134,7 +134,7 @@ export function getSuggestedAction(equipment = {}) {
   if (daysToNext != null && daysToNext >= 0 && daysToNext <= 7) {
     return {
       code: 'programar_preventiva',
-      label: 'Programar manutenção preventiva',
+      label: 'Programar serviço preventivo',
       requiresImmediateAction: false,
     };
   }

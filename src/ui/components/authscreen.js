@@ -67,13 +67,14 @@ function bindPasswordToggles(container) {
   });
 }
 
-// Score 0–3: 0=vazia, 1=<8 chars (red), 2=8+ sem dígito (gold), 3=8+ com dígito/símbolo (green)
+// Score 0–3: 0=vazia, 1=<8 chars (danger), 2=8+ sem dígito (warning), 3=8+ com dígito/símbolo (success)
+// Cores aplicadas via CSS custom properties — resolvem automaticamente em light/dark.
 function scorePassword(pw) {
-  if (!pw) return { score: 0, label: '', color: '#6a8ba8' };
-  if (pw.length < 8) return { score: 1, label: 'Muito curta', color: '#ff5577' };
+  if (!pw) return { score: 0, label: '', color: 'var(--text-3)' };
+  if (pw.length < 8) return { score: 1, label: 'Muito curta', color: 'var(--danger)' };
   const hasDigitOrSym = /[\d\W_]/.test(pw);
-  if (!hasDigitOrSym) return { score: 2, label: 'Fraca', color: '#e8b94a' };
-  return { score: 3, label: 'Forte', color: '#00c870' };
+  if (!hasDigitOrSym) return { score: 2, label: 'Fraca', color: 'var(--warning)' };
+  return { score: 3, label: 'Forte', color: 'var(--success)' };
 }
 
 function bindStrengthMeter(container) {
@@ -362,7 +363,7 @@ export const AuthScreen = {
           margin-bottom: 20px;
         }
         .auth-demo__icon {
-          color: #00c870; display: flex; flex-shrink: 0;
+          color: var(--success); display: flex; flex-shrink: 0;
         }
         .auth-demo__body { flex: 1; min-width: 0; }
         .auth-demo__title {
@@ -376,7 +377,7 @@ export const AuthScreen = {
           height: 32px; padding: 0 14px; border-radius: 8px;
           background: transparent;
           border: 1px solid rgba(0, 200, 112, 0.35);
-          color: #00c870; font-size: 13px; font-weight: 600;
+          color: var(--success); font-size: 13px; font-weight: 600;
           font-family: inherit; cursor: pointer; white-space: nowrap;
           transition: background .18s, border-color .18s;
         }
@@ -410,7 +411,7 @@ export const AuthScreen = {
         /* ── Google button = PRIMARY (gradient 52px) ── */
         .auth-btn-google {
           width: 100%; height: 52px; border-radius: 12px;
-          background: linear-gradient(135deg, #00c8e8 0%, #0090c8 100%);
+          background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
           color: #06101e;
           font-size: 15px; font-weight: 700; font-family: inherit;
           display: flex; align-items: center; justify-content: center;
@@ -685,6 +686,12 @@ export const AuthScreen = {
       formSignin.hidden = !showSignin;
       formSignup.hidden = showSignin;
       focusFirstField(overlay, showSignin ? '#signin-email' : '#signup-nome');
+
+      // Emite signup_started quando usuário muda pra aba de cadastro.
+      // É o gate pra medir drop-off entre "abriu tela" e "completou signup".
+      if (!showSignin) {
+        trackEvent('signup_started', { source: intentOptions.source || 'auth-screen' });
+      }
     };
 
     const triggerGoogleAuth = async (button) => {
@@ -734,11 +741,21 @@ export const AuthScreen = {
     overlay.querySelector('#btn-signin')?.addEventListener('click', async () => {
       const btn = overlay.querySelector('#btn-signin');
       if (!btn) return;
-      const email = overlay.querySelector('#signin-email').value.trim();
-      const password = overlay.querySelector('#signin-password').value;
+      const emailEl = overlay.querySelector('#signin-email');
+      const passwordEl = overlay.querySelector('#signin-password');
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
 
-      if (!email || !password) return Toast.warning('Informe email e senha para entrar.');
-      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email válido.');
+      if (!email || !password) {
+        Toast.warning('Informe email e senha para entrar.');
+        (!email ? emailEl : passwordEl).focus();
+        return;
+      }
+      if (!Auth.isValidEmail(email)) {
+        Toast.warning('Digite um email válido.');
+        emailEl.focus();
+        return;
+      }
 
       await runAsyncAction(btn, { loadingLabel: 'Entrando...' }, async () => {
         const user = await Auth.signIn(email, password);
@@ -755,22 +772,35 @@ export const AuthScreen = {
     overlay.querySelector('#btn-signup')?.addEventListener('click', async () => {
       const btn = overlay.querySelector('#btn-signup');
       if (!btn) return;
-      const nome = overlay.querySelector('#signup-nome').value.trim();
-      const email = overlay.querySelector('#signup-email').value.trim();
-      const password = overlay.querySelector('#signup-password').value;
-      const confirm = overlay.querySelector('#signup-confirm').value;
+      const nomeEl = overlay.querySelector('#signup-nome');
+      const emailEl = overlay.querySelector('#signup-email');
+      const passwordEl = overlay.querySelector('#signup-password');
+      const confirmEl = overlay.querySelector('#signup-confirm');
+      const nome = nomeEl.value.trim();
+      const email = emailEl.value.trim();
+      const password = passwordEl.value;
+      const confirm = confirmEl.value;
 
       if (!nome || !email || !password || !confirm) {
-        return Toast.warning('Preencha todos os campos para criar a conta.');
+        Toast.warning('Preencha todos os campos para criar a conta.');
+        // Foca no primeiro campo vazio para orientar o usuário
+        const firstEmpty = !nome ? nomeEl : !email ? emailEl : !password ? passwordEl : confirmEl;
+        firstEmpty.focus();
+        return;
       }
-      if (!Auth.isValidEmail(email)) return Toast.warning('Digite um email válido.');
+      if (!Auth.isValidEmail(email)) {
+        Toast.warning('Digite um email válido.');
+        emailEl.focus();
+        return;
+      }
       if (password.length < 8) {
         Toast.error('Senha deve ter no mínimo 8 caracteres.');
+        passwordEl.focus();
         return;
       }
       if (password !== confirm) {
         Toast.error('As senhas não conferem. Verifique e tente novamente.');
-        overlay.querySelector('#signup-confirm').focus();
+        confirmEl.focus();
         return;
       }
 
@@ -782,6 +812,7 @@ export const AuthScreen = {
     });
 
     overlay.querySelector('#btn-guest')?.addEventListener('click', () => {
+      trackEvent('guest_mode_started', { source: 'auth-screen' });
       localStorage.setItem('cooltrack-guest-mode', '1');
       overlay.remove();
       window.location.reload();

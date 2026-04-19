@@ -36,7 +36,7 @@ describe('Tour', () => {
     nextBtn?.click();
 
     const title = document.getElementById('tour-title')?.textContent;
-    expect(title).toContain('Registre manutenções');
+    expect(title).toContain('Registre cada atendimento');
   });
 
   it('goes back to previous step when Anterior is clicked', async () => {
@@ -48,11 +48,11 @@ describe('Tour', () => {
     document.getElementById('tour-next')?.click();
 
     const titleAfterTwoNexts = document.getElementById('tour-title')?.textContent;
-    expect(titleAfterTwoNexts).toContain('Gerencie equipamentos');
+    expect(titleAfterTwoNexts).toContain('Organize os equipamentos');
 
     document.getElementById('tour-prev')?.click();
     const titleAfterBack = document.getElementById('tour-title')?.textContent;
-    expect(titleAfterBack).toContain('Registre manutenções');
+    expect(titleAfterBack).toContain('Registre cada atendimento');
   });
 
   it('finishes and marks done when Pular tour is clicked', async () => {
@@ -69,8 +69,8 @@ describe('Tour', () => {
     const { Tour } = await import('../ui/components/tour.js');
 
     Tour.start();
-    // Click next 3 times to reach last step (4 steps total)
-    for (let i = 0; i < 3; i++) {
+    // Click next 5 times to reach last step (6 steps total)
+    for (let i = 0; i < 5; i++) {
       document.getElementById('tour-next')?.click();
     }
     // Now on last step — click "Começar a usar"
@@ -93,5 +93,25 @@ describe('Tour', () => {
 
     // Modal should NOT appear since tour is done
     expect(document.getElementById('tour-modal')).toBeNull();
+  });
+
+  it('includes a dedicated slide explaining the Score de Risco', async () => {
+    const { Tour } = await import('../ui/components/tour.js');
+
+    Tour.start();
+    // Step 4 of 6 (index 3): Score de Risco
+    for (let i = 0; i < 3; i++) {
+      document.getElementById('tour-next')?.click();
+    }
+
+    const title = document.getElementById('tour-title')?.textContent;
+    expect(title).toContain('Score de Risco');
+
+    const desc = document.getElementById('tour-desc')?.innerHTML;
+    // Must explain factors, the track-record bonus and the 30-day trend
+    expect(desc).toMatch(/0 a 100/);
+    expect(desc).toMatch(/bônus/i);
+    // Trend arrows rendered via Unicode
+    expect(desc).toMatch(/[↓→↑]/);
   });
 });

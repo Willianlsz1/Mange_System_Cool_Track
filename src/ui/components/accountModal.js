@@ -13,8 +13,11 @@ import {
 } from '../../core/subscriptionPlans.js';
 import { goTo } from '../../core/router.js';
 import { getState } from '../../core/state.js';
+import { attachDialogA11y } from '../../core/modal.js';
 
 const ACCOUNT_MODAL_ID = 'account-modal-overlay';
+// Handle do cleanup do focus trap / Escape para o overlay atual.
+let _a11yCleanup = null;
 
 // Preço do Plus hardcoded aqui — a fonte da verdade é pricing.js.
 // Se mudar lá, lembrar de atualizar esta string. Copy vem do mockup.
@@ -135,7 +138,7 @@ function renderHeroFooter(planCode, planData) {
     return `
       <button type="button" class="account-modal__hero-cta" id="btn-upgrade-plan">
         <span class="account-modal__hero-cta-icon">${ICON_BOLT}</span>
-        <span>Fazer upgrade para Plus — ${PLUS_MONTHLY_PRICE_LABEL}</span>
+        <span>Fazer upgrade para o Plus — ${PLUS_MONTHLY_PRICE_LABEL}</span>
       </button>`;
   }
 
@@ -159,34 +162,44 @@ function renderHeroFooter(planCode, planData) {
 }
 
 export function closeAccountModal() {
+  if (_a11yCleanup) {
+    _a11yCleanup();
+    _a11yCleanup = null;
+  }
   document.getElementById(ACCOUNT_MODAL_ID)?.remove();
 }
 
-export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
+export function openAccountModal(user, { onEditProfile, onSignOut, billingProfile = null } = {}) {
   closeAccountModal();
 
-  const profile = Profile.get() || {};
-  const name = profile.nome || 'Técnico';
+  // Nome/email vêm do perfil local (controlado pelo ProfileModal);
+  // plano e renovação vêm do billingProfile (Supabase), que é a fonte da verdade
+  // para status da assinatura. Fallback para o perfil local mantém
+  // compatibilidade caso o fetch falhe (offline/erro de rede).
+  const localProfile = Profile.get() || {};
+  const planProfile = billingProfile || localProfile;
+  const name = localProfile.nome || 'Técnico';
   const email = user?.email || '';
   const initials = getInitials(name);
 
-  const planCode = getEffectivePlan(profile);
+  const planCode = getEffectivePlan(planProfile);
   const planData = PLAN_CATALOG[planCode] || PLAN_CATALOG[PLAN_CODE_FREE];
   const isFree = planCode === PLAN_CODE_FREE;
   const chipsVariant = isFree ? 'stroke' : 'filled';
 
   const tierModifier = `account-modal--${planCode}`;
-  const renewDate = !isFree ? formatRenewalShort(profile.subscription_current_period_end) : '';
-  const manageLabel = isFree ? 'Ver planos' : 'Gerenciar assinatura';
+  const renewDate = !isFree ? formatRenewalShort(planProfile.subscription_current_period_end) : '';
+  const manageLabel = isFree ? 'Fazer upgrade' : 'Gerenciar assinatura';
 
   const overlay = document.createElement('div');
   overlay.id = ACCOUNT_MODAL_ID;
   overlay.className = 'modal-overlay is-open account-modal-overlay';
   overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', 'Menu da conta');
 
   overlay.innerHTML = `
-    <div class="modal account-modal ${tierModifier}" role="menu">
+    <div class="modal account-modal ${tierModifier}">
       <span class="account-modal__caret" aria-hidden="true"></span>
 
       <section class="account-modal__hero">
@@ -256,15 +269,6 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
     if (event.target === overlay) closeAccountModal();
   });
 
-  // Fechar com Escape
-  const onKeyDown = (e) => {
-    if (e.key === 'Escape') {
-      closeAccountModal();
-      document.removeEventListener('keydown', onKeyDown);
-    }
-  };
-  document.addEventListener('keydown', onKeyDown);
-
   overlay.querySelector('#btn-edit-profile')?.addEventListener('click', () => {
     closeAccountModal();
     onEditProfile?.();
@@ -286,4 +290,10 @@ export function openAccountModal(user, { onEditProfile, onSignOut } = {}) {
   });
 
   document.body.appendChild(overlay);
+
+  // A11y: focus trap + Escape + retorna foco ao fechar. Dispensa o listener
+  // manual de Escape acima porque `attachDialogA11y` já cobre.
+  _a11yCleanup = attachDialogA11y(overlay, {
+    onDismiss: () => closeAccountModal(),
+  });
 }

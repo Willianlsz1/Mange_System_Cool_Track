@@ -95,6 +95,43 @@ describe('router', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Rota desconhecida'));
   });
 
+  it('catches sync errors in onEnter and renders fallback UI', async () => {
+    const { registerRoute, goTo, currentRoute } = await loadRouterModule();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    registerRoute('inicio', () => {
+      throw new Error('boom');
+    });
+    goTo('inicio');
+
+    // Router permanece navegável — rota atual foi atualizada mesmo com erro
+    expect(currentRoute()).toBe('inicio');
+    // Fallback é renderizado dentro do container da view
+    const view = document.getElementById('view-inicio');
+    expect(view.querySelector('.view-error-boundary')).toBeTruthy();
+    expect(view.querySelector('.view-error-boundary__retry')).toBeTruthy();
+    // Erro foi logado via handleError
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('catches rejected promises from onEnter and renders fallback UI', async () => {
+    const { registerRoute, goTo } = await loadRouterModule();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    registerRoute('inicio', () => Promise.reject(new Error('async boom')));
+    goTo('inicio');
+
+    // Aguarda microtask pra rejection chegar ao .catch do router
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const view = document.getElementById('view-inicio');
+    expect(view.querySelector('.view-error-boundary')).toBeTruthy();
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
   it('handles popstate navigation and backbutton integration', async () => {
     vi.useFakeTimers();
     const { registerRoute, goTo, initHistory } = await loadRouterModule();

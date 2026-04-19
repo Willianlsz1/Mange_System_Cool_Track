@@ -1,10 +1,18 @@
 import { trackEvent } from '../../core/telemetry.js';
 import { AuthScreen } from './authscreen.js';
 import { Utils } from '../../core/utils.js';
+import { attachDialogA11y } from '../../core/modal.js';
+import { Toast } from '../../core/toast.js';
 
 const MODAL_ID = 'guest-conversion-modal';
+// Handle do cleanup do focus trap / Escape do overlay atual.
+let _a11yCleanup = null;
 
 function removeModal() {
+  if (_a11yCleanup) {
+    _a11yCleanup();
+    _a11yCleanup = null;
+  }
   document.getElementById(MODAL_ID)?.remove();
 }
 
@@ -22,6 +30,10 @@ function buildReasonMessage(reason) {
   if (reason === 'limit_equipamentos')
     return 'Você atingiu o limite do plano Free para equipamentos.';
   if (reason === 'limit_registros') return 'Você atingiu o limite do plano Free para registros.';
+  if (reason === 'limit_free_equipamentos')
+    return 'Você já cadastrou 3 equipamentos — o limite do plano Free. Faça upgrade para o Pro e cadastre até 30.';
+  if (reason === 'limit_free_registros')
+    return 'Você atingiu 10 registros este mês no plano Free. Faça upgrade para o Pro e tenha registros ilimitados.';
   if (reason === 'limit_pdf')
     return 'Você gerou 3 relatórios este mês. O plano Pro tem relatórios ilimitados.';
   if (reason === 'limit_whatsapp')
@@ -58,9 +70,16 @@ export const GuestConversionModal = {
     removeModal();
     const trigger = source;
     const isProLimit = reason === 'limit_pro_equipamentos';
+    // "isUpgrade": usuário JÁ tem conta (não é guest). Mostra flow de upgrade
+    // para o Pro em vez do flow de "salve seus dados" (criar conta).
+    // Inclui: PDF/WhatsApp mensais + limites do Free autenticado (registros/equipamentos).
     const isUpgrade =
       !isProLimit &&
-      (reason === 'limit_pdf' || reason === 'limit_whatsapp' || reason === 'premium_pdf');
+      (reason === 'limit_pdf' ||
+        reason === 'limit_whatsapp' ||
+        reason === 'premium_pdf' ||
+        reason === 'limit_free_equipamentos' ||
+        reason === 'limit_free_registros');
 
     const resolvedTitle =
       title ||
@@ -125,7 +144,7 @@ export const GuestConversionModal = {
             isProLimit
               ? `<button type="button" class="landing-btn landing-btn--ghost" data-action="dismiss">Entendido</button>`
               : isUpgrade
-                ? `<button type="button" class="landing-btn landing-btn--primary" data-action="pricing">Ver planos Pro</button>
+                ? `<button type="button" class="landing-btn landing-btn--primary" data-action="pricing">Fazer upgrade para o Pro</button>
                    <button type="button" class="landing-btn landing-btn--ghost" data-action="dismiss">Agora não</button>`
                 : `<button type="button" class="landing-btn landing-btn--primary" data-action="google">Salvar com Google</button>
                    <button type="button" class="landing-btn landing-btn--ghost" data-action="email">Criar conta com e-mail</button>`
@@ -160,26 +179,34 @@ export const GuestConversionModal = {
         source === 'pdf_export_attempt' ||
         source === 'whatsapp_share_attempt';
 
+      const openAuthScreenSafe = (initialTab) => {
+        try {
+          AuthScreen.show({
+            intent: 'guest-save',
+            initialTab,
+            postAuthRedirect: shouldPromotePro
+              ? { route: 'pricing', params: { highlightPlan: 'pro' } }
+              : null,
+          });
+        } catch (err) {
+          console.error('[guestConversionModal] Falha ao abrir AuthScreen', err);
+          Toast.error('Não foi possível abrir a tela de login. Tente novamente.');
+          trackEvent('guest_modal_auth_open_failed', {
+            trigger,
+            initialTab,
+            error: err?.message || 'unknown',
+          });
+        }
+      };
+
       overlay.querySelector('[data-action="google"]')?.addEventListener('click', () => {
         closeModal({ converted: true, trigger });
-        AuthScreen.show({
-          intent: 'guest-save',
-          initialTab: 'signin',
-          postAuthRedirect: shouldPromotePro
-            ? { route: 'pricing', params: { highlightPlan: 'pro' } }
-            : null,
-        });
+        openAuthScreenSafe('signin');
       });
 
       overlay.querySelector('[data-action="email"]')?.addEventListener('click', () => {
         closeModal({ converted: true, trigger });
-        AuthScreen.show({
-          intent: 'guest-save',
-          initialTab: 'signup',
-          postAuthRedirect: shouldPromotePro
-            ? { route: 'pricing', params: { highlightPlan: 'pro' } }
-            : null,
-        });
+        openAuthScreenSafe('signup');
       });
 
       overlay.querySelector('[data-action="login"]')?.addEventListener('click', () => {
@@ -192,6 +219,10 @@ export const GuestConversionModal = {
     }
 
     document.body.appendChild(overlay);
+    _a11yCleanup = attachDialogA11y(overlay, {
+      onDismiss: () =>
+        closeModal({ converted: false, dismissEvent: 'guest_modal_dismissed', trigger }),
+    });
     trackEvent('guest_conversion_open', { reason, source });
   },
 

@@ -96,7 +96,7 @@ export async function saveSetor() {
     return false;
   }
 
-  const cor = Utils.getEl('setor-cor')?.value || '#00bcd4';
+  const cor = Utils.getEl('setor-cor')?.value || '#00c8e8';
 
   setState((prev) => ({
     ...prev,
@@ -119,7 +119,7 @@ export async function saveSetor() {
       b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
     });
     const hi = Utils.getEl('setor-cor');
-    if (hi) hi.value = '#00bcd4';
+    if (hi) hi.value = '#00c8e8';
   }
 
   Toast.success(`Setor "${nome}" criado.`);

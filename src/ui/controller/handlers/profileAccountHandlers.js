@@ -1,8 +1,20 @@
 import { on } from '../../../core/events.js';
 import { Auth } from '../../../core/auth.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
+import { fetchMyProfileBilling } from '../../../core/monetization.js';
 import { ProfileModal } from '../../components/onboarding.js';
 import { openAccountModal } from '../../components/accountModal.js';
+
+async function resolveBillingProfile() {
+  try {
+    const { profile } = await fetchMyProfileBilling();
+    return profile;
+  } catch {
+    // Falha no fetch (offline, erro de rede) — modal usa fallback local.
+    // Não bloqueia abertura do menu.
+    return null;
+  }
+}
 
 function openAccountOrProfile() {
   const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
@@ -12,13 +24,16 @@ function openAccountOrProfile() {
   }
 
   Auth.getUser()
-    .then((user) => {
+    .then(async (user) => {
       if (!user) {
         ProfileModal.open();
         return;
       }
 
+      const billingProfile = await resolveBillingProfile();
+
       openAccountModal(user, {
+        billingProfile,
         onEditProfile: () => ProfileModal.open(),
         onSignOut: () => {
           localStorage.removeItem('cooltrack-guest-mode');

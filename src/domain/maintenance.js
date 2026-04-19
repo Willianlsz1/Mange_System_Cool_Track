@@ -328,6 +328,91 @@ function getRiskCorrectiveFactor(context) {
   };
 }
 
+// Track record bonus: recompensa manutenção exemplar reduzindo o risco técnico.
+// Reverte o efeito "piso" do score — bom comportamento agora derruba o risco,
+// em vez de apenas impedir que ele suba. Máximo total de −18 pts sobre os 124
+// do factor set (equivale a ~14pp a menos no risco base).
+function getRiskTrackRecordBonus(context) {
+  const reasons = [];
+  let points = 0;
+
+  const registros = context.registrosOrdenados || [];
+  const periodicidade = context.periodicidadeDias;
+
+  // 1) Três ou mais preventivas consecutivas em dia → −10 pts
+  // Condições: últimos 3 registros são todos preventivos (não corretivos),
+  // cada gap entre eles ≤ periodicidade × 1.1 (folga de 10%), e a próxima
+  // preventiva atual não está atrasada.
+  const preventivasRecentes = registros.filter((r) => !isCorrectiveService(r?.tipo)).slice(0, 3);
+  if (preventivasRecentes.length >= 3 && periodicidade > 0) {
+    let todasEmDia = true;
+    for (let i = 0; i < preventivasRecentes.length - 1; i++) {
+      const atualIso = parseIsoDate(preventivasRecentes[i].data);
+      const anteriorIso = parseIsoDate(preventivasRecentes[i + 1].data);
+      if (!atualIso || !anteriorIso) {
+        todasEmDia = false;
+        break;
+      }
+      const gap = getDaysSince(anteriorIso) - getDaysSince(atualIso);
+      if (gap > periodicidade * 1.1) {
+        todasEmDia = false;
+        break;
+      }
+    }
+    const proximaOk = context.daysToNext == null || context.daysToNext >= 0;
+    if (todasEmDia && proximaOk) {
+      points -= 10;
+      reasons.push({
+        label: 'preventivas consecutivas em dia',
+        points: -10,
+        detail: 'Últimas 3 preventivas cumpridas dentro do prazo — rotina estável.',
+      });
+    }
+  }
+
+  // 2) Histórico longo sem corretivas → −5 pts
+  // Caso A: nenhuma corretiva no histórico e ≥3 registros totais.
+  // Caso B: última corretiva há 180+ dias.
+  const ultimaCorretiva = registros.find((r) => isCorrectiveService(r?.tipo));
+  if (!ultimaCorretiva && registros.length >= 3) {
+    points -= 5;
+    reasons.push({
+      label: 'sem corretivas no histórico',
+      points: -5,
+      detail: 'Nenhuma corretiva registrada — equipamento confiável.',
+    });
+  } else if (ultimaCorretiva) {
+    const diasSemCorretiva = getDaysSince(ultimaCorretiva.data);
+    if (diasSemCorretiva >= 180) {
+      points -= 5;
+      reasons.push({
+        label: 'longo período sem corretivas',
+        points: -5,
+        detail: `Última corretiva há ${diasSemCorretiva} dias — sem reincidências.`,
+      });
+    }
+  }
+
+  // 3) Status operacional estável → −3 pts
+  // Equipamento em ok agora e todos os registros recentes também em ok
+  // (pelo menos 2 registros para caracterizar estabilidade, não apenas sorte).
+  const registrosRecentes = context.registrosRecentes || [];
+  if (
+    context.equipamento?.status === 'ok' &&
+    registrosRecentes.length >= 2 &&
+    registrosRecentes.every((r) => r?.status === 'ok')
+  ) {
+    points -= 3;
+    reasons.push({
+      label: 'status operacional estável',
+      points: -3,
+      detail: 'Equipamento em operação normal, sem sinais de alerta nos últimos registros.',
+    });
+  }
+
+  return { points, reasons };
+}
+
 export function normalizeCriticidade(value, fallback = 'media') {
   return CRITICIDADE_VALUES.includes(value) ? value : fallback;
 }
@@ -497,11 +582,12 @@ export function evaluateEquipmentRisk(equipamento, registros = []) {
     getRiskPreventiveFactor(context),
     getRiskCorrectiveFactor(context),
   ];
-  const baseTechnicalRisk = clamp(
-    Math.round((factorSet.reduce((sum, factor) => sum + factor.points, 0) / 124) * 100),
-    0,
-    100,
-  );
+  const trackRecord = getRiskTrackRecordBonus(context);
+  const rawFactorSum = factorSet.reduce((sum, factor) => sum + factor.points, 0);
+  // Bônus é negativo; somamos e garantimos que a soma não fique negativa antes
+  // da normalização (o piso é 0% de risco técnico).
+  const adjustedSum = Math.max(rawFactorSum + trackRecord.points, 0);
+  const baseTechnicalRisk = clamp(Math.round((adjustedSum / 124) * 100), 0, 100);
   const finalRisk = calculateFinalRiskScore({
     baseTechnicalRisk,
     criticidade: context.equipamento.criticidade,
@@ -514,16 +600,26 @@ export function evaluateEquipmentRisk(equipamento, registros = []) {
     detail: `Criticidade ${criticidadeLabel} aplica multiplicador ${criticidadeMultiplier.toFixed(2)} sobre o risco técnico base para priorizar impacto operacional.`,
   };
 
+  const bonusDetails = trackRecord.reasons.map((reason) => ({
+    label: reason.label,
+    impact: reason.points,
+    detail: reason.detail,
+  }));
+
+  const bonusFactorLabels = trackRecord.reasons.map((reason) => reason.label);
+
   return {
     score: finalRisk.finalRisk,
     classification: finalRisk.classification,
     classificationLabel: getRiskClassLabel(finalRisk.classification),
     technicalBaseScore: finalRisk.technicalRisk,
     criticidadeMultiplier,
+    trackRecordBonus: trackRecord.points,
     factors: factorSet
       .filter((factor) => factor.points >= 10)
       .map((factor) => factor.shortLabel)
       .slice(0, 3)
+      .concat(bonusFactorLabels)
       .concat('criticidade operacional'),
     details: factorSet
       .map((factor) => ({
@@ -531,10 +627,46 @@ export function evaluateEquipmentRisk(equipamento, registros = []) {
         impact: factor.points,
         detail: factor.detail,
       }))
+      .concat(bonusDetails)
       .concat(criticidadeFactor),
-    explanation: `Risco técnico base ${finalRisk.technicalRisk} x criticidade (${criticidadeLabel}, ${criticidadeMultiplier.toFixed(2)}) = score final ${finalRisk.finalRisk}.`,
+    explanation:
+      trackRecord.points < 0
+        ? `Risco técnico base ${finalRisk.technicalRisk} (com bônus de track record ${trackRecord.points} pts) x criticidade (${criticidadeLabel}, ${criticidadeMultiplier.toFixed(2)}) = score final ${finalRisk.finalRisk}.`
+        : `Risco técnico base ${finalRisk.technicalRisk} x criticidade (${criticidadeLabel}, ${criticidadeMultiplier.toFixed(2)}) = score final ${finalRisk.finalRisk}.`,
     context,
   };
+}
+
+// Tendência do risco nos últimos 30 dias.
+// Compara o score atual com o score hipotético calculado apenas com os registros
+// anteriores ao corte de 30 dias — permite detectar se o equipamento está
+// melhorando (score caindo) ou piorando (score subindo) mesmo antes da próxima
+// rodada de preventivas. Se não há registros antes do corte, retorna 'stable'.
+export function evaluateEquipmentRiskTrend(equipamento, registros = []) {
+  if (!equipamento) {
+    return { trend: 'stable', delta: 0, now: 0, past: 0 };
+  }
+
+  const now = evaluateEquipmentRisk(equipamento, registros);
+  const cutoffIso = addDays(Utils.localDateString(new Date()), -30);
+  const registrosPast = (registros || []).filter((registro) => {
+    const d = parseIsoDate(registro?.data);
+    return d && d <= cutoffIso;
+  });
+
+  // Sem histórico antigo o suficiente pra comparar → sem tendência confiável.
+  if (registrosPast.length === 0) {
+    return { trend: 'stable', delta: 0, now: now.score, past: now.score };
+  }
+
+  const past = evaluateEquipmentRisk(equipamento, registrosPast);
+  const delta = now.score - past.score;
+
+  let trend = 'stable';
+  if (delta <= -5) trend = 'improving';
+  else if (delta >= 5) trend = 'worsening';
+
+  return { trend, delta, now: now.score, past: past.score };
 }
 
 export function buildMaintenanceAlerts(equipamentos = [], registros = []) {

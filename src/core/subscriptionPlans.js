@@ -115,19 +115,21 @@ function isActivePaidStatus(status) {
 
 // ── Resolução do plano efetivo ─────────────────────────────────────────────
 export function getEffectivePlan(profile) {
-  // Dev mode local: override tem prioridade total
+  // Dev mode: flag local OU is_dev=true no perfil liberam o override do toggle.
+  // Antes, is_dev=true forçava sempre Pro ignorando o override — o que fazia o
+  // devPlanToggle não ter efeito em usuários marcados como dev no Supabase.
   const isLocalDev =
     typeof localStorage !== 'undefined' && localStorage.getItem('cooltrack-dev-mode') === 'true';
-  if (isLocalDev) {
+  const isDevMode = isLocalDev || profile?.is_dev === true;
+
+  if (isDevMode) {
     const devOverride = DevPlanOverride.get();
     if (devOverride === PLAN_CODE_PRO) return PLAN_CODE_PRO;
     if (devOverride === PLAN_CODE_PLUS) return PLAN_CODE_PLUS;
     if (devOverride === PLAN_CODE_FREE) return PLAN_CODE_FREE;
-    // Sem override definido no dev mode → Pro por padrão
+    // Sem override definido em dev mode → Pro por padrão (compatibilidade legada).
     return PLAN_CODE_PRO;
   }
-
-  if (profile?.is_dev === true) return PLAN_CODE_PRO;
 
   const planCode = normalizePlanCode(profile?.plan || profile?.plan_code || PLAN_CODE_FREE);
   if (planCode === PLAN_CODE_FREE) return PLAN_CODE_FREE;

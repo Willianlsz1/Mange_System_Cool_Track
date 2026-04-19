@@ -86,6 +86,15 @@ export function validateEquipamentoPayload(
   { existingEquipamentos = [], editingId = null } = {},
 ) {
   const errors = [];
+  // Paralelo a `errors` — cada índice mapeia o nome do campo (nome/local/modelo/tag)
+  // que produziu o erro. Usado pelo equipCrud pra focar o input correspondente
+  // e marcar aria-invalid após validação falhar.
+  const errorFields = [];
+  const pushError = (field, message) => {
+    errors.push(message);
+    errorFields.push(field);
+  };
+
   const nome = validateTextField({
     name: 'Nome',
     value: payload?.nome,
@@ -105,21 +114,22 @@ export function validateEquipamentoPayload(
     maxLength: EQUIPMENT_FIELD_LIMITS.modelo,
   });
 
-  if (nome.error) errors.push(nome.error);
-  if (local.error) errors.push(local.error);
-  if (modelo.error) errors.push(modelo.error);
+  if (nome.error) pushError('nome', nome.error);
+  if (local.error) pushError('local', local.error);
+  if (modelo.error) pushError('modelo', modelo.error);
 
   const tag = normalizeTag(payload?.tag);
   if (tag.length > EQUIPMENT_FIELD_LIMITS.tag) {
-    errors.push(`TAG excede o limite de ${EQUIPMENT_FIELD_LIMITS.tag} caracteres.`);
+    pushError('tag', `TAG excede o limite de ${EQUIPMENT_FIELD_LIMITS.tag} caracteres.`);
   }
   if (hasDuplicateTag(tag, existingEquipamentos, editingId)) {
-    errors.push('Já existe equipamento com esta TAG.');
+    pushError('tag', 'Já existe equipamento com esta TAG.');
   }
 
   return {
     valid: errors.length === 0,
     errors,
+    errorFields,
     value: {
       nome: nome.value,
       local: local.value,
@@ -279,7 +289,7 @@ export function sanitizePersistedSetor(payload) {
   if (!nome || nome.length > SETOR_NOME_MAX) return null;
 
   const corRaw = String(payload.cor || '').trim();
-  const cor = SETOR_COR_REGEX.test(corRaw) ? corRaw : '#00bcd4';
+  const cor = SETOR_COR_REGEX.test(corRaw) ? corRaw : '#00c8e8';
 
   return { id, nome, cor };
 }

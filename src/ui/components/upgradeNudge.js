@@ -15,7 +15,7 @@ const NUDGE_CONFIGS = {
     targetPlan: PLAN_CODE_PLUS,
     badge: 'POPULAR',
     icon: '⚡',
-    title: 'Turbine com o CoolTrack Plus',
+    title: 'Fazer upgrade para o CoolTrack Plus',
     bullets: [
       'Até 25 equipamentos cadastrados',
       'Registros e histórico ilimitados',
@@ -24,7 +24,7 @@ const NUDGE_CONFIGS = {
     ],
     footer:
       'Tem frota maior? Conheça também o <strong>Pro</strong> — equipamentos ilimitados, tudo sem limite e setores.',
-    ctaLabel: 'Ver planos',
+    ctaLabel: 'Fazer upgrade',
     highlightPlan: 'plus',
   },
   fromPlus: {
@@ -39,7 +39,7 @@ const NUDGE_CONFIGS = {
       'Suporte prioritário',
     ],
     footer: null,
-    ctaLabel: 'Fazer upgrade para Pro',
+    ctaLabel: 'Fazer upgrade para o Pro',
     highlightPlan: 'pro',
   },
 };
@@ -64,13 +64,15 @@ const PLAN_COLORS = {
     ctaText: '#ffffff',
   },
   pro: {
-    border: 'color-mix(in srgb, #00a85c 35%, var(--border))',
-    bgFrom: 'color-mix(in srgb, #00a85c 12%, var(--surface))',
-    bgTo: 'color-mix(in srgb, #00a85c 4%, var(--surface))',
-    accent: '#00a85c',
-    ctaFrom: '#00c870',
-    ctaTo: '#00a85c',
-    ctaText: '#07111f',
+    // Pro = dourado (#e8b94a) — paleta canônica alinhada com pricing, account modal,
+    // header, usageMeter. Antes era verde (#00a85c) — legado do "pro = success".
+    border: 'color-mix(in srgb, #e8b94a 40%, var(--border))',
+    bgFrom: 'color-mix(in srgb, #e8b94a 14%, var(--surface))',
+    bgTo: 'color-mix(in srgb, #e8b94a 4%, var(--surface))',
+    accent: '#e8b94a',
+    ctaFrom: '#e8b94a',
+    ctaTo: '#c89a2e',
+    ctaText: '#2a1f04',
   },
 };
 

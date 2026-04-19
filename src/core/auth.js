@@ -110,6 +110,7 @@ export const Auth = {
         },
       });
       if (error) {
+        trackEvent('signup_failed', { reason: error.message || 'unknown' });
         handleError(
           new AppError('Não foi possível criar sua conta.', ErrorCodes.AUTH_FAILED, 'warning', {
             action: 'signUp',
@@ -119,6 +120,8 @@ export const Auth = {
         return null;
       }
 
+      // Marcador principal do bottom-funnel: visitante virou conta real.
+      trackEvent('signup_completed', { method: 'email' });
       return data.user;
     } catch (error) {
       handleError(error, {
@@ -134,6 +137,7 @@ export const Auth = {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
+        trackEvent('login_failed', { method: 'email', reason: error.message || 'unknown' });
         handleError(
           new AppError('Email ou senha incorretos.', ErrorCodes.AUTH_FAILED, 'warning', {
             action: 'signIn',
@@ -142,6 +146,7 @@ export const Auth = {
         );
         return null;
       }
+      trackEvent('login_completed', { method: 'email' });
       return data.user;
     } catch (error) {
       handleError(error, {

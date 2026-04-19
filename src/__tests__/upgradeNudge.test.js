@@ -5,14 +5,14 @@ describe('UpgradeNudge', () => {
     it('renderiza upsell para Plus quando usuário está no Free', () => {
       const html = UpgradeNudge.renderDashboardCard({ planCode: 'free' });
 
-      expect(html).toContain('Turbine com o CoolTrack Plus');
+      expect(html).toContain('Fazer upgrade para o CoolTrack Plus');
       expect(html).toContain('POPULAR');
       expect(html).toContain('Até 25 equipamentos cadastrados');
       expect(html).toContain('Registros e histórico ilimitados');
       expect(html).toContain('PDFs sem marca');
       expect(html).toContain('assinatura do cliente');
       expect(html).toContain('50 envios de WhatsApp/mês');
-      expect(html).toContain('Ver planos &rarr;');
+      expect(html).toContain('Fazer upgrade &rarr;');
       expect(html).toContain('data-highlight-plan="plus"');
       // Menciona Pro como caminho futuro
       expect(html).toContain('Pro');
@@ -27,7 +27,7 @@ describe('UpgradeNudge', () => {
       expect(html).toContain('PDF e WhatsApp ilimitados');
       expect(html).toContain('Agrupamento por setores');
       expect(html).toContain('Suporte prioritário');
-      expect(html).toContain('Fazer upgrade para Pro &rarr;');
+      expect(html).toContain('Fazer upgrade para o Pro &rarr;');
       expect(html).toContain('data-highlight-plan="pro"');
     });
 
@@ -40,7 +40,7 @@ describe('UpgradeNudge', () => {
     it('default (sem planCode) trata como Free e destaca Plus', () => {
       const html = UpgradeNudge.renderDashboardCard();
 
-      expect(html).toContain('Turbine com o CoolTrack Plus');
+      expect(html).toContain('Fazer upgrade para o CoolTrack Plus');
       expect(html).toContain('data-highlight-plan="plus"');
     });
   });

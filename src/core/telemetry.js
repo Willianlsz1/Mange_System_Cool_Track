@@ -1,3 +1,5 @@
+import { queueEvent } from './telemetrySink.js';
+
 const TELEMETRY_EVENT = 'cooltrack:telemetry';
 
 export function trackEvent(name, payload = {}) {
@@ -17,6 +19,16 @@ export function trackEvent(name, payload = {}) {
     }
     window.__cooltrackEvents.push(detail);
     window.dispatchEvent(new CustomEvent(TELEMETRY_EVENT, { detail }));
+  }
+
+  // Enfileira pro sink externo — try/catch pra garantir que telemetria nunca
+  // quebra o app. No-op se initTelemetrySink() ainda não foi chamado.
+  try {
+    queueEvent(detail);
+  } catch (err) {
+    if (import.meta.env?.DEV) {
+      console.warn('[telemetry] queueEvent falhou (silenciado):', err);
+    }
   }
 
   if (import.meta.env?.DEV) {

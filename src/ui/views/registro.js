@@ -13,10 +13,10 @@ import { Profile } from '../../features/profile.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
 import { uploadPendingPhotos } from '../../core/photoStorage.js';
 import { getOperationalStatus, validateOperationalPayload } from '../../core/equipmentRules.js';
-import { checkGuestLimit, isGuestMode } from '../../core/guestLimits.js';
+import { checkPlanLimit, isGuestMode } from '../../core/guestLimits.js';
 import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
-import { withViewSkeleton } from '../components/skeleton.js';
+import { withSkeleton } from '../components/skeleton.js';
 import { validateRegistroPayload } from '../../core/inputValidation.js';
 import { isCachedPlanPlusOrHigher } from '../../core/planCache.js';
 
@@ -147,7 +147,7 @@ export function initRegistro(params = {}) {
   const formView = Utils.getEl('view-registro');
   if (!formView) return;
 
-  withViewSkeleton(formView, { enabled: true, variant: 'generic', count: 3 }, () => {
+  withSkeleton(formView, { enabled: true, variant: 'generic', count: 3 }, () => {
     _ensureProgressBar(formView);
     if (!formView.dataset.bound) {
       _fields.forEach((f) => {
@@ -199,11 +199,23 @@ export function applyQuickTemplate(templateId) {
 
 export async function saveRegistro() {
   const isGuest = isGuestMode();
-  const guestLimit = checkGuestLimit('registros');
-  if (guestLimit.blocked) {
-    trackEvent('limit_reached', { resource: 'registros', current: guestLimit.current, limit: 10 });
-    GuestConversionModal.open({ reason: 'limit_registros', source: 'save-registro' });
-    return false;
+  // Edição não consome cota — só novo registro conta pro limite mensal.
+  // Evita que "corrigir um registro antigo" bloqueie o usuário que já bateu o teto.
+  const isEditing = Boolean(sessionStorage.getItem(EDITING_KEY));
+  if (!isEditing) {
+    const planLimit = await checkPlanLimit('registros');
+    if (planLimit.blocked) {
+      trackEvent('limit_reached', {
+        resource: 'registros',
+        current: planLimit.current,
+        limit: planLimit.limit,
+        planCode: planLimit.planCode,
+      });
+      // Guest: pede cadastro. Free autenticado: pede upgrade pro Plus/Pro.
+      const reason = planLimit.isGuest ? 'limit_registros' : 'limit_free_registros';
+      GuestConversionModal.open({ reason, source: 'save-registro' });
+      return false;
+    }
   }
   const prioridade = Utils.getVal('r-prioridade') || 'media';
   const { equipamentos } = getState();
@@ -508,5 +520,5 @@ export function loadRegistroForEdit(id) {
   }
 
   const title = document.querySelector('#view-registro .section-title');
-  if (title) title.textContent = 'Editar registro';
+  if (title) title.textContent = 'Editar serviço';
 }

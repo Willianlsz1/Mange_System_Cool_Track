@@ -31,4 +31,4 @@ export const RISK_CLASS_LABEL = {
 
 export const STATUS_LABEL = { ok: 'Normal', warn: 'Atenção', danger: 'Crítico' };
 
-export const SETOR_CORES = ['#00bcd4', '#00c853', '#ffab40', '#ff5252', '#7c4dff', '#448aff'];
+export const SETOR_CORES = ['#00c8e8', '#00c853', '#ffab40', '#ff5252', '#7c4dff', '#448aff'];

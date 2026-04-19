@@ -82,8 +82,8 @@ describe('UsageMeter', () => {
     const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 25).toISOString();
 
     expect(UMI.countReportsThisMonth([makeReg(inMonth), makeReg(prevMonth)])).toBe(1);
-    expect(UMI.getReportBarColor(71)).toBe('#e8a020');
-    expect(UMI.getReportBarColor(91)).toBe('#e03040');
+    expect(UMI.getReportBarColor(71)).toBe('var(--warning)');
+    expect(UMI.getReportBarColor(91)).toBe('var(--danger)');
     expect(UMI.clampPercent(8, 3)).toBe(100);
     expect(UMI.getUsageState(4, 4).hasOverLimit).toBe(true);
     expect(UMI.getUsageState(2, 9).hasNearLimit).toBe(true);

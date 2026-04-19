@@ -6,6 +6,7 @@ import { Photos } from '../../components/photos.js';
 import { EquipmentPhotos } from '../../components/equipmentPhotos.js';
 import { getSuggestedPreventiveDays } from '../../../domain/maintenance.js';
 import { initHistScrollAutoHide } from './histScrollAutoHide.js';
+import { initOnlineStatus } from '../../../core/onlineStatus.js';
 
 function resetRegistroEditingState() {
   sessionStorage.removeItem('cooltrack-editing-id');
@@ -167,5 +168,6 @@ export function initControllerHelpers() {
   bindReportFilters();
   initTheme();
   bindSyncStatusUpdates();
+  initOnlineStatus();
   initHistScrollAutoHide();
 }

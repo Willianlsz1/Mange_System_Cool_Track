@@ -101,9 +101,16 @@ describe('guestLimits', () => {
     expect(result.limit).toBe(3);
   });
 
-  it('blocks guest when registros reaches free limit', async () => {
+  it('blocks guest when registros reaches free limit (monthly window)', async () => {
     localStorage.setItem('cooltrack-guest-mode', '1');
-    mockState.registros = Array.from({ length: 10 }, (_, i) => ({ id: `r-${i}` }));
+    const now = new Date();
+    const iso = (day) =>
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T10:00`;
+    // 10 registros no mês corrente — bate o teto mensal do Free.
+    mockState.registros = Array.from({ length: 10 }, (_, i) => ({
+      id: `r-${i}`,
+      data: iso((i % 28) + 1),
+    }));
 
     const { checkGuestLimit, checkPlanLimit } = await import('../core/guestLimits.js');
     const guestResult = checkGuestLimit('registros');
@@ -114,5 +121,63 @@ describe('guestLimits', () => {
     expect(planResult.blocked).toBe(true);
     expect(planResult.isGuest).toBe(true);
     expect(planResult.planCode).toBe('free');
+  });
+
+  it('blocks authenticated free users when monthly registros reaches free limit (10)', async () => {
+    const now = new Date();
+    const iso = (day) =>
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T10:00`;
+    mockState.registros = Array.from({ length: 10 }, (_, i) => ({
+      id: `r-${i}`,
+      data: iso((i % 28) + 1),
+    }));
+
+    const { checkPlanLimit } = await import('../core/guestLimits.js');
+    const result = await checkPlanLimit('registros');
+
+    expect(result.blocked).toBe(true);
+    expect(result.limit).toBe(10);
+    expect(result.current).toBe(10);
+    expect(result.isGuest).toBe(false);
+    expect(result.planCode).toBe('free');
+  });
+
+  it('does not count registros from previous months toward free monthly limit', async () => {
+    const now = new Date();
+    // 20 registros no mês anterior + 3 no mês corrente → current deve ser 3, não 23.
+    const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 15);
+    const prevIso = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-15T10:00`;
+    const curIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01T10:00`;
+    mockState.registros = [
+      ...Array.from({ length: 20 }, (_, i) => ({ id: `old-${i}`, data: prevIso })),
+      ...Array.from({ length: 3 }, (_, i) => ({ id: `new-${i}`, data: curIso })),
+    ];
+
+    const { checkPlanLimit, countRegistrosThisMonth } = await import('../core/guestLimits.js');
+    const result = await checkPlanLimit('registros');
+
+    expect(countRegistrosThisMonth(mockState.registros, now)).toBe(3);
+    expect(result.current).toBe(3);
+    expect(result.blocked).toBe(false);
+  });
+
+  it('does not block authenticated plus users on registros (unlimited)', async () => {
+    const now = new Date();
+    const iso = (day) =>
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T10:00`;
+    mockState.registros = Array.from({ length: 50 }, (_, i) => ({
+      id: `r-${i}`,
+      data: iso((i % 28) + 1),
+    }));
+    maybeSingle.mockResolvedValue({
+      data: { plan: 'plus', subscription_status: 'active', is_dev: false },
+      error: null,
+    });
+
+    const { checkPlanLimit } = await import('../core/guestLimits.js');
+    const result = await checkPlanLimit('registros');
+
+    expect(result.blocked).toBe(false);
+    expect(result.planCode).toBe('plus');
   });
 });

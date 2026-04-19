@@ -178,6 +178,11 @@ body {
    HEADER V2REFINED — logo enxuto + tier pill + gear + avatar
    ════════════════════════════════════════════════════════ */
 
+/* Paleta por tier — alinhada com pricing + account modal:
+   - Free: cyan (brand) — é o default; o PILL "FREE" recebe override neutro
+     logo abaixo pra não parecer premium
+   - Plus: azul (#3a8ee6)
+   - Pro:  dourado (#e8b94a) */
 .app-header {
   --hdr-accent: #00c8e8;
   --hdr-accent-dim: rgba(0, 200, 232, 0.14);
@@ -185,15 +190,15 @@ body {
   --hdr-accent-text: #02131f;
 }
 .app-header[data-tier='plus'] {
-  --hdr-accent: #2eca7a;
-  --hdr-accent-dim: rgba(46, 202, 122, 0.14);
-  --hdr-accent-soft: rgba(46, 202, 122, 0.22);
-  --hdr-accent-text: #02221a;
+  --hdr-accent: #3a8ee6;
+  --hdr-accent-dim: rgba(58, 142, 230, 0.14);
+  --hdr-accent-soft: rgba(58, 142, 230, 0.22);
+  --hdr-accent-text: #041530;
 }
 .app-header[data-tier='pro'] {
-  --hdr-accent: #f5c451;
-  --hdr-accent-dim: rgba(245, 196, 81, 0.16);
-  --hdr-accent-soft: rgba(245, 196, 81, 0.26);
+  --hdr-accent: #e8b94a;
+  --hdr-accent-dim: rgba(232, 185, 74, 0.16);
+  --hdr-accent-soft: rgba(232, 185, 74, 0.26);
   --hdr-accent-text: #2a1f04;
 }
 
@@ -238,10 +243,31 @@ body {
   display: inline-flex;
   color: var(--hdr-accent);
 }
+/* FREE: pill neutro (cinza) para não parecer "premium" na brand cyan. */
+.app-logo__pill[data-tier='free'] {
+  background: color-mix(in srgb, var(--text-3) 14%, transparent);
+  color: var(--text-2);
+  border-color: color-mix(in srgb, var(--text-3) 26%, transparent);
+}
+.app-logo__pill[data-tier='free'] .app-logo__pill-icon {
+  color: var(--text-2);
+}
+
+/* PLUS: azul sóbrio — alinhado com pricing + account modal. */
+.app-logo__pill[data-tier='plus'] {
+  background: rgba(58, 142, 230, 0.14);
+  color: #3a8ee6;
+  border-color: rgba(58, 142, 230, 0.32);
+}
+.app-logo__pill[data-tier='plus'] .app-logo__pill-icon {
+  color: #3a8ee6;
+}
+
+/* PRO: dourado com gradiente — alinhado com #e8b94a da paleta canônica. */
 .app-logo__pill[data-tier='pro'] {
-  background: linear-gradient(135deg, rgba(245, 196, 81, 0.18), rgba(245, 196, 81, 0.08));
+  background: linear-gradient(135deg, rgba(232, 185, 74, 0.18), rgba(232, 185, 74, 0.08));
   color: var(--hdr-accent);
-  box-shadow: 0 0 0 1px rgba(245, 196, 81, 0.26);
+  box-shadow: 0 0 0 1px rgba(232, 185, 74, 0.26);
   border-color: transparent;
 }
 

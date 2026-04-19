@@ -1,0 +1,397 @@
+/* ============================================================
+   firstTimeExperience.css — Onboarding overlay (FTX)
+   Extraído do firstTimeExperience.js para permitir caching e
+   reduzir size do bundle JS. Tokens seguem o design system
+   (base.css). Layout responsivo unificado para mobile + desktop.
+   ============================================================ */
+
+@keyframes ftx-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ftx-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes ftx-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+#ftx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(7, 17, 31, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: ftx-fade-in 0.25s ease;
+}
+
+#ftx-card {
+  background: var(--surface);
+  border: 1px solid rgba(0, 200, 232, 0.15);
+  border-radius: var(--premier-radius, 12px);
+  width: 100%;
+  max-width: 480px;
+  padding: 32px;
+  animation: ftx-slide-up 0.3s ease;
+  position: relative;
+}
+
+.ftx-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 28px;
+}
+.ftx-step-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0, 200, 232, 0.2);
+  transition: all 0.2s;
+}
+.ftx-step-dot.active {
+  background: var(--primary);
+  width: 20px;
+  border-radius: 3px;
+}
+.ftx-step-dot.done {
+  background: rgba(0, 200, 112, 0.6);
+}
+
+.ftx-step {
+  animation: ftx-step-in 0.25s ease;
+}
+
+.ftx-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.ftx-logo-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 200, 232, 0.1);
+  border: 1px solid rgba(0, 200, 232, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ftx-logo-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+.ftx-logo-sub {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  background: rgba(0, 200, 232, 0.1);
+  border: 1px solid rgba(0, 200, 232, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.ftx-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+.ftx-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+  margin-bottom: 10px;
+}
+.ftx-desc {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+.ftx-form-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+  margin-bottom: 6px;
+  display: block;
+}
+.ftx-input,
+.ftx-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 15px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+  margin-bottom: 14px;
+}
+.ftx-select {
+  cursor: pointer;
+}
+.ftx-input:focus,
+.ftx-select:focus {
+  border-color: rgba(0, 200, 232, 0.5);
+}
+.ftx-input::placeholder {
+  color: rgba(138, 170, 200, 0.4);
+}
+.ftx-input--error {
+  border-color: color-mix(in srgb, var(--danger) 60%, transparent);
+}
+.ftx-select option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.ftx-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ftx-btn-primary {
+  width: 100%;
+  background: var(--primary);
+  color: var(--bg);
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    opacity 0.15s,
+    transform 0.1s;
+}
+.ftx-btn-primary:hover {
+  opacity: 0.92;
+}
+.ftx-btn-primary:active {
+  transform: scale(0.99);
+}
+.ftx-btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ftx-hint {
+  font-size: 12px;
+  color: rgba(138, 170, 200, 0.5);
+  text-align: center;
+  margin-top: 12px;
+}
+
+.ftx-success-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 200, 112, 0.15);
+  border: 1px solid rgba(0, 200, 112, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  font-size: 24px;
+}
+.ftx-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.ftx-btn-sec {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 14px;
+  color: var(--text-2);
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+.ftx-btn-sec:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text);
+}
+
+.ftx-value-props {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.ftx-prop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ftx-prop-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(0, 200, 232, 0.08);
+  border: 1px solid rgba(0, 200, 232, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* Bloco de prévia do relatório (step 3) — usa superfície clara
+   intencionalmente (simula PDF impresso), por isso NÃO usa tokens
+   de tema dark. */
+.ftx-report-copy-top {
+  font-size: 14px;
+  color: #cfe2f4;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.ftx-report-preview-wrap {
+  position: relative;
+  max-height: 280px;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  margin-bottom: 14px;
+  background: #fff;
+}
+.ftx-report-preview-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 58px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 78%);
+  pointer-events: none;
+}
+.ftx-report-preview {
+  background: #fff;
+  color: #1b2430;
+  padding: 14px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.ftx-report-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #dce4ec;
+  margin-bottom: 10px;
+}
+.ftx-report-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f2237;
+}
+.ftx-report-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #e8f8fc;
+  border: 1px solid #bceaf3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0089a0;
+  font-size: 12px;
+}
+.ftx-report-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+.ftx-report-meta span {
+  display: block;
+  color: #5a6a7d;
+  font-size: 10px;
+}
+.ftx-report-meta strong {
+  font-size: 11px;
+  color: #162232;
+}
+.ftx-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+}
+.ftx-report-table th,
+.ftx-report-table td {
+  border: 1px solid #dee6ee;
+  padding: 6px 7px;
+  text-align: left;
+  vertical-align: top;
+  font-size: 10px;
+}
+.ftx-report-table th {
+  background: #f5f8fb;
+  color: #33445a;
+  font-weight: 700;
+}
+.ftx-signature-mock {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e8ef;
+}
+.ftx-signature-line {
+  margin-top: 18px;
+  border-top: 1px dashed #8a98a8;
+  padding-top: 6px;
+  font-size: 10px;
+  color: #4c5c6e;
+  width: 68%;
+}
+.ftx-report-copy-bottom {
+  text-align: center;
+  color: var(--text-2);
+  font-size: 13px;
+  margin-bottom: 16px;
+}

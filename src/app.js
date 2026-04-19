@@ -7,17 +7,20 @@ import { initAppShell } from './ui/shell.js';
 import { FirstTimeExperience } from './ui/components/onboarding.js';
 import { Auth } from './core/auth.js';
 import { AuthScreen } from './ui/components/authscreen.js';
-import { LandingPage } from './ui/components/landingPage.js';
 import { PasswordRecoveryModal } from './ui/components/passwordRecoveryModal.js';
 import { Storage } from './core/storage.js';
 import { Tour } from './ui/components/tour.js';
 import { ErrorCodes, handleError } from './core/errors.js';
 import { Toast } from './core/toast.js';
 import { sanitizeSessionForCurrentProject, fetchMyProfileBilling } from './core/monetization.js';
-import { DevPlanToggle } from './ui/components/devPlanToggle.js';
+// DevPlanToggle: dynamic-imported abaixo apenas em ambiente de dev.
+// Em produção, Vite faz tree-shake do módulo inteiro (≈9 KB + 492 LoC).
 import { DevPlanOverride } from './core/devPlanOverride.js';
 import { setCachedPlan } from './core/planCache.js';
 import { getEffectivePlan } from './core/subscriptionPlans.js';
+import { supabase } from './core/supabase.js';
+import { initTelemetrySink } from './core/telemetrySink.js';
+import { initSwUpdate } from './core/swUpdate.js';
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 
@@ -30,6 +33,43 @@ const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 
 async function bootstrap() {
   try {
+    // Se o SW foi registrado em index.html antes do bootstrap, liga o fluxo
+    // de update (banner "Nova versão disponível"). Em dev ou sem SW não há
+    // registration e esta chamada é no-op.
+    if (typeof window !== 'undefined') {
+      const existingReg = window.__cooltrackSwRegistration;
+      if (existingReg) {
+        initSwUpdate(existingReg);
+      } else if ('serviceWorker' in navigator) {
+        // Fallback: se a registration ainda não chegou (race condition entre
+        // o script inline e o module bootstrap), aguarda e tenta novamente.
+        navigator.serviceWorker
+          .getRegistration()
+          .then((reg) => reg && initSwUpdate(reg))
+          .catch(() => {
+            /* sem SW registrado — OK, seguimos sem update flow */
+          });
+      }
+    }
+
+    // Inicializa sink de telemetria cedo — antes de LandingPage.render() pra
+    // garantir que lp_view e lp_cta_click cheguem na fila.
+    // getUserId usa getSession() (lê do localStorage, sem round-trip) pra não
+    // adicionar latência a cada flush — getUser() iria ao server toda vez.
+    initTelemetrySink({
+      supabaseClient: supabase,
+      getUserId: async () => {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          return session?.user?.id || null;
+        } catch {
+          return null;
+        }
+      },
+    });
+
     try {
       await sanitizeSessionForCurrentProject();
     } catch (sessionError) {
@@ -57,6 +97,9 @@ async function bootstrap() {
     }
 
     if (!user && !isGuest) {
+      // Code-split: carrega landingPage (JS + CSS ~48KB) só pra quem não tá logado.
+      // Usuário logado / guest pula esse chunk inteiro.
+      const { LandingPage } = await import('./ui/components/landingPage.js');
       LandingPage.render({ onLogin: () => AuthScreen.show() });
       return;
     }
@@ -65,7 +108,9 @@ async function bootstrap() {
       if (nextUser) localStorage.removeItem('cooltrack-guest-mode');
     });
 
-    LandingPage.clear();
+    // Inline do LandingPage.clear() pra evitar baixar o chunk da landing quando
+    // o usuário já tá logado.
+    document.getElementById('app')?.classList.remove('landing-active');
     initAppShell();
 
     if (!isGuest) {
@@ -81,16 +126,22 @@ async function bootstrap() {
 
       // Monta o painel dev: ativa se is_dev === true no Supabase OU se a flag
       // local 'cooltrack-dev-mode' estiver definida (ativada via console do browser).
+      // Em produção, o import dinâmico é tree-shaken pelo Vite e o painel não é baixado.
       const localDevMode = localStorage.getItem('cooltrack-dev-mode') === 'true';
-      if (localDevMode) {
+      const mountDevToggle = async () => {
+        if (!import.meta.env.DEV) return;
+        const { DevPlanToggle } = await import('./ui/components/devPlanToggle.js');
         DevPlanToggle.mount();
+      };
+      if (localDevMode) {
+        await mountDevToggle();
         setCachedPlan(DevPlanOverride.get() || 'pro');
       } else {
         try {
           const { profile } = await fetchMyProfileBilling();
           setCachedPlan(getEffectivePlan(profile));
           if (profile?.is_dev === true) {
-            DevPlanToggle.mount();
+            await mountDevToggle();
           }
         } catch {
           // ignora — não bloqueia o boot se o perfil falhar

@@ -38,34 +38,52 @@ function runWithLoadingState(target, variant, count, renderFn) {
   const overlay = createOverlay(variant, count);
   target.appendChild(overlay);
 
+  const cleanup = () => {
+    target.removeAttribute('aria-busy');
+    target.classList.remove('is-skeleton-loading');
+    overlay.remove();
+  };
+
+  // rAF duplo garante que o browser pinte o skeleton antes de rodarmos o
+  // renderFn (que pode bloquear o main thread por um frame ou mais).
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
+      let result;
       try {
-        renderFn();
-      } finally {
-        target.removeAttribute('aria-busy');
-        target.classList.remove('is-skeleton-loading');
-        overlay.remove();
+        result = renderFn();
+      } catch (err) {
+        cleanup();
+        throw err;
+      }
+      // Se renderFn for async, precisamos esperar resolve/reject para só então
+      // remover o overlay — caso contrário o skeleton pisca e some antes
+      // do conteúdo real ser inserido.
+      if (result && typeof result.then === 'function') {
+        result.then(cleanup, (err) => {
+          cleanup();
+          // Repropaga para não engolir erros silenciosamente
+          Promise.reject(err);
+          if (typeof console !== 'undefined') {
+            console.error('[withSkeleton] renderFn falhou', err);
+          }
+        });
+      } else {
+        cleanup();
       }
     });
   });
 }
 
+/**
+ * Renderiza um conteúdo com skeleton overlay enquanto o renderFn roda.
+ * Serve tanto para cards individuais quanto para views inteiras — a única
+ * diferença é o `variant` escolhido.
+ *
+ * @param {HTMLElement} target — container onde o overlay será anexado.
+ * @param {{ enabled?: boolean, variant?: 'equipment'|'timeline'|'report'|'alerts'|'generic', count?: number }} options
+ * @param {() => void | Promise<void>} renderFn — função de render real.
+ */
 export function withSkeleton(target, options, renderFn) {
-  if (!(target instanceof HTMLElement) || !(renderFn instanceof Function)) return;
-  const { enabled = false, variant = 'generic', count = 3 } = options || {};
-
-  if (!enabled) {
-    target.removeAttribute('aria-busy');
-    target.classList.remove('is-skeleton-loading');
-    renderFn();
-    return;
-  }
-
-  runWithLoadingState(target, variant, count, renderFn);
-}
-
-export function withViewSkeleton(target, options, renderFn) {
   if (!(target instanceof HTMLElement) || !(renderFn instanceof Function)) return;
   const { enabled = false, variant = 'generic', count = 3 } = options || {};
 
