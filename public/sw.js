@@ -3,7 +3,7 @@
  * Estratégia: Cache-first para assets estáticos, Network-first para API/Supabase.
  */
 
-const CACHE_NAME = 'cooltrack-pro-v3';
+const CACHE_NAME = 'cooltrack-pro-v7';
 const OFFLINE_PAGE = '/offline.html';
 
 // Assets que sempre ficam em cache

@@ -7,7 +7,13 @@ import { SupportFeedbackModal } from '../../components/supportFeedbackModal.js';
 import { Toast } from '../../../core/toast.js';
 import { Tour } from '../../components/tour.js';
 import { AuthScreen } from '../../components/authscreen.js';
-import { clearEditingState as clearEquipEditingState } from '../../views/equipamentos.js';
+import {
+  clearEditingState as clearEquipEditingState,
+  clearSetorEditingState,
+  applyEquipPhotosGate,
+} from '../../views/equipamentos.js';
+import { isCachedPlanPlusOrHigher } from '../../../core/planCache.js';
+import { toggleTheme } from '../helpers/themeInitHelpers.js';
 
 let isHelpOpen = false;
 
@@ -25,7 +31,11 @@ export function bindNavigationHandlers() {
   if (!document.body.dataset.helpMenuBound) {
     document.body.dataset.helpMenuBound = '1';
     document.addEventListener('click', (event) => {
-      const insideHelp = event.target.closest('.header-help');
+      // Considera clique "dentro" quando mira o trigger, o menu em si,
+      // ou qualquer wrapper legado/novo (.header-help / .header-settings)
+      const insideHelp = event.target.closest(
+        '#header-help-btn, #header-help-menu, .header-help, .header-settings',
+      );
       if (!insideHelp && isHelpOpen) setHelpMenuState(false);
     });
 
@@ -37,14 +47,20 @@ export function bindNavigationHandlers() {
   on('open-modal', (el) => {
     const id = el.dataset.id;
     // Ao abrir o modal de equipamento via "+ Novo", garante que não estamos em modo edição
-    if (id === 'modal-add-eq') clearEquipEditingState();
+    if (id === 'modal-add-eq') {
+      clearEquipEditingState();
+      // Aplica o gate Plus+/Pro do bloco de fotos (síncrono via cache do plano)
+      applyEquipPhotosGate(isCachedPlanPlusOrHigher());
+    }
+    if (id === 'modal-add-setor') clearSetorEditingState();
     Modal.open(id);
   });
   on('close-modal', (el) => {
     const id = el.dataset.id;
     Modal.close(id);
-    // Ao fechar o modal de equipamento via Cancelar, reseta estado de edição
+    // Ao fechar modais de criação/edição via Cancelar, reseta estado de edição
     if (id === 'modal-add-eq') clearEquipEditingState();
+    if (id === 'modal-add-setor') clearSetorEditingState();
   });
   on('toggle-help-menu', () => {
     setHelpMenuState(!isHelpOpen);
@@ -67,6 +83,11 @@ export function bindNavigationHandlers() {
   on('help-feedback', () => {
     setHelpMenuState(false);
     SupportFeedbackModal.open('feedback');
+  });
+
+  on('toggle-theme', () => {
+    setHelpMenuState(false);
+    toggleTheme();
   });
 
   on('go-register-equip', (el) => {

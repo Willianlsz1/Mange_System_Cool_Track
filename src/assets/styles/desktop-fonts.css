@@ -525,9 +525,9 @@
   /* ════════════════════════════════════════════════════════
      HISTÓRICO
      ════════════════════════════════════════════════════════ */
-  .hist-sticky-header {
-    top: 4px;
-  }
+  /* NÃO sobrescrever o `top` aqui — components.css já calcula
+     `top: calc(var(--app-header-total-height) + var(--hist-sticky-gap))`
+     para o sticky grudar abaixo do header global, não atrás dele. */
   .hist-count {
     font-size: 13px; /* de 11px */
   }

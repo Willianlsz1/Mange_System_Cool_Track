@@ -25,20 +25,37 @@ export function setSectorDeletedCallback(fn) {
   _onSectorDeleted = typeof fn === 'function' ? fn : () => {};
 }
 
+/**
+ * Mantém o container CONTEXTO visível só quando pelo menos um filho
+ * (setor ou fotos) está ativo. Mantém modal enxuto para usuários Free.
+ */
+function syncContextGroupVisibility() {
+  const group = Utils.getEl('eq-context-group');
+  if (!group) return;
+  const setorVisible = Utils.getEl('eq-setor-wrapper')?.style.display !== 'none';
+  const fotosVisible = Utils.getEl('eq-fotos-wrapper')?.style.display !== 'none';
+  group.style.display = setorVisible || fotosVisible ? '' : 'none';
+}
+
 /** Popula o select de setores no modal de cadastro de equipamento. */
 export function populateSetorSelect(isPro = false) {
   const wrapper = Utils.getEl('eq-setor-wrapper');
   const select = Utils.getEl('eq-setor');
-  if (!wrapper || !select) return;
+  if (!wrapper || !select) {
+    syncContextGroupVisibility();
+    return;
+  }
 
   if (!isPro) {
     wrapper.style.display = 'none';
+    syncContextGroupVisibility();
     return;
   }
 
   const { setores } = getState();
   if (!setores.length) {
     wrapper.style.display = 'none';
+    syncContextGroupVisibility();
     return;
   }
 
@@ -50,6 +67,7 @@ export function populateSetorSelect(isPro = false) {
     opt.textContent = s.nome;
     select.appendChild(opt);
   });
+  syncContextGroupVisibility();
 }
 
 /** Inicializa o color picker do modal de setor. */

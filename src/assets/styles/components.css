@@ -4,6 +4,12 @@
    cores semânticas (cyan=ativo, amber=manutenção, red=falha)
    ============================================================ */
 
+/* ─── Módulos externos (precisam vir antes das regras abaixo pro
+   @import do CSS ser válido conforme spec — @import tem que ser
+   o primeiro conteúdo do arquivo além de @charset) ─── */
+@import './components/_setor-card.css';
+@import './components/_pricing.css';
+
 /* ─── SECTION TITLE ─── */
 .section-title {
   display: flex;
@@ -855,14 +861,14 @@
 .hist-summary-item__value {
   font-size: 22px;
   font-weight: 700;
-  color: #e8f2fa;
+  color: var(--text);
   line-height: 1.2;
 }
 
 .hist-summary-item__label {
   margin-top: 4px;
   font-size: 11px;
-  color: #6a8ba8;
+  color: var(--text-3);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1371,6 +1377,198 @@ textarea.form-control {
   background: var(--danger);
 }
 
+/* ─── Equipment photos (feature Plus+) ─────────────────────────────────────
+   Bloco que aparece no modal de equipamento. Reusa .photo-thumb/.photo-preview
+   mas isola o layout do drop-zone para não interferir no fluxo de fotos de
+   registro (que já existe separado). */
+
+/* Seção de formulário: trata o bloco de fotos como área destacada com
+   divider, subtítulo e corner-ribbon pro gating do plano Plus+. */
+.eq-form-section {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px 16px;
+  margin: 16px 0 4px;
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 60%, transparent);
+}
+
+.eq-form-section__ribbon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: linear-gradient(90deg, #00bcd4, #7c4dff);
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.eq-form-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding-right: 44px; /* espaço pro ribbon não colidir */
+}
+
+.eq-form-section__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: 0.01em;
+}
+
+.eq-form-section__meta {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.eq-form-section__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.equip-photo-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Drop zone única: bloco tracejado, ícone grande + 2 linhas de texto.
+   Funciona como label pro input file (galeria/picker nativo). */
+.equip-photo-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px 16px;
+  border: 1.5px dashed var(--border-2);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card) 40%, transparent);
+  color: var(--text-2);
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    color 0.15s;
+}
+
+.equip-photo-dropzone:hover,
+.equip-photo-dropzone:focus-within {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  color: var(--text);
+}
+
+.equip-photo-dropzone__icon {
+  color: var(--primary);
+  opacity: 0.9;
+}
+
+.equip-photo-dropzone__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.equip-photo-dropzone__sub {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.equip-photo-dropzone[hidden] {
+  display: none;
+}
+
+/* Atalho pequeno pra capture="environment" (câmera direta). Fica discreto,
+   não compete com a drop zone principal. Só é relevante no mobile. */
+.equip-photo-shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition:
+    color 0.12s,
+    background 0.12s;
+}
+
+.equip-photo-shortcut:hover,
+.equip-photo-shortcut:focus-visible {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.equip-photo-shortcut svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* Desktop: a drop zone já abre file picker nativo (sem câmera).
+   Mobile vai ter o picker com opção câmera/galeria, então o atalho
+   fica redundante no desktop. Escondemos via hover: impreciso, melhor
+   via hover-none (dispositivos touch). */
+@media (hover: hover) and (pointer: fine) {
+  .equip-photo-shortcut {
+    display: none;
+  }
+}
+
+.equip-photo-preview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.equip-photo-preview:empty {
+  display: none;
+}
+
+/* Marca visual sutil para fotos ainda não uploadadas: um indicador superior
+   esquerdo "•" cyan pra o usuário perceber que ainda vai subir no save. */
+.photo-thumb--pending::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 0 2px rgba(0, 188, 212, 0.25);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ─── BUTTONS ─── */
 .btn {
   width: auto;
@@ -1398,6 +1596,11 @@ textarea.form-control {
 .btn--primary {
   background: var(--primary);
   color: #07111f;
+}
+[data-theme='light'] .btn--primary {
+  /* No tema light, o --primary é teal escuro (#0096b4) — branco garante
+     AA contra o verde-azulado, evitando o navy dim que afunda no teal. */
+  color: #ffffff;
 }
 .btn--primary:hover {
   background: var(--primary-strong);
@@ -1454,6 +1657,10 @@ textarea.form-control {
 .btn--editing {
   background: var(--warning);
   color: #07111f;
+}
+[data-theme='light'] .btn--editing {
+  /* No tema light, --warning é ocre escuro (#9a6700) — branco tem AA. */
+  color: #ffffff;
 }
 
 .btn-group {
@@ -2053,6 +2260,68 @@ mark,
   padding: 4px 0 8px;
 }
 
+/* ── Galeria de fotos no topo do modal de detalhes ─────── */
+.eq-detail-gallery {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+.eq-detail-gallery::-webkit-scrollbar {
+  height: 6px;
+}
+.eq-detail-gallery::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 4px;
+}
+
+.eq-detail-gallery__thumb {
+  flex: 0 0 auto;
+  width: 120px;
+  height: 90px;
+  padding: 0;
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--surface-2, var(--card));
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+/* V3: quando a galeria vive dentro da coluna da foto (140px),
+   as thumbs encolhem pra 40×40 e se distribuem horizontalmente
+   sem scroll. A primeira thumb aparece destacada (active) pra
+   ecoar o padrão do mock. */
+.eq-detail-hero__photo-col .eq-detail-gallery {
+  gap: 4px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.eq-detail-hero__photo-col .eq-detail-gallery__thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+}
+.eq-detail-gallery__thumb:hover,
+.eq-detail-gallery__thumb:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(3, 8, 16, 0.22);
+  transform: translateY(-1px);
+  outline: none;
+}
+.eq-detail-gallery__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* ── Hero card ─────────────────────────────────────────── */
 .eq-detail-hero {
   background: var(--card);
@@ -2080,6 +2349,94 @@ mark,
 }
 .eq-detail-hero--danger::before {
   background: var(--danger);
+}
+
+/* ── Hero com foto: grid 2-col (foto 140px + body 1fr) ─────
+   Aparece quando o equipamento tem pelo menos 1 foto. No mobile
+   empilha (foto full-width como banner acima do corpo). O body
+   é apenas um wrapper do score + stats já existentes, assim o
+   layout antigo (sem foto) continua funcionando sem alterações.
+
+   V3 (PR D3): a faixa de thumbs vive agora dentro da coluna da foto
+   (eq-detail-hero__photo-col) ao invés de ser irmã do hero, pra manter
+   o grid compacto e alinhar visualmente a foto principal com suas
+   miniaturas adicionais. */
+.eq-detail-hero--with-photo {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 14px;
+  padding: 14px;
+  align-items: start;
+}
+
+.eq-detail-hero__photo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.eq-detail-hero__photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2, var(--card));
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.eq-detail-hero__photo:hover,
+.eq-detail-hero__photo:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(3, 8, 16, 0.25);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.eq-detail-hero__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.eq-detail-hero__photo-count {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 999px;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.eq-detail-hero__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* No mobile, empilha: foto vira banner full-width acima do body */
+@media (max-width: 560px) {
+  .eq-detail-hero--with-photo {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .eq-detail-hero__photo {
+    aspect-ratio: 16 / 9;
+  }
 }
 
 /* Score row */
@@ -2750,11 +3107,12 @@ mark,
 
 .header-alert-pill {
   position: absolute;
-  top: -4px;
-  right: -5px;
-  width: 16px;
+  top: -3px;
+  right: -3px;
+  min-width: 16px;
   height: 16px;
-  border-radius: 50%;
+  padding: 0 4px;
+  border-radius: 999px;
   background: #e03040;
   color: #fff;
   font-size: 10px;
@@ -2763,6 +3121,12 @@ mark,
   align-items: center;
   justify-content: center;
   line-height: 1;
+  box-shadow: 0 0 0 2px var(--app-header-bg, #0b1728);
+  pointer-events: none;
+}
+
+.header-alert-pill[hidden] {
+  display: none;
 }
 
 .header-alert-pill.is-visible {
@@ -2774,12 +3138,14 @@ mark,
   top: calc(100% + 8px);
   right: 0;
   border-radius: 6px;
+  /* Tooltip sempre escuro em ambos os temas (padrão Linear/Notion) —
+     por isso hardcoded, não usa var(--surface). */
   background: #0c1929;
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 6px 8px;
   white-space: nowrap;
   font-size: 11px;
-  color: var(--text);
+  color: #e8f2fa;
   opacity: 0;
   pointer-events: none;
   transform: translateY(-2px);
@@ -3078,14 +3444,17 @@ mark,
   margin-right: 4px;
 }
 
+/* ── Footer do modal de detalhes ─────────────────────────────
+   Hierarquia: "Editar identificação" é o botão primary (ação
+   rotineira do modal). "Excluir" fica como ícone-only danger,
+   reduzido, pra não competir com a ação diária. */
 .eq-modal-footer {
   margin-top: var(--space-4);
   padding-top: var(--space-3);
   border-top: 1px solid var(--border);
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
-  justify-content: flex-end;
 }
 
 .eq-modal-footer__btn {
@@ -3095,15 +3464,143 @@ mark,
   white-space: nowrap;
 }
 
+.eq-modal-footer__btn--primary {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.eq-modal-footer__delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+  background: transparent;
+  color: var(--danger);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.eq-modal-footer__delete:hover,
+.eq-modal-footer__delete:focus-visible {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  border-color: var(--danger);
+  outline: none;
+}
+
 @media (max-width: 560px) {
   .eq-modal-footer {
-    flex-direction: column-reverse;
-    align-items: stretch;
+    flex-direction: row; /* mantém lado a lado no mobile: primary cresce, delete fica 36x36 */
   }
-  .eq-modal-footer__btn {
-    width: 100%;
+  .eq-modal-footer__btn--primary {
+    width: auto;
+  }
+}
+
+/* ── V3: Footer 3-ações ─────────────────────────────────────────
+   Layout nov├o (PR D3): [Registrar 60%] [Editar flex 1] [Excluir 36×36].
+   A ação primária "Registrar serviço" ganha peso visual dominante;
+   "Editar" fica como outline secundária; "Excluir" permanece como
+   ícone danger reduzido.
+   Mobile: Registrar continua primary, Editar vira ícone compacto pra
+   economizar largura. Trash continua 36×36. */
+.eq-modal-footer--tri {
+  gap: 8px;
+}
+
+.eq-modal-footer--tri .eq-modal-footer__btn--register {
+  flex: 0 0 60%;
+  justify-content: center;
+}
+
+.eq-modal-footer--tri .eq-modal-footer__btn--edit {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+@media (max-width: 560px) {
+  .eq-modal-footer--tri .eq-modal-footer__btn--register {
+    flex: 1 1 auto;
+  }
+
+  .eq-modal-footer--tri .eq-modal-footer__btn--edit {
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    padding: 0;
+    height: 36px;
+    gap: 0;
     justify-content: center;
   }
+
+  .eq-modal-footer--tri .eq-modal-footer__btn--edit svg {
+    margin: 0;
+  }
+
+  /* Esconde o texto do "Editar" no mobile (só ícone) para não quebrar layout */
+  .eq-modal-footer--tri .eq-modal-footer__btn--edit {
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .eq-modal-footer--tri .eq-modal-footer__btn--edit svg {
+    font-size: initial;
+    width: 15px;
+    height: 15px;
+  }
+}
+
+/* ── V3: Label row do painel de risco com botão "?" de ajuda ───
+   Substitui a antiga seção <details> "Ver análise detalhada" que
+   expunha a fórmula do score. Agora a fórmula vive no modal
+   `modal-score-info` (acionado via gear do header ou via este botão),
+   mantendo o card de risco enxuto com apenas label + classificação
+   + factors. */
+.eq-risk-panel__label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.eq-risk-panel__help {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border-2);
+  background: transparent;
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    border-color 140ms ease,
+    background 140ms ease;
+}
+
+.eq-risk-panel__help:hover,
+.eq-risk-panel__help:focus-visible {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  outline: none;
+}
+
+/* CTA de "Registrar serviço" dentro do histórico: peso reduzido
+   quando já existem registros; fica primary só quando é o 1º registro
+   (empty state nudge). */
+.eq-svc-section__cta {
+  white-space: nowrap;
 }
 
 /* ── WhatsApp button ── */
@@ -3272,6 +3769,22 @@ mark,
   flex-shrink: 0;
 }
 
+/* Variante "foto real" (feature Plus+): preenche o box com a imagem
+   capturada pelo técnico, sem padding/background. Fallback pro emoji
+   acontece no JS via onerror. */
+.equip-card__type-icon--photo {
+  background: var(--surface-3);
+  padding: 0;
+  overflow: hidden;
+}
+
+.equip-card__type-icon--photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 /* ── Health score bar ── */
 .equip-card__health {
   padding: 0 var(--space-3) var(--space-2);
@@ -3377,6 +3890,9 @@ mark,
   color: var(--text-3);
 }
 
+/* Priority — mesmo padrão do risk row, mas usa o nível numérico (1–4)
+   do PRIORITY_LEVEL (OK, MONITORAR, ALTA, URGENTE). Sem padding lateral
+   no container a badge colava na borda esquerda do card. */
 .equip-card__priority {
   padding: 0 var(--space-3) var(--space-2);
   display: flex;
@@ -3392,6 +3908,8 @@ mark,
   padding: 3px 8px;
   border: 1px solid var(--border);
   background: var(--surface-2);
+  color: var(--text-2);
+  white-space: nowrap;
 }
 
 .equip-card__priority-badge--1 {
@@ -3400,26 +3918,43 @@ mark,
 }
 
 .equip-card__priority-badge--2 {
+  color: var(--text-2);
+  border-color: var(--border);
+}
+
+.equip-card__priority-badge--3 {
   color: var(--warning);
   border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
 }
 
-.equip-card__priority-badge--3,
 .equip-card__priority-badge--4 {
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
-}
-
-.equip-card__priority-action {
-  font-size: 11px;
-  color: var(--text-2);
-  font-weight: 600;
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface-2));
 }
 
 .equip-card__priority-reasons {
   flex: 1 1 100%;
   font-size: 10px;
   color: var(--text-3);
+  line-height: 1.4;
+}
+
+/* Estado idle: equipamento 100% saudável, sem registros, sem agenda.
+   Omite a seção de ação recomendada e a grade de métricas — o card
+   vira um snapshot enxuto (~160-180px) focado em "está tudo bem, se
+   quiser registrar algo clica no CTA". */
+.equip-card--idle .equip-card__footer {
+  border-top-color: transparent;
+  padding-top: 2px;
+}
+
+.equip-card--idle .equip-card__risk {
+  padding-bottom: var(--space-3);
+}
+
+.equip-card--idle .equip-card__priority {
+  padding-bottom: var(--space-3);
 }
 
 .equip-card__suggested-action {
@@ -3555,6 +4090,360 @@ mark,
 /* Cards em atenção: CTA em amber */
 .equip-card--warn .equip-card__cta {
   color: var(--warning);
+}
+
+/* ════════════════════════════════════════════════════════
+   EQUIP CARD v6 — Port Claude Design (PR D1)
+
+   Porta a proposta V2: score lateral no header (substitui pill
+   de status), barra full-width sem label, chips compactos em
+   linha, timeline strip (Última ──── Próx.), ação recomendada
+   com meta autor/tempo, CTA tonal full-width colado no rodapé.
+
+   Idle vira um card enxuto: só header + bloco dashed cyan de
+   "Novo equipamento — Crie a linha de base com seu primeiro
+   serviço" (~140-150px).
+   ════════════════════════════════════════════════════════ */
+
+/* Header precisa ficar alinhado ao topo pro score-block respirar */
+.equip-card__header {
+  align-items: flex-start;
+}
+
+/* ── Header right: score block (ativo) ou risk chip (idle) ── */
+.equip-card__score-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.equip-card__score-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+.equip-card__score-value--ok {
+  color: var(--success);
+}
+.equip-card__score-value--warn {
+  color: var(--warning);
+}
+.equip-card__score-value--danger {
+  color: var(--danger);
+}
+
+.equip-card__score-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Risk chip (idle + primeiro chip do row ativo) */
+.equip-card__risk-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.equip-card__risk-chip--alto {
+  color: var(--danger);
+  background: var(--danger-dim);
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--border));
+}
+.equip-card__risk-chip--medio {
+  color: var(--warning);
+  background: var(--warning-dim);
+  border-color: color-mix(in srgb, var(--warning) 30%, var(--border));
+}
+.equip-card__risk-chip--baixo {
+  color: var(--success);
+  background: var(--success-dim);
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+}
+
+/* ── Health bar full-width (sem label, % já no header) ── */
+.equip-card__health-bar-full {
+  height: 4px;
+  background: var(--surface-3);
+  margin: 0 var(--space-3) 10px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.equip-card__health-bar-full .equip-card__health-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+/* ── Chips row: risk chip + até 3 chips de contexto ── */
+.equip-card__chips {
+  padding: 0 var(--space-3) var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.equip-card__chip-ctx {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-2);
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: transparent;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+/* ── Timeline strip (substitui grid 2-col Último/Próxima) ── */
+.equip-card__timeline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 0 var(--space-3) var(--space-2);
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: 11.5px;
+  color: var(--text-2);
+}
+
+.equip-card__timeline-icon {
+  width: 12px;
+  height: 12px;
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+
+.equip-card__timeline-last,
+.equip-card__timeline-next {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.equip-card__timeline-last b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.equip-card__timeline-next b {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.equip-card__timeline-next--warn b {
+  color: var(--warning);
+}
+.equip-card__timeline-next--danger b {
+  color: var(--danger);
+}
+
+.equip-card__timeline-divider {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  min-width: 20px;
+}
+
+/* ── Ação recomendada com meta autor/tempo ── */
+.equip-card__action {
+  padding: 0 var(--space-3) var(--space-2);
+  display: grid;
+  gap: 2px;
+}
+
+.equip-card__action-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.equip-card__action-label--warn {
+  color: var(--warning);
+}
+.equip-card__action-label--danger {
+  color: var(--danger);
+}
+
+.equip-card__action-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
+.equip-card__action-meta {
+  font-size: 10.5px;
+  color: var(--text-3);
+  margin-top: 2px;
+}
+
+/* ── CTA tonal full-width colada no rodapé ── */
+.equip-card__cta-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: 0;
+  border-top: 1px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.equip-card__cta-bar-arrow {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+}
+
+.equip-card__cta-bar--ok {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--primary);
+  border-top-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+.equip-card__cta-bar--ok:hover {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.equip-card__cta-bar--warn {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--warning) 18%, transparent),
+    color-mix(in srgb, var(--warning) 9%, transparent)
+  );
+  color: var(--warning);
+  border-top-color: color-mix(in srgb, var(--warning) 35%, var(--border));
+}
+.equip-card__cta-bar--warn:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--warning) 24%, transparent),
+    color-mix(in srgb, var(--warning) 12%, transparent)
+  );
+}
+
+.equip-card__cta-bar--danger {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--danger) 20%, transparent),
+    color-mix(in srgb, var(--danger) 10%, transparent)
+  );
+  color: var(--danger);
+  border-top-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+}
+.equip-card__cta-bar--danger:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--danger) 26%, transparent),
+    color-mix(in srgb, var(--danger) 13%, transparent)
+  );
+}
+
+/* ── Idle: bloco de onboarding dashed cyan ── */
+.equip-card__onboard {
+  margin: 0 var(--space-3) var(--space-3);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--primary) 30%, var(--border));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.equip-card__onboard-text {
+  min-width: 0;
+}
+
+.equip-card__onboard-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.equip-card__onboard-sub {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.equip-card__onboard-cta {
+  background: transparent;
+  border: 0;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 4px 0;
+  font-family: var(--font-body);
+  transition: color 0.15s ease;
+}
+.equip-card__onboard-cta:hover {
+  color: var(--primary-strong);
+}
+
+/* Idle não usa health-bar-full/chips/timeline/action/cta-bar — nada a fazer */
+
+/* ── Mobile ajustes (substitui regras v5 que referenciavam metrics) ── */
+@media (max-width: 640px) {
+  .equip-card__score-value {
+    font-size: 17px;
+  }
+  .equip-card__score-label {
+    font-size: 8.5px;
+  }
+  .equip-card__timeline {
+    font-size: 11px;
+    padding: 7px 10px;
+    gap: 8px;
+  }
+  .equip-card__action-title {
+    font-size: 12.5px;
+  }
+  .equip-card__cta-bar {
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+  .equip-card__onboard {
+    padding: 9px 11px;
+  }
 }
 
 /* ════════════════════════════════════════════════════════
@@ -4041,15 +4930,34 @@ mark,
    HISTÓRICO v5.3 — sticky header, badges cronológicos
    ════════════════════════════════════════════════════════ */
 
-/* Sticky header do histórico */
+/* Sticky header do histórico
+   top = altura do header fixo global + pequeno respiro (`--hist-sticky-gap`)
+   para o bloco de filtros grudar exatamente abaixo do topo, e não por trás dele.
+   Fundo opaco para esconder o conteúdo que rola por baixo. */
 .hist-sticky-header {
   position: sticky;
-  top: 4px;
+  top: calc(var(--app-header-total-height, 0px) + var(--hist-sticky-gap, 0px));
   z-index: 40;
-  background: transparent;
+  background: var(--bg, #07111f);
   padding: 10px 0 8px;
   margin-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  /* Auto-hide on scroll-down: o JS adiciona .is-hidden ao rolar para baixo;
+     remove ao rolar para cima. A animação é feita via transform para ficar
+     suave e não interferir com o layout. */
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+.hist-sticky-header.is-hidden {
+  /* -120% garante que o sticky suma completamente mesmo com border-bottom
+     e qualquer sombra/blur residual. */
+  transform: translateY(-120%);
+}
+/* Usuário prefere reduzir movimento → sem animação, só esconde. */
+@media (prefers-reduced-motion: reduce) {
+  .hist-sticky-header {
+    transition: none;
+  }
 }
 
 .hist-sticky-header__top {
@@ -4150,7 +5058,7 @@ mark,
 /* Mobile: sticky header compacto */
 @media (max-width: 639px) {
   .hist-sticky-header {
-    top: 4px;
+    top: calc(var(--app-header-total-height, 0px) + var(--hist-sticky-gap, 2px));
     padding-top: 9px;
     margin-bottom: 12px;
   }
@@ -4188,7 +5096,11 @@ mark,
   }
 }
 
-/* ── Account dropdown (perfil/autenticacao) ── */
+/* ─── Account dropdown — V2Refined (Claude Design final) ──────────────── */
+/* Hero card do plano (orbs decorativos + badge + nome grande + chips +
+   bar/CTA) seguido de identity row + ações. Tier vars ficam no .account-modal
+   via modifier; Pro ganha gold/cyan bicolor exclusivo. */
+
 .account-modal-overlay {
   align-items: flex-start;
   justify-content: flex-end;
@@ -4210,18 +5122,50 @@ mark,
 }
 
 .account-modal {
+  /* Tier defaults (Free / fallback) — neutral gray, sóbrio */
+  --acm-bg: var(--surface);
+  --acm-border: var(--border);
+  --acm-divider: var(--border);
+  --acm-gold: #e8b94a;
+  --acm-plus-blue: #3a8ee6;
+  --acm-red: #ff5577;
+
+  --acm-accent: var(--text-2);
+  --acm-accent-dim: color-mix(in srgb, var(--text-3) 30%, transparent);
+  --acm-accent-soft: color-mix(in srgb, var(--text-3) 10%, transparent);
+  --acm-accent-glow: color-mix(in srgb, var(--text-3) 14%, transparent);
+  --acm-badge-bg: color-mix(in srgb, var(--text-3) 12%, transparent);
+  --acm-badge-border: color-mix(in srgb, var(--text-3) 24%, transparent);
+
+  position: relative;
   padding: 0;
-  overflow: hidden;
-  width: 300px;
-  border-radius: 14px;
+  overflow: visible;
+  width: 336px;
+  max-width: calc(100vw - 24px);
+  border-radius: 16px;
   margin-top: 52px;
   margin-right: 12px;
+  background: var(--acm-bg);
+  border: 1px solid var(--acm-border);
   box-shadow:
-    var(--shadow-lg),
-    0 0 0 1px var(--border-2);
-  background: var(--surface);
+    0 24px 48px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 200, 232, 0.06);
   transform-origin: top right;
   animation: account-dropdown-in 0.15s cubic-bezier(0.2, 0, 0, 1.2) both;
+}
+
+/* Caret triangular apontando pro avatar no header (top-right) */
+.account-modal__caret {
+  position: absolute;
+  top: -7px;
+  right: 16px;
+  width: 14px;
+  height: 14px;
+  background: var(--acm-bg);
+  border-top: 1px solid var(--acm-border);
+  border-left: 1px solid var(--acm-border);
+  transform: rotate(45deg);
+  z-index: 1;
 }
 
 @keyframes account-dropdown-in {
@@ -4235,29 +5179,365 @@ mark,
   }
 }
 
-.account-modal__header {
-  background: linear-gradient(135deg, var(--primary-soft), var(--primary-dim));
-  border-bottom: 1px solid var(--border);
-  padding: 20px 18px 16px;
+/* Tier variants — override accent vars */
+.account-modal--plus {
+  --acm-border: rgba(58, 142, 230, 0.22);
+  --acm-divider: rgba(58, 142, 230, 0.1);
+  --acm-accent: var(--acm-plus-blue);
+  --acm-accent-dim: rgba(58, 142, 230, 0.28);
+  --acm-accent-soft: rgba(58, 142, 230, 0.1);
+  --acm-accent-glow: rgba(58, 142, 230, 0.22);
+  --acm-badge-bg: rgba(58, 142, 230, 0.14);
+  --acm-badge-border: rgba(58, 142, 230, 0.32);
+}
+
+[data-theme='light'] .account-modal--plus {
+  --acm-accent: #1d4f8e;
+}
+
+.account-modal--pro {
+  --acm-border: rgba(232, 185, 74, 0.2);
+  --acm-divider: rgba(232, 185, 74, 0.1);
+  --acm-accent: var(--acm-gold);
+  --acm-accent-dim: rgba(232, 185, 74, 0.32);
+  --acm-accent-soft: rgba(232, 185, 74, 0.1);
+  --acm-accent-glow: rgba(232, 185, 74, 0.26);
+  --acm-badge-border: rgba(232, 185, 74, 0.36);
+}
+
+/* ─── HERO ────────────────────────────────────────────────────────────── */
+.account-modal__hero {
+  position: relative;
+  padding: 18px 20px 16px;
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+  border-bottom: 1px solid var(--acm-divider);
+  background:
+    radial-gradient(120% 120% at 0% 0%, var(--acm-accent-glow), transparent 55%),
+    linear-gradient(180deg, var(--acm-accent-soft), transparent);
+}
+
+.account-modal--pro .account-modal__hero {
+  border-bottom-color: rgba(232, 185, 74, 0.14);
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(232, 185, 74, 0.18), transparent 50%),
+    radial-gradient(120% 120% at 100% 100%, rgba(0, 200, 232, 0.14), transparent 55%),
+    linear-gradient(180deg, rgba(232, 185, 74, 0.04), transparent);
+}
+
+/* Decorative orbs — adicionam profundidade sem distrair */
+.account-modal__hero-orb {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.account-modal__hero-orb--a {
+  top: -40px;
+  right: -40px;
+  background: radial-gradient(circle, var(--acm-accent-glow), transparent 70%);
+}
+
+.account-modal--pro .account-modal__hero-orb--a {
+  background: radial-gradient(circle, rgba(232, 185, 74, 0.28), transparent 70%);
+}
+
+.account-modal__hero-orb--b {
+  bottom: -60px;
+  left: -40px;
+  background: radial-gradient(circle, var(--acm-accent-glow), transparent 70%);
+}
+
+.account-modal--pro .account-modal__hero-orb--b {
+  background: radial-gradient(circle, rgba(0, 200, 232, 0.18), transparent 70%);
+}
+
+/* Top row: badge + renew (só em Plus/Pro) */
+.account-modal__hero-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.account-modal__plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: var(--acm-badge-bg);
+  border: 1px solid var(--acm-badge-border);
+  color: var(--acm-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.account-modal--pro .account-modal__plan-badge {
+  background: linear-gradient(90deg, rgba(232, 185, 74, 0.22), rgba(0, 200, 232, 0.18));
+  color: var(--acm-gold);
+}
+
+.account-modal__plan-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+/* Bolinha pulsante do Plus (sem SVG) */
+.account-modal__plan-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--acm-accent);
+  box-shadow: 0 0 6px var(--acm-accent);
+}
+
+.account-modal__renew {
+  font-size: 10px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Plan name: "CoolTrack **Plus**" grande */
+.account-modal__plan-name {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.account-modal__plan-tier {
+  font-weight: 800;
+}
+
+/* Pro ganha text-gradient gold→cyan no nome do tier */
+.account-modal--pro .account-modal__plan-tier {
+  background: linear-gradient(135deg, var(--acm-gold), var(--primary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.account-modal__plan-tagline {
+  position: relative;
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-3);
+}
+
+/* ─── Chips ───────────────────────────────────────────────────────────── */
+.account-modal__chips {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.account-modal__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  line-height: 1;
+}
+
+.account-modal__chip-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.account-modal__chip-icon svg {
+  display: block;
+}
+
+/* Filled (Plus/Pro): check preto no accent do plano */
+.account-modal__chip--filled {
+  background: var(--acm-accent-soft);
+  border-color: var(--acm-accent-dim);
+  color: var(--acm-accent);
+}
+
+.account-modal__chip--filled .account-modal__chip-icon {
+  background: var(--acm-accent);
+  color: #001218;
+}
+
+.account-modal--pro .account-modal__chip--filled {
+  background: linear-gradient(90deg, rgba(232, 185, 74, 0.14), rgba(0, 200, 232, 0.1));
+  border-color: rgba(232, 185, 74, 0.28);
+  color: var(--acm-gold);
+}
+
+.account-modal--pro .account-modal__chip--filled .account-modal__chip-icon {
+  background: linear-gradient(135deg, var(--acm-gold), var(--primary));
+}
+
+/* Stroke (Free): outline azul Plus, aspiracional — indica o destino do upgrade */
+.account-modal__chip--stroke {
+  background: transparent;
+  border-color: rgba(58, 142, 230, 0.32);
+  color: var(--acm-plus-blue);
+}
+
+.account-modal__chip--stroke .account-modal__chip-icon {
+  background: transparent;
+  border: 1.3px solid var(--acm-plus-blue);
+  color: var(--acm-plus-blue);
+}
+
+[data-theme='light'] .account-modal__chip--stroke {
+  color: #1d4f8e;
+}
+
+[data-theme='light'] .account-modal__chip--stroke .account-modal__chip-icon {
+  border-color: #1d4f8e;
+  color: #1d4f8e;
+}
+
+/* ─── Usage bar (Plus/Pro) ────────────────────────────────────────────── */
+.account-modal__usage {
+  position: relative;
+  margin-top: 14px;
+}
+
+.account-modal__usage-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 5px;
+}
+
+.account-modal__usage-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.account-modal__usage-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(0, 200, 112, 0.12);
+  overflow: hidden;
+  position: relative;
+}
+
+.account-modal--pro .account-modal__usage-bar {
+  background: rgba(232, 185, 74, 0.14);
+}
+
+.account-modal__usage-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--success), var(--primary));
+  transition: width 0.3s ease;
+}
+
+.account-modal--pro .account-modal__usage-fill {
+  opacity: 0.7;
+  background: linear-gradient(90deg, var(--acm-gold), var(--primary), var(--acm-gold));
+  background-size: 200% 100%;
+  animation: acm-proshimmer 3.5s ease-in-out infinite;
+}
+
+@keyframes acm-proshimmer {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
+}
+
+/* ─── CTA primário (Free) — aponta pro upgrade Plus ──────────────────── */
+.account-modal__hero-cta {
+  position: relative;
+  margin-top: 14px;
+  width: 100%;
+  padding: 11px 14px;
+  background: linear-gradient(135deg, #3a8ee6, #2d6fbd);
+  border: none;
+  border-radius: 10px;
+  color: #f0f7ff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(58, 142, 230, 0.28);
+  transition:
+    filter 0.15s,
+    transform 0.08s;
+}
+
+.account-modal__hero-cta:hover {
+  filter: brightness(1.08);
+}
+
+.account-modal__hero-cta:active {
+  transform: translateY(1px);
+}
+
+.account-modal__hero-cta-icon {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+/* ─── Identity row ────────────────────────────────────────────────────── */
+.account-modal__identity-row {
+  padding: 14px 20px 12px;
   display: flex;
   align-items: center;
   gap: 12px;
+  border-bottom: 1px solid var(--acm-divider);
 }
 
 .account-modal__avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: var(--primary-soft);
-  border: 1.5px solid var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--acm-accent-soft), transparent);
+  border: 1.5px solid var(--acm-accent);
+  color: var(--acm-accent);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--primary);
+  letter-spacing: 0.03em;
   flex-shrink: 0;
-  letter-spacing: 0.02em;
+}
+
+.account-modal--pro .account-modal__avatar {
+  color: var(--acm-gold);
 }
 
 .account-modal__identity {
@@ -4266,118 +5546,86 @@ mark,
 }
 
 .account-modal__name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text);
-  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .account-modal__email {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-3);
+  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* Badge de plano */
-.account-modal__plan-row {
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.account-modal__plan-label {
-  font-size: 11px;
-  color: var(--text-3);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.account-modal__plan-badge {
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 3px 10px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.account-modal__plan-badge--pro {
-  background: var(--success-soft);
-  color: var(--success);
-  border: 1px solid var(--success-soft);
-}
-
-.account-modal__plan-badge--free {
-  background: var(--surface-2);
-  color: var(--text-2);
-  border: 1px solid var(--border-2);
-}
-
-.account-modal__upgrade-btn {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-soft);
-  border: 1px solid var(--primary-soft);
-  border-radius: 999px;
-  padding: 3px 10px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
-  white-space: nowrap;
-}
-
-.account-modal__upgrade-btn:hover {
-  background: var(--primary-dim);
-}
-
+/* ─── Actions ─────────────────────────────────────────────────────────── */
 .account-modal__actions {
-  padding: 10px;
+  padding: 6px 8px 10px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .account-modal__action {
   width: 100%;
-  border-radius: 8px;
-  padding: 10px 10px;
+  padding: 11px 12px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.12s;
-  text-align: left;
-  border: none;
+  gap: 12px;
   background: transparent;
-}
-
-.account-modal__action--neutral {
-  color: var(--text-2);
-}
-
-.account-modal__action--neutral:hover {
-  background: var(--surface-2);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
   color: var(--text);
+  font-size: 13.5px;
+  font-weight: 500;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+
+.account-modal__action:hover {
+  background: var(--surface-2);
+}
+
+.account-modal__action-icon {
+  color: var(--text-2);
+  display: inline-flex;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.account-modal__action-label {
+  flex: 1;
+}
+
+.account-modal__action-chev {
+  color: var(--text-3);
+  display: inline-flex;
+  opacity: 0.6;
+  line-height: 0;
 }
 
 .account-modal__action--danger {
-  color: var(--danger);
+  color: var(--acm-red);
+}
+
+.account-modal__action--danger .account-modal__action-icon {
+  color: var(--acm-red);
 }
 
 .account-modal__action--danger:hover {
-  background: var(--danger-soft);
+  background: rgba(255, 85, 119, 0.08);
+}
+
+.account-modal__action-separator {
+  height: 1px;
+  background: var(--acm-divider);
+  margin: 4px 12px;
 }
 
 /* -- UX polish: async feedback, auth, shared layout helpers -- */
@@ -5106,12 +6354,12 @@ mark,
 .engaging-empty-state__title {
   font-size: 18px;
   font-weight: 600;
-  color: #e8f2fa;
+  color: var(--text);
 }
 
 .engaging-empty-state__description {
   font-size: 14px;
-  color: #8aaac8;
+  color: var(--text-2);
   line-height: 1.6;
   margin: 12px 0 24px;
 }
@@ -5132,9 +6380,9 @@ mark,
 
 .report-empty-preview {
   text-align: left;
-  border: 1px solid rgba(0, 200, 232, 0.22);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
   border-radius: 12px;
-  background: #0c1929;
+  background: var(--surface-2);
   overflow: hidden;
 }
 
@@ -5265,463 +6513,17 @@ mark,
 }
 
 /* ─── PRICING ─── */
-/* ─── PRICING PAGE ─── */
-.pricing-view {
-  display: grid;
-  gap: var(--space-5);
-  color: var(--text);
-  max-width: 900px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* Hero */
-.pricing-hero {
-  padding-bottom: var(--space-2);
-}
-
-.pricing-hero__title {
-  font-size: clamp(20px, 3.5vw, 28px);
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  font-weight: 700;
-}
-
-.pricing-hero__subtitle {
-  margin-top: var(--space-2);
-  color: var(--text-2);
-  font-size: 14px;
-}
-
-.pricing-plan-indicator {
-  margin-top: var(--space-3);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.pricing-plan-indicator--free {
-  color: #a9c6dd;
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.pricing-plan-indicator--pro {
-  color: #9df2ca;
-  border-color: rgba(0, 200, 112, 0.35);
-  background: rgba(0, 200, 112, 0.08);
-}
-
-.pricing-upgrade-reason {
-  margin-top: var(--space-3);
-  padding: 10px 14px;
-  background: rgba(255, 207, 102, 0.07);
-  border: 1px solid rgba(255, 207, 102, 0.2);
-  border-radius: 8px;
-  color: #ffcf66;
-  font-size: 13px;
-}
-
-/* Cards grid */
-.pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.pricing-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: var(--space-4);
-  box-shadow: var(--shadow);
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.pricing-card--active.pricing-card--pro {
-  border-color: rgba(0, 200, 112, 0.45);
-  box-shadow:
-    0 0 0 1px rgba(0, 200, 112, 0.2),
-    0 0 32px rgba(0, 200, 112, 0.1);
-}
-
-.pricing-card--highlighted {
-  transform: translateY(-2px);
-  box-shadow:
-    0 0 0 1px rgba(0, 200, 232, 0.24),
-    0 0 34px rgba(0, 200, 232, 0.2);
-}
-
-.pricing-card--pro {
-  border: 1px solid rgba(0, 200, 232, 0.3);
-  box-shadow:
-    0 0 0 1px rgba(0, 200, 232, 0.14),
-    0 0 24px rgba(0, 200, 232, 0.1);
-}
-
-/* Badge */
-.pricing-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border-radius: 6px;
-  padding: 3px 8px;
-}
-
-.pricing-badge--current {
-  border: 1px solid rgba(0, 200, 112, 0.3);
-  color: #9df2ca;
-  background: rgba(0, 200, 112, 0.1);
-}
-
-.pricing-badge--popular {
-  background: linear-gradient(135deg, #00c8e8, #00a0c8);
-  color: #07111f;
-}
-
-.pricing-badge--neutral {
-  color: var(--text-3);
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-/* Card content */
-.pricing-card__title {
-  margin-top: 14px;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-}
-
-.pricing-card__price {
-  margin-top: 10px;
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--text);
-}
-
-.pricing-card__price-period {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-3);
-}
-
-.pricing-card__price--pro {
-  color: #00c8e8;
-}
-
-.pricing-card__price-group {
-  margin-top: 10px;
-}
-
-/* Toggle mensal / anual */
-.pricing-billing-toggle {
-  display: flex;
-  gap: 4px;
-  margin: 12px 0 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 8px;
-  padding: 3px;
-}
-
-.pricing-billing-toggle__btn {
-  flex: 1;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 7px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    color 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-}
-
-.pricing-billing-toggle__btn--active {
-  background: var(--accent, #00c8e8);
-  color: #000;
-  font-weight: 700;
-}
-
-.pricing-billing-toggle__save {
-  background: rgba(0, 200, 112, 0.25);
-  color: #00e87a;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 4px;
-}
-
-.pricing-billing-toggle__btn--active .pricing-billing-toggle__save {
-  background: rgba(0, 0, 0, 0.2);
-  color: #004d2e;
-}
-
-.pricing-card__price-cents {
-  font-size: 0.55em;
-  vertical-align: super;
-  font-weight: 700;
-}
-
-.pricing-card__annual-detail {
-  margin-top: 2px;
-  color: var(--text-3);
-  font-size: 12px;
-}
-
-.pricing-card__annual {
-  margin-top: 3px;
-  color: var(--text-3);
-  font-size: 12px;
-}
-
-.pricing-card__annual-save {
-  background: rgba(0, 200, 112, 0.12);
-  color: #00c870;
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-size: 11px;
-  font-weight: 600;
-  margin-left: 4px;
-}
-
-/* Features */
-.pricing-features {
-  list-style: none;
-  margin-top: 20px;
-  display: grid;
-  gap: 9px;
-  font-size: 14px;
-  flex: 1;
-}
-
-.pricing-features li {
-  color: var(--text-2);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pricing-features li::before {
-  content: '✓';
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(0, 200, 112, 0.12);
-  color: #00c870;
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-/* Card footer */
-.pricing-card__footer {
-  margin-top: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.pricing-card__cta {
-  width: 100%;
-}
-
-.pricing-card__cta--pro {
-  border: 1px solid rgba(0, 200, 232, 0.4);
-  color: #031521;
-  font-weight: 700;
-  background: linear-gradient(135deg, #00d9ff, #00b5d4);
-  box-shadow: 0 8px 20px rgba(0, 200, 232, 0.22);
-  transition:
-    transform 0.18s,
-    box-shadow 0.18s;
-}
-
-.pricing-card__cta--pro:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(0, 200, 232, 0.3);
-}
-
-.pricing-card__microcopy {
-  color: var(--text-3);
-  font-size: 11px;
-  text-align: center;
-}
-
-/* Cancel / manage button */
-.pricing-cancel-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 12px;
-  color: #5a7a96;
-  text-align: center;
-  padding: 4px 0;
-  text-decoration: underline;
-  text-decoration-color: rgba(90, 122, 150, 0.4);
-  text-underline-offset: 3px;
-  transition: color 0.18s;
-}
-
-.pricing-cancel-btn:hover {
-  color: #ff8a8a;
-  text-decoration-color: rgba(255, 138, 138, 0.5);
-}
-
-/* Management section (Pro only) */
-.pricing-manage-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  padding: 18px 20px;
-}
-
-.pricing-manage-section__icon {
-  font-size: 24px;
-  flex-shrink: 0;
-}
-
-.pricing-manage-section__body {
-  flex: 1;
-  min-width: 0;
-}
-
-.pricing-manage-section__title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  margin-bottom: 4px;
-}
-
-.pricing-manage-section__desc {
-  font-size: 12px;
-  color: var(--text-3);
-  line-height: 1.5;
-}
-
-.pricing-manage-section__btn {
-  flex-shrink: 0;
-  white-space: nowrap;
-  font-size: 13px;
-  padding: 8px 16px;
-}
-
-/* FAQ */
-.pricing-faq {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: var(--space-4);
-}
-
-.pricing-faq__title {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-  margin-bottom: var(--space-3);
-}
-
-.pricing-faq__item {
-  border-top: 1px solid var(--border);
-  padding: 14px 0;
-}
-
-.pricing-faq__item:first-of-type {
-  border-top: none;
-  padding-top: 0;
-}
-
-.pricing-faq__item summary {
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-  list-style: none;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  user-select: none;
-}
-
-.pricing-faq__item summary::-webkit-details-marker {
-  display: none;
-}
-
-.pricing-faq__item summary::after {
-  content: '+';
-  font-size: 18px;
-  color: var(--text-3);
-  flex-shrink: 0;
-  line-height: 1;
-  transition: transform 0.2s;
-}
-
-.pricing-faq__item[open] summary::after {
-  transform: rotate(45deg);
-}
-
-.pricing-faq__item p {
-  margin-top: 10px;
-  color: var(--text-2);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.pricing-faq__item p strong {
-  color: var(--text);
-}
-
-/* Responsive */
-@media (max-width: 600px) {
-  .pricing-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .pricing-manage-section {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .pricing-manage-section__btn {
-    width: 100%;
-  }
-}
+/* Canonical rules live in ./components/_pricing.css (imported no topo).
+   Mantenha só um: deduplicado em 2026-04 pra destravar classes novas (--plus, --three-col). */
 
 .upgrade-nudge-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(0, 200, 232, 0.06), rgba(0, 168, 255, 0.03));
-  border: 1px solid rgba(0, 200, 232, 0.12);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 10%, var(--surface)),
+    color-mix(in srgb, var(--primary) 3%, var(--surface))
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
   border-radius: 14px;
   padding: 24px;
   display: grid;
@@ -5733,12 +6535,13 @@ mark,
   top: 12px;
   right: 12px;
   font-size: 10px;
-  color: #00c870;
-  background: rgba(0, 200, 112, 0.15);
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 28%, var(--border));
   border-radius: 999px;
   padding: 4px 8px;
   letter-spacing: 0.06em;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .upgrade-nudge-card__icon {
@@ -5746,20 +6549,25 @@ mark,
 }
 
 .upgrade-nudge-card--pro-active {
-  border-color: rgba(0, 200, 112, 0.28);
-  background: linear-gradient(135deg, rgba(0, 200, 112, 0.12), rgba(0, 200, 232, 0.08));
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--success) 12%, var(--surface)),
+    color-mix(in srgb, var(--primary) 8%, var(--surface))
+  );
 }
 
 .upgrade-nudge-card__pro-title {
   margin: 0;
-  color: #e8f2fa;
+  color: var(--text);
   font-size: 18px;
   line-height: 1.35;
+  font-weight: 700;
 }
 
 .upgrade-nudge-card__pro-copy {
   margin: 0;
-  color: #b4d3e8;
+  color: var(--text-2);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -5886,8 +6694,14 @@ mark,
   text-decoration: none;
   transition:
     border-color 0.15s,
-    background 0.15s;
+    background 0.15s,
+    transform 0.1s;
   color: inherit;
+  /* Quando renderizado como <button>, herda fontes e fica em largura total. */
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
 }
 
 .sfm-contact-card:hover {
@@ -5895,8 +6709,57 @@ mark,
   background: var(--surface-3);
 }
 
+.sfm-contact-card:active {
+  transform: scale(0.99);
+}
+
 .sfm-contact-card--email:hover {
   border-color: var(--primary);
+}
+
+/* Linha de botões alternativos — Gmail / Outlook / cliente padrão.
+   Garante 3 alternativas para o usuário enviar e-mail mesmo sem
+   cliente nativo configurado (ex.: Windows sem Mail/Outlook desktop). */
+.sfm-support-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.sfm-support-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.1s;
+}
+
+.sfm-support-btn:hover {
+  border-color: var(--primary);
+  background: var(--surface-3);
+}
+
+.sfm-support-btn:active {
+  transform: scale(0.97);
+}
+
+@media (max-width: 480px) {
+  .sfm-support-btn {
+    font-size: 12px;
+    padding: 9px 6px;
+  }
 }
 
 .sfm-contact-card__icon {
@@ -6162,13 +7025,16 @@ mark,
 }
 
 /* ── Card base ─────────────────────────────────────────── */
+/* Stripe superior + borda esquerda com a cor do setor: dupla identidade
+   visual pra a cor virar linguagem de navegação, não só enfeite sutil. */
 .setor-card {
   position: relative;
   display: flex;
   flex-direction: column;
   background: var(--card);
   border: 1px solid var(--border-2);
-  border-top: 3px solid var(--setor-cor, var(--primary));
+  border-top: 5px solid var(--setor-cor, var(--primary));
+  border-left: 3px solid var(--setor-cor, var(--primary));
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
@@ -6187,6 +7053,50 @@ mark,
     0 0 0 1px var(--setor-cor, var(--primary));
   transform: translateY(-3px);
   border-top-color: var(--setor-cor, var(--primary));
+  border-left-color: var(--setor-cor, var(--primary));
+}
+
+/* Título tingido sutilmente com a cor do setor: reforça a identidade sem
+   abusar do contraste. Usamos color-mix pra manter legibilidade. */
+.setor-card .setor-card__nome {
+  color: color-mix(in srgb, var(--setor-cor, var(--primary)) 25%, var(--text));
+}
+
+/* Fallback muted — "Sem setor": agrupamento automático de equipamentos órfãos.
+   Sem cor, sem stripe lateral, borda tracejada em cor mais presente, sem KPIs,
+   tipografia apagada: sinaliza que é um container técnico, não um setor real
+   do usuário. A presença do dashed precisa ser visível o suficiente pra o
+   olho perceber de relance que é uma categoria diferente. */
+.setor-card--fallback {
+  border: 1.5px dashed color-mix(in srgb, var(--text-3) 55%, transparent);
+  border-top-width: 1.5px;
+  border-left-width: 1.5px;
+  background: color-mix(in srgb, var(--card) 45%, transparent);
+  box-shadow: none;
+}
+
+.setor-card--fallback:hover,
+.setor-card--fallback:focus-visible {
+  border-color: var(--text-2);
+  border-style: dashed;
+  box-shadow: 0 4px 18px rgba(3, 8, 16, 0.18);
+  transform: translateY(-2px);
+}
+
+.setor-card--fallback .setor-card__nome {
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.setor-card--fallback .setor-card__count-dot {
+  background: var(--text-3);
+}
+
+.setor-card--fallback .setor-card__count {
+  color: var(--text-3);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.06em;
 }
 
 /* ── Cabeçalho do card ─────────────────────────────────── */
@@ -6255,27 +7165,30 @@ mark,
   color: var(--danger);
 }
 
-/* ── Métricas ──────────────────────────────────────────── */
-.setor-card__metrics {
-  display: flex;
-  border-top: 1px solid var(--border-2);
-  margin: 0 16px;
-  padding: 11px 0 14px;
-  gap: 0;
-}
-
-.setor-card__metric {
-  flex: 1;
+/* ── KPIs dinâmicos (score médio + % em dia) ────────────── */
+/* Barras horizontais finas: sempre têm valor (a partir de 1 equip),
+   diferente das métricas antigas que viviam em "—". */
+.setor-card__kpis {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 10px;
+  border-top: 1px solid var(--border-2);
+  margin: 0 16px;
+  padding: 12px 0 14px;
+}
+
+.setor-card__kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
 }
 
-.setor-card__metric + .setor-card__metric {
-  padding-left: 14px;
-  border-left: 1px solid var(--border-2);
-  margin-left: 14px;
+.setor-card__kpi-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .setor-card__lbl {
@@ -6289,20 +7202,72 @@ mark,
   text-overflow: ellipsis;
 }
 
-.setor-card__val {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.setor-card__kpi-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
-.setor-card__val--warn {
-  color: var(--warning);
+.setor-card__bar-track {
+  height: 4px;
+  background: var(--border-2);
+  border-radius: 2px;
+  overflow: hidden;
 }
-.setor-card__val--danger {
-  color: var(--danger);
+
+.setor-card__bar {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.35s ease-out;
+  background: var(--success);
+}
+
+.setor-card__bar--ok {
+  background: var(--success);
+}
+.setor-card__bar--warn {
+  background: var(--warning);
+}
+.setor-card__bar--danger {
+  background: var(--danger);
+}
+
+/* Corpo "empty" — setor novo ou fallback sem KPIs pra computar. */
+.setor-card__empty-body {
+  padding: 14px 16px 12px;
+  border-top: 1px solid var(--border-2);
+}
+
+.setor-card__empty-hint {
+  font-size: 12px;
+  color: var(--text-3);
+  font-style: italic;
+  line-height: 1.45;
+  display: block;
+}
+
+.setor-card--fallback .setor-card__empty-body,
+.setor-card--fallback .setor-card__kpis {
+  border-top-color: color-mix(in srgb, var(--text-3) 35%, transparent);
+}
+
+/* Corpo do fallback "Sem setor": sem KPIs (seria mentira dizer que órfãos
+   têm "score médio como grupo"). Espaço respirável pra mensagem ficar
+   legível e bater a diferença visual com setores reais. */
+.setor-card__empty-body--fallback {
+  padding: 18px 16px 14px;
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+}
+
+.setor-card__empty-body--fallback .setor-card__empty-hint {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-3);
+  font-style: normal;
 }
 
 /* ── CTA "Ver equipamentos" ────────────────────────────── */
@@ -6338,37 +7303,11 @@ mark,
   transform: translateX(3px);
 }
 
-/* ── Botão excluir ─────────────────────────────────────── */
-.setor-card__delete {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: var(--card);
-  border: 1px solid var(--border-2);
-  color: var(--text-3);
-  cursor: pointer;
-  padding: 5px;
-  border-radius: 6px;
-  opacity: 0;
-  line-height: 0;
-  transition:
-    opacity 0.15s,
-    color 0.12s,
-    background 0.12s,
-    border-color 0.12s;
-  z-index: 2;
-}
-
-.setor-card:hover .setor-card__delete,
-.setor-card:focus-within .setor-card__delete {
-  opacity: 1;
-}
-
-.setor-card__delete:hover {
-  background: var(--danger-soft);
-  border-color: var(--danger);
-  color: var(--danger);
-}
+/* Regras de .setor-card__actions / __edit / __delete foram movidas
+   pra src/assets/styles/components/_setor-card.css (PR D2 port V2).
+   Mantidas lá pra consolidar todo o styling do setor-card num único
+   módulo. A versão absolute+hover-reveal legada foi removida pra
+   evitar override do layout V2 (footer row com ações inline). */
 
 /* ── Color picker de setor ─────────────────────────────────────────────────── */
 
@@ -6511,4 +7450,955 @@ mark,
   color: var(--text-2);
   line-height: 1.5;
   margin: 0;
+}
+
+/* ============================================================
+   DASHBOARD V2REFINED (hero + KPI grid + pair + accordion)
+   Tokens tier-aware via --dsh-accent (cyan/green/gold), reaproveitados
+   do Account Modal V2Refined. NADA novo de cor além dos 10 tokens base.
+   ============================================================ */
+
+/* Tier defaults — Free (cyan) */
+.dash {
+  --dsh-gold: #e8b94a;
+  --dsh-red: #ff5577;
+
+  --dsh-accent: var(--primary);
+  --dsh-accent-dim: rgba(0, 200, 232, 0.28);
+  --dsh-accent-soft: rgba(0, 200, 232, 0.08);
+  --dsh-accent-strong: rgba(0, 200, 232, 0.4);
+  --dsh-accent-glow: rgba(0, 200, 232, 0.18);
+
+  --dsh-card-bg: rgba(255, 255, 255, 0.025);
+  --dsh-card-border: rgba(255, 255, 255, 0.08);
+  --dsh-card-border-strong: rgba(255, 255, 255, 0.16);
+  --dsh-surface: var(--surface);
+  --dsh-divider: rgba(255, 255, 255, 0.06);
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 2px 24px;
+}
+
+[data-theme='light'] .dash {
+  --dsh-card-bg: rgba(0, 30, 60, 0.025);
+  --dsh-card-border: rgba(0, 30, 60, 0.08);
+  --dsh-card-border-strong: rgba(0, 30, 60, 0.16);
+  --dsh-divider: rgba(0, 30, 60, 0.06);
+}
+
+.dash[data-tier='plus'] {
+  --dsh-accent: var(--success);
+  --dsh-accent-dim: rgba(0, 200, 112, 0.28);
+  --dsh-accent-soft: rgba(0, 200, 112, 0.08);
+  --dsh-accent-strong: rgba(0, 200, 112, 0.4);
+  --dsh-accent-glow: rgba(0, 200, 112, 0.2);
+}
+
+.dash[data-tier='pro'] {
+  --dsh-accent: var(--dsh-gold);
+  --dsh-accent-dim: rgba(232, 185, 74, 0.3);
+  --dsh-accent-soft: rgba(232, 185, 74, 0.1);
+  --dsh-accent-strong: rgba(232, 185, 74, 0.38);
+  --dsh-accent-glow: rgba(232, 185, 74, 0.22);
+}
+
+/* Quando está em tom "alert", override pro vermelho */
+.dash[data-tone='alert'] {
+  --dsh-tone-accent: var(--dsh-red);
+  --dsh-tone-strong: rgba(255, 85, 119, 0.4);
+  --dsh-tone-soft: rgba(255, 85, 119, 0.1);
+  --dsh-tone-glow: rgba(255, 85, 119, 0.24);
+}
+
+/* ─── Hero Status Card ─────────────────────────────────────────────────── */
+.dash__hero {
+  position: relative;
+  padding: 20px;
+  background: var(--dsh-surface);
+  border: 1px solid var(--dsh-accent-strong);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.28),
+    0 4px 12px rgba(0, 200, 232, 0.04);
+}
+
+.dash__hero[data-tone='alert'] {
+  border-color: var(--dsh-tone-strong);
+}
+
+.dash__hero-orb {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+.dash__hero-orb--a {
+  top: -50px;
+  left: -50px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, var(--dsh-accent-glow), transparent 70%);
+}
+
+.dash__hero[data-tone='alert'] .dash__hero-orb--a {
+  background: radial-gradient(circle, var(--dsh-tone-glow), transparent 70%);
+}
+
+.dash__hero-orb--b {
+  bottom: -80px;
+  right: -60px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(0, 200, 232, 0.12), transparent 70%);
+}
+
+.dash__hero[data-tone='alert'] .dash__hero-orb--b {
+  display: none;
+}
+
+.dash__hero-body {
+  position: relative;
+  z-index: 1;
+}
+
+.dash__hero-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--dsh-accent) 18%, transparent),
+    color-mix(in srgb, var(--dsh-accent) 8%, transparent)
+  );
+  border: 1px solid var(--dsh-accent-strong);
+  color: var(--dsh-accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 14px;
+}
+
+.dash__hero[data-tone='alert'] .dash__hero-pill {
+  background: var(--dsh-tone-soft);
+  border-color: var(--dsh-tone-strong);
+  color: var(--dsh-red);
+}
+
+.dash__hero-pill-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.dash__hero-greeting {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.dash__hero-datetime {
+  margin-top: 5px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.dash__hero-desc {
+  margin: 14px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.45;
+  max-width: 560px;
+}
+
+.dash__hero-desc-strong {
+  color: var(--dsh-red);
+  font-weight: 600;
+}
+
+.dash__hero[data-tone='ok'] .dash__hero-desc-strong {
+  color: var(--dsh-accent);
+}
+
+.dash__hero-chips {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.dash__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  background: var(--dsh-accent-soft);
+  border: 1px solid var(--dsh-accent-dim);
+  color: var(--dsh-accent);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dash__chip-check {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background: var(--dsh-accent);
+  display: grid;
+  place-items: center;
+  color: #0d1a28;
+  line-height: 0;
+}
+
+.dash__hero-cta-wrap {
+  position: relative;
+  z-index: 1;
+  margin-top: 18px;
+}
+
+.dash__hero-cta {
+  width: 100%;
+  height: 48px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(
+    135deg,
+    var(--dsh-accent),
+    color-mix(in srgb, var(--dsh-accent) 70%, #0a1420)
+  );
+  color: #0d1a28;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  letter-spacing: -0.1px;
+  box-shadow: 0 6px 18px var(--dsh-accent-glow);
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.dash__hero-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px var(--dsh-accent-glow);
+}
+
+.dash__hero-cta:active {
+  transform: translateY(0);
+}
+
+.dash__hero[data-tone='alert'] .dash__hero-cta {
+  background: linear-gradient(135deg, var(--dsh-red), #c43558);
+  box-shadow: 0 6px 18px rgba(255, 85, 119, 0.24);
+}
+
+.dash__hero-cta-icon {
+  display: inline-flex;
+  line-height: 0;
+}
+
+/* Desktop layout (≥960px): hero content à esquerda, CTA à direita */
+@media (min-width: 960px) {
+  .dash__hero {
+    padding: 28px 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: end;
+  }
+
+  .dash__hero-greeting {
+    font-size: 32px;
+  }
+
+  .dash__hero-cta-wrap {
+    margin-top: 0;
+    min-width: 240px;
+  }
+
+  .dash__hero-cta {
+    height: 52px;
+    padding: 0 22px;
+  }
+}
+
+/* ─── KPI Grid — 2×2 mobile, 1×4 desktop ──────────────────────────────── */
+.dash__kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.dash__kpi {
+  padding: 14px;
+  background: var(--dsh-card-bg);
+  border: 1px solid var(--dsh-card-border);
+  border-radius: 12px;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.dash__kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  text-transform: uppercase;
+}
+
+.dash__kpi-value {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.dash__kpi-value[data-tone='ok'] {
+  color: var(--text);
+}
+
+.dash__kpi-value[data-tone='warn'] {
+  color: var(--warning);
+}
+
+.dash__kpi-value[data-tone='danger'] {
+  color: var(--dsh-red);
+}
+
+.dash__kpi-value[data-tone='muted'] {
+  color: var(--text-2);
+}
+
+.dash__kpi-spark {
+  height: 20px;
+  color: var(--dsh-accent);
+}
+
+.dash__kpi-spark:empty {
+  display: none;
+}
+
+.dash__kpi-sub {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.dash__kpi-sub[data-tone='ok'] {
+  color: var(--success);
+}
+
+.dash__kpi-sub[data-tone='warn'] {
+  color: var(--warning);
+}
+
+.dash__kpi-sub[data-tone='danger'] {
+  color: var(--dsh-red);
+}
+
+@media (min-width: 960px) {
+  .dash__kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .dash__kpi {
+    padding: 18px;
+    min-height: 108px;
+  }
+  .dash__kpi-value {
+    font-size: 32px;
+  }
+}
+
+/* ─── Pair: Próxima ação + Último serviço ─────────────────────────────── */
+.dash__pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 960px) {
+  .dash__pair {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+}
+
+.dash__card {
+  padding: 16px;
+  background: var(--dsh-card-bg);
+  border: 1px solid var(--dsh-card-border);
+  border-radius: 14px;
+}
+
+.dash__card--next-action[data-tone='danger'] {
+  border-color: rgba(255, 85, 119, 0.3);
+  background: rgba(255, 85, 119, 0.05);
+}
+
+.dash__card--next-action[data-tone='warn'] {
+  border-color: rgba(232, 160, 32, 0.3);
+  background: rgba(232, 160, 32, 0.05);
+}
+
+.dash__card-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.dash__card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.dash__card-sub {
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.dash__card-desc {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.45;
+  opacity: 0.85;
+  margin-top: 6px;
+}
+
+.dash__card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dash__card--next-action[data-tone='danger'] .dash__card-cta {
+  color: var(--dsh-red);
+}
+
+.dash__card--next-action[data-tone='warn'] .dash__card-cta {
+  color: var(--warning);
+}
+
+.dash__card-cta:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* Último serviço com ícone */
+.dash__card--last-service {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dash__card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--dsh-accent-soft);
+  border: 1px solid var(--dsh-accent-dim);
+  display: grid;
+  place-items: center;
+  color: var(--dsh-accent);
+}
+
+.dash__card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── Seções legadas (critical-now, alertas, criticos, recentes) ──────── */
+.dash__section {
+  background: var(--dsh-card-bg);
+  border: 1px solid var(--dsh-card-border);
+  border-radius: 14px;
+  padding: 14px 16px 16px;
+}
+
+.dash__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dash__section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+  text-transform: uppercase;
+}
+
+.dash__section-count {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--dsh-accent-soft);
+  border: 1px solid var(--dsh-accent-dim);
+  color: var(--dsh-accent);
+}
+
+/* ─── Análise accordion / grid ────────────────────────────────────────── */
+.dash__analise {
+  background: var(--dsh-card-bg);
+  border: 1px solid var(--dsh-card-border);
+  border-radius: 14px;
+  padding: 14px 16px 8px;
+}
+
+.dash__accordion {
+  display: flex;
+  flex-direction: column;
+}
+
+.dash__accordion-item {
+  border-bottom: 1px solid var(--dsh-divider);
+}
+
+.dash__accordion-item:last-child {
+  border-bottom: none;
+}
+
+.dash__accordion-summary {
+  list-style: none;
+  padding: 14px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.dash__accordion-summary::-webkit-details-marker {
+  display: none;
+}
+
+.dash__accordion-chev {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  color: var(--text-2);
+  background: no-repeat center/contain
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236a8ba8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6l6 6-6 6'/></svg>");
+  transition: transform 0.15s;
+}
+
+.dash__accordion-item[open] > .dash__accordion-summary > .dash__accordion-chev {
+  transform: rotate(90deg);
+}
+
+.dash__accordion-body {
+  padding: 4px 4px 18px;
+  min-height: 140px;
+}
+
+.dash__accordion-body canvas {
+  max-height: 200px;
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Desktop: converte accordion em grid 2×1 + 1 full */
+@media (min-width: 960px) {
+  .dash__analise {
+    padding: 16px 20px 20px;
+  }
+  .dash__accordion {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .dash__accordion-item {
+    border: 1px solid var(--dsh-card-border);
+    border-radius: 12px;
+    padding: 4px 14px 0;
+  }
+  .dash__accordion-item:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+  .dash__accordion-item[open] > .dash__accordion-summary > .dash__accordion-chev {
+    transform: rotate(90deg);
+  }
+}
+
+/* Empty state container (usa emptyStateHtml existente) */
+.dash__empty {
+  background: var(--dsh-card-bg);
+  border: 1px dashed var(--dsh-card-border-strong);
+  border-radius: 16px;
+  padding: 24px;
+}
+
+/* ════════════════════════════════════════════════════════
+   CADASTRO v6 — Port Claude Design V2 (PR D4)
+   Breadcrumb, seção CONTEXTO unificada, PLUS pill inline,
+   expand-btn estilo pill.
+   ════════════════════════════════════════════════════════ */
+
+/* Breadcrumb no header do modal-add-eq substitui modal-steps */
+.modal-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.2;
+}
+
+.modal-breadcrumb__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-2);
+}
+
+.modal-breadcrumb__item--active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.modal-breadcrumb__item--muted {
+  color: var(--text-3);
+}
+
+.modal-breadcrumb__dot {
+  color: var(--primary);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.modal-breadcrumb__sep {
+  color: var(--border-2);
+}
+
+/* Counter "1 / 2" no canto superior direito */
+.modal-steps--counter {
+  align-items: center;
+  justify-content: flex-end;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+}
+
+.modal-steps__counter {
+  display: inline-block;
+}
+
+/* Cabeçalho de seção — label pequena em caps (ESSENCIAIS / CONTEXTO) */
+.eq-form-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 12px 0 6px;
+}
+
+.eq-form-section-head__label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  text-transform: uppercase;
+}
+
+.eq-context-group .eq-form-section-head__label {
+  color: var(--text-2);
+}
+
+.eq-form-section-head__meta {
+  font-size: 10.5px;
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+/* Container unificado da seção CONTEXTO: agrupa Setor + Fotos */
+.eq-context-group {
+  margin-top: 14px;
+}
+
+.eq-context-group__card {
+  background: var(--card);
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Linha compacta dentro do card (setor e fotos) */
+.eq-context-row {
+  display: block;
+  padding: 12px 14px;
+  position: relative;
+}
+
+.eq-context-row + .eq-context-row {
+  border-top: 1px solid var(--border-2);
+}
+
+.eq-context-row--setor {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.eq-context-row__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--card-2, var(--surface-2));
+  border: 1px solid var(--border-2);
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+}
+
+.eq-context-row__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--text-3);
+}
+
+.eq-context-row__body {
+  min-width: 0;
+}
+
+.eq-context-row__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.eq-context-row__sub {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.eq-context-row__chev {
+  color: var(--text-2);
+}
+
+/* Select "invisível" que ocupa a row inteira (acessível, clique abre nativo) */
+.eq-context-row__select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: transparent;
+}
+
+.eq-context-row__select:focus-visible + .eq-context-row__chev,
+.eq-context-row--setor:focus-within {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Linha de fotos */
+.eq-context-row--fotos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.eq-context-row__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.eq-context-row__icon--cam {
+  color: var(--text-2);
+}
+
+/* PLUS pill inline (no lugar do ribbon grande) */
+.plus-badge--inline {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  background: linear-gradient(135deg, #22d3ee, #a78bfa);
+  color: #001826;
+}
+
+/* PRO pill inline também reduzido */
+.pro-badge--inline {
+  font-size: 8.5px;
+  padding: 1px 7px;
+  letter-spacing: 0.08em;
+}
+
+/* Drop-zone redesenhada dentro da linha de fotos */
+.eq-context-row--fotos .equip-photo-dropzone {
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 35%, transparent);
+  background: color-mix(in srgb, var(--primary) 3%, transparent);
+  border-radius: 10px;
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--primary);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.eq-context-row--fotos .equip-photo-dropzone:hover {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+.eq-context-row--fotos .equip-photo-dropzone__icon {
+  flex: 0 0 auto;
+  color: var(--primary);
+}
+
+.eq-context-row--fotos .equip-photo-dropzone__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+}
+
+.eq-context-row--fotos .equip-photo-dropzone__title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.eq-context-row--fotos .equip-photo-dropzone__sub {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+/* Expand-btn estilo pill (V2) */
+.eq-expand-btn--pill {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-2);
+  background: var(--card);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.eq-expand-btn--pill:hover {
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border-2));
+  background: color-mix(in srgb, var(--primary) 3%, var(--card));
+}
+
+.eq-expand-btn--pill .eq-expand-btn__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.eq-expand-btn--pill .eq-expand-btn__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.eq-expand-btn--pill .eq-expand-hint {
+  font-size: 10.5px;
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+.eq-expand-btn--pill[aria-expanded='true'] {
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--border-2));
+  background: color-mix(in srgb, var(--primary) 5%, var(--card));
+}
+
+/* Mobile ajustes */
+@media (max-width: 519px) {
+  .eq-context-row {
+    padding: 10px 12px;
+  }
+
+  .eq-context-row__icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .eq-context-row__title {
+    font-size: 12px;
+  }
+
+  .modal-breadcrumb {
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .eq-context-row--fotos .equip-photo-dropzone {
+    padding: 12px 10px;
+  }
 }

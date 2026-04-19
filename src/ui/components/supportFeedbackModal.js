@@ -2,7 +2,11 @@
  * SupportFeedbackModal — Modal de suporte e feedback do usuário.
  * Acessível via menu de ajuda (?) no header.
  *
- * Aba Suporte: link direto para o e-mail do CoolTrack (mailto:).
+ * Aba Suporte: múltiplas formas de contatar o time — copiar e-mail,
+ * abrir no Gmail web, no Outlook web, ou no cliente padrão (mailto:).
+ * O fallback "copiar" é o mais robusto: funciona mesmo para usuários
+ * que não têm nenhum cliente de e-mail configurado no sistema.
+ *
  * Aba Feedback — fluxo de envio:
  *  1. Salva no localStorage (histórico local, fallback offline)
  *  2. Insere na tabela `feedback` do Supabase (owner lê no Dashboard)
@@ -13,12 +17,82 @@
 
 import { Toast } from '../../core/toast.js';
 import { supabase } from '../../core/supabase.js';
-import { buildFeedbackMailtoUrl, sendFeedbackEmail } from '../../core/emailNotification.js';
+import { buildFeedbackEmailBody, sendFeedbackEmail } from '../../core/emailNotification.js';
 
 const MODAL_ID = 'support-feedback-modal-overlay';
 const LS_KEY = 'cooltrack-feedback-history';
 
 const SUPPORT_EMAIL = 'suporte@cooltrackpro.com.br';
+const SUPPORT_SUBJECT = 'Suporte CoolTrack Pro';
+const SUPPORT_BODY =
+  'Olá, equipe CoolTrack!\n\n' +
+  'Descreva aqui sua dúvida ou problema com detalhes.\n' +
+  'Inclua, se possível: e-mail cadastrado, dispositivo (PC/Android/iPhone) e o que estava fazendo.\n\n' +
+  '— Enviado pelo CoolTrack Pro';
+
+function buildGmailUrl() {
+  const params = new URLSearchParams({
+    view: 'cm',
+    fs: '1',
+    to: SUPPORT_EMAIL,
+    su: SUPPORT_SUBJECT,
+    body: SUPPORT_BODY,
+  });
+  return `https://mail.google.com/mail/?${params.toString()}`;
+}
+
+function buildOutlookUrl() {
+  const params = new URLSearchParams({
+    path: '/mail/action/compose',
+    to: SUPPORT_EMAIL,
+    subject: SUPPORT_SUBJECT,
+    body: SUPPORT_BODY,
+  });
+  return `https://outlook.live.com/mail/0/deeplink/compose?${params.toString()}`;
+}
+
+function buildMailtoUrl() {
+  const params = new URLSearchParams({
+    subject: SUPPORT_SUBJECT,
+    body: SUPPORT_BODY,
+  });
+  return `mailto:${SUPPORT_EMAIL}?${params.toString()}`;
+}
+
+/**
+ * Copia uma string para o clipboard. Usa navigator.clipboard quando
+ * disponível (HTTPS) e fallback para document.execCommand em contextos
+ * inseguros ou navegadores antigos.
+ */
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_err) {
+      /* segue pro fallback */
+    }
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch (_err) {
+    return false;
+  }
+}
+
+// Açúcar sintático pro caso mais comum — copiar o e-mail de suporte.
+function copyEmailToClipboard() {
+  return copyTextToClipboard(SUPPORT_EMAIL);
+}
 
 function saveToLocalStorage(rating, message) {
   try {
@@ -42,8 +116,9 @@ async function saveToSupabase(rating, message) {
   });
   if (error) {
     console.warn('[Feedback] Supabase insert error:', error.message);
+    return { ok: false, userEmail: user?.email ?? null };
   }
-  return user?.email ?? null;
+  return { ok: true, userEmail: user?.email ?? null };
 }
 
 function closeModal() {
@@ -89,21 +164,31 @@ export const SupportFeedbackModal = {
           </div>
 
           <div class="sfm-contact-cards">
-            <a class="sfm-contact-card sfm-contact-card--email"
-               href="mailto:${SUPPORT_EMAIL}?subject=Suporte%20CoolTrack%20Pro"
-               target="_blank" rel="noopener">
+            <button type="button" class="sfm-contact-card sfm-contact-card--email" data-action="copy-email">
               <span class="sfm-contact-card__icon">✉️</span>
               <div>
-                <div class="sfm-contact-card__title">E-mail</div>
+                <div class="sfm-contact-card__title">E-mail de suporte</div>
                 <div class="sfm-contact-card__desc">${SUPPORT_EMAIL}</div>
               </div>
-              <span class="sfm-contact-card__arrow">→</span>
-            </a>
+              <span class="sfm-contact-card__arrow" aria-hidden="true">📋</span>
+            </button>
+          </div>
+
+          <div class="sfm-support-actions" role="group" aria-label="Abrir composição de e-mail">
+            <button type="button" class="sfm-support-btn" data-action="open-gmail">
+              <span aria-hidden="true">📧</span> Gmail
+            </button>
+            <button type="button" class="sfm-support-btn" data-action="open-outlook">
+              <span aria-hidden="true">📨</span> Outlook
+            </button>
+            <button type="button" class="sfm-support-btn" data-action="open-mailto">
+              <span aria-hidden="true">💻</span> App padrão
+            </button>
           </div>
 
           <div class="sfm-faq-hint">
             <span>💡</span>
-            <span>Ao entrar em contato, informe seu e-mail cadastrado e descreva o problema com detalhes.</span>
+            <span>Clique no card acima para copiar o e-mail. Depois cole no seu app/webmail preferido. Ao escrever, informe seu e-mail cadastrado e descreva o problema com detalhes.</span>
           </div>
         </div>
 
@@ -156,6 +241,32 @@ export const SupportFeedbackModal = {
     });
     document.addEventListener('keydown', _escHandler);
 
+    // Ações do painel de Suporte — copiar e-mail / abrir Gmail / Outlook / mailto
+    overlay.querySelector('[data-action="copy-email"]')?.addEventListener('click', async () => {
+      const copied = await copyEmailToClipboard();
+      if (copied) {
+        Toast.success(`E-mail copiado: ${SUPPORT_EMAIL}`);
+      } else {
+        // Último recurso: mostra o e-mail no toast pra o usuário selecionar/anotar
+        Toast.info(`Copie este e-mail: ${SUPPORT_EMAIL}`);
+      }
+    });
+
+    overlay.querySelector('[data-action="open-gmail"]')?.addEventListener('click', () => {
+      window.open(buildGmailUrl(), '_blank', 'noopener');
+    });
+
+    overlay.querySelector('[data-action="open-outlook"]')?.addEventListener('click', () => {
+      window.open(buildOutlookUrl(), '_blank', 'noopener');
+    });
+
+    overlay.querySelector('[data-action="open-mailto"]')?.addEventListener('click', () => {
+      // Copia em paralelo — se o mailto falhar (sem cliente configurado),
+      // o usuário ainda tem o e-mail no clipboard.
+      copyEmailToClipboard();
+      window.location.href = buildMailtoUrl();
+    });
+
     // Stars
     const LABELS = ['', 'Muito ruim 😞', 'Ruim 😕', 'Regular 😐', 'Bom 😊', 'Excelente! 🤩'];
     let selectedRating = 0;
@@ -198,45 +309,58 @@ export const SupportFeedbackModal = {
       // 1. Salva localmente (síncrono, nunca falha)
       saveToLocalStorage(selectedRating, message);
 
-      // 2. Persiste em Supabase e tenta enviar via EmailJS. Se EmailJS estiver
-      //    configurado, chega automaticamente no e-mail do CoolTrack.
-      //    Se não estiver, caímos para o fallback `mailto:` — abre o cliente
-      //    de e-mail do usuário já com assunto e corpo preenchidos, garantindo
-      //    que a mensagem chegue ao time mesmo sem backend de e-mail.
+      // 2. Persiste em Supabase — principal canal de entrega pro time. O owner
+      //    lê os feedbacks no Dashboard do Supabase, então basta o insert
+      //    ter sucesso pra considerar entregue.
       let userEmail = 'anônimo';
+      let savedToSupabase = false;
       try {
-        userEmail = (await saveToSupabase(selectedRating, message)) || 'anônimo';
+        const result = await saveToSupabase(selectedRating, message);
+        savedToSupabase = !!result?.ok;
+        userEmail = result?.userEmail || 'anônimo';
       } catch (_err) {
         /* Supabase offline ou sem sessão — segue o fluxo */
       }
 
-      let delivered = false;
+      // 3. Canal adicional: EmailJS (se configurado). Nunca abre cliente de
+      //    e-mail do usuário — o usuário pediu pra só escrever e enviar.
+      let deliveredByEmail = false;
       try {
-        delivered = await sendFeedbackEmail({
+        deliveredByEmail = await sendFeedbackEmail({
           rating: selectedRating,
           message,
           userEmail,
         });
       } catch (_err) {
-        // `delivered` já é `false` — cai no fallback mailto
+        /* deliveredByEmail fica false */
       }
 
       closeModal();
 
-      if (delivered) {
+      if (savedToSupabase || deliveredByEmail) {
         Toast.success('Obrigado pelo feedback! 🙏 Sua opinião é muito valiosa.');
+        return;
+      }
+
+      // Tudo falhou (usuário sem internet E sem EmailJS): oferece copiar
+      // o feedback formatado para o clipboard, pra o usuário colar depois
+      // onde quiser. Sem abrir nenhum app.
+      const body = buildFeedbackEmailBody({
+        rating: selectedRating,
+        message,
+        userEmail,
+      });
+      const copied = await copyTextToClipboard(
+        `Para: ${SUPPORT_EMAIL}\nAssunto: Feedback CoolTrack Pro — ${selectedRating}/5\n\n${body}`,
+      );
+      if (copied) {
+        Toast.info(
+          'Sem conexão agora. Seu feedback foi copiado — cole no Gmail/Outlook quando voltar a internet.',
+        );
       } else {
-        // Fallback: abre o cliente de e-mail do usuário pra enviar direto ao CoolTrack
-        const mailtoUrl = buildFeedbackMailtoUrl({
-          rating: selectedRating,
-          message,
-          userEmail,
-        });
-        Toast.info('Abrindo seu e-mail para concluir o envio ao CoolTrack…');
-        // Pequeno delay para o Toast renderizar antes do navegador focar o cliente de e-mail
-        setTimeout(() => {
-          window.location.href = mailtoUrl;
-        }, 150);
+        Toast.info(
+          'Sem conexão. Seu feedback ficou salvo localmente e vamos reenviar automaticamente.',
+        );
       }
     });
 

@@ -263,6 +263,27 @@ export function sanitizePersistedEquipamento(payload) {
   };
 }
 
+const SETOR_NOME_MAX = 80;
+const SETOR_COR_REGEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+
+/**
+ * Normaliza e valida um setor (feature Pro). Retorna `null` se inválido.
+ * Campos: id (obrigatório), nome (obrigatório, até 80 chars), cor (hex opcional).
+ */
+export function sanitizePersistedSetor(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const id = String(payload.id || '').trim();
+  if (!id) return null;
+
+  const nome = normalizeInlineText(payload.nome);
+  if (!nome || nome.length > SETOR_NOME_MAX) return null;
+
+  const corRaw = String(payload.cor || '').trim();
+  const cor = SETOR_COR_REGEX.test(corRaw) ? corRaw : '#00bcd4';
+
+  return { id, nome, cor };
+}
+
 export function sanitizePersistedRegistro(payload, { existingEquipamentos = [] } = {}) {
   const result = validateRegistroPayload(payload, {
     existingEquipamentos,

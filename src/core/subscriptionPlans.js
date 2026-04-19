@@ -38,6 +38,9 @@ const FEATURE_MIN_PLAN = {
 };
 
 // ── Catálogo de planos ─────────────────────────────────────────────────────
+// Nota: `accountTagline` e `accountChips` alimentam o account modal — versão
+// enxuta dos perks pra caber no card sem redundância. Fonte da verdade alinhada
+// com a pricing page (não inventar features que não existem nos perks).
 export const PLAN_CATALOG = {
   [PLAN_CODE_FREE]: {
     key: PLAN_CODE_FREE,
@@ -52,6 +55,9 @@ export const PLAN_CATALOG = {
       'Histórico dos últimos 30 dias',
       '10 envios de relatório via WhatsApp/mês',
     ],
+    accountTagline: 'Recursos básicos para começar. Desbloqueie mais com o Plus.',
+    // Chips aspiracionais no Free: mostram o que vem ao fazer upgrade (estilo ghost/muted).
+    accountChips: ['Até 25 equipamentos', 'PDFs sem marca d\u2019água', 'Registros ilimitados'],
   },
   [PLAN_CODE_PLUS]: {
     key: PLAN_CODE_PLUS,
@@ -67,7 +73,10 @@ export const PLAN_CATALOG = {
       '100 relatórios PDF/mês sem marca d\u2019água',
       '50 envios via WhatsApp/mês',
       'Assinatura digital do cliente no PDF',
+      'Fotos dos equipamentos (até 3 por equipamento)',
     ],
+    accountTagline: 'Até 25 equipamentos, PDFs sem marca d\u2019água e assinatura digital.',
+    accountChips: ['Até 25 equipamentos', 'PDFs sem marca d\u2019água', 'Assinatura digital'],
   },
   [PLAN_CODE_PRO]: {
     key: PLAN_CODE_PRO,
@@ -83,8 +92,11 @@ export const PLAN_CATALOG = {
       'Relatórios PDF e WhatsApp ilimitados',
       'Agrupamento por setores',
       'Assinatura digital do cliente no PDF',
+      'Fotos dos equipamentos (até 3 por equipamento)',
       'Suporte prioritário',
     ],
+    accountTagline: 'Equipamentos ilimitados, agrupamento por setores e suporte prioritário.',
+    accountChips: ['Ilimitado em tudo', 'Agrupamento por setores', 'Suporte prioritário'],
   },
 };
 

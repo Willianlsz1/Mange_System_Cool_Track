@@ -52,7 +52,9 @@ describe('UsageMeter', () => {
     expect(html).toContain(
       'Equipamentos: <span class="usage-meter__value">4 / 3</span> no plano grátis',
     );
-    expect(html).toContain('width:100%;background:#e03040');
+    // Barra usa classe CSS tonal em vez de background inline (theme-aware).
+    expect(html).toContain('usage-meter__fill--danger');
+    expect(html).toContain('width:100%');
     expect(html).toContain('LIMITE ULTRAPASSADO');
     expect(html).toContain('usage-meter__badge--danger');
     expect(html).toContain('Você precisa do plano Pro para continuar &rarr;');

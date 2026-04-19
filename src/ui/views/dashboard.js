@@ -1,6 +1,12 @@
 /**
- * CoolTrack Pro - Dashboard View v5.0
- * Funções: updateHeader, renderDashboard (renderInicio)
+ * CoolTrack Pro - Dashboard View v6.0 (V2Refined)
+ *
+ * Sistema visual: tier accent via `--dsh-accent` (gold Pro, green Plus, cyan Free).
+ * Layout: Hero Status Card + KPI Grid 2×2 (mobile) / 1×4 (desktop) + Próxima ação
+ * + Último serviço + seções preservadas (A fazer agora, Alertas, Recentes) +
+ * Análise (accordion mobile / grid desktop).
+ *
+ * Exports públicos: calcHealthScore, getHealthClass, updateHeader, renderDashboard.
  */
 
 import { Utils, TIPO_ICON } from '../../core/utils.js';
@@ -17,6 +23,7 @@ import { withViewSkeleton } from '../components/skeleton.js';
 import { fetchMyProfileBilling } from '../../core/monetization.js';
 import {
   PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
   PLAN_CODE_PRO,
   getEffectivePlan,
   hasProAccess,
@@ -32,7 +39,9 @@ import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/sugg
 import { getActionPriorityScore } from '../../domain/actionPriority.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
 
-// ── Labels internos ────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// Labels internos
+// ═══════════════════════════════════════════════════════
 const STATUS_OPERACIONAL = {
   ok: 'OPERANDO NORMALMENTE',
   warn: 'OPERANDO COM RESTRIÇÕES',
@@ -43,6 +52,19 @@ const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'A
 
 const ALERT_SEVERITY_WEIGHT = { danger: 3, warn: 2, info: 1 };
 
+// Ícones SVG inline (stroke 1.6–2, currentColor) pro hero + pills
+const DASH_SVG = {
+  crown:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4 4 5-7 5 7 4-4-2 12H5L3 7z"/></svg>',
+  alert:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L2 20h20L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>',
+  check:
+    '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>',
+};
+
+// ═══════════════════════════════════════════════════════
+// Helpers de métricas (preservados)
+// ═══════════════════════════════════════════════════════
 function _getMostSevereAlert(alerts = []) {
   return [...alerts].sort(
     (a, b) =>
@@ -51,7 +73,6 @@ function _getMostSevereAlert(alerts = []) {
   )[0];
 }
 
-// ── Helpers privados de métricas ───────────────────────
 function _getMonthRange(monthsAgo = 0) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
@@ -76,32 +97,120 @@ function _trendTag(current, previous) {
   if (previous === 0 && current > 0) return { text: `+${current} este mês`, cls: 'up' };
   const diff = current - previous;
   if (diff === 0) return { text: 'Igual ao mês passado', cls: 'neutral' };
-  if (diff > 0) return { text: `&uarr; ${diff} vs mês passado`, cls: 'up' };
-  return { text: `&darr; ${Math.abs(diff)} vs mês passado`, cls: 'down' };
+  if (diff > 0) return { text: `+${diff} vs mês passado`, cls: 'up' };
+  return { text: `-${Math.abs(diff)} vs mês passado`, cls: 'down' };
 }
 
-function _sparklineHtml(data, color = 'var(--primary)') {
+// Sparkline SVG inline — gradient fill + linha com ponto final destacado
+function _sparklineSvg(data) {
+  if (!data || !data.length) return '';
+  const w = 100;
+  const h = 20;
   const max = Math.max(...data, 1);
-  const bars = data
-    .map((v, i) => {
-      const pct = Math.round((v / max) * 100);
-      const isLast = i === data.length - 1;
-      const fill = isLast ? color : 'var(--surface-3)';
-      const height = Math.max(pct, 8);
-      return `<div class="kpi-spark__bar${isLast ? ' kpi-spark__bar--last' : ''}"
-      style="height:${height}%;background:${fill}"
-      title="${v} serviço${v !== 1 ? 's' : ''}"></div>`;
+  const pts = data.map((v, i) => {
+    const x = (i / Math.max(data.length - 1, 1)) * w;
+    const y = h - 2 - (v / max) * (h - 4);
+    return [x, y];
+  });
+  const line = pts.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ');
+  const area = `${line} L${w},${h} L0,${h} Z`;
+  const dots = pts
+    .map(([x, y], i) => {
+      const r = data[i] > 0 ? 1.8 : 1;
+      const last = i === pts.length - 1;
+      return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${last ? 2.2 : r}" fill="var(--dsh-accent,currentColor)" opacity="${last ? 1 : 0.6}"/>`;
     })
     .join('');
-  return `<div class="kpi-spark">${bars}</div>`;
+  return `<svg width="100%" height="20" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="dsh-spark" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="var(--dsh-accent,currentColor)" stop-opacity="0.28"/>
+        <stop offset="100%" stop-color="var(--dsh-accent,currentColor)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${area}" fill="url(#dsh-spark)"/>
+    <path d="${line}" fill="none" stroke="var(--dsh-accent,currentColor)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+    ${dots}
+  </svg>`;
 }
 
-function _alertContextText(count) {
-  if (count === 0) return { text: 'Sem alertas', cls: 'ok' };
-  if (count === 1) return { text: '1 alerta ativo', cls: 'warn' };
-  return { text: `${count} alertas ativos`, cls: 'danger' };
+function _recencia(data) {
+  const diff = Math.round((new Date() - new Date(data)) / 86400000);
+  if (diff === 0) return 'Hoje';
+  if (diff === 1) return 'Ontem';
+  if (diff < 30) return `há ${diff} dias`;
+  if (diff < 60) return 'há 1 mês';
+  return `há ${Math.floor(diff / 30)} meses`;
 }
 
+function _formatDateTimePill() {
+  const now = new Date();
+  const weekday = now.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
+  const dateStr = now
+    .toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+    .replace('.', '');
+  const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${dateStr} · ${time}`;
+}
+
+function _planTier(planCode) {
+  if (planCode === PLAN_CODE_PRO) return 'pro';
+  if (planCode === PLAN_CODE_PLUS) return 'plus';
+  return 'free';
+}
+
+function _planLabel(tier) {
+  if (tier === 'pro') return 'Plano Pro ativo';
+  if (tier === 'plus') return 'Plano Plus ativo';
+  return 'Plano Free';
+}
+
+function _planPillText(tier) {
+  if (tier === 'pro') return 'PRO';
+  if (tier === 'plus') return 'PLUS';
+  return 'FREE';
+}
+
+function _initialsFromName(raw) {
+  const src = (raw || '').trim();
+  if (!src) return '—';
+  // email → usa as duas primeiras letras antes do @
+  if (src.includes('@')) {
+    const local = src
+      .split('@')[0]
+      .replace(/[._-]+/g, ' ')
+      .trim();
+    if (!local) return '—';
+    const parts = local.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return local.slice(0, 2).toUpperCase();
+  }
+  const parts = src.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return parts[0].slice(0, 2).toUpperCase();
+}
+
+function _populateHeaderIdentity({ tier, userName }) {
+  const header = Utils.getEl('app-header');
+  if (header) header.setAttribute('data-tier', tier);
+
+  const pill = Utils.getEl('app-logo-pill');
+  const pillText = Utils.getEl('app-logo-pill-text');
+  if (pill) {
+    pill.setAttribute('data-tier', tier);
+    pill.hidden = false;
+    if (pillText) pillText.textContent = _planPillText(tier);
+  }
+
+  const avatar = Utils.getEl('header-avatar');
+  const initialsEl = Utils.getEl('header-avatar-initials');
+  if (avatar) avatar.setAttribute('data-tier', tier);
+  if (initialsEl) initialsEl.textContent = _initialsFromName(userName);
+}
+
+// ═══════════════════════════════════════════════════════
+// Health / risk (mantido; exportado pra outras views)
+// ═══════════════════════════════════════════════════════
 export function calcHealthScore(eqId) {
   const eq = findEquip(eqId);
   if (!eq) return 0;
@@ -112,65 +221,9 @@ export function getHealthClass(score) {
   return getMaintenanceHealthClass(score);
 }
 
-function _renderGlobalEfficiency(equipamentos) {
-  const el = Utils.getEl('hst-health');
-  const barEl = Utils.getEl('health-bar-fill');
-  const subEl = Utils.getEl('hst-health-sub');
-  if (!equipamentos.length) {
-    if (el) el.textContent = '—';
-    if (barEl) barEl.style.width = '0%';
-    if (subEl) subEl.innerHTML = '';
-    return;
-  }
-  const scores = equipamentos.map((eq) => calcHealthScore(eq.id));
-  const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
-  const cls = getHealthClass(avg);
-  if (el) {
-    el.textContent = `${avg}%`;
-    el.className = `bento-kpi__value bento-kpi__value--${cls === 'ok' ? 'cyan' : cls}`;
-  }
-  if (barEl) {
-    barEl.style.width = `${avg}%`;
-    barEl.className = `health-bar__fill health-bar__fill--${cls}`;
-  }
-  if (subEl) {
-    const ctx =
-      avg >= 90
-        ? `<span class="kpi-trend kpi-trend--ok">&uarr; Excelente - parque saudavel</span>`
-        : avg >= 75
-          ? `<span class="kpi-trend kpi-trend--ok">Bom - manutencao em dia</span>`
-          : avg >= 50
-            ? `<span class="kpi-trend kpi-trend--warn">&#9888; Atencao recomendada</span>`
-            : `<span class="kpi-trend kpi-trend--down">&darr; Intervencao necessaria</span>`;
-    subEl.innerHTML = ctx;
-  }
-}
-
-function _updateStorageIndicator() {
-  const indicator = Utils.getEl('storage-indicator');
-  if (!indicator) return;
-  const { used, total, percent } = Storage.usage();
-  if (percent < 50) {
-    indicator.hidden = true;
-    return;
-  }
-  indicator.hidden = false;
-  const cls = percent >= 85 ? 'danger' : 'warn';
-  indicator.className = `storage-indicator storage-indicator--${cls}`;
-  indicator.innerHTML = `<div class="storage-indicator__label"><span>Armazenamento local</span><span>${Utils.formatBytes(used)} / ${Utils.formatBytes(total)}</span></div><div class="storage-indicator__bar"><div class="storage-indicator__fill storage-indicator__fill--${cls}" style="width:${percent}%"></div></div>`;
-}
-
-function _renderProStatusCard() {
-  return `
-    <article class="upgrade-nudge-card upgrade-nudge-card--pro-active" aria-label="Plano Pro ativo">
-      <span class="upgrade-nudge-card__badge">PRO ATIVO</span>
-      <div class="upgrade-nudge-card__icon" aria-hidden="true">&#10003;</div>
-      <h3 class="upgrade-nudge-card__pro-title">Plano Pro ativo</h3>
-      <p class="upgrade-nudge-card__pro-copy">Todos os recursos premium estao liberados para sua conta.</p>
-    </article>
-  `;
-}
-
+// ═══════════════════════════════════════════════════════
+// Plan context
+// ═══════════════════════════════════════════════════════
 async function resolveDashboardPlanContext() {
   if (localStorage.getItem('cooltrack-guest-mode') === '1') {
     return { planCode: PLAN_CODE_FREE, hasPro: false };
@@ -186,73 +239,28 @@ async function resolveDashboardPlanContext() {
       hasPro: hasProAccess(profile),
     };
   } catch {
-    // Em caso de erro, ainda respeita o dev mode se estiver ativo
     const fallbackPlan = getEffectivePlan(null);
     return { planCode: fallbackPlan, hasPro: fallbackPlan === PLAN_CODE_PRO };
   }
 }
 
-// ── Alert strip ────────────────────────────────────────
-function _renderAlertStrip(alerts, hasCritical = false) {
-  const el = Utils.getEl('dash-alert-strip');
-  if (!el) return;
-  const primary = _getMostSevereAlert(alerts);
-  if (!hasCritical && !primary) {
-    el.innerHTML = `<div class="alert-strip alert-strip--none">
-      <div class="alert-strip__icon" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="var(--success)" stroke-width="1.3"/><path d="M5 8l2 2 4-4" stroke="var(--success)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div><div class="alert-strip__title">Todos os equipamentos operando normalmente</div><div class="alert-strip__desc">Sem anormalidades críticas registradas em campo</div></div>
-    </div>`;
-    return;
-  }
-  if (!primary) {
-    el.innerHTML = '';
-    return;
-  }
-
-  if (hasCritical) {
-    const actionMeta = _getAlertActionMeta(primary);
-    const preventiveText = primary.nextDueDate
-      ? `🛠 Prev.: ${Utils.formatDate(primary.nextDueDate)}`
-      : '🛠 Preventiva em atraso';
-    el.innerHTML = `<div class="critical-incident" role="alert" aria-live="assertive">
-      <div class="critical-incident__label">SITUAÇÃO CRÍTICA</div>
-      <div class="critical-incident__title">${Utils.escapeHtml(primary.eq?.nome || 'Equipamento não identificado')}</div>
-      <div class="critical-incident__desc">&#9888; ${Utils.truncate(primary.title || primary.subtitle || 'Intervenção imediata necessária.', 92)}</div>
-      <div class="critical-incident__meta">${Utils.escapeHtml(preventiveText)} &middot; &rarr; Ação imediata</div>
-      <button class="btn btn--danger btn--sm btn--fit-content critical-incident__cta" data-action="${actionMeta.action}" data-id="${actionMeta.id}">Registrar agora</button>
-    </div>`;
-    return;
-  }
-
-  const detailParts = [];
-  if (primary.eq?.nome) detailParts.push(Utils.escapeHtml(primary.eq.nome));
-  if (primary.subtitle) detailParts.push(primary.subtitle);
-  const detail = detailParts.join(' &middot; ');
-  const meta = primary.reg?.data
-    ? `Ult. serviço: ${Utils.formatDatetime(primary.reg.data)}`
-    : primary.nextDueDate
-      ? `Próxima preventiva: ${Utils.formatDate(primary.nextDueDate)}`
-      : '';
-  const actionMeta = _getAlertActionMeta(primary);
-  const toneClass =
-    primary.severity === 'danger'
-      ? 'alert-strip--critical'
-      : primary.severity === 'warn'
-        ? 'alert-strip--warn'
-        : 'alert-strip--info';
-
-  el.innerHTML = `<div class="alert-strip ${toneClass}" role="alert" aria-live="assertive">
-    <div class="alert-strip__icon" aria-hidden="true">${primary.icon || '!'}</div>
-    <div class="alert-strip__content">
-      <div class="alert-strip__title">${primary.title}</div>
-      <div class="alert-strip__desc">${detail}</div>
-      ${meta ? `<div class="alert-strip__time">${Utils.escapeHtml(meta)}</div>` : ''}
-    </div>
-    <button class="btn ${primary.severity === 'danger' ? 'btn--danger' : 'btn--primary'} btn--sm btn--fit-content alert-strip__cta" data-action="${actionMeta.action}" data-id="${actionMeta.id}">${actionMeta.label}</button>
-  </div>`;
+// ═══════════════════════════════════════════════════════
+// Pro status card (preservado — aparece só quando tier=pro)
+// ═══════════════════════════════════════════════════════
+function _renderProStatusCard() {
+  return `
+    <article class="upgrade-nudge-card upgrade-nudge-card--pro-active" aria-label="Plano Pro ativo">
+      <span class="upgrade-nudge-card__badge">PRO ATIVO</span>
+      <div class="upgrade-nudge-card__icon" aria-hidden="true">&#10003;</div>
+      <h3 class="upgrade-nudge-card__pro-title">Plano Pro ativo</h3>
+      <p class="upgrade-nudge-card__pro-copy">Todos os recursos premium estao liberados para sua conta.</p>
+    </article>
+  `;
 }
 
-// ── Alert card ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// Action / alert helpers (preservados para mini-cards)
+// ═══════════════════════════════════════════════════════
 function _getAlertActionMeta(alert) {
   const id = Utils.escapeAttr(alert.eq?.id || '');
   switch (alert.recommendedAction) {
@@ -317,48 +325,7 @@ function _getActionButton(actionCode) {
   return { action: 'view-equip', ctaLabel: 'Ver' };
 }
 
-// ── Próxima ação (D3) ──────────────────────────────────
-function _renderNextAction(equipamentos, alerts) {
-  const el = Utils.getEl('dash-next-action');
-  if (!el) return;
-  if (!equipamentos.length) {
-    el.innerHTML = '';
-    return;
-  }
-
-  const primaryAlert = _getMostSevereAlert(alerts);
-  if (primaryAlert) {
-    const actionMeta = _getAlertActionMeta(primaryAlert);
-    const cardClass =
-      primaryAlert.severity === 'danger'
-        ? 'next-action-card next-action-card--urgent'
-        : primaryAlert.kind === 'no-history'
-          ? 'next-action-card next-action-card--invite'
-          : 'next-action-card';
-
-    el.innerHTML = `<div class="${cardClass}" data-action="${actionMeta.action}" data-id="${actionMeta.id}">
-      <div class="next-action-card__icon">${primaryAlert.icon || '!'}</div>
-      <div class="next-action-card__body">
-        <div class="next-action-card__label">${primaryAlert.title.toUpperCase()}</div>
-        <div class="next-action-card__title">${Utils.escapeHtml(primaryAlert.eq?.nome || '—')}</div>
-        <div class="next-action-card__sub">${primaryAlert.subtitle || ''}</div>
-      </div>
-      <button class="btn ${primaryAlert.severity === 'danger' ? 'btn--danger' : 'btn--primary'} btn--sm btn--fit-content" data-action="${actionMeta.action}" data-id="${actionMeta.id}">${actionMeta.label}</button>
-    </div>`;
-    return;
-  }
-
-  el.innerHTML = `<div class="next-action-card next-action-card--ok">
-    <div class="next-action-card__icon">OK</div>
-    <div class="next-action-card__body">
-      <div class="next-action-card__label">NENHUMA AÇÃO URGENTE</div>
-      <div class="next-action-card__title">Todas as rotinas estão dentro do prazo</div>
-      <div class="next-action-card__sub">Continue registrando os serviços para manter o histórico atualizado</div>
-    </div>
-  </div>`;
-}
-
-// ── equip card (miniatura para o dashboard) ────────────
+// Cards "com ocorrência" (preservados) —————————————————
 function _equipCardMini(eq) {
   const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
   const context = getEquipmentMaintenanceContext(eq, regsForEquip(eq.id));
@@ -379,14 +346,6 @@ function _equipCardMini(eq) {
     if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar preventiva &rarr;';
     if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar preventiva &rarr;';
     return 'Registrar serviço &rarr;';
-  }
-  function recencia(data) {
-    const diff = Math.round((new Date() - new Date(data)) / 86400000);
-    if (diff === 0) return 'Hoje';
-    if (diff === 1) return 'Ontem';
-    if (diff < 30) return `Há ${diff} dias`;
-    if (diff < 60) return 'Há 1 mês';
-    return `Há ${Math.floor(diff / 30)} meses`;
   }
 
   let proximaLabel = '—';
@@ -424,11 +383,6 @@ function _equipCardMini(eq) {
         <div class="equip-card__tag">${Utils.escapeHtml(eq.fluido || eq.tipo)} &middot; Prioridade ${PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media}</div>
       </div>
       <span class="equip-card__status equip-card__status--${scls}"><span class="status-dot status-dot--${scls}"></span>${STATUS_OPERACIONAL[scls]}</span>
-      <div class="equip-card__actions">
-        <button class="equip-card__delete" data-action="delete-equip" data-id="${safeId}" aria-label="Excluir ${Utils.escapeHtml(eq?.nome ?? '—')}">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-        </button>
-      </div>
     </div>
     <div class="equip-card__health">
       <div class="equip-card__health-bar"><div class="equip-card__health-fill equip-card__health-fill--${hcls}" style="width:${score}%"></div></div>
@@ -437,26 +391,15 @@ function _equipCardMini(eq) {
     <div class="equip-card__risk">
       <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
       <span class="equip-card__risk-score">Score ${risk.score}</span>
-      <span class="equip-card__risk-factors">Base ${risk.technicalBaseScore} × Criticidade ${risk.criticidadeMultiplier.toFixed(2)}</span>
     </div>
     <div class="equip-card__priority">
       <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${priority.priorityLabel}</span>
-      <span class="equip-card__priority-reasons">${priority.priorityReasons.join(' &middot; ')}</span>
-    </div>
-    <div class="equip-card__suggested-action">
-      <span class="equip-card__suggested-action-label">Ação recomendada (baseada nos registros)</span>
-      <span class="equip-card__suggested-action-title">${suggestedAction.actionLabel}</span>
-      <span class="equip-card__suggested-action-reasons">${suggestedAction.actionReasons.join(' &middot; ')}</span>
     </div>
     <div class="equip-card__metrics">
       <div class="equip-card__metric">
         <div class="equip-card__metric-label">Última manutenção</div>
-        <div class="equip-card__metric-value">${last ? Utils.escapeHtml(recencia(last.data)) : '<span class="equip-card__metric-empty">Nenhum registro</span>'}</div>
+        <div class="equip-card__metric-value">${last ? Utils.escapeHtml(_recencia(last.data)) : '<span class="equip-card__metric-empty">Nenhum registro</span>'}</div>
         ${last ? `<div class="equip-card__metric-sub">${Utils.escapeHtml(Utils.truncate(last.tipo, 22))}</div>` : ''}
-      </div>
-      <div class="equip-card__metric">
-        <div class="equip-card__metric-label">Localização</div>
-        <div class="equip-card__metric-value equip-card__metric-value--muted">${Utils.escapeHtml(Utils.truncate(eq.local, 24))}</div>
       </div>
       <div class="equip-card__metric">
         <div class="equip-card__metric-label">Próxima prev.</div>
@@ -464,31 +407,431 @@ function _equipCardMini(eq) {
       </div>
     </div>
     <div class="equip-card__footer">
-      <span class="equip-card__footer-tecnico">${last?.tecnico ? `👷 ${Utils.escapeHtml(last.tecnico)}` : ''}</span>
       <button class="equip-card__cta" data-action="go-register-equip" data-id="${safeId}">${ctaLabel}</button>
     </div>
   </div>`;
 }
 
-// ── Gráficos ───────────────────────────────────────────
-let _lastChartHash = null;
+// ═══════════════════════════════════════════════════════
+// Hero Status Card
+// ═══════════════════════════════════════════════════════
+function _chipHtml(label) {
+  return `<span class="dash__chip"><span class="dash__chip-check" aria-hidden="true">${DASH_SVG.check}</span>${Utils.escapeHtml(label)}</span>`;
+}
 
-function _renderStatusChart() {
-  const viewInicio = Utils.getEl('view-inicio');
+function _renderHero({
+  tier,
+  tone,
+  userName,
+  equipCount,
+  alertCount,
+  efficiency,
+  mesCount,
+  primaryAlert,
+}) {
+  const hero = document.getElementById('dash-hero');
+  const dashRoot = document.getElementById('dash');
+  if (!hero || !dashRoot) return;
+
+  dashRoot.setAttribute('data-tier', tier);
+  dashRoot.setAttribute('data-tone', tone);
+  hero.setAttribute('data-tone', tone);
+
+  // Pill
+  const pillIcon = document.getElementById('dash-hero-pill-icon');
+  const pillText = document.getElementById('dash-hero-pill-text');
+  if (pillIcon) pillIcon.innerHTML = tone === 'alert' ? DASH_SVG.alert : DASH_SVG.crown;
+  if (pillText) pillText.textContent = tone === 'alert' ? 'AÇÃO NECESSÁRIA' : 'TUDO OPERANDO';
+
+  // Greeting + datetime
+  const greetingEl = document.getElementById('dash-hero-greeting');
+  if (greetingEl) {
+    const name = (userName || '').trim().split(/\s+/)[0] || 'Técnico';
+    greetingEl.textContent = `Olá, ${name}`;
+  }
+  const dtEl = document.getElementById('dash-hero-datetime');
+  if (dtEl) dtEl.textContent = _formatDateTimePill();
+
+  // Description
+  const descEl = document.getElementById('dash-hero-desc');
+  if (descEl) {
+    if (tone === 'alert' && primaryAlert) {
+      const title = Utils.escapeHtml(primaryAlert.title || 'Intervenção necessária');
+      const eqName = Utils.escapeHtml(primaryAlert.eq?.nome || 'equipamento');
+      const sub = Utils.escapeHtml(
+        Utils.truncate(primaryAlert.subtitle || 'Verifique o histórico recente.', 80),
+      );
+      descEl.innerHTML = `<strong class="dash__hero-desc-strong">${title}</strong> em <em>${eqName}</em>. ${sub}`;
+    } else if (equipCount === 0) {
+      descEl.textContent =
+        'Cadastre seu primeiro equipamento para começar a acompanhar a operação.';
+    } else {
+      const plural = equipCount === 1 ? 'equipamento' : 'equipamentos';
+      descEl.textContent = `Seu parque está saudável. ${equipCount} ${plural}, ${alertCount} alerta${alertCount === 1 ? '' : 's'} crítico${alertCount === 1 ? '' : 's'}.`;
+    }
+  }
+
+  // Chips (só no estado "ok")
+  const chipsEl = document.getElementById('dash-hero-chips');
+  if (chipsEl) {
+    if (tone === 'ok' && equipCount > 0) {
+      const efLabel = efficiency != null ? `Eficiência ${efficiency}%` : null;
+      const mesLabel =
+        mesCount > 0
+          ? `${mesCount} serviço${mesCount === 1 ? '' : 's'} este mês`
+          : 'Nenhum serviço este mês';
+      const planLabel = _planLabel(tier);
+      chipsEl.innerHTML = [efLabel, mesLabel, planLabel].filter(Boolean).map(_chipHtml).join('');
+    } else {
+      chipsEl.innerHTML = '';
+    }
+  }
+
+  // CTA
+  const ctaBtn = document.getElementById('dash-hero-cta');
+  const ctaLabel = document.getElementById('dash-hero-cta-label');
+  if (ctaBtn && ctaLabel) {
+    if (tone === 'alert' && primaryAlert) {
+      const actionMeta = _getAlertActionMeta(primaryAlert);
+      ctaBtn.setAttribute('data-action', actionMeta.action);
+      ctaBtn.setAttribute('data-id', actionMeta.id);
+      ctaBtn.removeAttribute('data-nav');
+      ctaLabel.textContent = actionMeta.label;
+    } else if (equipCount === 0) {
+      ctaBtn.setAttribute('data-action', 'open-modal');
+      ctaBtn.setAttribute('data-id', 'modal-add-eq');
+      ctaBtn.removeAttribute('data-nav');
+      ctaLabel.textContent = 'Cadastrar equipamento';
+    } else {
+      ctaBtn.setAttribute('data-nav', 'registro');
+      ctaBtn.removeAttribute('data-action');
+      ctaBtn.removeAttribute('data-id');
+      ctaLabel.textContent = 'Registrar manutenção';
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// KPI Grid
+// ═══════════════════════════════════════════════════════
+function _renderKPIs({ equipamentos, registros, alerts }) {
+  const total = equipamentos.length;
+  const active = equipamentos.filter((e) => e.status !== 'danger').length;
+  const faults = total - active;
+  const alertCount = alerts.length;
+  const mesCount = _countRegistrosNoMes(registros, 0);
+  const mesPrev = _countRegistrosNoMes(registros, 1);
+  const sparkData = _sparklineData(registros, 6);
+
+  // Ativos
+  const ativosEl = document.getElementById('dash-kpi-ativos');
+  const ativosSub = document.getElementById('dash-kpi-ativos-sub');
+  if (ativosEl) ativosEl.textContent = total ? `${active}/${total}` : '—';
+  if (ativosSub) {
+    ativosSub.textContent = !total ? 'sem cadastro' : faults > 0 ? `${faults} fora` : 'estável';
+    ativosSub.dataset.tone = faults > 0 ? 'danger' : 'ok';
+  }
+
+  // Eficiência
+  let efficiency = null;
+  const efEl = document.getElementById('dash-kpi-ef');
+  const efSub = document.getElementById('dash-kpi-ef-sub');
+  const efSpark = document.getElementById('dash-kpi-ef-spark');
+  if (total) {
+    const scores = equipamentos.map((eq) => calcHealthScore(eq.id));
+    efficiency = Math.round(scores.reduce((a, b) => a + b, 0) / Math.max(scores.length, 1));
+    if (efEl) efEl.textContent = `${efficiency}%`;
+    const cls = getHealthClass(efficiency);
+    if (efEl) efEl.dataset.tone = cls === 'ok' ? 'ok' : cls === 'warn' ? 'warn' : 'danger';
+    if (efSub) {
+      efSub.textContent =
+        efficiency >= 90
+          ? 'excelente'
+          : efficiency >= 75
+            ? 'saudável'
+            : efficiency >= 50
+              ? 'atenção'
+              : 'intervenção';
+      efSub.dataset.tone = cls === 'ok' ? 'ok' : cls === 'warn' ? 'warn' : 'danger';
+    }
+    if (efSpark) efSpark.innerHTML = _sparklineSvg(scores.slice(-6));
+  } else {
+    if (efEl) efEl.textContent = '—';
+    if (efEl) efEl.dataset.tone = 'muted';
+    if (efSub) efSub.textContent = 'sem dados';
+    if (efSpark) efSpark.innerHTML = '';
+  }
+
+  // Anomalias
+  const anomEl = document.getElementById('dash-kpi-anom');
+  const anomSub = document.getElementById('dash-kpi-anom-sub');
+  if (anomEl) {
+    anomEl.textContent = String(alertCount);
+    anomEl.dataset.tone = alertCount > 0 ? 'danger' : 'ok';
+  }
+  if (anomSub) {
+    anomSub.textContent = !alertCount
+      ? 'sem alerta'
+      : alertCount === 1
+        ? '1 alerta ativo'
+        : `${alertCount} alertas ativos`;
+    anomSub.dataset.tone = alertCount > 0 ? 'danger' : 'ok';
+  }
+
+  // Serviços / mês
+  const mesEl = document.getElementById('dash-kpi-mes');
+  const mesSub = document.getElementById('dash-kpi-mes-sub');
+  const mesSpark = document.getElementById('dash-kpi-mes-spark');
+  if (mesEl) mesEl.textContent = String(mesCount);
+  if (mesSub) {
+    const tr = _trendTag(mesCount, mesPrev);
+    mesSub.textContent = tr.text;
+    mesSub.dataset.tone = tr.cls === 'up' ? 'ok' : tr.cls === 'down' ? 'warn' : 'muted';
+  }
+  if (mesSpark) mesSpark.innerHTML = _sparklineSvg(sparkData);
+
+  return { efficiency, mesCount };
+}
+
+// ═══════════════════════════════════════════════════════
+// Próxima Ação + Último Serviço
+// ═══════════════════════════════════════════════════════
+function _renderNextActionCard({ alerts, equipCount }) {
+  const cardEl = document.getElementById('dash-next-action-card');
+  const titleEl = document.getElementById('dash-next-title');
+  const subEl = document.getElementById('dash-next-sub');
+  const ctaEl = document.getElementById('dash-next-cta');
+  const ctaLabelEl = document.getElementById('dash-next-cta-label');
+  if (!cardEl || !titleEl || !subEl || !ctaEl || !ctaLabelEl) return;
+
+  const primary = _getMostSevereAlert(alerts);
+  if (primary) {
+    const actionMeta = _getAlertActionMeta(primary);
+    cardEl.setAttribute('data-tone', primary.severity === 'danger' ? 'danger' : 'warn');
+    titleEl.textContent = primary.title || 'Verificar equipamento';
+    subEl.textContent =
+      primary.subtitle || (primary.eq?.nome ? `em ${primary.eq.nome}` : 'Ação recomendada');
+    ctaEl.setAttribute('data-action', actionMeta.action);
+    ctaEl.setAttribute('data-id', actionMeta.id);
+    ctaEl.removeAttribute('data-nav');
+    ctaLabelEl.textContent = actionMeta.label;
+    return;
+  }
+
+  cardEl.setAttribute('data-tone', 'ok');
+  if (!equipCount) {
+    titleEl.textContent = 'Cadastre o primeiro equipamento';
+    subEl.textContent = 'Depois você poderá registrar manutenções e acompanhar alertas.';
+    ctaEl.setAttribute('data-action', 'open-modal');
+    ctaEl.setAttribute('data-id', 'modal-add-eq');
+    ctaEl.removeAttribute('data-nav');
+    ctaLabelEl.textContent = 'Cadastrar';
+  } else {
+    titleEl.textContent = 'Nenhuma ação urgente';
+    subEl.textContent = 'Todas as rotinas dentro do prazo.';
+    ctaEl.setAttribute('data-nav', 'historico');
+    ctaEl.removeAttribute('data-action');
+    ctaEl.removeAttribute('data-id');
+    ctaLabelEl.textContent = 'Ver histórico';
+  }
+}
+
+function _renderLastServiceCard({ registros }) {
+  const card = document.getElementById('dash-last-service');
+  const titleEl = document.getElementById('dash-last-title');
+  const subEl = document.getElementById('dash-last-sub');
+  const descEl = document.getElementById('dash-last-desc');
+  if (!card || !titleEl || !subEl || !descEl) return;
+
+  if (!registros.length) {
+    card.hidden = true;
+    return;
+  }
+
+  const last = [...registros].sort((a, b) => b.data.localeCompare(a.data))[0];
+  const eq = findEquip(last.equipId);
+  card.hidden = false;
+  titleEl.textContent = last.tipo || 'Serviço';
+  subEl.textContent = [eq?.nome || '—', _recencia(last.data)].filter(Boolean).join(' · ');
+  descEl.textContent = last.obs ? Utils.truncate(last.obs, 92) : '';
+}
+
+// ═══════════════════════════════════════════════════════
+// Seções secundárias (critical-now, alertas-mini, criticos, recentes)
+// ═══════════════════════════════════════════════════════
+function _renderCriticalNowSection(equipamentos) {
+  const section = document.getElementById('dash-critical-section');
+  const container = document.getElementById('dash-critical-now');
+  const countEl = document.getElementById('dash-critical-now-count');
+  if (!section || !container) return;
+
+  if (!equipamentos.length) {
+    section.hidden = true;
+    return;
+  }
+
+  const actionQueue = equipamentos
+    .map((eq) => ({ eq, score: getActionPriorityScore(eq, regsForEquip(eq.id)) }))
+    .sort((a, b) => b.score.actionPriorityScore - a.score.actionPriorityScore)
+    .slice(0, 9);
+
+  const groups = {
+    critico: actionQueue.filter((i) => i.score.group === 'critico').slice(0, 3),
+    atencao: actionQueue.filter((i) => i.score.group === 'atencao').slice(0, 3),
+  };
+
+  const render = (items, tone) =>
+    items
+      .map(({ eq, score }) => {
+        const actionMeta = _getActionButton(score.suggestedAction.actionCode);
+        return _criticalNowItemHtml({
+          icon: score.group === 'critico' ? '!!' : '!',
+          tone,
+          title: `${eq.nome || 'Equipamento'} · ${score.suggestedAction.actionLabel}`,
+          subtitle: score.reasons.join(' · ') || 'Ação recomendada',
+          action: actionMeta.action,
+          id: eq.id,
+          ctaLabel: actionMeta.ctaLabel,
+        });
+      })
+      .join('');
+
+  const total = groups.critico.length + groups.atencao.length;
+  if (!total) {
+    section.hidden = true;
+    return;
+  }
+
+  section.hidden = false;
+  if (countEl) countEl.textContent = String(total);
+  container.innerHTML = `
+    ${
+      groups.critico.length
+        ? `<div class="critical-now-group">
+            <div class="critical-now-group__label">Crítico agora</div>
+            <div class="critical-now-list">${render(groups.critico, 'danger')}</div>
+          </div>`
+        : ''
+    }
+    ${
+      groups.atencao.length
+        ? `<div class="critical-now-group">
+            <div class="critical-now-group__label">Atenção</div>
+            <div class="critical-now-list">${render(groups.atencao, 'warn')}</div>
+          </div>`
+        : ''
+    }
+  `;
+}
+
+function _renderAlertsMiniSection({ alerts, planContext }) {
+  const section = document.getElementById('dash-alerts-section');
+  const list = document.getElementById('dash-alertas-mini');
+  const hint = document.getElementById('dash-upgrade-inline-hint');
+  if (!section || !list) return;
+  if (!alerts.length) {
+    section.hidden = true;
+    if (hint) hint.innerHTML = '';
+    return;
+  }
+  section.hidden = false;
+  list.innerHTML = `<div class="dash-alertas-list">${alerts.slice(0, 4).map(_alertCardHtml).join('')}</div>`;
+  if (hint) {
+    hint.innerHTML = planContext.hasPro
+      ? ''
+      : UpgradeNudge.renderInlineHint('Exportar relatorio em lote', {
+          planCode: planContext.planCode,
+          requiredPlan: 'plus',
+        });
+  }
+}
+
+function _renderCriticosSection({ equipamentos, alerts }) {
+  const section = document.getElementById('dash-criticos-section');
+  const container = document.getElementById('dash-criticos');
+  if (!section || !container) return;
+
+  const critical = equipamentos
+    .map((eq) => {
+      const eqRegs = regsForEquip(eq.id);
+      return {
+        eq,
+        score: calcHealthScore(eq.id),
+        riskScore: evaluateEquipmentRisk(eq, eqRegs).score,
+        priority: evaluateEquipmentPriority(eq, eqRegs),
+        hasAlert: alerts.some((alert) => alert.eq?.id === eq.id),
+      };
+    })
+    .filter(
+      ({ eq, score, priority, hasAlert }) =>
+        hasAlert ||
+        getOperationalStatus({ status: eq.status }).code !== 'ok' ||
+        score < 80 ||
+        priority.priorityLevel >= 2,
+    )
+    .sort(
+      (a, b) =>
+        b.priority.priorityLevel - a.priority.priorityLevel ||
+        Number(b.hasAlert) - Number(a.hasAlert) ||
+        b.riskScore - a.riskScore ||
+        a.score - b.score,
+    )
+    .map(({ eq }) => eq)
+    .slice(0, 4);
+
+  if (!critical.length) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+  container.innerHTML = `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`;
+}
+
+function _renderRecentesSection({ registros }) {
+  const section = document.getElementById('dash-recentes-section');
+  const container = document.getElementById('dash-recentes');
+  if (!section || !container) return;
+  if (registros.length < 2) {
+    // Com < 2 registros, o "Último serviço" já cobre. Evita duplicar.
+    section.hidden = true;
+    return;
+  }
+  const recent = [...registros].sort((a, b) => b.data.localeCompare(a.data)).slice(1, 4);
+  if (!recent.length) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+  container.innerHTML = `<div class="dash-recentes-grid">${recent
+    .map((r) => {
+      const eq = findEquip(r.equipId);
+      return `<article class="card recent-card" data-nav="historico">
+        <div class="recent-card__date">${Utils.formatDatetime(r.data)}</div>
+        <div class="recent-card__title">${Utils.escapeHtml(r.tipo)}</div>
+        <div class="recent-card__equip">${Utils.escapeHtml(eq?.nome ?? '—')} · ${Utils.escapeHtml(eq?.tag ?? '')}</div>
+        <div class="recent-card__obs">${Utils.escapeHtml(Utils.truncate(r.obs, 70))}</div>
+      </article>`;
+    })
+    .join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// Charts refresh (debounced)
+// ═══════════════════════════════════════════════════════
+let _lastChartHash = null;
+function _refreshCharts() {
+  const viewInicio = document.getElementById('view-inicio');
   if (!viewInicio?.classList.contains('active')) return;
   const { registros, equipamentos } = getState();
   const hash = `${equipamentos.length}:${registros.length}:${equipamentos.map((e) => e.status).join('')}`;
   if (hash === _lastChartHash) return;
   _lastChartHash = hash;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => Charts.refreshAll());
-  });
+  requestAnimationFrame(() => requestAnimationFrame(() => Charts.refreshAll()));
 }
 
 // ═══════════════════════════════════════════════════════
-// API PÚBLICA
+// Header status (app-wide — não-dashboard-específico)
 // ═══════════════════════════════════════════════════════
-
 function _setStatusIndicatorState(el, tone, options = {}) {
   if (!el) return;
   const { live = false, syncing = false } = options;
@@ -504,16 +847,12 @@ function _setStatusIndicatorState(el, tone, options = {}) {
   if (syncing) el.classList.add('status-indicator--syncing');
 }
 
-export function updateHeader() {
-  const { equipamentos, registros } = getState();
+function _updateGlobalHeader({ equipamentos, registros, alerts }) {
   const today = new Date();
-  const alerts = Alerts.getAll();
   const alertCount = alerts.length;
   const faultCount = equipamentos.filter((e) => e.status === 'danger').length;
   const activeCount = equipamentos.filter((e) => e.status !== 'danger').length;
   const mesCount = _countRegistrosNoMes(registros, 0);
-  const mesPrev = _countRegistrosNoMes(registros, 1);
-  const sparkData = _sparklineData(registros, 6);
 
   const dateEl = Utils.getEl('hdr-date');
   if (dateEl)
@@ -597,118 +936,40 @@ export function updateHeader() {
       _setStatusIndicatorState(syncStatusEl, 'ok');
     }
   }
+}
 
-  // KPIs
-  const bentAlert = Utils.getEl('hst-alert-bento');
-  if (bentAlert) {
-    bentAlert.textContent = String(activeCount);
-    bentAlert.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'danger' : 'ok'}`;
-  }
-  const bentAlertSub = Utils.getEl('hst-alert-bento-sub');
-  if (bentAlertSub)
-    bentAlertSub.innerHTML =
-      faultCount > 0
-        ? `<span class="kpi-trend kpi-trend--down">${faultCount} fora</span>`
-        : `<span class="kpi-trend kpi-trend--ok">estável</span>`;
+// ═══════════════════════════════════════════════════════
+// API PÚBLICA
+// ═══════════════════════════════════════════════════════
 
-  const failEl = Utils.getEl('hst-fail-bento');
-  if (failEl) {
-    failEl.textContent = String(faultCount);
-    failEl.className = `bento-kpi__value bento-kpi__value--${faultCount > 0 ? 'danger' : 'ok'}`;
-  }
-  const failSub = Utils.getEl('hst-fail-bento-sub');
-  if (failSub) {
-    const ctx = _alertContextText(alertCount);
-    failSub.innerHTML = `<span class="kpi-trend kpi-trend--${ctx.cls}">${ctx.text}</span>`;
-  }
-
-  const mesB = Utils.getEl('hst-mes-bento');
-  if (mesB) mesB.textContent = String(mesCount);
-  const mesBSub = Utils.getEl('hst-mes-bento-sub');
-  if (mesBSub) {
-    const trend = _trendTag(mesCount, mesPrev);
-    mesBSub.innerHTML = `<span class="kpi-trend kpi-trend--${trend.cls}">${trend.text}</span>`;
-  }
-  const mesSpark = Utils.getEl('hst-mes-spark');
-  if (mesSpark) mesSpark.innerHTML = _sparklineHtml(sparkData, 'var(--primary)');
-
-  _renderGlobalEfficiency(equipamentos);
-  _updateStorageIndicator();
+export function updateHeader() {
+  const { equipamentos, registros } = getState();
+  const alerts = Alerts.getAll();
+  _updateGlobalHeader({ equipamentos, registros, alerts });
+  // KPIs também são populadas aqui para respostas em tempo real a mudanças vindas de outras views.
+  _renderKPIs({ equipamentos, registros, alerts });
 }
 
 export async function renderDashboard() {
   const planContext = await resolveDashboardPlanContext();
   const { equipamentos, registros } = getState();
-  const faults = equipamentos.filter((e) => e.status === 'danger').length;
   const alerts = Alerts.getAll();
-  const hasCritical = alerts.some((alert) => alert.severity === 'danger');
-  const critical = equipamentos
-    .map((eq) => {
-      const eqRegs = regsForEquip(eq.id);
-      return {
-        eq,
-        score: calcHealthScore(eq.id),
-        riskScore: evaluateEquipmentRisk(eq, eqRegs).score,
-        priority: evaluateEquipmentPriority(eq, eqRegs),
-        hasAlert: alerts.some((alert) => alert.eq?.id === eq.id),
-      };
-    })
-    .filter(
-      ({ eq, score, priority, hasAlert }) =>
-        hasAlert ||
-        getOperationalStatus({ status: eq.status }).code !== 'ok' ||
-        score < 80 ||
-        priority.priorityLevel >= 2,
-    )
-    .sort(
-      (a, b) =>
-        b.priority.priorityLevel - a.priority.priorityLevel ||
-        Number(b.hasAlert) - Number(a.hasAlert) ||
-        b.riskScore - a.riskScore ||
-        a.score - b.score,
-    )
-    .map(({ eq }) => eq)
-    .slice(0, 4);
 
   const viewInicio = Utils.getEl('view-inicio');
   if (!viewInicio) return;
 
-  withViewSkeleton(viewInicio, { enabled: true, variant: 'generic', count: 4 }, () => {
-    const greetEl = Utils.getEl('dash-greeting');
-    if (greetEl) {
-      greetEl.textContent =
-        faults > 0
-          ? `${faults} situaç${faults > 1 ? 'ões' : 'ão'} exigindo intervenção`
-          : alerts.length > 0
-            ? `${alerts.length} alerta${alerts.length > 1 ? 's' : ''} de manutenção`
-            : 'Sistema Operacional';
+  const tier = _planTier(planContext.planCode);
 
-      let usageMeterHost = document.getElementById('dash-usage-meter');
-      if (!usageMeterHost) {
-        usageMeterHost = document.createElement('div');
-        usageMeterHost.id = 'dash-usage-meter';
-        greetEl.insertAdjacentElement('afterend', usageMeterHost);
-      }
-      usageMeterHost.innerHTML = UsageMeter.render({ planCode: planContext.planCode });
-    }
+  withViewSkeleton(viewInicio, { enabled: true, variant: 'generic', count: 4 }, async () => {
+    // Tier no root pra theming
+    const dashRoot = document.getElementById('dash');
+    if (dashRoot) dashRoot.setAttribute('data-tier', tier);
 
-    const bento = document.querySelector('.dashboard-bento');
-    if (!bento) return;
-
-    let upgradeCardHost = document.getElementById('dash-upgrade-card');
-    if (!upgradeCardHost) {
-      upgradeCardHost = document.createElement('div');
-      upgradeCardHost.id = 'dash-upgrade-card';
-      bento.appendChild(upgradeCardHost);
-    } else if (upgradeCardHost.parentElement !== bento) {
-      bento.appendChild(upgradeCardHost);
-    }
-    upgradeCardHost.innerHTML = planContext.hasPro
-      ? _renderProStatusCard()
-      : UpgradeNudge.renderDashboardCard({ planCode: planContext.planCode });
-
-    if (!equipamentos.length) {
-      bento.innerHTML = `<div class="dash-empty-shell">${emptyStateHtml({
+    // Empty state curto quando sem equipamentos — mantém hero + KPIs desligados
+    const emptyHost = document.getElementById('dash-empty');
+    if (!equipamentos.length && emptyHost) {
+      emptyHost.hidden = false;
+      emptyHost.innerHTML = emptyStateHtml({
         icon: '🔧',
         title: 'Seu painel está pronto',
         description:
@@ -721,135 +982,70 @@ export async function renderDashboard() {
           autoWidth: true,
           centered: true,
         },
-      })}</div>`;
-      return;
+      });
+    } else if (emptyHost) {
+      emptyHost.hidden = true;
+      emptyHost.innerHTML = '';
     }
 
+    // KPIs (retorna eficiência e mesCount pro hero)
+    const { efficiency, mesCount } = _renderKPIs({ equipamentos, registros, alerts });
+
+    // Tone do hero
+    const hasCritical = alerts.some((a) => a.severity === 'danger');
+    const primaryAlert = _getMostSevereAlert(alerts);
+    const tone = hasCritical ? 'alert' : 'ok';
+
+    // Nome do usuário
+    let userName = '';
+    try {
+      const user = await Auth.getUser();
+      userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || '';
+    } catch {
+      // sem fallback: userName fica vazio e o hero cai em "Técnico"
+    }
+
+    _renderHero({
+      tier,
+      tone,
+      userName,
+      equipCount: equipamentos.length,
+      alertCount: alerts.length,
+      efficiency,
+      mesCount,
+      primaryAlert,
+    });
+
+    _populateHeaderIdentity({ tier, userName });
+
+    _renderNextActionCard({ alerts, equipCount: equipamentos.length });
+    _renderLastServiceCard({ registros });
+
+    // Seções secundárias
+    _renderCriticalNowSection(equipamentos);
+    _renderAlertsMiniSection({ alerts, planContext });
+    _renderCriticosSection({ equipamentos, alerts });
+    _renderRecentesSection({ registros });
+
+    // Plan extras: onboarding + usage meter + upgrade card
     OnboardingBanner.render();
-    _renderAlertStrip(alerts, hasCritical);
-    if (hasCritical) {
-      const nextActionEl = Utils.getEl('dash-next-action');
-      if (nextActionEl) nextActionEl.innerHTML = '';
-    } else {
-      _renderNextAction(equipamentos, alerts);
+
+    const usageMeterHost = document.getElementById('dash-usage-meter');
+    if (usageMeterHost) {
+      usageMeterHost.innerHTML = UsageMeter.render({ planCode: planContext.planCode });
     }
 
-    const criticosEl = Utils.getEl('dash-criticos');
-    if (criticosEl) {
-      criticosEl.innerHTML = critical.length
-        ? `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`
-        : `<div class="dash-state-box dash-state-box--success">✅ Todos os equipamentos operando normalmente</div>`;
+    const upgradeCardHost = document.getElementById('dash-upgrade-card');
+    if (upgradeCardHost) {
+      upgradeCardHost.innerHTML = planContext.hasPro
+        ? _renderProStatusCard()
+        : UpgradeNudge.renderDashboardCard({ planCode: planContext.planCode });
     }
 
-    const criticalNowEl = Utils.getEl('dash-critical-now');
-    const criticalNowCountEl = Utils.getEl('dash-critical-now-count');
-    if (criticalNowEl) {
-      const actionQueue = equipamentos
-        .map((eq) => {
-          const score = getActionPriorityScore(eq, regsForEquip(eq.id));
-          return { eq, score };
-        })
-        .sort((a, b) => b.score.actionPriorityScore - a.score.actionPriorityScore)
-        .slice(0, 9);
+    // Header global (status, sync, badges)
+    _updateGlobalHeader({ equipamentos, registros, alerts });
 
-      const groups = {
-        critico: actionQueue.filter((item) => item.score.group === 'critico').slice(0, 3),
-        atencao: actionQueue.filter((item) => item.score.group === 'atencao').slice(0, 3),
-        monitoramento: actionQueue
-          .filter((item) => item.score.group === 'monitoramento')
-          .slice(0, 3),
-      };
-
-      const renderActionItems = (items, tone = 'warn') =>
-        items.length
-          ? items
-              .map(({ eq, score }) => {
-                const actionMeta = _getActionButton(score.suggestedAction.actionCode);
-                return _criticalNowItemHtml({
-                  icon:
-                    score.group === 'critico' ? '!!' : score.group === 'atencao' ? '!' : '&bull;',
-                  tone,
-                  title: `${eq.nome || 'Equipamento'} &middot; ${score.suggestedAction.actionLabel}`,
-                  subtitle: score.reasons.join(' &middot; ') || 'Sem sinais críticos no momento',
-                  action: actionMeta.action,
-                  id: eq.id,
-                  ctaLabel: actionMeta.ctaLabel,
-                });
-              })
-              .join('')
-          : '<div class="dash-state-box dash-state-box--muted">Nenhum equipamento nesta faixa</div>';
-
-      const totalCount =
-        groups.critico.length + groups.atencao.length + groups.monitoramento.length;
-      criticalNowEl.innerHTML = totalCount
-        ? `<div class="critical-now-group">
-          <div class="critical-now-group__label">Crítico agora</div>
-          <div class="critical-now-list">${renderActionItems(groups.critico, 'danger')}</div>
-        </div>
-        <div class="critical-now-group">
-          <div class="critical-now-group__label">Atenção</div>
-          <div class="critical-now-list">${renderActionItems(groups.atencao, 'warn')}</div>
-        </div>
-        <div class="critical-now-group">
-          <div class="critical-now-group__label">Monitoramento</div>
-          <div class="critical-now-list">${renderActionItems(groups.monitoramento, 'warn')}</div>
-        </div>`
-        : `<div class="dash-state-box dash-state-box--success">✅ Sem ações pendentes no momento</div>`;
-
-      if (criticalNowCountEl) {
-        criticalNowCountEl.textContent = String(totalCount);
-      }
-    }
-
-    const alertsMini = Utils.getEl('dash-alertas-mini');
-    if (alertsMini) {
-      alertsMini.innerHTML = alerts.length
-        ? `<div class="dash-alertas-list">${alerts.slice(0, 4).map(_alertCardHtml).join('')}</div>`
-        : `<div class="dash-state-box dash-state-box--muted">Nenhum alerta ativo</div>`;
-
-      let inlineHintHost = document.getElementById('dash-upgrade-inline-hint');
-      if (!inlineHintHost) {
-        inlineHintHost = document.createElement('div');
-        inlineHintHost.id = 'dash-upgrade-inline-hint';
-        alertsMini.insertAdjacentElement('afterend', inlineHintHost);
-      }
-      inlineHintHost.innerHTML = planContext.hasPro
-        ? ''
-        : UpgradeNudge.renderInlineHint('Exportar relatorio em lote', {
-            planCode: planContext.planCode,
-            requiredPlan: 'plus',
-          });
-    }
-
-    const recentEl = Utils.getEl('dash-recentes');
-    if (recentEl) {
-      const recent = [...registros].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 3);
-      recentEl.innerHTML = recent.length
-        ? `<div class="dash-recentes-grid">${recent
-            .map((r) => {
-              const eq = findEquip(r.equipId);
-              return `<article class="card recent-card" data-nav="historico">
-            <div class="recent-card__date">${Utils.formatDatetime(r.data)}</div>
-            <div class="recent-card__title">${Utils.escapeHtml(r.tipo)}</div>
-            <div class="recent-card__equip">${Utils.escapeHtml(eq?.nome ?? '—')} &middot; ${Utils.escapeHtml(eq?.tag ?? '')}</div>
-            <div class="recent-card__obs">${Utils.escapeHtml(Utils.truncate(r.obs, 70))}</div>
-          </article>`;
-            })
-            .join('')}</div>`
-        : emptyStateHtml({
-            icon: '📋',
-            title: 'Nenhum serviço registrado',
-            description: 'Registre o primeiro serviço para acompanhar a operação.',
-            cta: {
-              label: 'Registrar serviço',
-              nav: 'registro',
-              tone: 'outline',
-              size: 'sm',
-              autoWidth: true,
-            },
-          });
-    }
-
-    _renderStatusChart();
+    // Charts
+    _refreshCharts();
   });
 }

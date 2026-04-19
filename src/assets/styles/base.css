@@ -72,52 +72,66 @@
   --layout-max: 1440px;
 }
 
+/* ────────────────────────────────────────────────────────────
+   LIGHT THEME — Cool neutral (GitHub/Linear-style)
+   Princípios:
+   • Fundo cinza-neutro (#f6f8fa) em vez do azulado antigo
+     — reduz o "frio clínico" e deixa cards brancos com separação natural.
+   • Bordas sólidas #d8dee4 (estilo GH) em vez de rgba(azul) tênue
+     — dá hierarquia visível sem depender de shadow.
+   • Texto em slate escuro (#0f172a / #3e4c5e / #596878) — todos passam
+     WCAG AA ≥ 4.5:1 em fundo branco e #f6f8fa.
+   • Accents (primary cyan, danger, warning, success) ajustados pra ter
+     contraste AA em branco sem perder a identidade do produto.
+   • Shadows combinam y-offset real + ring de borda — imitam GH cards.
+   ────────────────────────────────────────────────────────────── */
 [data-theme='light'] {
-  --bg: #eff3f8;
-  --bg-soft: #e4ecf4;
+  --bg: #f6f8fa;
+  --bg-soft: #eff2f5;
   --surface: #ffffff;
-  --surface-2: #f4f7fa;
-  --surface-3: #e8eff6;
+  --surface-2: #f6f8fa;
+  --surface-3: #eaeef2;
 
   --card: #ffffff;
-  --card-hover: #f4f7fa;
+  --card-hover: #f6f8fa;
 
-  --border: rgba(0, 30, 60, 0.08);
-  --border-2: rgba(0, 30, 60, 0.14);
-  --border-focus: rgba(0, 150, 200, 0.5);
+  --border: #d8dee4;
+  --border-2: #afb8c1;
+  --border-focus: rgba(9, 105, 218, 0.45);
 
   --primary: #0096b4;
   --primary-strong: #007a96;
-  --primary-soft: rgba(0, 150, 180, 0.1);
-  --primary-dim: rgba(0, 150, 180, 0.05);
+  --primary-soft: rgba(0, 150, 180, 0.12);
+  --primary-dim: rgba(0, 150, 180, 0.06);
 
-  --success: #008a50;
-  --success-soft: rgba(0, 138, 80, 0.1);
-  --success-dim: rgba(0, 138, 80, 0.05);
+  --success: #1a7f37;
+  --success-soft: rgba(26, 127, 55, 0.1);
+  --success-dim: rgba(26, 127, 55, 0.05);
 
-  --warning: #b87800;
-  --warning-soft: rgba(184, 120, 0, 0.1);
-  --warning-dim: rgba(184, 120, 0, 0.05);
+  --warning: #9a6700;
+  --warning-soft: rgba(154, 103, 0, 0.1);
+  --warning-dim: rgba(154, 103, 0, 0.05);
 
-  --danger: #c02030;
-  --danger-soft: rgba(192, 32, 48, 0.08);
-  --danger-dim: rgba(192, 32, 48, 0.04);
+  --danger: #cf222e;
+  --danger-soft: rgba(207, 34, 46, 0.08);
+  --danger-dim: rgba(207, 34, 46, 0.04);
 
-  --text: #0a1e32;
-  --text-2: #2c4a64;
-  --text-3: #3d6080; /* ajustado para contraste WCAG AA ≥ 4.5:1 em fundo branco */
-  --text-muted: #3a5870;
-  --muted: #3d6080;
-  --muted-light: #4a6a88;
+  --text: #0f172a;
+  --text-2: #3e4c5e;
+  --text-3: #596878; /* slate-500 — WCAG AA ≥ 4.5:1 em branco */
+  --text-muted: #3e4c5e;
+  --muted: #596878;
+  --muted-light: #768496;
 
-  --surface-strong: #e8eff6;
-  --border-strong: rgba(0, 30, 60, 0.14);
-  --white: #0a1e32;
+  --surface-strong: #eaeef2;
+  --border-strong: #afb8c1;
+  --white: #0f172a;
   --black: #ffffff;
 
-  --shadow: 0 1px 6px rgba(0, 30, 60, 0.1);
-  --shadow-lg: 0 4px 20px rgba(0, 30, 60, 0.14);
-  --shadow-elevated: 0 2px 12px rgba(0, 30, 60, 0.12), 0 0 0 1px rgba(0, 30, 60, 0.06);
+  /* Shadows com y-offset real + ring de borda — imitam GH/Linear cards. */
+  --shadow: 0 1px 2px rgba(27, 31, 36, 0.06), 0 0 0 1px rgba(27, 31, 36, 0.04);
+  --shadow-lg: 0 8px 24px rgba(27, 31, 36, 0.12);
+  --shadow-elevated: 0 3px 6px rgba(27, 31, 36, 0.08), 0 0 0 1px rgba(27, 31, 36, 0.05);
 }
 
 *,

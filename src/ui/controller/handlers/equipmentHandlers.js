@@ -11,10 +11,67 @@ import {
   deleteSetor,
   setActiveSector,
   initSetorColorPicker,
+  openEditSetor,
+  clearSetorEditingState,
 } from '../../views/equipamentos.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
 
+/**
+ * Kebab menu do card de setor — controla estado de abertura dos dropdowns.
+ * Design: só um menu pode estar aberto por vez. Clique fora ou Esc fecha.
+ */
+let openSetorMenuId = null;
+
+function closeAllSetorMenus() {
+  if (!openSetorMenuId) return;
+  const menu = document.getElementById(`setor-menu-${openSetorMenuId}`);
+  const kebab = document.querySelector(`.setor-card__kebab[data-id="${openSetorMenuId}"]`);
+  if (menu) menu.hidden = true;
+  if (kebab) kebab.setAttribute('aria-expanded', 'false');
+  openSetorMenuId = null;
+}
+
+function toggleSetorMenu(id) {
+  if (openSetorMenuId === id) {
+    closeAllSetorMenus();
+    return;
+  }
+  // Fecha o que estava aberto antes de abrir o novo
+  closeAllSetorMenus();
+  const menu = document.getElementById(`setor-menu-${id}`);
+  const kebab = document.querySelector(`.setor-card__kebab[data-id="${id}"]`);
+  if (!menu || !kebab) return;
+  menu.hidden = false;
+  kebab.setAttribute('aria-expanded', 'true');
+  openSetorMenuId = id;
+}
+
 export function bindEquipmentHandlers() {
+  // Listeners globais (só uma vez) pra fechar o kebab dropdown ao
+  // clicar fora, pressionar Esc ou mudar de rota.
+  if (typeof document !== 'undefined' && !document.body.dataset.setorKebabBound) {
+    document.body.dataset.setorKebabBound = '1';
+
+    document.addEventListener('click', (e) => {
+      if (!openSetorMenuId) return;
+      const insideKebab = e.target.closest('.setor-card__kebab');
+      const insideMenu = e.target.closest('.setor-card__menu');
+      if (insideKebab || insideMenu) return;
+      closeAllSetorMenus();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && openSetorMenuId) {
+        closeAllSetorMenus();
+        // Devolve foco pro kebab pra não perder contexto
+        const kebab = document.querySelector(`.setor-card__kebab[data-id="${openSetorMenuId}"]`);
+        kebab?.focus?.();
+      }
+    });
+
+    document.addEventListener('app:route-changed', closeAllSetorMenus);
+  }
+
   on('save-equip', async (el) => {
     try {
       await runAsyncAction(el, { loadingLabel: 'Salvando...' }, async () => {
@@ -104,8 +161,14 @@ export function bindEquipmentHandlers() {
     }
   });
 
+  on('toggle-setor-menu', (el, event) => {
+    event?.stopPropagation?.(); // evita drill-down do setor ao clicar no kebab
+    toggleSetorMenu(el.dataset.id);
+  });
+
   on('delete-setor', async (el, event) => {
     event?.stopPropagation?.(); // evita abrir o setor ao clicar em excluir
+    closeAllSetorMenus(); // fecha o kebab antes de abrir o confirm
     try {
       const ok = await CustomConfirm.show(
         'Excluir Setor',
@@ -122,9 +185,26 @@ export function bindEquipmentHandlers() {
     }
   });
 
+  on('edit-setor', async (el, event) => {
+    event?.stopPropagation?.(); // evita drill-down do setor ao clicar em editar
+    closeAllSetorMenus(); // fecha o kebab antes de abrir o modal de edição
+    try {
+      openEditSetor(el.dataset.id);
+      initSetorColorPicker();
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: 'Não foi possível abrir a edição do setor.',
+        context: { action: 'controller.edit-setor', id: el.dataset.id },
+      });
+    }
+  });
+
   // Abre modal de criar setor e inicializa color picker
   on('open-setor-modal', async () => {
     try {
+      // Garante que não estamos em modo edição quando clicar em "+ Novo setor"
+      clearSetorEditingState();
       const { Modal: M } = await import('../../../core/modal.js');
       M.open('modal-add-setor');
       initSetorColorPicker();

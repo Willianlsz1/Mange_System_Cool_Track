@@ -67,17 +67,48 @@ function bindPasswordToggles(container) {
   });
 }
 
+// Score 0–3: 0=vazia, 1=<8 chars (red), 2=8+ sem dígito (gold), 3=8+ com dígito/símbolo (green)
+function scorePassword(pw) {
+  if (!pw) return { score: 0, label: '', color: '#6a8ba8' };
+  if (pw.length < 8) return { score: 1, label: 'Muito curta', color: '#ff5577' };
+  const hasDigitOrSym = /[\d\W_]/.test(pw);
+  if (!hasDigitOrSym) return { score: 2, label: 'Fraca', color: '#e8b94a' };
+  return { score: 3, label: 'Forte', color: '#00c870' };
+}
+
+function bindStrengthMeter(container) {
+  const pwInput = container.querySelector('#signup-password');
+  const meter = container.querySelector('#signup-strength');
+  if (!pwInput || !meter) return;
+
+  const segs = meter.querySelectorAll('.auth-strength__seg');
+  const label = meter.querySelector('.auth-strength__label');
+
+  const update = () => {
+    const { score, label: text, color } = scorePassword(pwInput.value);
+    segs.forEach((seg, i) => {
+      seg.style.background = i < score ? color : 'rgba(255,255,255,0.06)';
+    });
+    label.textContent = text;
+    label.style.color = color;
+    meter.setAttribute('aria-valuenow', String(score));
+    meter.setAttribute('aria-label', `Força da senha: ${text || 'vazia'}`);
+  };
+
+  pwInput.addEventListener('input', update);
+  update();
+}
+
 function eyeSVG() {
-  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/>
     <circle cx="12" cy="12" r="3"/>
   </svg>`;
 }
 
 function eyeOffSVG() {
-  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+  return `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
     <line x1="1" y1="1" x2="23" y2="23"/>
   </svg>`;
 }
@@ -92,6 +123,85 @@ function passwordInputHTML(id, placeholder, autocomplete) {
       </button>
     </div>`;
 }
+
+// Inline SVGs — CoolTrack snowflake dentro do squircle (6 arms com V-tips)
+const ICON_LOGO = `<svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" style="display:block">
+  <rect x="2" y="2" width="28" height="28" rx="7" fill="rgba(0,200,232,0.10)" stroke="#00c8e8" stroke-width="1.6"/>
+  <g stroke="#00c8e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <g>
+      <line x1="16" y1="7" x2="16" y2="25"/>
+      <polyline points="13.5,9 16,7 18.5,9"/>
+      <polyline points="13.5,23 16,25 18.5,23"/>
+    </g>
+    <g transform="rotate(60 16 16)">
+      <line x1="16" y1="7" x2="16" y2="25"/>
+      <polyline points="13.5,9 16,7 18.5,9"/>
+      <polyline points="13.5,23 16,25 18.5,23"/>
+    </g>
+    <g transform="rotate(120 16 16)">
+      <line x1="16" y1="7" x2="16" y2="25"/>
+      <polyline points="13.5,9 16,7 18.5,9"/>
+      <polyline points="13.5,23 16,25 18.5,23"/>
+    </g>
+  </g>
+  <circle cx="16" cy="16" r="1.3" fill="#00c8e8"/>
+</svg>`;
+
+const ICON_LOGO_SM = `<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true" style="display:block">
+  <rect x="2" y="2" width="28" height="28" rx="7" fill="rgba(0,200,232,0.10)" stroke="#00c8e8" stroke-width="1.6"/>
+  <g stroke="#00c8e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <g>
+      <line x1="16" y1="7" x2="16" y2="25"/>
+      <polyline points="13.5,9 16,7 18.5,9"/>
+      <polyline points="13.5,23 16,25 18.5,23"/>
+    </g>
+    <g transform="rotate(60 16 16)">
+      <line x1="16" y1="7" x2="16" y2="25"/>
+      <polyline points="13.5,9 16,7 18.5,9"/>
+      <polyline points="13.5,23 16,25 18.5,23"/>
+    </g>
+    <g transform="rotate(120 16 16)">
+      <line x1="16" y1="7" x2="16" y2="25"/>
+      <polyline points="13.5,9 16,7 18.5,9"/>
+      <polyline points="13.5,23 16,25 18.5,23"/>
+    </g>
+  </g>
+  <circle cx="16" cy="16" r="1.3" fill="#00c8e8"/>
+</svg>`;
+
+const ICON_SNOWFLAKE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/>
+  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/>
+  <polyline points="9 5 12 2 15 5"/><polyline points="9 19 12 22 15 19"/>
+  <polyline points="5 9 2 12 5 15"/><polyline points="19 9 22 12 19 15"/>
+</svg>`;
+
+const ICON_FILETEXT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+  <polyline points="14 2 14 8 20 8"/>
+  <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+</svg>`;
+
+const ICON_BELL = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+</svg>`;
+
+const ICON_PLAY_CIRCLE = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+</svg>`;
+
+const ICON_ARROW_RIGHT = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+</svg>`;
+
+// Google mark — colored official-style G (NOT monochrome, per spec)
+const ICON_GOOGLE = `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="display:block;flex-shrink:0">
+  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09 0-.73.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+</svg>`;
 
 export const AuthScreen = {
   show(options = {}) {
@@ -114,281 +224,344 @@ export const AuthScreen = {
 
     overlay.innerHTML = `
       <style>
-        /* ── Auth screen layout ── */
+        /* ── Auth screen layout (V2Refined — login sóbrio/transacional) ── */
         .auth-screen {
           position: fixed; inset: 0; z-index: 9000;
           display: flex; align-items: stretch;
           background: #070c14;
-          font-family: var(--font, system-ui, sans-serif);
+          font-family: var(--font, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+          color: #e8f2fa;
+        }
+        .auth-screen button:focus-visible,
+        .auth-screen input:focus-visible,
+        .auth-screen [role="tab"]:focus-visible {
+          outline: 2px solid #00c8e8; outline-offset: 2px;
         }
 
         /* ── Left branding panel ── */
         .auth-brand {
           flex: 0 0 46%;
-          display: flex; flex-direction: column; justify-content: center;
+          display: flex; flex-direction: column;
           padding: 56px 52px;
           background: linear-gradient(145deg, #080f1c 0%, #0b1525 60%, #091828 100%);
           border-right: 1px solid rgba(0,200,232,0.08);
           position: relative; overflow: hidden;
+          box-sizing: border-box;
         }
+        /* Atmospheric orbs — 5–7% (NÃO é signature dual orb do accountModal) */
         .auth-brand::before {
           content: '';
-          position: absolute; top: -80px; right: -80px;
-          width: 380px; height: 380px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(0,200,232,0.07) 0%, transparent 70%);
+          position: absolute; top: -120px; right: -100px;
+          width: 360px; height: 360px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(0,200,232,0.07) 0%, transparent 65%);
           pointer-events: none;
         }
         .auth-brand::after {
           content: '';
-          position: absolute; bottom: -120px; left: -60px;
-          width: 320px; height: 320px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(0,150,180,0.05) 0%, transparent 70%);
+          position: absolute; bottom: -140px; left: -120px;
+          width: 400px; height: 400px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(0,200,232,0.05) 0%, transparent 65%);
           pointer-events: none;
         }
 
         .auth-brand__logo {
           display: flex; align-items: center; gap: 10px;
-          margin-bottom: 44px;
-        }
-        .auth-brand__logo-icon {
-          width: 36px; height: 36px; border-radius: 8px;
-          background: rgba(0,200,232,0.1); border: 1px solid rgba(0,200,232,0.25);
-          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+          position: relative; z-index: 1;
         }
         .auth-brand__logo-text {
-          font-size: 20px; font-weight: 700; color: #e8f4fc; letter-spacing: -0.3px;
+          font-size: 19px; font-weight: 700; color: #e8f2fa; letter-spacing: -0.2px;
         }
         .auth-brand__logo-badge {
-          font-size: 10px; font-weight: 700; color: #00c8e8; letter-spacing: 1px;
-          background: rgba(0,200,232,0.12); border: 1px solid rgba(0,200,232,0.3);
-          padding: 2px 6px; border-radius: 4px; align-self: flex-start; margin-top: 2px;
+          font-size: 10px; font-weight: 700; color: #e8b94a; letter-spacing: 0.6px;
+          background: rgba(232,185,74,0.12);
+          padding: 3px 7px; border-radius: 4px;
         }
 
+        /* Headline sólido — SEM grad word (login é sóbrio) */
         .auth-brand__headline {
-          font-size: 28px; font-weight: 700; color: #e8f4fc;
-          line-height: 1.25; letter-spacing: -0.5px;
-          margin-bottom: 12px;
-        }
-        .auth-brand__headline em {
-          font-style: normal; color: #00c8e8;
+          font-size: 28px; font-weight: 700; color: #e8f2fa;
+          line-height: 1.15; letter-spacing: -0.5px;
+          margin: 40px 0 16px;
+          text-wrap: balance;
+          position: relative; z-index: 1;
         }
         .auth-brand__sub {
-          font-size: 15px; color: #5a7a96; line-height: 1.5;
-          margin-bottom: 44px;
+          font-size: 15px; color: #8aaac8; line-height: 1.5;
+          margin: 0; max-width: 440px;
+          position: relative; z-index: 1;
         }
 
         .auth-brand__features {
           display: flex; flex-direction: column; gap: 20px;
-          margin-bottom: 48px;
+          margin-top: 40px;
+          position: relative; z-index: 1;
         }
         .auth-brand__feat {
           display: flex; align-items: flex-start; gap: 14px;
         }
         .auth-brand__feat-icon {
           width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
-          background: rgba(0,200,232,0.08); border: 1px solid rgba(0,200,232,0.15);
+          background: rgba(0,200,232,0.08);
+          border: 1px solid rgba(0,200,232,0.15);
+          color: #00c8e8;
           display: flex; align-items: center; justify-content: center;
-          font-size: 16px;
         }
-        .auth-brand__feat-body {}
         .auth-brand__feat-title {
-          font-size: 14px; font-weight: 600; color: #c8dce8; margin-bottom: 2px;
+          font-size: 14px; font-weight: 600; color: #e8f2fa; margin-bottom: 3px;
         }
         .auth-brand__feat-desc {
-          font-size: 12px; color: #4a6880; line-height: 1.45;
+          font-size: 13px; font-weight: 400; color: #8aaac8; line-height: 1.45;
         }
 
         .auth-brand__stats {
-          display: flex; gap: 28px;
+          margin-top: auto;
           padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.05);
+          display: flex; gap: 28px;
+          position: relative; z-index: 1;
         }
-        .auth-brand__stat {}
         .auth-brand__stat-num {
-          font-size: 22px; font-weight: 700; color: #00c8e8; letter-spacing: -0.5px;
+          font-size: 22px; font-weight: 700; color: #00c8e8;
+          letter-spacing: -0.5px; line-height: 1;
         }
         .auth-brand__stat-label {
-          font-size: 11px; color: #3a5870; text-transform: uppercase; letter-spacing: 0.5px;
-          margin-top: 2px;
+          font-size: 11px; font-weight: 500; color: #6a8ba8;
+          letter-spacing: 0.5px; text-transform: uppercase;
+          margin-top: 6px;
         }
 
         /* ── Right form panel ── */
         .auth-form-panel {
           flex: 1;
-          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          display: flex; align-items: center; justify-content: center;
           padding: 40px 24px;
           overflow-y: auto;
-          background: #070c14;
+          background: #07111f;
+          box-sizing: border-box;
         }
         .auth-card {
           width: 100%; max-width: 400px;
         }
         .auth-card-header {
-          text-align: center; margin-bottom: 28px;
+          text-align: center; margin-bottom: 24px;
           display: none;
         }
+        .auth-card-header__brand {
+          display: inline-flex; align-items: center; gap: 10px; margin-bottom: 10px;
+        }
+        .auth-card-header__sub {
+          font-size: 13px; color: #8aaac8; line-height: 1.5;
+        }
 
-        /* ── Tabs ── */
+        /* ── Demo card (topo do form — CTA guest verde) ── */
+        .auth-demo {
+          display: flex; align-items: center; gap: 12px;
+          background: rgba(0, 200, 112, 0.05);
+          border: 1px solid rgba(0, 200, 112, 0.2);
+          border-radius: 10px;
+          padding: 14px 16px;
+          margin-bottom: 20px;
+        }
+        .auth-demo__icon {
+          color: #00c870; display: flex; flex-shrink: 0;
+        }
+        .auth-demo__body { flex: 1; min-width: 0; }
+        .auth-demo__title {
+          font-size: 14px; font-weight: 600; color: #e8f2fa; line-height: 1.3;
+        }
+        .auth-demo__sub {
+          font-size: 12px; font-weight: 400; color: #8aaac8;
+          margin-top: 2px; line-height: 1.4;
+        }
+        .auth-demo__btn {
+          height: 32px; padding: 0 14px; border-radius: 8px;
+          background: transparent;
+          border: 1px solid rgba(0, 200, 112, 0.35);
+          color: #00c870; font-size: 13px; font-weight: 600;
+          font-family: inherit; cursor: pointer; white-space: nowrap;
+          transition: background .18s, border-color .18s;
+        }
+        .auth-demo__btn:hover {
+          background: rgba(0, 200, 112, 0.08);
+          border-color: rgba(0, 200, 112, 0.55);
+        }
+
+        /* ── Tabs (sem border no active — fix #9) ── */
         .auth-tabs {
-          display: flex; gap: 0;
+          display: flex; gap: 4; padding: 4px;
           background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.07);
-          border-radius: 10px; padding: 4px;
-          margin-bottom: 24px;
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 10px;
+          margin-bottom: 20px;
         }
         .auth-tab {
           flex: 1; padding: 9px 0; border: none; cursor: pointer;
-          background: transparent; color: #4a6880;
+          background: transparent; color: #6a8ba8;
           font-size: 14px; font-weight: 500; font-family: inherit;
-          border-radius: 7px; transition: all .18s;
+          border-radius: 7px;
+          transition: background .18s, color .18s, font-weight .18s;
         }
         .auth-tab.active {
           background: rgba(0,200,232,0.12);
           color: #00c8e8;
-          border: 1px solid rgba(0,200,232,0.2);
+          font-weight: 600;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
 
-        /* ── Google button ── */
+        /* ── Google button = PRIMARY (gradient 52px) ── */
         .auth-btn-google {
-          width: 100%; padding: 12px; margin-bottom: 16px;
-          border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(255,255,255,0.04);
-          color: #c8dce8; font-size: 14px; font-weight: 500; font-family: inherit;
-          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-          transition: border-color .18s, background .18s;
+          width: 100%; height: 52px; border-radius: 12px;
+          background: linear-gradient(135deg, #00c8e8 0%, #0090c8 100%);
+          color: #06101e;
+          font-size: 15px; font-weight: 700; font-family: inherit;
+          display: flex; align-items: center; justify-content: center;
+          gap: 12px; border: none; cursor: pointer;
+          box-shadow: 0 1px 0 rgba(255,255,255,0.15) inset;
+          transition: opacity .18s, transform .12s;
         }
-        .auth-btn-google:hover { border-color: rgba(0,200,232,0.3); background: rgba(0,200,232,0.06); }
-        .auth-btn-google--primary {
-          background: rgba(0,200,232,0.1); border-color: rgba(0,200,232,0.25); color: #00c8e8;
-        }
-        .auth-btn-google--primary:hover { background: rgba(0,200,232,0.16); border-color: rgba(0,200,232,0.4); }
+        .auth-btn-google:hover { opacity: .95; transform: translateY(-1px); }
+        .auth-btn-google:active { transform: translateY(0); }
 
-        /* ── Divider ── */
+        /* ── Divider "ou com email e senha" ── */
         .auth-divider {
           display: flex; align-items: center; gap: 10px;
-          font-size: 12px; color: #2a4258; margin-bottom: 16px;
+          margin: 18px 0 14px;
+          font-size: 12px; font-weight: 400; color: #6a8ba8;
         }
         .auth-divider::before, .auth-divider::after {
           content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06);
         }
 
-        /* ── Labels + inputs ── */
+        /* ── Labels (sentence-case 12/500 — fix #2) ── */
         .auth-label {
-          display: block; font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
-          color: #3a5870; margin-bottom: 5px; margin-top: 14px;
-          text-transform: uppercase;
+          display: block; font-size: 12px; font-weight: 500;
+          color: #8aaac8; margin-bottom: 6px; margin-top: 14px;
+          letter-spacing: 0;
         }
+        .auth-label--first { margin-top: 0; }
+
+        /* ── Inputs ── */
         .auth-input {
           width: 100%; box-sizing: border-box;
-          padding: 11px 14px; border-radius: 8px;
-          border: 1px solid rgba(255,255,255,0.08);
+          padding: 12px 14px; border-radius: 8px;
           background: rgba(255,255,255,0.03);
-          color: #d8eaf6; font-size: 14px; font-family: inherit;
-          outline: none; transition: border-color .18s;
+          border: 1px solid rgba(255,255,255,0.06);
+          color: #e8f2fa; font-size: 14px; font-weight: 400; font-family: inherit;
+          min-height: 44px; outline: none;
+          transition: border-color .18s, background .18s;
         }
-        .auth-input:focus { border-color: rgba(0,200,232,0.35); background: rgba(0,200,232,0.04); }
-        .auth-input::placeholder { color: #2a4258; }
+        .auth-input:focus {
+          border-color: rgba(0,200,232,0.35);
+          background: rgba(0,200,232,0.04);
+        }
+        .auth-input::placeholder { color: #6a8ba8; }
 
         /* ── Password wrap (input + olho) ── */
         .auth-input-wrap {
           position: relative; display: flex; align-items: center;
         }
-        .auth-input-wrap .auth-input {
-          padding-right: 42px;
-        }
+        .auth-input-wrap .auth-input { padding-right: 42px; }
         .auth-pwd-toggle {
-          position: absolute; right: 10px;
+          position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
           background: none; border: none; cursor: pointer; padding: 4px;
-          color: #3a5870; display: flex; align-items: center;
+          color: #6a8ba8; display: flex; align-items: center;
           transition: color .18s;
         }
-        .auth-pwd-toggle:hover { color: #7aaccc; }
+        .auth-pwd-toggle:hover { color: #8aaac8; }
 
-        /* ── Primary CTA ── */
-        .auth-btn {
-          width: 100%; margin-top: 20px; padding: 13px;
-          border-radius: 8px; border: none; cursor: pointer; font-family: inherit;
-          font-size: 15px; font-weight: 600;
-          background: linear-gradient(135deg, #00c8e8 0%, #0090c8 100%);
-          color: #06101e; transition: opacity .18s, transform .12s;
+        /* ── Strength meter ── */
+        .auth-strength {
+          display: flex; align-items: center; gap: 10px;
+          margin-top: 8px;
         }
-        .auth-btn:hover { opacity: .92; transform: translateY(-1px); }
-        .auth-btn:active { transform: translateY(0); }
+        .auth-strength__bars {
+          display: flex; gap: 4px; flex: 1;
+        }
+        .auth-strength__seg {
+          flex: 1; height: 4px; border-radius: 2px;
+          background: rgba(255,255,255,0.06);
+          transition: background .16s;
+        }
+        .auth-strength__label {
+          font-size: 11px; font-weight: 500;
+          min-width: 68px; text-align: right;
+          color: #6a8ba8;
+        }
+
+        /* ── Secondary CTA (email submit, 48px outline cyan) ── */
+        .auth-btn {
+          width: 100%; height: 48px; margin-top: 20px;
+          border-radius: 10px;
+          background: transparent;
+          border: 1px solid #00c8e8;
+          color: #00c8e8;
+          font-size: 15px; font-weight: 600; font-family: inherit;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center; gap: 6px;
+          transition: background .18s;
+        }
+        .auth-btn:hover { background: rgba(0,200,232,0.08); }
 
         /* ── Forgot / hints ── */
-        .auth-actions-center { text-align: center; margin-top: 10px; }
+        .auth-actions-center { text-align: center; margin-top: 14px; }
         .auth-btn-forgot {
           background: none; border: none; cursor: pointer; font-family: inherit;
-          font-size: 12px; color: #3a5870; padding: 4px 8px;
-        }
-        .auth-btn-forgot:hover { color: #6a9ab8; }
-
-        .auth-hint {
-          font-size: 12px; color: #2a4258; text-align: center;
-          margin-top: 14px; line-height: 1.5;
-        }
-        .auth-hint--tight { margin-top: 4px; }
-
-        /* ── Guest panel ── */
-        .auth-guest-panel {
-          margin-top: 20px; padding-top: 16px;
-          border-top: 1px solid rgba(255,255,255,0.05);
-          text-align: center;
-        }
-        .auth-btn-guest {
-          background: none; border: none; cursor: pointer; font-family: inherit;
-          font-size: 13px; color: #4a6880; padding: 4px 0;
+          font-size: 12px; font-weight: 400; color: #6a8ba8;
+          padding: 4px 8px;
           transition: color .18s;
         }
-        .auth-btn-guest:hover { color: #7aaccc; }
+        .auth-btn-forgot:hover { color: #8aaac8; }
+
+        .auth-hint {
+          font-size: 12px; font-weight: 400; color: #6a8ba8;
+          text-align: center;
+          margin-top: 14px; line-height: 1.5;
+        }
 
         /* ── Responsive ── */
         @media (max-width: 768px) {
           .auth-brand { display: none; }
-          .auth-form-panel { padding: 24px 16px; }
+          .auth-form-panel {
+            padding: 24px 16px 40px;
+            align-items: flex-start;
+          }
           .auth-card-header { display: block; }
         }
       </style>
 
-      <!-- LEFT: Branding panel -->
-      <aside class="auth-brand" aria-hidden="true">
+      <!-- LEFT: Branding panel (role=complementary, NUNCA aria-hidden) -->
+      <aside class="auth-brand" role="complementary">
         <div class="auth-brand__logo">
-          <div class="auth-brand__logo-icon">
-            <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-              <rect x="1" y="1" width="14" height="14" rx="2" stroke="#00C8E8" stroke-width="1.2"/>
-              <circle cx="8" cy="8" r="2.5" stroke="#00C8E8" stroke-width="1.2"/>
-              <path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round"/>
-            </svg>
-          </div>
+          ${ICON_LOGO}
           <span class="auth-brand__logo-text">CoolTrack</span>
           <span class="auth-brand__logo-badge">PRO</span>
         </div>
 
         <h1 class="auth-brand__headline">
-          Controle total sobre<br><em>cada equipamento</em><br>que você atende
+          Controle total sobre cada equipamento que você atende.
         </h1>
         <p class="auth-brand__sub">
-          Gestão de manutenção para técnicos de climatização.<br>
-          Do diagnóstico ao relatório PDF — tudo em um só lugar.
+          Gestão de manutenção para técnicos de climatização. Do diagnóstico
+          ao relatório PDF — tudo em um só lugar.
         </p>
 
         <div class="auth-brand__features">
           <div class="auth-brand__feat">
-            <div class="auth-brand__feat-icon">🧊</div>
-            <div class="auth-brand__feat-body">
+            <div class="auth-brand__feat-icon">${ICON_SNOWFLAKE}</div>
+            <div>
               <div class="auth-brand__feat-title">Histórico completo de cada equipamento</div>
               <div class="auth-brand__feat-desc">Todas as manutenções, peças trocadas e anomalias — organizadas por equipamento.</div>
             </div>
           </div>
           <div class="auth-brand__feat">
-            <div class="auth-brand__feat-icon">📋</div>
-            <div class="auth-brand__feat-body">
+            <div class="auth-brand__feat-icon">${ICON_FILETEXT}</div>
+            <div>
               <div class="auth-brand__feat-title">Relatórios PDF com sua assinatura</div>
               <div class="auth-brand__feat-desc">Gere laudos profissionais em segundos, prontos para enviar ao cliente via WhatsApp.</div>
             </div>
           </div>
           <div class="auth-brand__feat">
-            <div class="auth-brand__feat-icon">🚨</div>
-            <div class="auth-brand__feat-body">
+            <div class="auth-brand__feat-icon">${ICON_BELL}</div>
+            <div>
               <div class="auth-brand__feat-title">Alertas inteligentes de preventivas</div>
               <div class="auth-brand__feat-desc">Nunca perca um prazo. O sistema avisa quais equipamentos precisam de atenção hoje.</div>
             </div>
@@ -396,15 +569,15 @@ export const AuthScreen = {
         </div>
 
         <div class="auth-brand__stats">
-          <div class="auth-brand__stat">
+          <div>
             <div class="auth-brand__stat-num">100%</div>
             <div class="auth-brand__stat-label">Offline ready</div>
           </div>
-          <div class="auth-brand__stat">
+          <div>
             <div class="auth-brand__stat-num">PDF</div>
             <div class="auth-brand__stat-label">Instantâneo</div>
           </div>
-          <div class="auth-brand__stat">
+          <div>
             <div class="auth-brand__stat-num">∞</div>
             <div class="auth-brand__stat-label">Histórico</div>
           </div>
@@ -412,25 +585,30 @@ export const AuthScreen = {
       </aside>
 
       <!-- RIGHT: Form panel -->
-      <div class="auth-form-panel">
+      <main class="auth-form-panel" aria-labelledby="auth-title">
         <div class="auth-card">
 
           <!-- Mobile-only logo -->
           <div class="auth-card-header">
-            <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:6px">
-              <div style="width:28px;height:28px;border-radius:6px;background:rgba(0,200,232,0.1);border:1px solid rgba(0,200,232,0.2);display:flex;align-items:center;justify-content:center;">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <rect x="1" y="1" width="14" height="14" rx="2" stroke="#00C8E8" stroke-width="1.2"/>
-                  <circle cx="8" cy="8" r="2.5" stroke="#00C8E8" stroke-width="1.2"/>
-                  <path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round"/>
-                </svg>
-              </div>
-              <span id="auth-title" style="font-size:17px;font-weight:700;color:#e8f4fc">CoolTrack</span>
-              <span style="font-size:9px;font-weight:700;color:#00c8e8;background:rgba(0,200,232,0.1);border:1px solid rgba(0,200,232,0.25);padding:2px 5px;border-radius:4px;letter-spacing:1px">PRO</span>
+            <div class="auth-card-header__brand">
+              ${ICON_LOGO_SM}
+              <span id="auth-title" style="font-size:18px;font-weight:700;color:#e8f2fa">CoolTrack</span>
+              <span style="font-size:10px;font-weight:700;color:#e8b94a;background:rgba(232,185,74,0.12);padding:3px 7px;border-radius:4px;letter-spacing:0.6px">PRO</span>
             </div>
-            <div style="font-size:13px;color:#3a5870">Gestão de manutenção para técnicos de climatização</div>
+            <div class="auth-card-header__sub">Gestão de manutenção para técnicos de climatização.</div>
           </div>
 
+          <!-- Demo card (topo, verde) -->
+          <div class="auth-demo">
+            <div class="auth-demo__icon">${ICON_PLAY_CIRCLE}</div>
+            <div class="auth-demo__body">
+              <div class="auth-demo__title">Testar sem criar conta</div>
+              <div class="auth-demo__sub">Entre no app com dados de exemplo.</div>
+            </div>
+            <button class="auth-demo__btn" id="btn-guest" type="button">Abrir</button>
+          </div>
+
+          <!-- Tabs -->
           <div class="auth-tabs" role="tablist" aria-label="Acesso">
             <button class="auth-tab active" id="tab-signin" type="button" role="tab" aria-selected="true" aria-controls="auth-form-signin">Entrar</button>
             <button class="auth-tab" id="tab-signup" type="button" role="tab" aria-selected="false" aria-controls="auth-form-signup">Criar conta</button>
@@ -438,62 +616,60 @@ export const AuthScreen = {
 
           <!-- Sign In panel -->
           <div id="auth-form-signin" role="tabpanel" aria-labelledby="tab-signin">
-            <button class="auth-btn-google auth-btn-google--primary" id="btn-google-signin" type="button">
-              <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
-                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
-                <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
-                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
-              </svg>
+            <button class="auth-btn-google" id="btn-google-signin" type="button">
+              ${ICON_GOOGLE}
               ${intentOptions.highlightCopy}
             </button>
             <div class="auth-divider">ou com email e senha</div>
-            <label class="auth-label" for="signin-email">EMAIL</label>
+            <label class="auth-label auth-label--first" for="signin-email">Email</label>
             <input class="auth-input" id="signin-email" type="email" placeholder="seu@email.com" autocomplete="email" />
-            <label class="auth-label" for="signin-password">SENHA</label>
-            ${passwordInputHTML('signin-password', '••••••••', 'current-password')}
-            <button class="auth-btn" id="btn-signin" type="button">Acessar meu painel →</button>
+            <label class="auth-label" for="signin-password">Senha</label>
+            ${passwordInputHTML('signin-password', 'Sua senha', 'current-password')}
+            <button class="auth-btn" id="btn-signin" type="button">Acessar meu painel ${ICON_ARROW_RIGHT}</button>
             <div class="auth-actions-center">
               <button class="auth-btn-forgot" id="btn-forgot" type="button">Esqueci minha senha</button>
-            </div>
-            <div class="auth-guest-panel">
-              <button class="auth-btn-guest" id="btn-guest" type="button">Ver demo interativa sem cadastro →</button>
-              <div class="auth-hint auth-hint--tight">Dados de exemplo · Nada é salvo na nuvem</div>
             </div>
           </div>
 
           <!-- Sign Up panel -->
           <div id="auth-form-signup" role="tabpanel" aria-labelledby="tab-signup" hidden>
             <button class="auth-btn-google" id="btn-google-signup" type="button">
-              <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
-                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
-                <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
-                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
-              </svg>
-              Criar conta com Google
+              ${ICON_GOOGLE}
+              Continuar com Google
             </button>
             <div class="auth-divider">ou com email e senha</div>
-            <label class="auth-label" for="signup-nome">SEU NOME</label>
+            <label class="auth-label auth-label--first" for="signup-nome">Seu nome</label>
             <input class="auth-input" id="signup-nome" type="text" placeholder="Carlos Figueiredo" autocomplete="name" />
-            <label class="auth-label" for="signup-email">EMAIL</label>
+            <label class="auth-label" for="signup-email">Email</label>
             <input class="auth-input" id="signup-email" type="email" placeholder="seu@email.com" autocomplete="email" />
-            <label class="auth-label" for="signup-password">SENHA</label>
+            <label class="auth-label" for="signup-password">Senha</label>
             ${passwordInputHTML('signup-password', 'mínimo 8 caracteres', 'new-password')}
-            <label class="auth-label" for="signup-confirm">CONFIRMAR SENHA</label>
+            <div class="auth-strength" id="signup-strength" role="progressbar"
+                 aria-live="polite" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0">
+              <div class="auth-strength__bars">
+                <div class="auth-strength__seg"></div>
+                <div class="auth-strength__seg"></div>
+                <div class="auth-strength__seg"></div>
+              </div>
+              <div class="auth-strength__label">&nbsp;</div>
+            </div>
+            <label class="auth-label" for="signup-confirm">Confirmar senha</label>
             ${passwordInputHTML('signup-confirm', 'repita a senha', 'new-password')}
-            <button class="auth-btn" id="btn-signup" type="button">Começar a usar gratuitamente →</button>
-            <div class="auth-hint">Plano gratuito · Sem cartão · Cancele quando quiser</div>
+            <button class="auth-btn" id="btn-signup" type="button">Começar gratuitamente ${ICON_ARROW_RIGHT}</button>
+            <div class="auth-hint">Plano gratuito · Sem cartão · 5 PDFs/mês</div>
           </div>
 
         </div>
-      </div>
+      </main>
     `;
 
     document.body.appendChild(overlay);
 
     // Ativa todos os botões de olho
     bindPasswordToggles(overlay);
+
+    // Strength meter no signup
+    bindStrengthMeter(overlay);
 
     const tabSignin = overlay.querySelector('#tab-signin');
     const tabSignup = overlay.querySelector('#tab-signup');

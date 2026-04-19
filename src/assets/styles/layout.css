@@ -5,12 +5,14 @@
 
 :root {
   --app-header-top-height: 48px;
-  --app-header-stats-height: 48px;
-  --app-header-total-height: calc(var(--app-header-top-height) + var(--app-header-stats-height));
+  --app-header-stats-height: 0px;
+  --app-header-total-height: var(--app-header-top-height);
   --app-header-height: var(--app-header-total-height);
   --app-content-top-gap: 16px;
   --app-nav-height: 80px;
-  --hist-sticky-gap: 4px;
+  /* Gap = 0: o sticky encosta exatamente no fim do header fixo,
+     sem deixar uma fresta onde conteúdo aparece passando atrás. */
+  --hist-sticky-gap: 0px;
 }
 
 html,
@@ -19,7 +21,10 @@ body {
 }
 
 body {
-  overflow-x: hidden;
+  /* `clip` em vez de `hidden` para não quebrar `position: sticky`
+     (os filtros do histórico, por ex.). `clip` impede overflow visual
+     sem criar um scroll container. Suportado em Chrome 90+, FF 81+, Safari 16+. */
+  overflow-x: clip;
 }
 
 #app {
@@ -163,6 +168,186 @@ body {
   letter-spacing: 0.08em;
 }
 
+/* Stats-bar global desligada em todas as views — cada tela tem os seus
+   próprios indicadores (hero do painel, toolbar/busca nas listas). */
+.header-stats-bar {
+  display: none;
+}
+
+/* ════════════════════════════════════════════════════════
+   HEADER V2REFINED — logo enxuto + tier pill + gear + avatar
+   ════════════════════════════════════════════════════════ */
+
+.app-header {
+  --hdr-accent: #00c8e8;
+  --hdr-accent-dim: rgba(0, 200, 232, 0.14);
+  --hdr-accent-soft: rgba(0, 200, 232, 0.22);
+  --hdr-accent-text: #02131f;
+}
+.app-header[data-tier='plus'] {
+  --hdr-accent: #2eca7a;
+  --hdr-accent-dim: rgba(46, 202, 122, 0.14);
+  --hdr-accent-soft: rgba(46, 202, 122, 0.22);
+  --hdr-accent-text: #02221a;
+}
+.app-header[data-tier='pro'] {
+  --hdr-accent: #f5c451;
+  --hdr-accent-dim: rgba(245, 196, 81, 0.16);
+  --hdr-accent-soft: rgba(245, 196, 81, 0.26);
+  --hdr-accent-text: #2a1f04;
+}
+
+/* Logo tile + nome */
+.app-logo__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--hdr-accent);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--hdr-accent-text);
+  flex-shrink: 0;
+}
+.app-logo__name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  line-height: 1;
+}
+
+/* Pill de tier (PRO/PLUS/FREE) — ao lado do logo */
+.app-logo__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: var(--hdr-accent-dim);
+  color: var(--hdr-accent);
+  border: 1px solid var(--hdr-accent-soft);
+  line-height: 1;
+  white-space: nowrap;
+}
+.app-logo__pill-icon {
+  display: inline-flex;
+  color: var(--hdr-accent);
+}
+.app-logo__pill[data-tier='pro'] {
+  background: linear-gradient(135deg, rgba(245, 196, 81, 0.18), rgba(245, 196, 81, 0.08));
+  color: var(--hdr-accent);
+  box-shadow: 0 0 0 1px rgba(245, 196, 81, 0.26);
+  border-color: transparent;
+}
+
+/* Sync status pill — só aparece quando há sync pendente/em curso */
+.header-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+}
+.header-sync__icon {
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+.header-sync.status-indicator--warn {
+  color: var(--warning);
+  background: rgba(245, 196, 81, 0.1);
+}
+.header-sync.status-indicator--warn .header-sync__icon {
+  color: var(--warning);
+}
+.header-sync.status-indicator--ok {
+  color: var(--success);
+  background: rgba(46, 202, 122, 0.1);
+}
+.header-sync.status-indicator--ok .header-sync__icon {
+  color: var(--success);
+}
+.header-sync.status-indicator--syncing .header-sync__icon {
+  animation: header-sync-spin 1.4s linear infinite;
+}
+@keyframes header-sync-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Gear + settings dropdown container */
+.header-settings {
+  position: relative;
+}
+
+/* Avatar circular com iniciais */
+.header-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--hdr-accent);
+  background: var(--hdr-accent);
+  color: var(--hdr-accent-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+.header-avatar:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+.header-avatar:active {
+  transform: scale(0.97);
+}
+.header-avatar__initials {
+  font-family: var(--font-sans, inherit);
+  line-height: 1;
+  user-select: none;
+}
+
+/* Mobile: reduz levemente o tamanho do logo + avatar */
+@media (max-width: 640px) {
+  .app-logo__name {
+    font-size: 14px;
+  }
+  .app-logo__pill {
+    padding: 2px 6px 2px 5px;
+    font-size: 9px;
+    gap: 3px;
+  }
+  .header-sync {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  .header-sync__text {
+    /* No mobile, pode esconder o texto se ficar apertado */
+  }
+  .header-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 11px;
+    border-width: 2px;
+  }
+}
+
 /* APP CONTENT */
 .app-content {
   width: min(var(--layout-max), calc(100% - 32px));
@@ -204,44 +389,71 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   position: relative;
-  padding: 10px 4px 7px;
+  padding: 8px 6px 6px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.04em;
+  opacity: 0.72;
   transition:
     color 0.2s ease,
-    transform 0.2s ease,
+    opacity 0.2s ease,
+    transform 0.18s ease,
     background 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .nav-btn__icon {
-  font-size: 18px;
-  transition: transform 0.2s ease;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+/* dual-icon: outline por padrão, filled quando is-active */
+.nav-btn__svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}
+.nav-btn__svg--filled {
+  display: none;
+}
+.nav-btn.is-active .nav-btn__svg--outline {
+  display: none;
+}
+.nav-btn.is-active .nav-btn__svg--filled {
+  display: block;
+}
+
+.nav-btn:hover {
+  opacity: 1;
 }
 .nav-btn:hover .nav-btn__icon {
   transform: translateY(-1px);
 }
 
 .nav-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
+/* Active state: neutro (sem cor de tier), pill de fundo + label 600 */
 .nav-btn.is-active {
-  color: var(--primary);
-  transform: translateY(-1px);
+  color: var(--text);
+  opacity: 1;
+  font-weight: 600;
 }
-.nav-btn.is-active::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 24%;
-  right: 24%;
-  height: 2px;
-  background: var(--primary);
-  border-radius: 0 0 3px 3px;
+.nav-btn.is-active .nav-btn__icon {
+  background: rgba(255, 255, 255, 0.08);
+}
+[data-theme='light'] .nav-btn.is-active .nav-btn__icon {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 #nav-registro {
@@ -261,10 +473,18 @@ body {
 }
 
 #nav-registro .nav-btn__icon {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent !important;
   font-size: 30px;
   font-weight: 700;
   line-height: 1;
   transform: translateY(-1px);
+}
+
+#nav-registro {
+  opacity: 1;
 }
 
 #nav-registro .nav-btn__label {
@@ -471,11 +691,11 @@ main:focus {
 @media (max-width: 640px) {
   :root {
     --app-header-top-height: 46px;
-    --app-header-stats-height: 36px;
-    --app-header-total-height: calc(var(--app-header-top-height) + var(--app-header-stats-height));
+    --app-header-stats-height: 0px;
+    --app-header-total-height: var(--app-header-top-height);
     --app-header-height: var(--app-header-total-height);
     --app-content-top-gap: 0px;
-    --hist-sticky-gap: 2px;
+    --hist-sticky-gap: 0px;
   }
 
   html {
@@ -484,7 +704,7 @@ main:focus {
 
   body {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   #app {
@@ -717,10 +937,28 @@ main:focus {
     justify-content: center;
     align-items: center;
     gap: 8px;
-    padding: 12px 22px;
+    padding: 10px 18px;
     border-left: none;
     border-radius: var(--radius-sm);
     position: relative;
+  }
+
+  /* No desktop o pill cobre o botão inteiro, não só o ícone */
+  .nav-btn .nav-btn__icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: transparent !important;
+  }
+  .nav-btn__svg {
+    width: 20px;
+    height: 20px;
+  }
+  .nav-btn.is-active {
+    background: rgba(255, 255, 255, 0.07);
+  }
+  [data-theme='light'] .nav-btn.is-active {
+    background: rgba(0, 0, 0, 0.05);
   }
 
   #nav-registro {
@@ -728,7 +966,7 @@ main:focus {
     height: auto;
     margin-top: 0;
     border-radius: var(--radius-sm);
-    padding: 12px 22px;
+    padding: 10px 18px;
     background: transparent;
     color: var(--text-3);
     font-size: 10px;

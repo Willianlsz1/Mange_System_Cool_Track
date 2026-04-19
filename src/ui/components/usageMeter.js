@@ -33,6 +33,14 @@ function getReportBarColor(percent) {
   return '#00C8E8';
 }
 
+// Classe CSS correspondente ao tom (cores via var() no <style> do render,
+// assim trocam no tema claro sem alterar JS).
+function getReportBarTone(percent) {
+  if (percent > 90) return 'danger';
+  if (percent > 70) return 'warn';
+  return 'primary';
+}
+
 function getUsageState(equipmentCount, reportsThisMonth) {
   const equipmentOverLimit = equipmentCount > FREE_PLAN_EQUIP_LIMIT;
   const reportOverLimit = reportsThisMonth > FREE_PLAN_REPORT_LIMIT;
@@ -60,8 +68,8 @@ function renderPaidMeter(
     <section class="usage-meter usage-meter--pro" aria-label="Consumo do plano ${planLabel}">
       <style>
         .usage-meter {
-          background: rgba(0, 200, 232, 0.05);
-          border: 1px solid rgba(0, 200, 232, 0.1);
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 12px;
           padding: 16px;
           margin: 10px 0 14px;
@@ -76,17 +84,18 @@ function renderPaidMeter(
 
         .usage-meter__label {
           font-size: 12px;
-          color: #6a8ba8;
+          color: var(--text-3);
         }
 
         .usage-meter__value {
-          color: #e8f2fa;
+          color: var(--text);
+          font-weight: 600;
         }
 
         .usage-meter__track {
           height: 6px;
           border-radius: 3px;
-          background: rgba(255, 255, 255, 0.06);
+          background: var(--surface-3);
           overflow: hidden;
         }
 
@@ -105,8 +114,9 @@ function renderPaidMeter(
 
         .usage-meter__upgrade {
           font-size: 12px;
-          color: #00c8e8;
+          color: var(--primary);
           text-decoration: none;
+          font-weight: 600;
         }
 
         .usage-meter__badge {
@@ -119,18 +129,24 @@ function renderPaidMeter(
         }
 
         .usage-meter__badge--warn {
-          background: rgba(232, 160, 32, 0.15);
-          color: #e8a020;
+          background: var(--warning-soft);
+          color: var(--warning);
+          border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
         }
 
         .usage-meter__badge--danger {
-          background: rgba(224, 48, 64, 0.15);
-          color: #e03040;
+          background: var(--danger-soft);
+          color: var(--danger);
+          border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
         }
 
         .usage-meter--pro {
-          border-color: rgba(0, 200, 112, 0.26);
-          background: linear-gradient(135deg, rgba(0, 200, 112, 0.11), rgba(0, 200, 232, 0.08));
+          border-color: color-mix(in srgb, var(--success) 28%, var(--border));
+          background: linear-gradient(
+            135deg,
+            color-mix(in srgb, var(--success) 10%, var(--surface)),
+            color-mix(in srgb, var(--primary) 7%, var(--surface))
+          );
         }
 
         .usage-meter__pro-badge {
@@ -138,16 +154,16 @@ function renderPaidMeter(
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.06em;
-          color: #00c870;
-          background: rgba(0, 200, 112, 0.16);
-          border: 1px solid rgba(0, 200, 112, 0.3);
+          color: var(--success);
+          background: color-mix(in srgb, var(--success) 16%, transparent);
+          border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
           border-radius: 999px;
           padding: 4px 10px;
         }
 
         .usage-meter__pro-copy {
           font-size: 12px;
-          color: #d8f6ee;
+          color: var(--text-2);
         }
 
         @keyframes usage-meter-pulse {
@@ -180,10 +196,10 @@ function renderPaidMeter(
 
 function renderFreeMeter(equipmentCount, reportsThisMonth) {
   const usageState = getUsageState(equipmentCount, reportsThisMonth);
-  const equipmentBarColor = usageState.equipmentOverLimit ? '#e03040' : '#00C8E8';
-  const reportColor = usageState.hasOverLimit
-    ? '#e03040'
-    : getReportBarColor(usageState.reportPercent);
+  const equipmentTone = usageState.equipmentOverLimit ? 'danger' : 'primary';
+  const reportTone = usageState.hasOverLimit
+    ? 'danger'
+    : getReportBarTone(usageState.reportPercent);
   const upgradeText = usageState.hasOverLimit
     ? 'Você precisa do plano Pro para continuar &rarr;'
     : 'Desbloquear ilimitado &rarr;';
@@ -197,8 +213,8 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
     <section class="usage-meter" aria-label="Consumo do plano grátis">
       <style>
         .usage-meter {
-          background: rgba(0, 200, 232, 0.05);
-          border: 1px solid rgba(0, 200, 232, 0.1);
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 12px;
           padding: 16px;
           margin: 10px 0 14px;
@@ -213,17 +229,18 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
 
         .usage-meter__label {
           font-size: 12px;
-          color: #6a8ba8;
+          color: var(--text-3);
         }
 
         .usage-meter__value {
-          color: #e8f2fa;
+          color: var(--text);
+          font-weight: 600;
         }
 
         .usage-meter__track {
           height: 6px;
           border-radius: 3px;
-          background: rgba(255, 255, 255, 0.06);
+          background: var(--surface-3);
           overflow: hidden;
         }
 
@@ -231,6 +248,18 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
           height: 100%;
           border-radius: 3px;
           transition: width 0.3s ease;
+        }
+
+        .usage-meter__fill--primary {
+          background: var(--primary);
+        }
+
+        .usage-meter__fill--warn {
+          background: var(--warning);
+        }
+
+        .usage-meter__fill--danger {
+          background: var(--danger);
         }
 
         .usage-meter__actions {
@@ -242,8 +271,9 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
 
         .usage-meter__upgrade {
           font-size: 12px;
-          color: #00c8e8;
+          color: var(--primary);
           text-decoration: none;
+          font-weight: 600;
         }
 
         .usage-meter__badge {
@@ -256,13 +286,15 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
         }
 
         .usage-meter__badge--warn {
-          background: rgba(232, 160, 32, 0.15);
-          color: #e8a020;
+          background: var(--warning-soft);
+          color: var(--warning);
+          border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
         }
 
         .usage-meter__badge--danger {
-          background: rgba(224, 48, 64, 0.15);
-          color: #e03040;
+          background: var(--danger-soft);
+          color: var(--danger);
+          border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
         }
 
         @keyframes usage-meter-pulse {
@@ -284,14 +316,14 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
       <div class="usage-meter__row">
         <div class="usage-meter__label">Equipamentos: <span class="usage-meter__value">${equipmentCount} / ${FREE_PLAN_EQUIP_LIMIT}</span> no plano grátis</div>
         <div class="usage-meter__track">
-          <div class="usage-meter__fill" style="width:${usageState.equipmentPercent}%;background:${equipmentBarColor}"></div>
+          <div class="usage-meter__fill usage-meter__fill--${equipmentTone}" style="width:${usageState.equipmentPercent}%"></div>
         </div>
       </div>
 
       <div class="usage-meter__row">
         <div class="usage-meter__label">Relatórios este mês: <span class="usage-meter__value">${reportsThisMonth} / ${FREE_PLAN_REPORT_LIMIT}</span> no plano grátis</div>
         <div class="usage-meter__track">
-          <div class="usage-meter__fill" style="width:${usageState.reportPercent}%;background:${reportColor}"></div>
+          <div class="usage-meter__fill usage-meter__fill--${reportTone}" style="width:${usageState.reportPercent}%"></div>
         </div>
       </div>
 

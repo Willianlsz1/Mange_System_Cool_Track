@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CoolTrack Pro — Conceitos de Logo</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+        padding: 40px 24px;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 8px;
+      }
+      .sub {
+        text-align: center;
+        color: #64748b;
+        margin-bottom: 40px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+        text-align: center;
+      }
+      .card h3 {
+        margin: 0 0 4px;
+        font-size: 15px;
+      }
+      .card p {
+        margin: 0 0 16px;
+        font-size: 12px;
+        color: #64748b;
+      }
+      .logo-box {
+        width: 180px;
+        height: 180px;
+        margin: 0 auto 16px;
+      }
+      .mini-row {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        align-items: center;
+        padding-top: 12px;
+        border-top: 1px solid #e2e8f0;
+      }
+      .mini-row .s {
+        width: 24px;
+        height: 24px;
+      }
+      .mini-row .m {
+        width: 48px;
+        height: 48px;
+      }
+      .mini-row .l {
+        width: 72px;
+        height: 72px;
+      }
+      .current {
+        background: #0f172a;
+        color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CoolTrack Pro — Conceitos de Logo</h1>
+    <p class="sub">Baseados na identidade do projeto (HVAC / azul-marinho / ciano)</p>
+
+    <div class="grid">
+      <!-- CURRENT -->
+      <div class="card current">
+        <h3 style="color: #38bdf8">Atual</h3>
+        <p style="color: #94a3b8">Versão em uso hoje</p>
+        <div class="logo-box">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <rect x="10" y="10" width="180" height="180" rx="32" fill="#0F172A" />
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#38BDF8" stroke-width="3" />
+            <text
+              x="100"
+              y="118"
+              font-family="Arial, sans-serif"
+              font-size="56"
+              font-weight="700"
+              fill="#38BDF8"
+              text-anchor="middle"
+            >
+              CT
+            </text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- CONCEPT 1 - CT + Snowflake -->
+      <div class="card">
+        <h3>Conceito 1 · CT + Floco</h3>
+        <p>Monograma moderno com floco minimalista</p>
+        <div class="logo-box">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0F172A" />
+                <stop offset="100%" stop-color="#1E293B" />
+              </linearGradient>
+              <linearGradient id="fg1" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#7DD3FC" />
+                <stop offset="100%" stop-color="#38BDF8" />
+              </linearGradient>
+            </defs>
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="url(#bg1)" />
+            <!-- snowflake top -->
+            <g
+              stroke="url(#fg1)"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              fill="none"
+              opacity="0.9"
+            >
+              <line x1="100" y1="40" x2="100" y2="60" />
+              <line x1="96" y1="46" x2="100" y2="50" />
+              <line x1="104" y1="46" x2="100" y2="50" />
+            </g>
+            <!-- CT letters -->
+            <text
+              x="100"
+              y="130"
+              font-family="'Segoe UI', sans-serif"
+              font-size="72"
+              font-weight="800"
+              fill="url(#fg1)"
+              text-anchor="middle"
+              letter-spacing="-2"
+            >
+              CT
+            </text>
+            <!-- bottom airflow line -->
+            <path
+              d="M60 160 Q80 150 100 160 T140 160"
+              stroke="#38BDF8"
+              stroke-width="2.5"
+              fill="none"
+              stroke-linecap="round"
+              opacity="0.7"
+            />
+          </svg>
+        </div>
+        <div class="mini-row">
+          <svg class="s" viewBox="0 0 200 200">
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="#0F172A" />
+            <text
+              x="100"
+              y="130"
+              font-family="sans-serif"
+              font-size="72"
+              font-weight="800"
+              fill="#38BDF8"
+              text-anchor="middle"
+            >
+              CT
+            </text>
+          </svg>
+          <svg class="m" viewBox="0 0 200 200">
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="#0F172A" />
+            <text
+              x="100"
+              y="130"
+              font-family="sans-serif"
+              font-size="72"
+              font-weight="800"
+              fill="#38BDF8"
+              text-anchor="middle"
+            >
+              CT
+            </text>
+          </svg>
+          <svg class="l" viewBox="0 0 200 200">
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="#0F172A" />
+            <text
+              x="100"
+              y="130"
+              font-family="sans-serif"
+              font-size="72"
+              font-weight="800"
+              fill="#38BDF8"
+              text-anchor="middle"
+            >
+              CT
+            </text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- CONCEPT 2 - Snowflake only -->
+      <div class="card">
+        <h3>Conceito 2 · Floco Geométrico</h3>
+        <p>Símbolo puro, sem letras — estilo app premium</p>
+        <div class="logo-box">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <radialGradient id="bg2" cx="0.5" cy="0.3" r="0.9">
+                <stop offset="0%" stop-color="#1E293B" />
+                <stop offset="100%" stop-color="#0F172A" />
+              </radialGradient>
+            </defs>
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="url(#bg2)" />
+            <g
+              transform="translate(100 100)"
+              stroke="#38BDF8"
+              stroke-width="6"
+              stroke-linecap="round"
+              fill="none"
+            >
+              <!-- 6 arms -->
+              <g>
+                <line x1="0" y1="-55" x2="0" y2="55" />
+                <line x1="-14" y1="-40" x2="0" y2="-26" />
+                <line x1="14" y1="-40" x2="0" y2="-26" />
+                <line x1="-14" y1="40" x2="0" y2="26" />
+                <line x1="14" y1="40" x2="0" y2="26" />
+              </g>
+              <g transform="rotate(60)">
+                <line x1="0" y1="-55" x2="0" y2="55" />
+                <line x1="-14" y1="-40" x2="0" y2="-26" />
+                <line x1="14" y1="-40" x2="0" y2="-26" />
+                <line x1="-14" y1="40" x2="0" y2="26" />
+                <line x1="14" y1="40" x2="0" y2="26" />
+              </g>
+              <g transform="rotate(120)">
+                <line x1="0" y1="-55" x2="0" y2="55" />
+                <line x1="-14" y1="-40" x2="0" y2="-26" />
+                <line x1="14" y1="-40" x2="0" y2="-26" />
+                <line x1="-14" y1="40" x2="0" y2="26" />
+                <line x1="14" y1="40" x2="0" y2="26" />
+              </g>
+            </g>
+            <circle cx="100" cy="100" r="8" fill="#7DD3FC" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- CONCEPT 3 - Badge/Shield -->
+      <div class="card">
+        <h3>Conceito 3 · Badge Técnico</h3>
+        <p>Escudo + engrenagem sutil + CT</p>
+        <div class="logo-box">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bg3" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#1E293B" />
+                <stop offset="100%" stop-color="#0F172A" />
+              </linearGradient>
+            </defs>
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="url(#bg3)" />
+            <!-- hex ring -->
+            <g
+              transform="translate(100 100)"
+              fill="none"
+              stroke="#38BDF8"
+              stroke-width="3"
+              opacity="0.5"
+            >
+              <polygon points="0,-65 56,-33 56,33 0,65 -56,33 -56,-33" />
+            </g>
+            <!-- inner hex -->
+            <g transform="translate(100 100)" fill="#38BDF8" opacity="0.08">
+              <polygon points="0,-50 43,-25 43,25 0,50 -43,25 -43,-25" />
+            </g>
+            <text
+              x="100"
+              y="118"
+              font-family="'Segoe UI', sans-serif"
+              font-size="52"
+              font-weight="800"
+              fill="#38BDF8"
+              text-anchor="middle"
+              letter-spacing="-1"
+            >
+              CT
+            </text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- CONCEPT 4 - Wave/Airflow -->
+      <div class="card">
+        <h3>Conceito 4 · Fluxo de Ar</h3>
+        <p>C estilizado representando ondas de ar frio</p>
+        <div class="logo-box">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bg4" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0F172A" />
+                <stop offset="100%" stop-color="#1E293B" />
+              </linearGradient>
+            </defs>
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="url(#bg4)" />
+            <g fill="none" stroke="#38BDF8" stroke-linecap="round">
+              <path d="M130 60 A 50 50 0 1 0 130 140" stroke-width="14" />
+              <path d="M150 78 A 30 30 0 1 0 150 122" stroke-width="8" opacity="0.7" />
+              <path d="M165 90 A 14 14 0 1 0 165 110" stroke-width="5" opacity="0.4" />
+            </g>
+            <circle cx="70" cy="100" r="6" fill="#7DD3FC" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- CONCEPT 5 - Modern Monogram -->
+      <div class="card">
+        <h3>Conceito 5 · Monograma Fundido</h3>
+        <p>C e T integrados como um símbolo único</p>
+        <div class="logo-box">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bg5" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#1E293B" />
+                <stop offset="100%" stop-color="#0F172A" />
+              </linearGradient>
+              <linearGradient id="fg5" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#7DD3FC" />
+                <stop offset="100%" stop-color="#0EA5E9" />
+              </linearGradient>
+            </defs>
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="url(#bg5)" />
+            <!-- Stylized CT: C as arc, T as crossbar inside -->
+            <g stroke="url(#fg5)" fill="none" stroke-linecap="round">
+              <path d="M140 60 A 50 50 0 1 0 140 140" stroke-width="16" />
+              <line x1="80" y1="100" x2="130" y2="100" stroke-width="14" />
+              <line x1="105" y1="80" x2="105" y2="125" stroke-width="14" />
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- CONCEPT 6 - Thermometer/Gauge -->
+      <div class="card">
+        <h3>Conceito 6 · Medidor Técnico</h3>
+        <p>Gauge + CT — visual de monitoramento</p>
+        <div class="logo-box">
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="bg6" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#0F172A" />
+                <stop offset="100%" stop-color="#0B1220" />
+              </linearGradient>
+            </defs>
+            <rect x="10" y="10" width="180" height="180" rx="40" fill="url(#bg6)" />
+            <!-- gauge arc -->
+            <path
+              d="M45 130 A 60 60 0 0 1 155 130"
+              fill="none"
+              stroke="#334155"
+              stroke-width="8"
+              stroke-linecap="round"
+            />
+            <path
+              d="M45 130 A 60 60 0 0 1 120 78"
+              fill="none"
+              stroke="#38BDF8"
+              stroke-width="8"
+              stroke-linecap="round"
+            />
+            <!-- needle -->
+            <line
+              x1="100"
+              y1="130"
+              x2="125"
+              y2="85"
+              stroke="#7DD3FC"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+            <circle cx="100" cy="130" r="6" fill="#7DD3FC" />
+            <text
+              x="100"
+              y="168"
+              font-family="'Segoe UI', sans-serif"
+              font-size="22"
+              font-weight="800"
+              fill="#38BDF8"
+              text-anchor="middle"
+              letter-spacing="2"
+            >
+              CT
+            </text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <div
+      style="
+        max-width: 800px;
+        margin: 48px auto 0;
+        padding: 24px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+      "
+    >
+      <h3 style="margin-top: 0">Como usar</h3>
+      <p style="color: #475569; line-height: 1.6">
+        Escolha o conceito que mais representa o CoolTrack Pro e use o prompt correspondente no
+        SocialSight (proporção 1:1). Meus favoritos para HVAC são o
+        <strong>Conceito 1</strong> (mantém familiaridade com o CT atual, mas moderniza) e o
+        <strong>Conceito 5</strong> (mais memorável e escalável).
+      </p>
+    </div>
+  </body>
+</html>

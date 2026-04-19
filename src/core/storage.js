@@ -14,7 +14,11 @@ import {
   normalizePrioridadeOperacional,
   normalizePeriodicidadePreventivaDias,
 } from '../domain/maintenance.js';
-import { sanitizePersistedEquipamento, sanitizePersistedRegistro } from './inputValidation.js';
+import {
+  sanitizePersistedEquipamento,
+  sanitizePersistedRegistro,
+  sanitizePersistedSetor,
+} from './inputValidation.js';
 
 const STORAGE_WARN_BYTES = 4 * 1024 * 1024;
 const STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -45,6 +49,9 @@ function normalizeEquip(e) {
   });
   if (!sanitized) return null;
 
+  const setorIdRaw = e.setorId ?? e.setor_id ?? null;
+  const setorId = setorIdRaw ? String(setorIdRaw) : null;
+
   return {
     id: String(e.id),
     nome: sanitized.nome,
@@ -61,6 +68,9 @@ function normalizeEquip(e) {
       e.tipo,
       e.criticidade,
     ),
+    setorId,
+    // Feature Plus+: foto real do equipamento. Mesmo shape de `registros.fotos`.
+    fotos: normalizePhotoList(e.fotos),
   };
 }
 
@@ -70,7 +80,8 @@ function isLegacyEquipmentSchemaError(error) {
     message.includes('column') &&
     (message.includes('criticidade') ||
       message.includes('prioridade_operacional') ||
-      message.includes('periodicidade_preventiva_dias'))
+      message.includes('periodicidade_preventiva_dias') ||
+      message.includes('fotos'))
   );
 }
 
@@ -85,6 +96,7 @@ function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
     tipo: equipamento.tipo,
     modelo: equipamento.modelo,
     fluido: equipamento.fluido,
+    setor_id: equipamento.setorId ?? null,
   };
   if (legacy) return row;
   return {
@@ -96,7 +108,15 @@ function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
       equipamento.tipo,
       equipamento.criticidade,
     ),
+    // Mesma semântica de `registros.fotos` (jsonb). Fallback pra legacy acima
+    // se a coluna ainda não existir no schema (isLegacyEquipmentSchemaError).
+    fotos: normalizePhotoList(equipamento.fotos),
   };
+}
+
+function isMissingSetorSchemaError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('setor') || (message.includes('column') && message.includes('setor_id'));
 }
 
 function normalizeRegistro(r, equipamentoIds) {
@@ -187,7 +207,7 @@ function isDirty() {
 function parseDeletionQueue() {
   try {
     const raw = localStorage.getItem(STORAGE_SYNC_DELETIONS_KEY);
-    if (!raw) return { equipamentos: [], registros: [] };
+    if (!raw) return { equipamentos: [], registros: [], setores: [] };
     const parsed = JSON.parse(raw);
     const equipamentos = Array.isArray(parsed?.equipamentos)
       ? [...new Set(parsed.equipamentos.map(String).filter(Boolean))]
@@ -195,9 +215,12 @@ function parseDeletionQueue() {
     const registros = Array.isArray(parsed?.registros)
       ? [...new Set(parsed.registros.map(String).filter(Boolean))]
       : [];
-    return { equipamentos, registros };
+    const setores = Array.isArray(parsed?.setores)
+      ? [...new Set(parsed.setores.map(String).filter(Boolean))]
+      : [];
+    return { equipamentos, registros, setores };
   } catch (_error) {
-    return { equipamentos: [], registros: [] };
+    return { equipamentos: [], registros: [], setores: [] };
   }
 }
 
@@ -205,8 +228,9 @@ function saveDeletionQueue(queue) {
   const sanitized = {
     equipamentos: [...new Set((queue?.equipamentos || []).map(String).filter(Boolean))],
     registros: [...new Set((queue?.registros || []).map(String).filter(Boolean))],
+    setores: [...new Set((queue?.setores || []).map(String).filter(Boolean))],
   };
-  if (!sanitized.equipamentos.length && !sanitized.registros.length) {
+  if (!sanitized.equipamentos.length && !sanitized.registros.length && !sanitized.setores.length) {
     localStorage.removeItem(STORAGE_SYNC_DELETIONS_KEY);
     return sanitized;
   }
@@ -214,11 +238,12 @@ function saveDeletionQueue(queue) {
   return sanitized;
 }
 
-function queueDeletions({ equipamentos = [], registros = [] } = {}) {
+function queueDeletions({ equipamentos = [], registros = [], setores = [] } = {}) {
   const current = parseDeletionQueue();
   const next = {
     equipamentos: [...current.equipamentos, ...equipamentos.map(String).filter(Boolean)],
     registros: [...current.registros, ...registros.map(String).filter(Boolean)],
+    setores: [...current.setores, ...setores.map(String).filter(Boolean)],
   };
   const saved = saveDeletionQueue(next);
   updateSyncStatus();
@@ -234,7 +259,7 @@ function clearSyncMetadata() {
 
 function getPendingOpsCount() {
   const queue = parseDeletionQueue();
-  let count = queue.equipamentos.length + queue.registros.length;
+  let count = queue.equipamentos.length + queue.registros.length + queue.setores.length;
   if (isDirty()) count += 1;
   if (_queuedState) count += 1;
   return count;
@@ -355,6 +380,36 @@ async function pushTecnicos(tecnicos, userId) {
   }
 }
 
+async function pushSetores(setores, userId) {
+  if (!setores?.length) return;
+  try {
+    const rows = setores
+      .map((s) => sanitizePersistedSetor(s))
+      .filter(Boolean)
+      .map((s) => ({
+        id: s.id,
+        user_id: userId,
+        nome: s.nome,
+        cor: s.cor,
+      }));
+    if (!rows.length) return;
+    const { error } = await supabase.from('setores').upsert(rows, { onConflict: 'id' });
+    if (error) {
+      // Schema antigo sem tabela setores — loga mas não quebra sync
+      if (isMissingSetorSchemaError(error)) return;
+      throw error;
+    }
+  } catch (error) {
+    if (isMissingSetorSchemaError(error)) return;
+    throw new AppError('Falha ao sincronizar setores.', ErrorCodes.SYNC_FAILED, 'warning', {
+      action: 'pushSetores',
+      quantidade: setores.length,
+      userId,
+      cause: error?.message,
+    });
+  }
+}
+
 async function deleteRemoteRegistros(ids, userId) {
   const uniqueIds = [...new Set((ids || []).map(String).filter(Boolean))];
   if (!uniqueIds.length) return;
@@ -381,14 +436,28 @@ async function deleteRemoteEquipamentos(ids, userId) {
   }
 }
 
+async function deleteRemoteSetores(ids, userId) {
+  const uniqueIds = [...new Set((ids || []).map(String).filter(Boolean))];
+  if (!uniqueIds.length) return;
+  for (const chunk of splitIntoChunks(uniqueIds, 100)) {
+    const { error } = await supabase.from('setores').delete().eq('user_id', userId).in('id', chunk);
+    if (error) {
+      // Tabela ainda não migrada — não bloqueia sync
+      if (isMissingSetorSchemaError(error)) return;
+      throw error;
+    }
+  }
+}
+
 async function flushPendingDeletions(userId) {
   const queue = parseDeletionQueue();
-  if (!queue.equipamentos.length && !queue.registros.length) return;
+  if (!queue.equipamentos.length && !queue.registros.length && !queue.setores.length) return;
 
   const remaining = {
     ...queue,
     equipamentos: [...queue.equipamentos],
     registros: [...queue.registros],
+    setores: [...queue.setores],
   };
 
   if (queue.registros.length) {
@@ -399,6 +468,12 @@ async function flushPendingDeletions(userId) {
     await deleteRemoteEquipamentos(queue.equipamentos, userId);
     remaining.equipamentos = [];
   }
+  if (queue.setores.length) {
+    // ON DELETE SET NULL no FK garante que equipamentos continuam existindo
+    // mesmo se os setores forem deletados primeiro.
+    await deleteRemoteSetores(queue.setores, userId);
+    remaining.setores = [];
+  }
 
   saveDeletionQueue(remaining);
 }
@@ -407,11 +482,15 @@ async function pullFromSupabase(userId) {
   let eqRes;
   let regRes;
   let tecRes;
+  let setRes;
   try {
-    [eqRes, regRes, tecRes] = await Promise.all([
+    [eqRes, regRes, tecRes, setRes] = await Promise.all([
       supabase.from('equipamentos').select('*').eq('user_id', userId),
       supabase.from('registros').select('*').eq('user_id', userId),
       supabase.from('tecnicos').select('nome').eq('user_id', userId),
+      // Setores é opcional — se a tabela ainda não existir (schema antigo),
+      // o erro é absorvido e seguimos com lista vazia.
+      supabase.from('setores').select('id, nome, cor').eq('user_id', userId),
     ]);
     if (eqRes.error || regRes.error || tecRes.error) {
       throw new Error(
@@ -444,6 +523,9 @@ async function pullFromSupabase(userId) {
       e.tipo,
       e.criticidade,
     ),
+    setorId: e.setor_id ? String(e.setor_id) : null,
+    // Feature Plus+: pode vir null de schema antigo ou array vazio.
+    fotos: normalizePhotoList(e.fotos),
   }));
 
   const equipIds = new Set(equipamentos.map((e) => e.id));
@@ -468,7 +550,12 @@ async function pullFromSupabase(userId) {
 
   const tecnicos = (tecRes.data || []).map((t) => t.nome);
 
-  return { equipamentos, registros, tecnicos };
+  // Setores: absorve erro se tabela ainda não existe
+  const setores = setRes?.error
+    ? []
+    : (setRes?.data || []).map((s) => sanitizePersistedSetor(s)).filter(Boolean);
+
+  return { equipamentos, registros, tecnicos, setores };
 }
 
 /* Migracao automatica localStorage -> Supabase */
@@ -503,6 +590,8 @@ async function migrateIfNeeded(userId) {
     }
 
     Toast.info('Migrando seus dados para a nuvem...');
+    // Setores primeiro para satisfazer FK
+    await pushSetores(parsed.setores || [], userId);
     await pushEquipamentos(parsed.equipamentos, userId);
     await pushRegistros(parsed.registros || [], userId);
     await pushTecnicos(parsed.tecnicos || [], userId);
@@ -587,9 +676,18 @@ export const Storage = {
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== 'object') return null;
+      const setores = (Array.isArray(parsed.setores) ? parsed.setores : [])
+        .map(sanitizePersistedSetor)
+        .filter(Boolean);
+      const setorIds = new Set(setores.map((s) => s.id));
       const equipamentos = (Array.isArray(parsed.equipamentos) ? parsed.equipamentos : [])
         .map(normalizeEquip)
-        .filter(Boolean);
+        .filter(Boolean)
+        .map((e) => ({
+          ...e,
+          // Se o setor foi removido, descola o equipamento (mesmo comportamento do FK ON DELETE SET NULL).
+          setorId: e.setorId && setorIds.has(e.setorId) ? e.setorId : null,
+        }));
       const equipIds = new Set(equipamentos.map((e) => e.id));
       const registros = (Array.isArray(parsed.registros) ? parsed.registros : [])
         .map((r) => normalizeRegistro(r, equipIds))
@@ -599,7 +697,7 @@ export const Storage = {
             ...new Set(parsed.tecnicos.filter((t) => typeof t === 'string').map((t) => t.trim())),
           ].filter(Boolean)
         : [];
-      return { equipamentos, registros, tecnicos };
+      return { equipamentos, registros, tecnicos, setores };
     } catch (err) {
       handleError(err, {
         code: ErrorCodes.DATA_CORRUPT,
@@ -697,6 +795,9 @@ export const Storage = {
       const migration = await migrateLegacyPhotosInState(state, userId);
       const syncState = migration.state;
 
+      // IMPORTANTE: push setores ANTES de equipamentos para não violar FK.
+      // (equipamentos.setor_id referencia setores.id)
+      await pushSetores(syncState.setores || [], userId);
       await pushEquipamentos(syncState.equipamentos, userId);
       await pushRegistros(syncState.registros, userId);
       await pushTecnicos(syncState.tecnicos, userId);
@@ -758,6 +859,12 @@ export const Storage = {
     markDirty();
   },
 
+  markSetorDeleted(id) {
+    if (localStorage.getItem('cooltrack-guest-mode') === '1') return;
+    queueDeletions({ setores: [id] });
+    markDirty();
+  },
+
   hasPendingSync() {
     const queue = parseDeletionQueue();
     return Boolean(
@@ -765,6 +872,7 @@ export const Storage = {
       _queuedState ||
       queue.equipamentos.length ||
       queue.registros.length ||
+      queue.setores.length ||
       _syncRunning,
     );
   },
