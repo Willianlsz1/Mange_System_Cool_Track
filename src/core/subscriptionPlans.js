@@ -118,8 +118,16 @@ export function getEffectivePlan(profile) {
   // Dev mode: flag local OU is_dev=true no perfil liberam o override do toggle.
   // Antes, is_dev=true forçava sempre Pro ignorando o override — o que fazia o
   // devPlanToggle não ter efeito em usuários marcados como dev no Supabase.
+  //
+  // SEGURANÇA: `cooltrack-dev-mode` no localStorage só é aceito em build de
+  // desenvolvimento (import.meta.env.DEV). Em produção qualquer um poderia
+  // setar a flag no F12 e virar Pro sem pagar — o gate fecha esse bypass.
+  // `is_dev === true` no perfil continua valendo em prod, mas é bloqueado
+  // pelo trigger protect_profile_fields (usuário comum não consegue auto-setar).
   const isLocalDev =
-    typeof localStorage !== 'undefined' && localStorage.getItem('cooltrack-dev-mode') === 'true';
+    import.meta.env?.DEV === true &&
+    typeof localStorage !== 'undefined' &&
+    localStorage.getItem('cooltrack-dev-mode') === 'true';
   const isDevMode = isLocalDev || profile?.is_dev === true;
 
   if (isDevMode) {

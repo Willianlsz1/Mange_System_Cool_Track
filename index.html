@@ -137,28 +137,7 @@
     <script type="module" src="/src/app.js"></script>
 
     <!-- Registro do Service Worker (apenas em produção) -->
-    <script>
-      const _isDev =
-        location.hostname === 'localhost' ||
-        location.hostname === '127.0.0.1' ||
-        location.hostname.startsWith('192.168.');
-      if ('serviceWorker' in navigator && !_isDev) {
-        navigator.serviceWorker
-          .register('/sw.js', { scope: '/' })
-          .then((reg) => {
-            console.log('[SW] Registrado:', reg.scope);
-            // Expõe a registration pro app.js wirar o fluxo de update
-            // ("Nova versão disponível. Recarregar?"). Usamos globalThis
-            // por simplicidade — o app lê esta referência uma vez no boot.
-            window.__cooltrackSwRegistration = reg;
-          })
-          .catch((err) => console.warn('[SW] Falha no registro:', err));
-      } else if (_isDev && 'serviceWorker' in navigator) {
-        // Em dev: remove SW anterior para não bloquear atualizações
-        navigator.serviceWorker.getRegistrations().then((regs) => {
-          regs.forEach((r) => r.unregister());
-        });
-      }
-    </script>
+    <!-- Externalizado para permitir CSP script-src sem 'unsafe-inline'. -->
+    <script src="/sw-register.js"></script>
   </body>
 </html>

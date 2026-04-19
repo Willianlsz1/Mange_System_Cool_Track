@@ -41,7 +41,8 @@
         line-height: 1.6;
         margin-bottom: 2rem;
       }
-      button {
+      .retry-btn {
+        display: block;
         background: #38bdf8;
         color: #0f172a;
         border: none;
@@ -51,8 +52,10 @@
         font-weight: 600;
         cursor: pointer;
         width: 100%;
+        text-decoration: none;
+        text-align: center;
       }
-      button:active {
+      .retry-btn:active {
         opacity: 0.85;
       }
     </style>
@@ -65,7 +68,8 @@
         Você está offline. Algumas funcionalidades podem estar indisponíveis.<br />
         Verifique sua conexão e tente novamente.
       </p>
-      <button onclick="location.reload()">Tentar novamente</button>
+      <!-- Usa anchor em vez de button+onclick pra eliminar inline handler (CSP). -->
+      <a class="retry-btn" href="/">Tentar novamente</a>
     </div>
   </body>
 </html>

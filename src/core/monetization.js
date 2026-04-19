@@ -136,10 +136,17 @@ export async function fetchMyProfileBilling({ supabaseClient = supabase } = {}) 
     is_dev: false,
   };
 
-  // Aplica override de plano para usuários dev (is_dev === true ou flag local ativa)
-  const isDevMode =
-    rawProfile.is_dev === true ||
-    (typeof localStorage !== 'undefined' && localStorage.getItem('cooltrack-dev-mode') === 'true');
+  // Aplica override de plano para usuários dev (is_dev === true ou flag local ativa).
+  // SEGURANÇA: a flag local `cooltrack-dev-mode` só tem efeito em build de dev
+  // (import.meta.env.DEV). Em produção qualquer um poderia setar a flag no F12
+  // e virar Pro sem pagar — o gate fecha esse bypass. `is_dev === true` no perfil
+  // continua valendo em prod mas é bloqueado pelo trigger protect_profile_fields
+  // (usuário comum não consegue auto-setar no Supabase).
+  const isLocalDev =
+    import.meta.env?.DEV === true &&
+    typeof localStorage !== 'undefined' &&
+    localStorage.getItem('cooltrack-dev-mode') === 'true';
+  const isDevMode = rawProfile.is_dev === true || isLocalDev;
   const profile = isDevMode ? DevPlanOverride.applyToProfile(rawProfile) : rawProfile;
 
   return { user, profile };
