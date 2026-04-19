@@ -37,33 +37,43 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-2);
 }
 
 .pricing-plan-indicator--free {
-  color: #a9c6dd;
-  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-2);
+  border-color: var(--border);
 }
 
+/* Pro = dourado (alinhado ao account modal) */
 .pricing-plan-indicator--pro {
-  color: #9df2ca;
-  border-color: rgba(0, 200, 112, 0.35);
-  background: rgba(0, 200, 112, 0.08);
+  color: #c9912a;
+  border-color: color-mix(in srgb, #e8b94a 35%, var(--border));
+  background: color-mix(in srgb, #e8b94a 12%, transparent);
+}
+
+[data-theme='dark'] .pricing-plan-indicator--pro,
+:root:not([data-theme='light']) .pricing-plan-indicator--pro {
+  color: #e8b94a;
 }
 
 .pricing-plan-indicator--plus {
-  color: #a3c6ef;
-  border-color: rgba(58, 142, 230, 0.35);
-  background: rgba(58, 142, 230, 0.08);
+  color: #2a6fb8;
+  border-color: color-mix(in srgb, #3a8ee6 35%, var(--border));
+  background: color-mix(in srgb, #3a8ee6 10%, transparent);
+}
+
+[data-theme='light'] .pricing-plan-indicator--plus {
+  color: #1d4f8e;
 }
 
 .pricing-upgrade-reason {
   margin-top: var(--space-3);
   padding: 10px 14px;
-  background: rgba(255, 207, 102, 0.07);
-  border: 1px solid rgba(255, 207, 102, 0.2);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 25%, var(--border));
   border-radius: 8px;
-  color: #ffcf66;
+  color: var(--warning);
   font-size: 13px;
 }
 
@@ -93,28 +103,29 @@
   gap: 0;
 }
 
-.pricing-card--active.pricing-card--pro {
-  border-color: rgba(0, 200, 112, 0.45);
+/* Pro: tier premium, cor dourada alinhada ao account modal — com glow gold+cyan */
+.pricing-card--pro {
+  border: 1px solid rgba(232, 185, 74, 0.3);
   box-shadow:
-    0 0 0 1px rgba(0, 200, 112, 0.2),
-    0 0 32px rgba(0, 200, 112, 0.1);
+    0 0 0 1px rgba(232, 185, 74, 0.12),
+    0 0 24px rgba(232, 185, 74, 0.1);
+}
+
+.pricing-card--active.pricing-card--pro {
+  border-color: rgba(232, 185, 74, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(232, 185, 74, 0.22),
+    0 0 32px rgba(232, 185, 74, 0.14);
 }
 
 .pricing-card--highlighted {
   transform: translateY(-2px);
   box-shadow:
-    0 0 0 1px rgba(0, 200, 232, 0.24),
-    0 0 34px rgba(0, 200, 232, 0.2);
+    0 0 0 1px rgba(232, 185, 74, 0.24),
+    0 0 34px rgba(232, 185, 74, 0.18);
 }
 
-.pricing-card--pro {
-  border: 1px solid rgba(0, 200, 232, 0.3);
-  box-shadow:
-    0 0 0 1px rgba(0, 200, 232, 0.14),
-    0 0 24px rgba(0, 200, 232, 0.1);
-}
-
-/* Plus: tier intermediário, cor azul mais sóbria que o Pro */
+/* Plus: tier intermediário, cor azul sóbria */
 .pricing-card--plus {
   border: 1px solid rgba(58, 142, 230, 0.28);
   box-shadow:
@@ -129,11 +140,19 @@
     0 0 28px rgba(58, 142, 230, 0.12);
 }
 
-.pricing-card--highlight {
+/* Highlight = card em destaque (via prop highlightPlan). Herda glow do tier. */
+.pricing-card--highlight.pricing-card--pro {
   transform: translateY(-2px);
   box-shadow:
-    0 0 0 1px rgba(0, 200, 232, 0.24),
-    0 0 34px rgba(0, 200, 232, 0.2);
+    0 0 0 1px rgba(232, 185, 74, 0.28),
+    0 0 34px rgba(232, 185, 74, 0.2);
+}
+
+.pricing-card--highlight.pricing-card--plus {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(58, 142, 230, 0.28),
+    0 0 34px rgba(58, 142, 230, 0.14);
 }
 
 /* Badge */
@@ -148,15 +167,50 @@
   padding: 3px 8px;
 }
 
+/* Badge "PLANO ATUAL" — herda a cor do tier em vez de ser sempre verde */
 .pricing-badge--current {
-  border: 1px solid rgba(0, 200, 112, 0.3);
-  color: #9df2ca;
-  background: rgba(0, 200, 112, 0.1);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  background: var(--surface-2);
 }
 
+.pricing-card--plus .pricing-badge--current {
+  border-color: color-mix(in srgb, #3a8ee6 32%, var(--border));
+  color: #3a8ee6;
+  background: color-mix(in srgb, #3a8ee6 12%, transparent);
+}
+
+[data-theme='light'] .pricing-card--plus .pricing-badge--current {
+  color: #1d4f8e;
+}
+
+.pricing-card--pro .pricing-badge--current {
+  border-color: color-mix(in srgb, #e8b94a 36%, var(--border));
+  color: #c9912a;
+  background: color-mix(in srgb, #e8b94a 14%, transparent);
+}
+
+[data-theme='dark'] .pricing-card--pro .pricing-badge--current,
+:root:not([data-theme='light']) .pricing-card--pro .pricing-badge--current {
+  color: #e8b94a;
+}
+
+/* Pro badge: gold+cyan com shimmer sutil (alinhado ao account modal) */
 .pricing-badge--popular {
-  background: linear-gradient(135deg, #00c8e8, #00a0c8);
-  color: #07111f;
+  background: linear-gradient(90deg, #e8b94a, #00c8e8);
+  background-size: 200% 100%;
+  color: #1a1206;
+  animation: pricing-pro-shimmer 3.5s ease-in-out infinite;
+}
+
+@keyframes pricing-pro-shimmer {
+  0%,
+  100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
 }
 
 .pricing-badge--plus {
@@ -167,7 +221,7 @@
 .pricing-badge--neutral {
   color: var(--text-3);
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-2);
 }
 
 /* Card content */
@@ -192,12 +246,21 @@
   color: var(--text-3);
 }
 
+/* Pro price: text-gradient gold→cyan (alinhado ao account modal) */
 .pricing-card__price--pro {
-  color: #00c8e8;
+  background: linear-gradient(135deg, #e8b94a, #00c8e8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
 }
 
 .pricing-card__price--plus {
   color: #3a8ee6;
+}
+
+[data-theme='light'] .pricing-card__price--plus {
+  color: #1d4f8e;
 }
 
 .pricing-card__price-group {
@@ -209,8 +272,8 @@
   display: flex;
   gap: 4px;
   margin: 12px 0 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 3px;
 }
@@ -219,7 +282,7 @@
   flex: 1;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-2);
   font-size: 13px;
   font-weight: 500;
   padding: 7px 8px;
@@ -235,14 +298,18 @@
 }
 
 .pricing-billing-toggle__btn--active {
-  background: var(--accent, #00c8e8);
-  color: #000;
+  background: var(--primary);
+  color: var(--black);
   font-weight: 700;
 }
 
+[data-theme='light'] .pricing-billing-toggle__btn--active {
+  color: #ffffff;
+}
+
 .pricing-billing-toggle__save {
-  background: rgba(0, 200, 112, 0.25);
-  color: #00e87a;
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+  color: var(--success);
   font-size: 10px;
   font-weight: 700;
   padding: 1px 5px;
@@ -273,8 +340,8 @@
 }
 
 .pricing-card__annual-save {
-  background: rgba(0, 200, 112, 0.12);
-  color: #00c870;
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
   border-radius: 4px;
   padding: 1px 5px;
   font-size: 11px;
@@ -307,11 +374,25 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: rgba(0, 200, 112, 0.12);
-  color: #00c870;
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
   font-size: 11px;
   font-weight: 700;
   flex-shrink: 0;
+}
+
+/* Itens explicitamente não incluídos (mostra limitação do tier) */
+.pricing-features__excluded {
+  color: var(--text-3) !important;
+  opacity: 0.75;
+}
+
+.pricing-features__excluded::before {
+  content: '×' !important;
+  background: color-mix(in srgb, var(--text-3) 18%, transparent) !important;
+  color: var(--text-3) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
 }
 
 /* Card footer */
@@ -326,20 +407,23 @@
   width: 100%;
 }
 
+/* Pro CTA: gradient gold+cyan animado (alinhado ao account modal) */
 .pricing-card__cta--pro {
-  border: 1px solid rgba(0, 200, 232, 0.4);
-  color: #031521;
+  border: 1px solid rgba(232, 185, 74, 0.4);
+  color: #1a1206;
   font-weight: 700;
-  background: linear-gradient(135deg, #00d9ff, #00b5d4);
-  box-shadow: 0 8px 20px rgba(0, 200, 232, 0.22);
+  background: linear-gradient(90deg, #e8b94a, #f0d27a, #00c8e8, #e8b94a);
+  background-size: 200% 100%;
+  box-shadow: 0 8px 20px rgba(232, 185, 74, 0.24);
   transition:
     transform 0.18s,
     box-shadow 0.18s;
+  animation: pricing-pro-shimmer 4s ease-in-out infinite;
 }
 
 .pricing-card__cta--pro:hover {
   transform: translateY(-1px);
-  box-shadow: 0 12px 28px rgba(0, 200, 232, 0.3);
+  box-shadow: 0 12px 28px rgba(232, 185, 74, 0.32);
 }
 
 .pricing-card__cta--plus {
@@ -371,18 +455,18 @@
   cursor: pointer;
   font-family: inherit;
   font-size: 12px;
-  color: #5a7a96;
+  color: var(--text-3);
   text-align: center;
   padding: 4px 0;
   text-decoration: underline;
-  text-decoration-color: rgba(90, 122, 150, 0.4);
+  text-decoration-color: color-mix(in srgb, var(--text-3) 40%, transparent);
   text-underline-offset: 3px;
   transition: color 0.18s;
 }
 
 .pricing-cancel-btn:hover {
-  color: #ff8a8a;
-  text-decoration-color: rgba(255, 138, 138, 0.5);
+  color: var(--danger);
+  text-decoration-color: color-mix(in srgb, var(--danger) 50%, transparent);
 }
 
 /* Management section (Pro only) */
@@ -390,8 +474,8 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 18px 20px;
 }
@@ -519,8 +603,12 @@
 
 .upgrade-nudge-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(0, 200, 232, 0.06), rgba(0, 168, 255, 0.03));
-  border: 1px solid rgba(0, 200, 232, 0.12);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 10%, var(--surface)),
+    color-mix(in srgb, var(--primary) 3%, var(--surface))
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
   border-radius: 14px;
   padding: 24px;
   display: grid;
@@ -532,12 +620,13 @@
   top: 12px;
   right: 12px;
   font-size: 10px;
-  color: #00c870;
-  background: rgba(0, 200, 112, 0.15);
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success) 28%, var(--border));
   border-radius: 999px;
   padding: 4px 8px;
   letter-spacing: 0.06em;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .upgrade-nudge-card__icon {
@@ -545,20 +634,25 @@
 }
 
 .upgrade-nudge-card--pro-active {
-  border-color: rgba(0, 200, 112, 0.28);
-  background: linear-gradient(135deg, rgba(0, 200, 112, 0.12), rgba(0, 200, 232, 0.08));
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--success) 12%, var(--surface)),
+    color-mix(in srgb, var(--primary) 8%, var(--surface))
+  );
 }
 
 .upgrade-nudge-card__pro-title {
   margin: 0;
-  color: #e8f2fa;
+  color: var(--text);
   font-size: 18px;
   line-height: 1.35;
+  font-weight: 700;
 }
 
 .upgrade-nudge-card__pro-copy {
   margin: 0;
-  color: #b4d3e8;
+  color: var(--text-2);
   font-size: 13px;
   line-height: 1.4;
 }

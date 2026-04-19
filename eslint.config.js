@@ -21,7 +21,7 @@ const testGlobals = {
 
 export default [
   {
-    ignores: ['node_modules/**', 'dist/**', 'coverage/**'],
+    ignores: ['node_modules/**', 'dist/**', 'dist-*/**', 'coverage/**'],
   },
   js.configs.recommended,
   {

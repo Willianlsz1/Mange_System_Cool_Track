@@ -35,11 +35,21 @@ function mimeToExtension(mimeType) {
   return 'jpg';
 }
 
-function buildObjectPath({ userId, recordId, index, mimeType }) {
+// Scopes suportados pra organizar os paths dentro do bucket.
+// Sempre que adicionar um scope novo, só incluir aqui — o upload não
+// precisa ser diferente por scope.
+const SUPPORTED_SCOPES = new Set(['registros', 'equipamentos']);
+
+function resolveScope(scope) {
+  const value = String(scope || 'registros').toLowerCase();
+  return SUPPORTED_SCOPES.has(value) ? value : 'registros';
+}
+
+function buildObjectPath({ userId, recordId, index, mimeType, scope = 'registros' }) {
   const safeRecordId = normalizeRecordId(recordId);
   const ext = mimeToExtension(mimeType);
   const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${index}`;
-  return `${userId}/registros/${safeRecordId}/${unique}.${ext}`;
+  return `${userId}/${resolveScope(scope)}/${safeRecordId}/${unique}.${ext}`;
 }
 
 function blobToDataUrl(blob) {
@@ -176,10 +186,13 @@ export function hasInlineLegacyPhotos(photoList) {
   return Array.isArray(photoList) && photoList.some((photo) => isDataUrl(photo));
 }
 
-async function uploadDataUrlPhoto(dataUrl, { userId, recordId, index, bucket = DEFAULT_BUCKET }) {
+async function uploadDataUrlPhoto(
+  dataUrl,
+  { userId, recordId, index, bucket = DEFAULT_BUCKET, scope = 'registros' },
+) {
   const blob = await dataUrlToBlob(dataUrl);
   const mimeType = blob.type || 'image/jpeg';
-  const path = buildObjectPath({ userId, recordId, index, mimeType });
+  const path = buildObjectPath({ userId, recordId, index, mimeType, scope });
 
   const { error: uploadError } = await supabase.storage.from(bucket).upload(path, blob, {
     upsert: false,
@@ -217,7 +230,7 @@ async function uploadDataUrlPhoto(dataUrl, { userId, recordId, index, bucket = D
 
 export async function uploadPendingPhotos(
   photos,
-  { recordId, userId = null, bucket = DEFAULT_BUCKET } = {},
+  { recordId, userId = null, bucket = DEFAULT_BUCKET, scope = 'registros' } = {},
 ) {
   const source = Array.isArray(photos) ? photos : [];
   if (!source.length) return { photos: [], uploadedCount: 0, failedCount: 0 };
@@ -246,6 +259,7 @@ export async function uploadPendingPhotos(
           recordId,
           index: i,
           bucket,
+          scope,
         });
         result.push(uploaded);
         uploadedCount += 1;

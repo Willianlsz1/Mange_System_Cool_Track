@@ -145,8 +145,11 @@ function buildTypesData(registros, c) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6);
 
-  // Paleta técnica fixa para os tipos
-  const palette = [c.primary, c.success, c.warning, c.danger, '#7CB8D0', '#8AAAC8'];
+  // Paleta técnica fixa para os tipos. Cores 5-6 adaptam ao tema pra não
+  // sumirem contra o fundo branco no light.
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const extras = isLight ? ['#3a6f9c', '#7a5a2a'] : ['#7CB8D0', '#8AAAC8'];
+  const palette = [c.primary, c.success, c.warning, c.danger, ...extras];
 
   return {
     labels: sorted.map(([tipo]) => (tipo.length > 26 ? tipo.slice(0, 26) + '…' : tipo)),

@@ -290,10 +290,25 @@ export const FirstTimeExperience = {
         <div class="ftx-step">
           <div class="ftx-logo">
             <div class="ftx-logo-icon">
-              <svg width="20" height="20" viewBox="0 0 16 16" fill="none">
-                <rect x="1" y="1" width="14" height="14" rx="2" stroke="#00C8E8" stroke-width="1.2"/>
-                <circle cx="8" cy="8" r="2.5" stroke="#00C8E8" stroke-width="1.2"/>
-                <path d="M8 1v2.5M8 12.5V15M1 8h2.5M12.5 8H15" stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round"/>
+              <svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <g stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
+                  <g>
+                    <line x1="8" y1="2" x2="8" y2="14"/>
+                    <polyline points="6.5,3.2 8,2 9.5,3.2"/>
+                    <polyline points="6.5,12.8 8,14 9.5,12.8"/>
+                  </g>
+                  <g transform="rotate(60 8 8)">
+                    <line x1="8" y1="2" x2="8" y2="14"/>
+                    <polyline points="6.5,3.2 8,2 9.5,3.2"/>
+                    <polyline points="6.5,12.8 8,14 9.5,12.8"/>
+                  </g>
+                  <g transform="rotate(120 8 8)">
+                    <line x1="8" y1="2" x2="8" y2="14"/>
+                    <polyline points="6.5,3.2 8,2 9.5,3.2"/>
+                    <polyline points="6.5,12.8 8,14 9.5,12.8"/>
+                  </g>
+                </g>
+                <circle cx="8" cy="8" r="0.9" fill="#00C8E8"/>
               </svg>
             </div>
             <span class="ftx-logo-text">CoolTrack</span>

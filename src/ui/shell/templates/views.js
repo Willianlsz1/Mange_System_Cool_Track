@@ -1,102 +1,162 @@
 export function renderShellViews() {
   return String.raw`
-<!-- PAINEL -->
+<!-- PAINEL (V2Refined redesign) -->
         <div class="view active" id="view-inicio">
-          <div class="section-title" id="dash-greeting">Sistema Operacional</div>
-          <div class="dashboard-bento">
-            <div id="dash-alert-strip"></div>
-            <div id="dash-next-action"></div>
-            <div class="dashboard-operational-grid">
-              <div class="dash-section dash-section--critical-now">
-                <div class="dash-section-header">
-                  <span class="dash-section-header__label">A FAZER AGORA</span>
-                  <span class="dash-section-header__line"></span>
-                  <span class="dash-section-header__count" id="dash-critical-now-count">0</span>
+          <section class="dash" id="dash" data-tier="free" data-tone="ok">
+            <!-- Hero Status Card — pill (TUDO OPERANDO/AÇÃO NECESSÁRIA) + greeting + chips + CTA -->
+            <article class="dash__hero" id="dash-hero" aria-label="Status geral do parque">
+              <span class="dash__hero-orb dash__hero-orb--a" aria-hidden="true"></span>
+              <span class="dash__hero-orb dash__hero-orb--b" aria-hidden="true"></span>
+              <div class="dash__hero-body">
+                <span class="dash__hero-pill" id="dash-hero-pill">
+                  <span class="dash__hero-pill-icon" id="dash-hero-pill-icon" aria-hidden="true">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4 4 5-7 5 7 4-4-2 12H5L3 7z" /></svg>
+                  </span>
+                  <span class="dash__hero-pill-text" id="dash-hero-pill-text">TUDO OPERANDO</span>
+                </span>
+                <h1 class="dash__hero-greeting" id="dash-hero-greeting">Olá</h1>
+                <div class="dash__hero-datetime" id="dash-hero-datetime"></div>
+                <p class="dash__hero-desc" id="dash-hero-desc">Seu parque está saudável.</p>
+                <div class="dash__hero-chips" id="dash-hero-chips"></div>
+              </div>
+              <div class="dash__hero-cta-wrap">
+                <button class="dash__hero-cta" id="dash-hero-cta" type="button" data-nav="registro">
+                  <span class="dash__hero-cta-icon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+                  </span>
+                  <span class="dash__hero-cta-label" id="dash-hero-cta-label">Registrar manutenção</span>
+                </button>
+              </div>
+            </article>
+
+            <!-- Empty state (sem equipamento) -->
+            <div id="dash-empty" class="dash__empty" hidden></div>
+
+            <!-- Onboarding + Usage meter + Upgrade card (mantidos para integração de plano) -->
+            <div id="dash-onboarding"></div>
+            <div id="dash-usage-meter"></div>
+            <div id="dash-upgrade-card"></div>
+
+            <!-- KPI Grid — 2×2 mobile / 1×4 desktop -->
+            <section class="dash__kpi-grid" aria-label="Indicadores principais">
+              <article class="dash__kpi">
+                <div class="dash__kpi-label">Ativos</div>
+                <div class="dash__kpi-value" id="dash-kpi-ativos">—</div>
+                <div class="dash__kpi-sub" id="dash-kpi-ativos-sub">—</div>
+              </article>
+              <article class="dash__kpi">
+                <div class="dash__kpi-label">Eficiência</div>
+                <div class="dash__kpi-value" id="dash-kpi-ef">—</div>
+                <div class="dash__kpi-spark" id="dash-kpi-ef-spark" aria-hidden="true"></div>
+                <div class="dash__kpi-sub" id="dash-kpi-ef-sub">—</div>
+              </article>
+              <article class="dash__kpi">
+                <div class="dash__kpi-label">Anomalias</div>
+                <div class="dash__kpi-value" id="dash-kpi-anom">0</div>
+                <div class="dash__kpi-sub" id="dash-kpi-anom-sub">sem alerta</div>
+              </article>
+              <article class="dash__kpi">
+                <div class="dash__kpi-label">Serviços / mês</div>
+                <div class="dash__kpi-value" id="dash-kpi-mes">—</div>
+                <div class="dash__kpi-spark" id="dash-kpi-mes-spark" aria-hidden="true"></div>
+                <div class="dash__kpi-sub" id="dash-kpi-mes-sub">—</div>
+              </article>
+            </section>
+
+            <!-- Próxima ação + Último serviço -->
+            <section class="dash__pair">
+              <article class="dash__card dash__card--next-action" id="dash-next-action-card" data-tone="ok">
+                <div class="dash__card-label">Próxima ação</div>
+                <div class="dash__card-title" id="dash-next-title">Nenhuma ação urgente</div>
+                <div class="dash__card-sub" id="dash-next-sub">—</div>
+                <button class="dash__card-cta" id="dash-next-cta" type="button" data-nav="historico" data-action="" data-id="">
+                  <span class="dash__card-cta-label" id="dash-next-cta-label">Ver histórico</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                </button>
+              </article>
+              <article class="dash__card dash__card--last-service" id="dash-last-service" hidden>
+                <div class="dash__card-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.8-2.8 2.8-2.8z" /></svg>
                 </div>
-                <div id="dash-critical-now"></div>
-              </div>
-              <div class="dash-section dash-section--quick-actions">
-                <div class="dash-section-header">
-                  <span class="dash-section-header__label">AÇÕES RÁPIDAS</span>
-                  <span class="dash-section-header__line"></span>
+                <div class="dash__card-body">
+                  <div class="dash__card-label">Último serviço</div>
+                  <div class="dash__card-title" id="dash-last-title">—</div>
+                  <div class="dash__card-sub" id="dash-last-sub">—</div>
+                  <div class="dash__card-desc" id="dash-last-desc"></div>
                 </div>
-                <div class="quick-actions-grid">
-                  <button class="btn btn--primary quick-action-btn" data-nav="registro">Registrar manutenção</button>
-                  <button class="btn btn--outline quick-action-btn" data-nav="equipamentos">Buscar equipamento</button>
-                  <button class="btn btn--danger quick-action-btn" data-nav="alertas">Ver críticos</button>
-                </div>
-              </div>
-            </div>
-            <div class="kpi-row">
-              <div class="bento-kpi bento-kpi--alert">
-                <div class="bento-kpi__label">EQUIPAMENTOS ATIVOS</div>
-                <div class="bento-kpi__value" id="hst-alert-bento">—</div>
-                <div class="bento-kpi__sub" id="hst-alert-bento-sub"></div>
-              </div>
-              <div class="bento-kpi bento-kpi--health">
-                <div class="bento-kpi__label">EFICIÊNCIA DO SISTEMA</div>
-                <div class="bento-kpi__value bento-kpi__value--cyan" id="hst-health">—</div>
-                <div class="health-bar">
-                  <div class="health-bar__fill health-bar__fill--ok" id="health-bar-fill"></div>
-                </div>
-                <div class="bento-kpi__sub" id="hst-health-sub"></div>
-              </div>
-              <div class="bento-kpi bento-kpi--fail">
-                <div class="bento-kpi__label">ANOMALIAS OPERACIONAIS</div>
-                <div class="bento-kpi__value bento-kpi__value--danger" id="hst-fail-bento">0</div>
-                <div class="bento-kpi__sub" id="hst-fail-bento-sub"></div>
-              </div>
-              <div class="bento-kpi bento-kpi--mes">
-                <div class="bento-kpi__label">SERVIÇOS — MÊS ATUAL</div>
-                <div class="bento-kpi__value" id="hst-mes-bento">—</div>
-                <div id="hst-mes-spark"></div>
-                <div class="bento-kpi__sub" id="hst-mes-bento-sub"></div>
-              </div>
-            </div>
-            <div class="dash-center-grid">
-              <div class="dash-section">
-                <div class="dash-section-header">
-                  <span class="dash-section-header__label">EQUIPAMENTOS COM OCORRÊNCIA</span>
-                  <span class="dash-section-header__line"></span>
-                </div>
-                <div id="dash-criticos"></div>
-              </div>
-              <div class="dash-section">
-                <div class="dash-section-header">
-                  <span class="dash-section-header__label">ALERTAS ATIVOS — AÇÃO IMEDIATA</span>
-                  <span class="dash-section-header__line"></span>
-                </div>
-                <div id="dash-alertas-mini"></div>
-              </div>
-            </div>
-            <div class="dash-section">
-              <div class="dash-section-header">
-                <span class="dash-section-header__label">ÚLTIMOS SERVIÇOS</span>
-                <span class="dash-section-header__line"></span>
-              </div>
+              </article>
+            </section>
+
+            <!-- A fazer agora (equipamentos) -->
+            <section class="dash__section" id="dash-critical-section" hidden>
+              <header class="dash__section-header">
+                <span class="dash__section-label">A FAZER AGORA</span>
+                <span class="dash__section-count" id="dash-critical-now-count">0</span>
+              </header>
+              <div id="dash-critical-now"></div>
+            </section>
+
+            <!-- Alertas ativos -->
+            <section class="dash__section" id="dash-alerts-section" hidden>
+              <header class="dash__section-header">
+                <span class="dash__section-label">Alertas ativos</span>
+              </header>
+              <div id="dash-alertas-mini"></div>
+              <div id="dash-upgrade-inline-hint"></div>
+            </section>
+
+            <!-- Equipamentos com ocorrência -->
+            <section class="dash__section" id="dash-criticos-section" hidden>
+              <header class="dash__section-header">
+                <span class="dash__section-label">Equipamentos com ocorrência</span>
+              </header>
+              <div id="dash-criticos"></div>
+            </section>
+
+            <!-- Últimos serviços registrados -->
+            <section class="dash__section" id="dash-recentes-section" hidden>
+              <header class="dash__section-header">
+                <span class="dash__section-label">Últimos serviços</span>
+              </header>
               <div id="dash-recentes"></div>
-            </div>
-            <div class="dash-section dash-section--analysis">
-              <div class="dash-section-header">
-                <span class="dash-section-header__label">ANÁLISE DO PARQUE</span>
-                <span class="dash-section-header__line"></span>
+            </section>
+
+            <!-- Análise do parque — accordion mobile / grid desktop -->
+            <section class="dash__analise" aria-label="Análise do parque">
+              <header class="dash__section-header">
+                <span class="dash__section-label">Análise do parque</span>
+              </header>
+              <div class="dash__accordion">
+                <details class="dash__accordion-item">
+                  <summary class="dash__accordion-summary">
+                    <span class="dash__accordion-title">Status do parque</span>
+                    <span class="dash__accordion-chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="dash__accordion-body">
+                    <canvas id="chart-status-pie"></canvas>
+                  </div>
+                </details>
+                <details class="dash__accordion-item">
+                  <summary class="dash__accordion-summary">
+                    <span class="dash__accordion-title">Serviços por período</span>
+                    <span class="dash__accordion-chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="dash__accordion-body">
+                    <canvas id="chart-trend-line"></canvas>
+                  </div>
+                </details>
+                <details class="dash__accordion-item">
+                  <summary class="dash__accordion-summary">
+                    <span class="dash__accordion-title">Tipos de serviço</span>
+                    <span class="dash__accordion-chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="dash__accordion-body">
+                    <canvas id="chart-types-bar"></canvas>
+                  </div>
+                </details>
               </div>
-              <div class="charts-grid">
-                <div class="chart-card">
-                  <div class="chart-card__title">STATUS DO PARQUE</div>
-                  <div class="chart-card__body"><canvas id="chart-status-pie"></canvas></div>
-                </div>
-                <div class="chart-card">
-                  <div class="chart-card__title">SERVIÇOS POR PERÍODO</div>
-                  <div class="chart-card__body"><canvas id="chart-trend-line"></canvas></div>
-                </div>
-                <div class="chart-card chart-card--full">
-                  <div class="chart-card__title">TIPOS DE SERVIÇO — FREQUÊNCIA</div>
-                  <div class="chart-card__body"><canvas id="chart-types-bar"></canvas></div>
-                </div>
-              </div>
-            </div>
-          </div>
+            </section>
+          </section>
         </div>
 
         <!-- EQUIPAMENTOS -->

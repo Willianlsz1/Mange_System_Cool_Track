@@ -113,6 +113,11 @@ function _activateRoute(name, el, params, options = {}) {
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('is-active'));
   document.getElementById(`nav-${name}`)?.classList.add('is-active');
 
+  // Expor rota atual para CSS (ex.: hide de header-stats-bar no painel)
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.setAttribute('data-route', name);
+  }
+
   // Ativar view
   el.classList.add('active');
 

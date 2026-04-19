@@ -27,7 +27,10 @@
   border: 1px solid var(--border-2);
   border-top: 3px solid var(--setor-cor, var(--primary));
   border-radius: 10px;
-  overflow: hidden;
+  /* overflow: visible pra o dropdown do kebab poder escapar do card
+     (abre pra cima e em cards compactos precisa sair dos limites).
+     As bordas arredondadas continuam valendo via border-radius. */
+  overflow: visible;
   cursor: pointer;
   transition:
     box-shadow 0.18s,
@@ -195,35 +198,139 @@
   transform: translateX(3px);
 }
 
-/* ── Botão excluir ─────────────────────────────────────── */
-.setor-card__delete {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: var(--card);
-  border: 1px solid var(--border-2);
+/* ── Footer do card de setor — kebab + CTA alinhados ─────────────────────────
+   V2 Port: antes as ações (editar/excluir) ficavam absolute no top-right e
+   colidiam com o score lateral; depois migraram pro footer como dois ícones
+   ghost, mas ainda competiam visualmente com o CTA. Agora: um único botão
+   kebab (⋮) abre dropdown com as duas ações. Footer vira uma linha só:
+       [ ⋮ ] [ Ver equipamentos → ]
+   ────────────────────────────────────────────────────────────────────────── */
+.setor-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.setor-card__footer .setor-card__cta {
+  flex: 1;
+  margin-top: 0;
+}
+
+/* ── Ações (wrapper para posicionar o menu absolute) ─────────────── */
+.setor-card__actions {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+/* ── Kebab (trigger do dropdown) ─────────────────────────────────── */
+.setor-card__kebab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
   color: var(--text-3);
   cursor: pointer;
-  padding: 5px;
-  border-radius: 6px;
-  opacity: 0;
+  padding: 0;
+  border-radius: 8px;
   line-height: 0;
   transition:
-    opacity 0.15s,
     color 0.12s,
+    background 0.12s;
+}
+
+.setor-card__kebab:hover,
+.setor-card__kebab:focus-visible,
+.setor-card__kebab[aria-expanded='true'] {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  color: var(--text);
+  outline: none;
+}
+
+/* ── Dropdown menu (abre pra cima a partir do kebab) ─────────────── */
+.setor-card__menu {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  min-width: 148px;
+  padding: 4px;
+  background: var(--card-hi, var(--surface-2, var(--card)));
+  border: 1px solid var(--border-2);
+  border-radius: 10px;
+  box-shadow:
+    0 10px 28px rgba(3, 8, 16, 0.5),
+    0 2px 6px rgba(3, 8, 16, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 20;
+  animation: setor-menu-in 0.12s ease-out;
+}
+
+.setor-card__menu[hidden] {
+  display: none;
+}
+
+@keyframes setor-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.setor-card__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition:
     background 0.12s,
-    border-color 0.12s;
-  z-index: 2;
+    color 0.12s;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
-.setor-card:hover .setor-card__delete,
-.setor-card:focus-within .setor-card__delete {
-  opacity: 1;
+.setor-card__menu-item svg {
+  flex-shrink: 0;
+  color: var(--text-3);
+  transition: color 0.12s;
 }
 
-.setor-card__delete:hover {
+.setor-card__menu-item:hover,
+.setor-card__menu-item:focus-visible {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+  outline: none;
+}
+
+.setor-card__menu-item:hover svg,
+.setor-card__menu-item:focus-visible svg {
+  color: var(--text);
+}
+
+.setor-card__menu-item--danger:hover,
+.setor-card__menu-item--danger:focus-visible {
   background: var(--danger-soft);
-  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.setor-card__menu-item--danger:hover svg,
+.setor-card__menu-item--danger:focus-visible svg {
   color: var(--danger);
 }
 
@@ -368,4 +475,274 @@
   color: var(--text-2);
   line-height: 1.5;
   margin: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SETOR v6 — Port Claude Design V2 (PR D2)
+
+   Novo layout do card de setor:
+   · Head com nome + score lateral (à direita, num grande colorido por tom)
+   · Health meter tonal (pill com dot + label contextual + % em dia)
+   · 2 barras finas side-by-side (score + preventiva)
+   · CTA "Ver equipamentos" e ações (editar/excluir) inalterados
+
+   Strip "Sem setor" — promovida do grid pro topo da view quando há órfãos.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Score lateral (head right) ──────────────────────────────────────────── */
+.setor-card__score-lat {
+  flex-shrink: 0;
+  text-align: right;
+  line-height: 1.1;
+}
+
+.setor-card__score-lat-cap {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.setor-card__score-lat-num {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.setor-card__score-lat-val {
+  color: var(--text);
+}
+
+.setor-card__score-lat-val--ok {
+  color: var(--success);
+}
+
+.setor-card__score-lat-val--warn {
+  color: var(--warning);
+}
+
+.setor-card__score-lat-val--danger {
+  color: var(--danger);
+}
+
+.setor-card__score-lat-den {
+  color: var(--text-3);
+  font-weight: 500;
+  font-size: 12px;
+  margin-left: 1px;
+}
+
+.setor-card__score-lat--muted .setor-card__score-lat-val {
+  color: var(--text-3);
+}
+
+/* ── Health meter unificado ──────────────────────────────────────────────── */
+.setor-card__health-block {
+  padding: 0 16px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.setor-card__health-meter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.setor-card__health-meter--ok {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.setor-card__health-meter--warn {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+.setor-card__health-meter--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+}
+
+.setor-card__health-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.setor-card__health-label {
+  /* label usa a cor do tom herdada do meter */
+}
+
+.setor-card__health-pct {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+/* ── Barras finas duo (score + preventiva) ───────────────────────────────── */
+.setor-card__bars-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.setor-card__bar-thin {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border-2);
+  overflow: hidden;
+}
+
+.setor-card__bar-thin > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease-out;
+  background: var(--text-3);
+}
+
+.setor-card__bar-thin--ok > span {
+  background: var(--success);
+}
+
+.setor-card__bar-thin--warn > span {
+  background: var(--warning);
+}
+
+.setor-card__bar-thin--danger > span {
+  background: var(--danger);
+}
+
+/* ── Strip "Sem setor" (topo do grid) ────────────────────────────────────── */
+.sem-setor-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  border: 1.5px dashed color-mix(in srgb, var(--primary) 40%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 3%, transparent);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  outline: none;
+}
+
+.sem-setor-strip:hover,
+.sem-setor-strip:focus-visible {
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-color: var(--primary);
+}
+
+.sem-setor-strip__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.sem-setor-strip__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sem-setor-strip__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.sem-setor-strip__sub {
+  font-size: 11.5px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.sem-setor-strip__cta {
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.sem-setor-strip__cta:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border-color: var(--primary);
+}
+
+/* ── Responsive (mobile) ─────────────────────────────────────────────────── */
+@media (max-width: 519px) {
+  .setor-card__score-lat-num {
+    font-size: 18px;
+  }
+
+  .setor-card__score-lat-den {
+    font-size: 11px;
+  }
+
+  .setor-card__health-meter {
+    font-size: 11.5px;
+    padding: 5px 9px;
+  }
+
+  .setor-card__health-pct {
+    font-size: 10.5px;
+  }
+
+  .sem-setor-strip {
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .sem-setor-strip__icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .sem-setor-strip__title {
+    font-size: 12.5px;
+  }
+
+  .sem-setor-strip__sub {
+    font-size: 11px;
+  }
+
+  .sem-setor-strip__cta {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
 }

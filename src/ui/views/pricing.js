@@ -57,7 +57,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
       : 'Comece grátis. Faça upgrade quando precisar.';
 
   const indicator = isPro
-    ? '<svg width="12" height="12" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#00c870" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#00c870" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Plano Pro ativo'
+    ? '<svg width="12" height="12" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#e8b94a" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#e8b94a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Plano Pro ativo'
     : isPlus
       ? '<svg width="12" height="12" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#3a8ee6" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#3a8ee6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Plano Plus ativo'
       : '⬡ Plano Gratuito';
@@ -107,8 +107,11 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             <li>Histórico dos últimos 30 dias</li>
             <li>5 relatórios PDF/mês <span style="color:var(--text-3);font-size:12px">(com marca d'água CoolTrack)</span></li>
             <li>10 envios via WhatsApp/mês</li>
+            <li>Fotos nos registros de serviço</li>
             <li>Alertas de manutenção preventiva</li>
             <li>Funciona offline</li>
+            <li class="pricing-features__excluded">Sem fotos no cadastro de equipamentos</li>
+            <li class="pricing-features__excluded">Sem assinatura digital no PDF</li>
           </ul>
           <div class="pricing-card__footer">
             <button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">
@@ -147,8 +150,10 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             <li>Registros de serviço ilimitados</li>
             <li>Todo o histórico de manutenções</li>
             <li>100 relatórios PDF/mês <strong>sem marca d'água</strong></li>
-            <li>Assinatura digital do cliente no PDF</li>
+            <li><strong>Assinatura digital</strong> do cliente no PDF</li>
             <li>50 envios via WhatsApp/mês</li>
+            <li><strong>Fotos dos equipamentos</strong> (até 3 por equipamento)</li>
+            <li>Fotos nos registros de serviço</li>
             <li>Alertas de manutenção preventiva</li>
           </ul>
           <div class="pricing-card__footer">
@@ -213,7 +218,9 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             <li>Relatórios PDF <strong>ilimitados</strong> sem marca d'água</li>
             <li>Assinatura digital do cliente no PDF</li>
             <li>Envios de WhatsApp <strong>ilimitados</strong></li>
-            <li>Agrupamento por setores</li>
+            <li><strong>Fotos dos equipamentos</strong> (até 3 por equipamento)</li>
+            <li>Fotos nos registros de serviço</li>
+            <li><strong>Agrupamento por setores</strong></li>
             <li>Suporte prioritário</li>
           </ul>
           <div class="pricing-card__footer">

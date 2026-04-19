@@ -3,7 +3,9 @@ import { renderRelatorio } from '../../views/relatorio.js';
 import { updateHeader } from '../../views/dashboard.js';
 import { renderEquip } from '../../views/equipamentos.js';
 import { Photos } from '../../components/photos.js';
+import { EquipmentPhotos } from '../../components/equipmentPhotos.js';
 import { getSuggestedPreventiveDays } from '../../../domain/maintenance.js';
+import { initHistScrollAutoHide } from './histScrollAutoHide.js';
 
 function resetRegistroEditingState() {
   sessionStorage.removeItem('cooltrack-editing-id');
@@ -41,15 +43,18 @@ function bindPreventiveSuggestion() {
   const updateHint = () => {
     const suggested = getSuggestedPreventiveDays(tipo.value, criticidade.value);
     if (hint) hint.textContent = `Sugestao para ${tipo.value}: ${suggested} dias.`;
-    if (!periodicidade.value || periodicidade.dataset.manual !== '1') {
+    // Só sobrescreve o valor se o usuário ainda não editou manualmente.
+    // Não usamos `!periodicidade.value` aqui porque isso impediria o usuário
+    // de limpar o campo para redigitar outro número (bug: "fica fixo").
+    if (periodicidade.dataset.manual !== '1') {
       periodicidade.value = String(suggested);
-      periodicidade.dataset.manual = '0';
     }
   };
 
   periodicidade.addEventListener('input', () => {
-    periodicidade.dataset.manual = periodicidade.value ? '1' : '0';
-    if (!periodicidade.value) updateHint();
+    // Qualquer digitação direta = controle manual, inclusive limpar o campo.
+    // Isso libera o usuário para apagar "90" e digitar "80" sem auto-reset.
+    periodicidade.dataset.manual = '1';
   });
 
   tipo.addEventListener('change', updateHint);
@@ -61,6 +66,16 @@ function bindPhotoInput() {
   const inputFotos = document.getElementById('input-fotos');
   if (!inputFotos) return;
   inputFotos.addEventListener('change', (event) => Photos.add(event.target));
+}
+
+// Fotos do equipamento (feature Plus+): dois inputs — câmera e galeria.
+// Ambos delegam para EquipmentPhotos.add, que lida com limite e preview.
+function bindEquipmentPhotoInputs() {
+  ['equip-photo-camera', 'equip-photo-gallery'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener('change', (event) => EquipmentPhotos.add(event.target));
+  });
 }
 
 function bindHistFilters() {
@@ -105,32 +120,32 @@ function bindReportFilters() {
   });
 }
 
+/**
+ * Aplica o tema (light/dark), persiste no storage e sincroniza o label do
+ * item de menu da engrenagem. Não depende de nenhum botão dedicado no DOM.
+ */
+function applyThemeMode(theme) {
+  const menuLabel = document.getElementById('header-theme-label');
+  if (theme === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    if (menuLabel) menuLabel.textContent = '🌙 Tema escuro';
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    if (menuLabel) menuLabel.textContent = '☀️ Tema claro';
+  }
+  localStorage.setItem('cooltrack-theme', theme);
+}
+
+export function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  applyThemeMode(current === 'light' ? 'dark' : 'light');
+}
+
 function initTheme() {
-  const btn = document.getElementById('theme-toggle');
-  const icon = document.getElementById('theme-icon');
-  if (!btn || !icon) return;
-
-  const applyTheme = (theme) => {
-    if (theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light');
-      icon.textContent = '☀️';
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      icon.textContent = '🌙';
-    }
-    localStorage.setItem('cooltrack-theme', theme);
-  };
-
   const preferred =
     localStorage.getItem('cooltrack-theme') ||
     (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
-  applyTheme(preferred);
-  btn.hidden = false;
-
-  btn.addEventListener('click', () => {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    applyTheme(currentTheme === 'light' ? 'dark' : 'light');
-  });
+  applyThemeMode(preferred);
 }
 
 function bindSyncStatusUpdates() {
@@ -146,9 +161,11 @@ export function initControllerHelpers() {
   bindEquipDetailsToggle();
   bindPreventiveSuggestion();
   bindPhotoInput();
+  bindEquipmentPhotoInputs();
   bindEquipFilters();
   bindHistFilters();
   bindReportFilters();
   initTheme();
   bindSyncStatusUpdates();
+  initHistScrollAutoHide();
 }

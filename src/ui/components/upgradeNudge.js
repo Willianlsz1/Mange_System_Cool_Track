@@ -51,21 +51,23 @@ function pickConfig(planCode) {
 }
 
 // ── Cores por plano de destino ─────────────────────────────────────────────
+// bg/border usam color-mix() para se adaptar ao tema claro (aumentam contraste
+// contra --surface branco) sem ficar saturadas demais no tema escuro.
 const PLAN_COLORS = {
   plus: {
-    border: 'rgba(58, 142, 230, 0.25)',
-    bgFrom: 'rgba(58, 142, 230, 0.08)',
-    bgTo: 'rgba(58, 142, 230, 0.03)',
+    border: 'color-mix(in srgb, #3a8ee6 35%, var(--border))',
+    bgFrom: 'color-mix(in srgb, #3a8ee6 12%, var(--surface))',
+    bgTo: 'color-mix(in srgb, #3a8ee6 4%, var(--surface))',
     accent: '#3a8ee6',
     ctaFrom: '#3a8ee6',
     ctaTo: '#2a6fb8',
     ctaText: '#ffffff',
   },
   pro: {
-    border: 'rgba(0, 200, 112, 0.25)',
-    bgFrom: 'rgba(0, 200, 112, 0.08)',
-    bgTo: 'rgba(0, 200, 112, 0.03)',
-    accent: '#00c870',
+    border: 'color-mix(in srgb, #00a85c 35%, var(--border))',
+    bgFrom: 'color-mix(in srgb, #00a85c 12%, var(--surface))',
+    bgTo: 'color-mix(in srgb, #00a85c 4%, var(--surface))',
+    accent: '#00a85c',
     ctaFrom: '#00c870',
     ctaTo: '#00a85c',
     ctaText: '#07111f',
@@ -113,10 +115,11 @@ export const UpgradeNudge = {
 
           .upgrade-nudge-card__title {
             margin: 0;
-            color: #e8f2fa;
+            color: var(--text);
             font-size: 18px;
             line-height: 1.35;
             max-width: 34ch;
+            font-weight: 700;
           }
 
           .upgrade-nudge-card__icon {
@@ -133,7 +136,7 @@ export const UpgradeNudge = {
 
           .upgrade-nudge-card__item {
             font-size: 13px;
-            color: #8aaac8;
+            color: var(--text-2);
           }
 
           .upgrade-nudge-card__check {
@@ -145,12 +148,13 @@ export const UpgradeNudge = {
           .upgrade-nudge-card__footer {
             margin: 0;
             font-size: 12px;
-            color: #4a6880;
+            color: var(--text-3);
             line-height: 1.5;
           }
 
           .upgrade-nudge-card__footer strong {
-            color: #8aaac8;
+            color: var(--text-2);
+            font-weight: 600;
           }
 
           .upgrade-nudge-card__cta {

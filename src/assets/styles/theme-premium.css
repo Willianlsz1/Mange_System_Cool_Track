@@ -62,29 +62,20 @@ body::before {
 }
 
 .app-logo {
-  font-size: 16px;
   font-weight: 700;
-  letter-spacing: 0.06em;
   color: #fff;
+  gap: 10px;
 }
 
+/* Logo icon fica sólido (tier-accent) — regras base em layout.css */
 .app-logo__icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--premier-radius-xs);
-  background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(0, 212, 255, 0.05));
-  border: 1px solid rgba(0, 212, 255, 0.25);
-  box-shadow: 0 0 12px var(--neon-cyan-faint);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
+/* .app-logo__sub (legado do texto PRO inline) — neutralizado, agora temos
+   .app-logo__pill com a coroa. Escondo com segurança. */
 .app-logo__sub {
-  background: linear-gradient(135deg, var(--neon-cyan), #00a8ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  color: var(--neon-cyan);
-  border: 1px solid rgba(0, 212, 255, 0.3);
-  box-shadow: 0 0 8px var(--neon-cyan-faint);
+  display: none !important;
 }
 
 /* ════════════════════════════════════════════════════════
@@ -98,7 +89,7 @@ body::before {
 /* ===== NAVBAR FIXO — DESKTOP ONLY (≥1025px) ===== */
 @media (min-width: 1025px) {
   .nav-btn {
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.68);
     transition: all 0.2s ease;
   }
 
@@ -107,20 +98,19 @@ body::before {
   }
 
   .nav-btn:hover {
-    color: rgba(255, 255, 255, 0.8);
-    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .nav-btn:hover .nav-btn__icon {
     transform: translateY(-1px);
   }
 
+  /* Active state neutro — sem accent de tier, igual no dark e no light */
   .nav-btn.is-active {
-    color: var(--neon-cyan);
-    background: var(--neon-cyan-soft);
-    box-shadow:
-      0 0 20px var(--neon-cyan-faint),
-      inset 0 0 20px var(--neon-cyan-faint);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
   }
 
   .nav-btn__badge {
@@ -1058,11 +1048,17 @@ mark,
 /* ════════════════════════════════════════════════════════
    HIST STICKY HEADER — Premium
    ════════════════════════════════════════════════════════ */
+/* Fundo OPACO é obrigatório para um sticky-header: se ficar transparente,
+   o conteúdo que rola por baixo aparece atrás dele e cria a sensação
+   de "barra descendo junto da página". Usamos o mesmo `--bg` do app. */
 .hist-sticky-header {
-  background: transparent;
+  background: var(--bg, #07111f);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   border-bottom-color: var(--border-premium);
+}
+[data-theme='light'] .hist-sticky-header {
+  background: var(--bg, #f6f8fa);
 }
 
 /* ════════════════════════════════════════════════════════
@@ -1138,8 +1134,8 @@ mark,
 }
 
 [data-theme='light'] .app-logo__icon {
-  background: var(--primary-soft);
-  border-color: var(--border-2);
+  /* light mode: mantém o tile sólido com o accent do tier (definido em layout.css) */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 [data-theme='light'] .header-icon-btn {
@@ -1160,12 +1156,14 @@ mark,
 }
 
 [data-theme='light'] .nav-btn {
-  color: var(--text-3);
+  color: var(--text-2);
 }
 
-[data-theme='light'] .nav-btn.is-active,
+[data-theme='light'] .nav-btn.is-active {
+  color: var(--text);
+}
 [data-theme='light'] .nav-btn:hover {
-  color: var(--primary);
+  color: var(--text);
 }
 
 [data-theme='light'] .card,

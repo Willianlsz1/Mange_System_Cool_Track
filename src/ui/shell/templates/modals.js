@@ -9,16 +9,27 @@ export function renderShellModals() {
         <div class="modal-progress-header">
           <div>
             <div class="modal__title" id="modal-add-eq-title">Qual equipamento você quer monitorar?</div>
-            <div class="modal__subtitle">Só 2 campos obrigatórios para começar</div>
+            <nav class="modal-breadcrumb" aria-label="Seções do cadastro">
+              <span class="modal-breadcrumb__item modal-breadcrumb__item--active" id="crumb-essenciais">
+                <span class="modal-breadcrumb__dot" aria-hidden="true">●</span> Essenciais
+              </span>
+              <span class="modal-breadcrumb__sep" aria-hidden="true">/</span>
+              <span class="modal-breadcrumb__item" id="crumb-contexto">Contexto</span>
+              <span class="modal-breadcrumb__sep" aria-hidden="true">/</span>
+              <span class="modal-breadcrumb__item modal-breadcrumb__item--muted" id="crumb-detalhes">Detalhes técnicos</span>
+            </nav>
           </div>
-          <div class="modal-steps" aria-label="Etapas">
-            <span class="modal-step modal-step--active" id="step-dot-1">1</span>
-            <span class="modal-step-line"></span>
-            <span class="modal-step" id="step-dot-2">2</span>
+          <div class="modal-steps modal-steps--counter" aria-label="Etapas">
+            <span class="modal-steps__counter" id="eq-step-counter">1 / 2</span>
+            <span class="modal-step modal-step--active visually-hidden" id="step-dot-1">1</span>
+            <span class="modal-step visually-hidden" id="step-dot-2">2</span>
           </div>
         </div>
 
         <div id="eq-step-1">
+          <div class="eq-form-section-head">
+            <span class="eq-form-section-head__label">ESSENCIAIS</span>
+          </div>
           <div class="form-group">
             <label class="form-label" for="eq-nome">Como você chama esse equipamento? *</label>
             <input id="eq-nome" class="form-control" type="text"
@@ -30,21 +41,95 @@ export function renderShellModals() {
             <input id="eq-local" class="form-control" type="text"
               placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..." required autocomplete="off" />
           </div>
-          <div class="form-group" id="eq-setor-wrapper" style="display:none">
-            <label class="form-label" for="eq-setor">Setor <span class="pro-badge">PRO</span></label>
-            <select id="eq-setor" class="form-control">
-              <option value="">Sem setor</option>
-            </select>
-            <div class="form-hint">Agrupe este equipamento em um setor para visualização organizada</div>
+
+          <div class="eq-context-group" id="eq-context-group" style="display:none">
+            <div class="eq-form-section-head">
+              <span class="eq-form-section-head__label">CONTEXTO</span>
+              <span class="eq-form-section-head__meta">— opcional, melhora organização</span>
+            </div>
+            <div class="eq-context-group__card">
+              <label class="eq-context-row eq-context-row--setor" id="eq-setor-wrapper" for="eq-setor" style="display:none">
+                <span class="eq-context-row__icon" aria-hidden="true">
+                  <span class="eq-context-row__dot"></span>
+                </span>
+                <span class="eq-context-row__body">
+                  <span class="eq-context-row__title">
+                    Setor <span class="pro-badge pro-badge--inline">PRO</span>
+                  </span>
+                  <span class="eq-context-row__sub" id="eq-setor-sub">Sem setor atribuído</span>
+                </span>
+                <select id="eq-setor" class="eq-context-row__select" aria-label="Setor">
+                  <option value="">Sem setor</option>
+                </select>
+                <svg class="eq-context-row__chev" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </label>
+
+              <section class="eq-context-row eq-context-row--fotos" id="eq-fotos-wrapper" style="display:none"
+                aria-label="Fotos do equipamento">
+                <div class="eq-context-row__head">
+                  <span class="eq-context-row__icon eq-context-row__icon--cam" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                      <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="1.6" />
+                    </svg>
+                  </span>
+                  <div class="eq-context-row__body">
+                    <div class="eq-context-row__title">
+                      Fotos <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
+                    </div>
+                    <div class="eq-context-row__sub" id="equip-photo-sub">0 de 3 · ajuda a identificar em campo</div>
+                  </div>
+                </div>
+
+                <div class="equip-photo-block" id="equip-photo-block">
+                  <label class="equip-photo-dropzone" for="equip-photo-gallery" id="equip-photo-drop-zone">
+                    <svg class="equip-photo-dropzone__icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                      aria-hidden="true">
+                      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                      <circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.6" />
+                    </svg>
+                    <span class="equip-photo-dropzone__text">
+                      <span class="equip-photo-dropzone__title" id="equip-photo-drop-text">Tirar foto ou escolher da galeria</span>
+                      <span class="equip-photo-dropzone__sub">câmera ou arquivos · até 3</span>
+                    </span>
+                  </label>
+                  <input type="file" id="equip-photo-gallery" accept="image/*" multiple
+                    class="visually-hidden" data-action="equip-photo-add" />
+
+                  <label class="equip-photo-shortcut" for="equip-photo-camera">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
+                        stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                      <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="1.6" />
+                    </svg>
+                    Atalho: abrir câmera direto
+                  </label>
+                  <input type="file" id="equip-photo-camera" accept="image/*" capture="environment"
+                    class="visually-hidden" data-action="equip-photo-add" />
+
+                  <div class="equip-photo-counter photo-counter visually-hidden" aria-live="polite">0/3 fotos</div>
+                  <div class="photo-preview equip-photo-preview" id="equip-photo-preview" role="list"></div>
+                </div>
+              </section>
+            </div>
           </div>
-          <button class="eq-expand-btn" id="eq-expand-details" type="button" aria-expanded="false"
+
+          <button class="eq-expand-btn eq-expand-btn--pill" id="eq-expand-details" type="button" aria-expanded="false"
             aria-controls="eq-step-2">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" id="eq-expand-icon">
-              <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"
-                stroke-linejoin="round" />
-            </svg>
-            Adicionar detalhes técnicos
-            <span class="eq-expand-hint">(TAG, fluido, modelo — opcional)</span>
+            <span class="eq-expand-btn__body">
+              <span class="eq-expand-btn__title">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" id="eq-expand-icon" aria-hidden="true">
+                  <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+                Adicionar detalhes técnicos
+              </span>
+              <span class="eq-expand-hint">TAG, fluido, modelo — pode preencher depois</span>
+            </span>
           </button>
         </div>
 

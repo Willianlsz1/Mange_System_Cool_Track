@@ -20,5 +20,45 @@
     "net"
   ],
   "editor.formatOnSave": true,
-  "deno.enable": true
+  "deno.enable": true,
+
+  // ───────────────────────────────────────────────────────────────
+  // Esconde arquivos temporários e pastas de build que poluem o
+  // explorer. A única "dist" real é /dist. Tudo que casa com
+  // dist-* é artefato local (verificação de builds, previews, etc.)
+  // e nunca vai pro git (já está no .gitignore).
+  // ───────────────────────────────────────────────────────────────
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/node_modules": true,
+    "**/coverage": true,
+    "dist-*": true,
+    "dist-tmp": true,
+    "vite.config.js.timestamp-*": true,
+    "dev.err.log": true,
+    "dev.out.log": true,
+    "pdf_validacao.pdf": true,
+    "COMMIT_MSG.txt": true,
+    "*-preview.html": true,
+    "deploy-checklist.html": true,
+    "logo-concepts.html": true
+  },
+
+  // Também remove essas pastas das buscas (Ctrl+Shift+F) e do watch.
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true,
+    "dist-*": true,
+    "**/coverage": true,
+    "*-preview.html": true,
+    "vite.config.js.timestamp-*": true
+  },
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "dist-*/**": true,
+    "**/coverage/**": true
+  }
 }

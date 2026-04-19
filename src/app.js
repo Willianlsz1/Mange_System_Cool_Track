@@ -73,7 +73,7 @@ async function bootstrap() {
       if (cloudState) {
         setState(() => cloudState, { persist: false, emit: false });
       } else {
-        setState(() => ({ equipamentos: [], registros: [], tecnicos: [] }), {
+        setState(() => ({ equipamentos: [], registros: [], tecnicos: [], setores: [] }), {
           persist: false,
           emit: false,
         });
