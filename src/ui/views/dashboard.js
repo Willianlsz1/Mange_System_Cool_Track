@@ -18,7 +18,7 @@ import { Alerts } from '../../domain/alerts.js';
 // (~100 KB gz) no chunk principal. Só baixa quando o dashboard efetivamente
 // vai desenhar os gráficos.
 import { emptyStateHtml } from '../components/emptyState.js';
-import { OnboardingBanner } from '../components/onboarding.js';
+import { OnboardingBanner, Profile } from '../components/onboarding.js';
 import { UpgradeNudge } from '../components/upgradeNudge.js';
 import { UsageMeter } from '../components/usageMeter.js';
 import { withSkeleton } from '../components/skeleton.js';
@@ -172,6 +172,22 @@ function _planPillText(tier) {
   if (tier === 'pro') return 'PRO';
   if (tier === 'plus') return 'PLUS';
   return 'FREE';
+}
+
+// Fallback de último recurso pra saudação quando a única identidade
+// disponível é o email (ex.: conta nova antes de completar o FTX). Pega
+// a local-part, joga fora `+tag` (Gmail-style) e o domínio, e tira a
+// primeira "palavra" quebrando em `. _ -` (cobre "ana.silva", "joao_pedro",
+// "ana-maria") — evita "Olá, willianloopes123+teste@gmail.com" na home.
+function _prettifyEmailLocalPart(email) {
+  if (typeof email !== 'string' || !email) return '';
+  const at = email.indexOf('@');
+  const local = at === -1 ? email : email.slice(0, at);
+  const base = local.split('+')[0].trim();
+  if (!base) return '';
+  const firstToken = base.split(/[._-]+/).filter(Boolean)[0] || '';
+  if (!firstToken) return '';
+  return firstToken.charAt(0).toUpperCase() + firstToken.slice(1);
 }
 
 function _initialsFromName(raw) {
@@ -1029,11 +1045,19 @@ export async function renderDashboard() {
     const primaryAlert = _getMostSevereAlert(alerts);
     const tone = hasCritical ? 'alert' : 'ok';
 
-    // Nome do usuário
+    // Nome do usuário — cascata priorizando o que o próprio usuário digitou
+    // no FTX (Profile local) antes de cair pro email. Motivo: o FTX grava o
+    // nome no Profile (localStorage), não no `user_metadata` do Supabase —
+    // então sem esse passo contas novas viam "Olá, <email>" no hero.
     let userName = '';
     try {
       const user = await Auth.getUser();
-      userName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || '';
+      userName =
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        Profile.get()?.nome ||
+        _prettifyEmailLocalPart(user?.email) ||
+        '';
     } catch {
       // sem fallback: userName fica vazio e o hero cai em "Técnico"
     }
