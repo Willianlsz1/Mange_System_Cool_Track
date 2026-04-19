@@ -190,6 +190,17 @@ function _prettifyEmailLocalPart(email) {
   return firstToken.charAt(0).toUpperCase() + firstToken.slice(1);
 }
 
+// Helper: ignora valores do `user_metadata` que parecem email. Supabase
+// popula `user_metadata.name` com o próprio email no signup, então sem esse
+// filtro o hero cairia em "Olá, fulano@gmail.com" mesmo com Profile vazio.
+function _nonEmailMetadataName(raw) {
+  if (typeof raw !== 'string') return '';
+  const trimmed = raw.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('@')) return '';
+  return trimmed;
+}
+
 function _initialsFromName(raw) {
   const src = (raw || '').trim();
   if (!src) return '—';
@@ -1046,16 +1057,17 @@ export async function renderDashboard() {
     const tone = hasCritical ? 'alert' : 'ok';
 
     // Nome do usuário — cascata priorizando o que o próprio usuário digitou
-    // no FTX (Profile local) antes de cair pro email. Motivo: o FTX grava o
-    // nome no Profile (localStorage), não no `user_metadata` do Supabase —
-    // então sem esse passo contas novas viam "Olá, <email>" no hero.
+    // no FTX (Profile local). O Supabase popula `user_metadata.name` com o
+    // email no signup, então ler dele antes do Profile faz o hero mostrar
+    // "Olá, <email>" mesmo quando o técnico já cadastrou o nome no FTX.
+    // Ordem correta: Profile (input explícito) → user_metadata → prettify(email).
     let userName = '';
     try {
       const user = await Auth.getUser();
       userName =
-        user?.user_metadata?.full_name ||
-        user?.user_metadata?.name ||
         Profile.get()?.nome ||
+        _nonEmailMetadataName(user?.user_metadata?.full_name) ||
+        _nonEmailMetadataName(user?.user_metadata?.name) ||
         _prettifyEmailLocalPart(user?.email) ||
         '';
     } catch {
