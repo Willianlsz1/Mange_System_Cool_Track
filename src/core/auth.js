@@ -247,6 +247,19 @@ export const Auth = {
 
   async signOut() {
     try {
+      // Limpa flags de dev-mode pra não vazarem entre contas em dispositivos
+      // compartilhados. Se outra conta logar depois e a flag tiver sobrado,
+      // na prod o gate import.meta.env.DEV já bloqueia o efeito — mas
+      // removemos por defense-in-depth e higiene de estado.
+      try {
+        localStorage.removeItem('cooltrack-dev-mode');
+        localStorage.removeItem('cooltrack-dev-plan-override');
+        localStorage.removeItem('cooltrack-dev-toggle-pos');
+        localStorage.removeItem('cooltrack-dev-toggle-minimized');
+      } catch (_) {
+        /* ignora — storage pode estar inacessível (Safari private mode) */
+      }
+
       await supabase.auth.signOut();
       window.location.reload();
     } catch (error) {

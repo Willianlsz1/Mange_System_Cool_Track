@@ -126,23 +126,34 @@ async function bootstrap() {
 
       // Monta o painel dev: ativa se is_dev === true no Supabase OU se a flag
       // local 'cooltrack-dev-mode' estiver definida (ativada via console do browser).
-      // Em produção, o import dinâmico é tree-shaken pelo Vite e o painel não é baixado.
-      const localDevMode = localStorage.getItem('cooltrack-dev-mode') === 'true';
-      const mountDevToggle = async () => {
-        if (!import.meta.env.DEV) return;
-        const { DevPlanToggle } = await import('./ui/components/devPlanToggle.js');
-        DevPlanToggle.mount();
-      };
-      if (localDevMode) {
-        await mountDevToggle();
-        setCachedPlan(DevPlanOverride.get() || 'pro');
+      // Em produção (import.meta.env.DEV === false), Vite faz tree-shake do bloco
+      // inteiro — o chunk de devPlanToggle nem é emitido no bundle. Isso fecha
+      // o vetor de F12 + localStorage que foi identificado na auditoria.
+      if (import.meta.env.DEV) {
+        const localDevMode = localStorage.getItem('cooltrack-dev-mode') === 'true';
+        const mountDevToggle = async () => {
+          const { DevPlanToggle } = await import('./ui/components/devPlanToggle.js');
+          DevPlanToggle.mount();
+        };
+        if (localDevMode) {
+          await mountDevToggle();
+          setCachedPlan(DevPlanOverride.get() || 'pro');
+        } else {
+          try {
+            const { profile } = await fetchMyProfileBilling();
+            setCachedPlan(getEffectivePlan(profile));
+            if (profile?.is_dev === true) {
+              await mountDevToggle();
+            }
+          } catch {
+            // ignora — não bloqueia o boot se o perfil falhar
+          }
+        }
       } else {
+        // Prod: só consulta o plano real (sem nenhum caminho pra dev override).
         try {
           const { profile } = await fetchMyProfileBilling();
           setCachedPlan(getEffectivePlan(profile));
-          if (profile?.is_dev === true) {
-            await mountDevToggle();
-          }
         } catch {
           // ignora — não bloqueia o boot se o perfil falhar
         }

@@ -59,8 +59,12 @@ export function setCachedPlan(planCode) {
 export function getCachedPlan() {
   if (typeof localStorage === 'undefined') return PLAN_CODE_FREE;
 
-  // Dev mode override tem prioridade total
-  const isLocalDev = localStorage.getItem('cooltrack-dev-mode') === 'true';
+  // Dev mode override tem prioridade total.
+  // SEGURANÇA: a flag só é aceita em build de dev (import.meta.env.DEV).
+  // Em prod, qualquer um poderia setar `cooltrack-dev-mode=true` no F12 e
+  // virar Pro sem pagar. O gate fecha esse bypass.
+  const isLocalDev =
+    import.meta.env?.DEV === true && localStorage.getItem('cooltrack-dev-mode') === 'true';
   if (isLocalDev) {
     const devOverride = DevPlanOverride.get();
     if (devOverride === PLAN_CODE_PRO) return PLAN_CODE_PRO;
