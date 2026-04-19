@@ -123,6 +123,66 @@ export const Modal = {
   },
 };
 
+/**
+ * attachDialogA11y — adiciona Escape, focus trap e focus inicial a um overlay
+ * criado dinamicamente (fora do fluxo Modal.open/close).
+ * Retorna uma função `cleanup()` que remove os listeners e restaura o foco.
+ *
+ * Uso:
+ *   const detach = attachDialogA11y(overlay, { onDismiss: () => overlay.remove() });
+ *   // ...quando fechar, chamar detach() antes de remover
+ */
+export function attachDialogA11y(overlay, { onDismiss } = {}) {
+  if (!(overlay instanceof HTMLElement)) return () => {};
+
+  const returnFocusEl =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  const focusableSelector =
+    'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+
+  const onKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      onDismiss?.();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const nodes = overlay.querySelectorAll(focusableSelector);
+    if (!nodes.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (event.shiftKey) {
+      if (document.activeElement === first || !overlay.contains(document.activeElement)) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  };
+
+  overlay.addEventListener('keydown', onKeyDown);
+
+  // Foca o primeiro elemento focável no próximo frame (garante DOM pronto).
+  requestAnimationFrame(() => {
+    const nodes = overlay.querySelectorAll(focusableSelector);
+    const target = nodes[0];
+    if (target instanceof HTMLElement) target.focus();
+  });
+
+  return function cleanup() {
+    overlay.removeEventListener('keydown', onKeyDown);
+    if (returnFocusEl instanceof HTMLElement && document.contains(returnFocusEl)) {
+      returnFocusEl.focus();
+    }
+  };
+}
+
 export const CustomConfirm = {
   show(title, msg, options = {}) {
     return new Promise((resolve) => {

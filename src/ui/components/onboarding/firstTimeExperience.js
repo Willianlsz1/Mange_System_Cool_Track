@@ -2,10 +2,21 @@ import { Utils, TIPO_ICON } from '../../../core/utils.js';
 import { setState } from '../../../core/state.js';
 import { goTo } from '../../../core/router.js';
 import { Profile } from '../../../features/profile.js';
+import { trackEvent } from '../../../core/telemetry.js';
+// Styles foram extraídos pra arquivo cacheável — Vite bundla junto com o
+// chunk dinâmico desse módulo (só carrega quando o overlay precisa abrir).
+import './firstTimeExperience.css';
 
 const FTX_KEY = 'cooltrack-ftx-done';
 
-function dismiss(overlay) {
+function dismiss(overlay, { reason = 'completed' } = {}) {
+  // Só emite onboarding_completed quando o usuário realmente terminou o fluxo
+  // (reason === 'completed'). Se sair antes, emitimos onboarding_abandoned.
+  if (!localStorage.getItem(FTX_KEY)) {
+    trackEvent(reason === 'completed' ? 'onboarding_completed' : 'onboarding_abandoned', {
+      reason,
+    });
+  }
   localStorage.setItem(FTX_KEY, '1');
   overlay.style.animation = 'ftx-fade-in .2s ease reverse';
   setTimeout(() => overlay.remove(), 200);
@@ -15,249 +26,16 @@ export const FirstTimeExperience = {
   show(equipamentos) {
     if (equipamentos.length || localStorage.getItem(FTX_KEY)) return;
 
+    // Primeira vez que o overlay vai aparecer — marca início da ativação.
+    trackEvent('onboarding_started', {});
+
     document.getElementById('ftx-overlay')?.remove();
 
     const overlay = document.createElement('div');
     overlay.id = 'ftx-overlay';
-    overlay.style.cssText = `
-      position:fixed;inset:0;z-index:200;
-      background:rgba(7,17,31,0.92);
-      display:flex;align-items:center;justify-content:center;
-      padding:16px;
-      animation:ftx-fade-in .25s ease;
-    `;
+    // Estilo completo definido em firstTimeExperience.css (via #ftx-overlay)
 
     overlay.innerHTML = `
-      <style>
-        @keyframes ftx-fade-in{from{opacity:0}to{opacity:1}}
-        @keyframes ftx-slide-up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes ftx-step-in{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:translateX(0)}}
-
-        #ftx-card{
-          background:#0C1929;
-          border:1px solid rgba(0,200,232,0.15);
-          border-radius:16px;
-          width:100%;max-width:480px;
-          padding:32px;
-          animation:ftx-slide-up .3s ease;
-          position:relative;
-        }
-
-        .ftx-steps{
-          display:flex;align-items:center;gap:6px;
-          margin-bottom:28px;
-        }
-        .ftx-step-dot{
-          width:6px;height:6px;border-radius:50%;
-          background:rgba(0,200,232,0.2);
-          transition:all .2s;
-        }
-        .ftx-step-dot.active{
-          background:#00C8E8;width:20px;border-radius:3px;
-        }
-        .ftx-step-dot.done{background:rgba(0,200,112,0.6)}
-
-        .ftx-step{animation:ftx-step-in .25s ease}
-
-        .ftx-logo{
-          display:flex;align-items:center;gap:10px;
-          margin-bottom:24px;
-        }
-        .ftx-logo-icon{
-          width:40px;height:40px;
-          background:rgba(0,200,232,0.1);
-          border:1px solid rgba(0,200,232,0.2);
-          border-radius:10px;
-          display:flex;align-items:center;justify-content:center;
-        }
-        .ftx-logo-text{font-size:18px;font-weight:600;color:#E8F2FA;letter-spacing:.02em}
-        .ftx-logo-sub{
-          font-size:9px;font-weight:600;letter-spacing:.1em;
-          color:#00C8E8;background:rgba(0,200,232,0.1);
-          border:1px solid rgba(0,200,232,0.2);
-          padding:2px 6px;border-radius:4px;
-        }
-
-        .ftx-eyebrow{
-          font-size:11px;font-weight:600;letter-spacing:.1em;
-          color:#00C8E8;margin-bottom:8px;
-        }
-        .ftx-title{
-          font-size:22px;font-weight:700;color:#E8F2FA;
-          line-height:1.25;margin-bottom:10px;
-        }
-        .ftx-desc{
-          font-size:14px;color:#8AAAC8;line-height:1.6;
-          margin-bottom:24px;
-        }
-
-        .ftx-form-label{
-          font-size:11px;font-weight:600;color:#6A8BA8;
-          letter-spacing:.06em;margin-bottom:6px;display:block;
-        }
-        .ftx-input{
-          width:100%;background:rgba(255,255,255,0.05);
-          border:1px solid rgba(255,255,255,0.1);
-          border-radius:8px;padding:12px 14px;
-          font-size:15px;color:#E8F2FA;
-          font-family:inherit;outline:none;
-          transition:border-color .15s;
-          margin-bottom:14px;
-        }
-        .ftx-input:focus{border-color:rgba(0,200,232,0.5)}
-        .ftx-input::placeholder{color:rgba(138,170,200,0.4)}
-        .ftx-select{
-          width:100%;background:rgba(255,255,255,0.05);
-          border:1px solid rgba(255,255,255,0.1);
-          border-radius:8px;padding:12px 14px;
-          font-size:15px;color:#E8F2FA;
-          font-family:inherit;outline:none;
-          transition:border-color .15s;
-          margin-bottom:14px;
-          cursor:pointer;
-        }
-        .ftx-select:focus{border-color:rgba(0,200,232,0.5)}
-        .ftx-select option{background:#0C1929;color:#E8F2FA}
-
-        .ftx-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-        .ftx-btn-primary{
-          width:100%;background:#00C8E8;color:#07111F;
-          border:none;border-radius:10px;
-          padding:14px;font-size:15px;font-weight:600;
-          font-family:inherit;cursor:pointer;
-          transition:opacity .15s,transform .1s;
-        }
-        .ftx-btn-primary:hover{opacity:.92}
-        .ftx-btn-primary:active{transform:scale(.99)}
-        .ftx-btn-primary:disabled{opacity:.4;cursor:not-allowed}
-
-        .ftx-hint{
-          font-size:12px;color:rgba(138,170,200,0.5);
-          text-align:center;margin-top:12px;
-        }
-
-        .ftx-success-icon{
-          width:56px;height:56px;border-radius:50%;
-          background:rgba(0,200,112,0.15);
-          border:1px solid rgba(0,200,112,0.3);
-          display:flex;align-items:center;justify-content:center;
-          margin:0 auto 20px;
-          font-size:24px;
-        }
-        .ftx-actions{display:flex;flex-direction:column;gap:10px;margin-top:20px}
-        .ftx-btn-sec{
-          width:100%;background:transparent;
-          border:1px solid rgba(255,255,255,0.1);
-          border-radius:10px;padding:13px;
-          font-size:14px;color:#8AAAC8;
-          font-family:inherit;cursor:pointer;
-          transition:border-color .15s,color .15s;
-        }
-        .ftx-btn-sec:hover{border-color:rgba(255,255,255,0.2);color:#E8F2FA}
-
-        .ftx-value-props{
-          display:flex;flex-direction:column;gap:8px;
-          margin-bottom:24px;
-        }
-        .ftx-prop{
-          display:flex;align-items:center;gap:10px;
-          font-size:13px;color:#8AAAC8;
-        }
-        .ftx-prop-icon{
-          width:28px;height:28px;border-radius:6px;
-          background:rgba(0,200,232,0.08);
-          border:1px solid rgba(0,200,232,0.15);
-          display:flex;align-items:center;justify-content:center;
-          font-size:13px;flex-shrink:0;
-        }
-        .ftx-report-copy-top{
-          font-size:14px;color:#CFE2F4;line-height:1.5;
-          margin-bottom:14px;
-        }
-        .ftx-report-preview-wrap{
-          position:relative;
-          max-height:280px;
-          overflow:hidden;
-          border-radius:10px;
-          border:1px solid rgba(255,255,255,0.14);
-          margin-bottom:14px;
-          background:#fff;
-        }
-        .ftx-report-preview-wrap::after{
-          content:"";
-          position:absolute;
-          left:0;right:0;bottom:0;
-          height:58px;
-          background:linear-gradient(180deg,rgba(255,255,255,0) 0%,#fff 78%);
-          pointer-events:none;
-        }
-        .ftx-report-preview{
-          background:#fff;
-          color:#1B2430;
-          padding:14px;
-          font-size:11px;
-          line-height:1.45;
-        }
-        .ftx-report-header{
-          display:flex;align-items:center;justify-content:space-between;
-          gap:10px;padding-bottom:10px;border-bottom:1px solid #DCE4EC;
-          margin-bottom:10px;
-        }
-        .ftx-report-brand{
-          display:flex;align-items:center;gap:8px;
-          font-size:12px;font-weight:700;color:#0F2237;
-        }
-        .ftx-report-logo{
-          width:22px;height:22px;border-radius:6px;
-          background:#E8F8FC;border:1px solid #BCEAF3;
-          display:flex;align-items:center;justify-content:center;
-          color:#0089A0;font-size:12px;
-        }
-        .ftx-report-meta{
-          display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;
-          margin-bottom:10px;
-        }
-        .ftx-report-meta span{display:block;color:#5A6A7D;font-size:10px}
-        .ftx-report-meta strong{font-size:11px;color:#162232}
-        .ftx-report-table{
-          width:100%;border-collapse:collapse;
-          margin-bottom:14px;
-        }
-        .ftx-report-table th,
-        .ftx-report-table td{
-          border:1px solid #DEE6EE;
-          padding:6px 7px;
-          text-align:left;
-          vertical-align:top;
-          font-size:10px;
-        }
-        .ftx-report-table th{
-          background:#F5F8FB;
-          color:#33445A;
-          font-weight:700;
-        }
-        .ftx-signature-mock{
-          margin-top:14px;
-          padding-top:12px;
-          border-top:1px solid #E2E8EF;
-        }
-        .ftx-signature-line{
-          margin-top:18px;
-          border-top:1px dashed #8A98A8;
-          padding-top:6px;
-          font-size:10px;
-          color:#4C5C6E;
-          width:68%;
-        }
-        .ftx-report-copy-bottom{
-          text-align:center;
-          color:#8AAAC8;
-          font-size:13px;
-          margin-bottom:16px;
-        }
-      </style>
-
       <div id="ftx-card">
         <div class="ftx-steps">
           <div class="ftx-step-dot active" id="ftx-dot-0"></div>
@@ -315,7 +93,7 @@ export const FirstTimeExperience = {
             <span class="ftx-logo-sub">PRO</span>
           </div>
 
-          <div class="ftx-eyebrow">BEM-VINDO</div>
+          <div class="ftx-eyebrow">Bem-vindo</div>
           <div class="ftx-title">Chega de planilha. Seus relatorios prontos em 30 segundos.</div>
 
           <div class="ftx-value-props">
@@ -333,7 +111,7 @@ export const FirstTimeExperience = {
             </div>
           </div>
 
-          <label class="ftx-form-label">COMO VOCÊ SE CHAMA?</label>
+          <label class="ftx-form-label">Como você se chama?</label>
           <input class="ftx-input" id="ftx-nome" type="text"
             placeholder="Seu nome completo..."
             value="${Utils.escapeAttr(techName)}"
@@ -354,14 +132,14 @@ export const FirstTimeExperience = {
         if (e.key === 'Enter') btn.click();
       });
       input?.addEventListener('input', () => {
-        input.style.borderColor = '';
+        input.classList.remove('ftx-input--error');
         input.placeholder = 'Seu nome completo...';
       });
 
       btn.addEventListener('click', () => {
         const nome = input.value.trim();
         if (!nome) {
-          input.style.borderColor = 'rgba(224,48,64,0.6)';
+          input.classList.add('ftx-input--error');
           input.placeholder = 'Digite seu nome para continuar';
           input.focus();
           return;
@@ -379,23 +157,23 @@ export const FirstTimeExperience = {
 
       contentEl.innerHTML = `
         <div class="ftx-step">
-          <div class="ftx-eyebrow">PASSO 1 DE 3</div>
+          <div class="ftx-eyebrow">Passo 1 de 3</div>
           <div class="ftx-title">Qual equipamento você quer monitorar, ${Utils.escapeHtml(firstName)}?</div>
           <div class="ftx-desc">Comece com o mais importante — você pode adicionar mais depois.</div>
 
-          <label class="ftx-form-label">NOME DO EQUIPAMENTO *</label>
+          <label class="ftx-form-label">Nome do equipamento *</label>
           <input class="ftx-input" id="ftx-eq-nome" type="text"
             placeholder="Ex: Split da recepção, Câmara do estoque..."
             autocomplete="off" />
 
-          <label class="ftx-form-label">ONDE ELE FICA? *</label>
+          <label class="ftx-form-label">Onde ele fica? *</label>
           <input class="ftx-input" id="ftx-eq-local" type="text"
             placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..."
             autocomplete="off" />
 
           <div class="ftx-row">
             <div>
-              <label class="ftx-form-label">TIPO</label>
+              <label class="ftx-form-label">Tipo</label>
               <select class="ftx-select" id="ftx-eq-tipo">
                 <option>Split Hi-Wall</option>
                 <option>Split Cassette</option>
@@ -410,7 +188,7 @@ export const FirstTimeExperience = {
               </select>
             </div>
             <div>
-              <label class="ftx-form-label">FLUIDO</label>
+              <label class="ftx-form-label">Fluido</label>
               <select class="ftx-select" id="ftx-eq-fluido">
                 <option>R-410A</option>
                 <option>R-22</option>
@@ -435,10 +213,10 @@ export const FirstTimeExperience = {
 
       setTimeout(() => nomeInput?.focus(), 100);
       nomeInput?.addEventListener('input', () => {
-        nomeInput.style.borderColor = '';
+        nomeInput.classList.remove('ftx-input--error');
       });
       localInput?.addEventListener('input', () => {
-        localInput.style.borderColor = '';
+        localInput.classList.remove('ftx-input--error');
       });
 
       btn.addEventListener('click', () => {
@@ -446,12 +224,12 @@ export const FirstTimeExperience = {
         const local = localInput.value.trim();
 
         if (!nome) {
-          nomeInput.style.borderColor = 'rgba(224,48,64,0.6)';
+          nomeInput.classList.add('ftx-input--error');
           nomeInput.focus();
           return;
         }
         if (!local) {
-          localInput.style.borderColor = 'rgba(224,48,64,0.6)';
+          localInput.classList.add('ftx-input--error');
           localInput.focus();
           return;
         }
@@ -473,6 +251,14 @@ export const FirstTimeExperience = {
           tecnicos: prev.tecnicos.includes(techName) ? prev.tecnicos : [...prev.tecnicos, techName],
         }));
 
+        // Este é SEMPRE o primeiro equipamento — FTX só roda quando a lista está vazia.
+        // Fonte primária pra medir ativação (visita → primeiro equipamento).
+        trackEvent('first_equipment_added', {
+          source: 'onboarding',
+          tipo: equipData.tipo,
+          fluido: equipData.fluido,
+        });
+
         renderStep2Preview();
       });
     };
@@ -482,7 +268,7 @@ export const FirstTimeExperience = {
 
       contentEl.innerHTML = `
         <div class="ftx-step">
-          <div class="ftx-eyebrow">PASSO 2 DE 3</div>
+          <div class="ftx-eyebrow">Passo 2 de 3</div>
           <div class="ftx-report-copy-top">Esse e o tipo de relatorio que seus clientes vao receber.</div>
 
           <div class="ftx-report-preview-wrap" role="presentation">
@@ -555,7 +341,7 @@ export const FirstTimeExperience = {
       contentEl.innerHTML = `
         <div class="ftx-step">
           <div class="ftx-success-icon">✅</div>
-          <div class="ftx-eyebrow" style="text-align:center;color:#00C870">TUDO PRONTO</div>
+          <div class="ftx-eyebrow" style="text-align:center;color:var(--success)">Tudo pronto</div>
           <div class="ftx-title" style="text-align:center">
             ${icon} ${Utils.escapeHtml(equipData.nome)} cadastrado!
           </div>

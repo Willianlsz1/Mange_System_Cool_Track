@@ -1,12 +1,16 @@
 import { on } from '../../../core/events.js';
 import { Toast } from '../../../core/toast.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
-import { PDFGenerator } from '../../../domain/pdf.js';
+// PDFGenerator é dynamic-imported dentro do handler pra evitar bundlar
+// jspdf + jspdf-autotable + pako (~150 KB gz) no chunk principal. Só baixa
+// quando o usuário clica "Gerar PDF".
 import { WhatsAppExport } from '../../../domain/whatsapp.js';
 import { Auth } from '../../../core/auth.js';
 import { trackEvent } from '../../../core/telemetry.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
 import { ShareSuccessToast } from '../../components/shareSuccessToast.js';
+import { PdfSuccessToast } from '../../components/pdfSuccessToast.js';
+import { PdfQuotaBadge } from '../../components/pdfQuotaBadge.js';
 import { GuestConversionModal } from '../../components/guestConversionModal.js';
 import {
   getEffectivePlan,
@@ -105,6 +109,7 @@ function bindPdfExport() {
         }
 
         // ── 2. Gera o PDF (planCode controla marca d'água "CoolTrack Free") ──
+        const { PDFGenerator } = await import('../../../domain/pdf.js');
         const fileName = await PDFGenerator.generateMaintenanceReport(filters, { planCode });
         if (!fileName) {
           Toast.error('Erro ao gerar PDF.');
@@ -112,11 +117,22 @@ function bindPdfExport() {
         }
 
         // ── 3. Incrementa contagem só se o plano tem limite finito (Free/Plus) ─
+        let newUsedCount = pdfUsed;
         if (Number.isFinite(pdfLimit)) {
-          await incrementMonthlyUsage(user.id, USAGE_RESOURCE_PDF_EXPORT);
+          newUsedCount = await incrementMonthlyUsage(user.id, USAGE_RESOURCE_PDF_EXPORT);
         }
 
-        Toast.success(`PDF gerado: ${fileName}`);
+        // Toast enriquecido com contador "X/Y · restam Z" para Free/Plus.
+        // Pro (limit=Infinity) fica com o subtítulo default ("Pronto para enviar").
+        PdfSuccessToast.show(
+          Number.isFinite(pdfLimit)
+            ? { used: newUsedCount, limit: pdfLimit, fileName }
+            : { fileName },
+        );
+
+        // Atualiza o badge inline na toolbar do relatório — assim o contador
+        // já reflete o novo uso sem precisar o usuário sair e voltar da view.
+        PdfQuotaBadge.refresh();
       });
     } catch (error) {
       handleError(error, {

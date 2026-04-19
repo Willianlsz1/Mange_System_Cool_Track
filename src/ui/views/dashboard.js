@@ -1,7 +1,7 @@
 /**
  * CoolTrack Pro - Dashboard View v6.0 (V2Refined)
  *
- * Sistema visual: tier accent via `--dsh-accent` (gold Pro, green Plus, cyan Free).
+ * Sistema visual: tier accent via `--dsh-accent` (gold Pro, blue Plus, cyan Free).
  * Layout: Hero Status Card + KPI Grid 2×2 (mobile) / 1×4 (desktop) + Próxima ação
  * + Último serviço + seções preservadas (A fazer agora, Alertas, Recentes) +
  * Análise (accordion mobile / grid desktop).
@@ -14,12 +14,14 @@ import { getState, findEquip, regsForEquip } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Auth } from '../../core/auth.js';
 import { Alerts } from '../../domain/alerts.js';
-import { Charts } from '../components/charts.js';
+// Charts é dynamic-imported em _refreshCharts() pra evitar bundlar Chart.js
+// (~100 KB gz) no chunk principal. Só baixa quando o dashboard efetivamente
+// vai desenhar os gráficos.
 import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner } from '../components/onboarding.js';
 import { UpgradeNudge } from '../components/upgradeNudge.js';
 import { UsageMeter } from '../components/usageMeter.js';
-import { withViewSkeleton } from '../components/skeleton.js';
+import { withSkeleton } from '../components/skeleton.js';
 import { fetchMyProfileBilling } from '../../core/monetization.js';
 import {
   PLAN_CODE_FREE,
@@ -31,6 +33,7 @@ import {
 import {
   calculateHealthScore,
   evaluateEquipmentRisk,
+  evaluateEquipmentRiskTrend,
   getEquipmentMaintenanceContext,
   getHealthClass as getMaintenanceHealthClass,
 } from '../../domain/maintenance.js';
@@ -267,7 +270,7 @@ function _getAlertActionMeta(alert) {
     case 'register-now':
       return { action: 'go-register-equip', id, label: 'Registrar agora' };
     case 'schedule':
-      return { action: 'go-register-equip', id, label: 'Registrar preventiva' };
+      return { action: 'go-register-equip', id, label: 'Registrar serviço preventivo' };
     case 'start-history':
       return { action: 'go-register-equip', id, label: 'Iniciar historico' };
     case 'inspect':
@@ -325,6 +328,19 @@ function _getActionButton(actionCode) {
   return { action: 'view-equip', ctaLabel: 'Ver' };
 }
 
+// Badge de tendência de risco (últimos 30 dias) — usa HTML entities pois os
+// cards mini vão para innerHTML direto sem passar por sanitização que resolva
+// caracteres Unicode de setas.
+function _renderTrendBadge(trend) {
+  if (!trend || trend.trend === 'stable') {
+    return `<span class="equip-card__risk-trend equip-card__risk-trend--stable" title="Tendência estável nos últimos 30 dias" aria-label="Tendência estável">&rarr; estável</span>`;
+  }
+  if (trend.trend === 'improving') {
+    return `<span class="equip-card__risk-trend equip-card__risk-trend--improving" title="Risco caiu ${Math.abs(trend.delta)} pontos nos últimos 30 dias" aria-label="Tendência melhorando">&darr; ${Math.abs(trend.delta)}</span>`;
+  }
+  return `<span class="equip-card__risk-trend equip-card__risk-trend--worsening" title="Risco subiu ${trend.delta} pontos nos últimos 30 dias" aria-label="Tendência piorando">&uarr; ${trend.delta}</span>`;
+}
+
 // Cards "com ocorrência" (preservados) —————————————————
 function _equipCardMini(eq) {
   const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
@@ -336,15 +352,18 @@ function _equipCardMini(eq) {
   const safeId = Utils.escapeAttr(eq.id);
   const eqRegs = regsForEquip(eq.id);
   const risk = evaluateEquipmentRisk(eq, eqRegs);
+  const riskTrend = evaluateEquipmentRiskTrend(eq, eqRegs);
   const priority = evaluateEquipmentPriority(eq, eqRegs);
   const suggestedAction = evaluateEquipmentSuggestedAction(eq, eqRegs);
 
   function getCtaByAction(actionCode) {
     if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE)
-      return 'Registrar corretiva agora &rarr;';
-    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar corretiva &rarr;';
-    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar preventiva &rarr;';
-    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar preventiva &rarr;';
+      return 'Registrar serviço corretivo agora &rarr;';
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar serviço corretivo &rarr;';
+    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE)
+      return 'Registrar serviço preventivo &rarr;';
+    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE)
+      return 'Programar serviço preventivo &rarr;';
     return 'Registrar serviço &rarr;';
   }
 
@@ -391,6 +410,7 @@ function _equipCardMini(eq) {
     <div class="equip-card__risk">
       <span class="equip-card__risk-badge equip-card__risk-badge--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>
       <span class="equip-card__risk-score">Score ${risk.score}</span>
+      ${_renderTrendBadge(riskTrend)}
     </div>
     <div class="equip-card__priority">
       <span class="equip-card__priority-badge equip-card__priority-badge--${priority.priorityLevel}">${priority.priorityLabel}</span>
@@ -506,7 +526,7 @@ function _renderHero({
       ctaBtn.setAttribute('data-nav', 'registro');
       ctaBtn.removeAttribute('data-action');
       ctaBtn.removeAttribute('data-id');
-      ctaLabel.textContent = 'Registrar manutenção';
+      ctaLabel.textContent = 'Registrar serviço';
     }
   }
 }
@@ -819,6 +839,15 @@ function _renderRecentesSection({ registros }) {
 // Charts refresh (debounced)
 // ═══════════════════════════════════════════════════════
 let _lastChartHash = null;
+let _chartsModulePromise = null;
+function _loadCharts() {
+  // Cacheia a promise pra que múltiplas chamadas concorrentes reusem o mesmo
+  // import — o chunk do Chart.js só é baixado uma vez.
+  if (!_chartsModulePromise) {
+    _chartsModulePromise = import('../components/charts.js').then((m) => m.Charts);
+  }
+  return _chartsModulePromise;
+}
 function _refreshCharts() {
   const viewInicio = document.getElementById('view-inicio');
   if (!viewInicio?.classList.contains('active')) return;
@@ -826,7 +855,9 @@ function _refreshCharts() {
   const hash = `${equipamentos.length}:${registros.length}:${equipamentos.map((e) => e.status).join('')}`;
   if (hash === _lastChartHash) return;
   _lastChartHash = hash;
-  requestAnimationFrame(() => requestAnimationFrame(() => Charts.refreshAll()));
+  _loadCharts().then((Charts) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => Charts.refreshAll()));
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -951,16 +982,18 @@ export function updateHeader() {
 }
 
 export async function renderDashboard() {
-  const planContext = await resolveDashboardPlanContext();
-  const { equipamentos, registros } = getState();
-  const alerts = Alerts.getAll();
-
   const viewInicio = Utils.getEl('view-inicio');
   if (!viewInicio) return;
 
-  const tier = _planTier(planContext.planCode);
+  // Skeleton cobre TODO o ciclo — incluindo o await do planContext — para
+  // que o usuário nunca veja a view em branco enquanto buscamos billing.
+  withSkeleton(viewInicio, { enabled: true, variant: 'generic', count: 4 }, async () => {
+    const planContext = await resolveDashboardPlanContext();
+    const { equipamentos, registros } = getState();
+    const alerts = Alerts.getAll();
 
-  withViewSkeleton(viewInicio, { enabled: true, variant: 'generic', count: 4 }, async () => {
+    const tier = _planTier(planContext.planCode);
+
     // Tier no root pra theming
     const dashRoot = document.getElementById('dash');
     if (dashRoot) dashRoot.setAttribute('data-tier', tier);

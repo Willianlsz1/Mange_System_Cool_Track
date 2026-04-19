@@ -1,5 +1,6 @@
 import { buildLandingHtml } from './landingPage/template.js';
-import { landingPageStyles } from './landingPage/styles.js';
+import './landingPage/styles.css';
+import { trackEvent } from '../../core/telemetry.js';
 
 export const LandingPage = {
   render({ onStartTrial, onLogin } = {}) {
@@ -7,7 +8,11 @@ export const LandingPage = {
     if (!app) return;
 
     app.classList.add('landing-active');
-    app.innerHTML = `<style>${landingPageStyles}</style>${buildLandingHtml()}`;
+    app.innerHTML = buildLandingHtml();
+
+    // Telemetria — emite lp_view uma vez por render pra ter o denominador
+    // do funil (visualizações → CTA → trial started → conversão).
+    trackEvent('lp_view', {});
 
     // Gallery scroll → dots
     const galleryTrack = app.querySelector('#lp-gallery-track');
@@ -29,9 +34,35 @@ export const LandingPage = {
       );
     }
 
+    // Pricing toggle (mensal ↔ anual) — alterna visibilidade dos blocos de preço.
+    const pricingToggleBtns = app.querySelectorAll('#lp-pricing-toggle .lp-pricing-toggle__btn');
+    if (pricingToggleBtns.length) {
+      pricingToggleBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const billing = btn.dataset.billing;
+          const showAnnual = billing === 'annual';
+
+          pricingToggleBtns.forEach((b) =>
+            b.classList.toggle('lp-pricing-toggle__btn--active', b === btn),
+          );
+
+          app.querySelectorAll('[data-price-monthly]').forEach((el) => {
+            el.hidden = showAnnual;
+          });
+          app.querySelectorAll('[data-price-annual]').forEach((el) => {
+            el.hidden = !showAnnual;
+          });
+
+          trackEvent('lp_pricing_toggle', { billing });
+        });
+      });
+    }
+
     const startTrialHandler =
       onStartTrial ||
       (() => {
+        // Entrou em modo guest — marca transição topo-de-funil → ativação.
+        trackEvent('guest_mode_started', { source: 'landing' });
         localStorage.setItem('cooltrack-guest-mode', '1');
         window.location.reload();
       });
@@ -42,13 +73,69 @@ export const LandingPage = {
         import('./authscreen.js').then(({ AuthScreen }) => AuthScreen.show());
       });
 
-    app
-      .querySelectorAll('[data-action="start-trial"]')
-      .forEach((btn) => btn.addEventListener('click', startTrialHandler));
+    // Handlers com telemetria — lp_cta_click é emitido ANTES de delegar pro
+    // handler real, pra capturar o source mesmo que o handler faça reload/nav.
+    app.querySelectorAll('[data-action="start-trial"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        trackEvent('lp_cta_click', {
+          action: 'start-trial',
+          source: btn.dataset.source || 'unknown',
+        });
+        startTrialHandler();
+      });
+    });
 
-    app
-      .querySelectorAll('[data-action="login"]')
-      .forEach((btn) => btn.addEventListener('click', loginHandler));
+    app.querySelectorAll('[data-action="login"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        trackEvent('lp_cta_click', {
+          action: 'login',
+          source: btn.dataset.source || 'unknown',
+        });
+        loginHandler();
+      });
+    });
+
+    // FAQ — emite lp_faq_open quando uma pergunta é expandida. O evento 'toggle'
+    // dispara tanto no abrir quanto no fechar; filtramos por details.open.
+    app.querySelectorAll('.lp-faq__item').forEach((details) => {
+      details.addEventListener('toggle', () => {
+        if (!details.open) return;
+        trackEvent('lp_faq_open', {
+          question: details.dataset.question || 'unknown',
+        });
+      });
+    });
+
+    // Smooth scroll em anchors internos (#lp-pricing-title, #lp-faq-title do footer).
+    // Respeita prefers-reduced-motion — usuários com motion reduzido recebem scroll
+    // instantâneo. Move foco pro target após scroll (a11y), sem disparar jump extra.
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    app.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+      anchor.addEventListener('click', (event) => {
+        const href = anchor.getAttribute('href');
+        if (!href || href === '#') return;
+        const target = app.querySelector(href);
+        if (!target) return;
+
+        event.preventDefault();
+        target.scrollIntoView({
+          behavior: prefersReducedMotion ? 'auto' : 'smooth',
+          block: 'start',
+        });
+
+        // Foco pro destino sem rolar de novo.
+        if (!target.hasAttribute('tabindex')) {
+          target.setAttribute('tabindex', '-1');
+        }
+        target.focus({ preventScroll: true });
+
+        trackEvent('lp_anchor_click', { anchor: href });
+      });
+    });
   },
 
   clear() {

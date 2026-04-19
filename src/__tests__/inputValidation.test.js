@@ -20,6 +20,7 @@ describe('inputValidation', () => {
 
     expect(duplicate.valid).toBe(false);
     expect(duplicate.errors[0]).toContain('TAG');
+    expect(duplicate.errorFields[0]).toBe('tag');
 
     const ok = validateEquipamentoPayload(
       {
@@ -35,6 +36,26 @@ describe('inputValidation', () => {
     expect(ok.value.nome).toBe('Split Centro');
     expect(ok.value.local).toBe('Sala 1');
     expect(ok.value.tag).toBe('AC-02');
+    expect(ok.errorFields).toEqual([]);
+  });
+
+  it('reports errorFields in order matching errors (for focus-first-invalid flow)', () => {
+    const result = validateEquipamentoPayload(
+      {
+        nome: '', // falha: obrigatório
+        local: '', // falha: obrigatório
+        tag: 'X'.repeat(50), // falha: excede 40
+        modelo: 'ok',
+      },
+      { existingEquipamentos: [] },
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errorFields[0]).toBe('nome');
+    expect(result.errorFields).toContain('local');
+    expect(result.errorFields).toContain('tag');
+    // errors e errorFields têm o mesmo comprimento e a mesma ordem
+    expect(result.errorFields).toHaveLength(result.errors.length);
   });
 
   it('validates registro payload before save', () => {

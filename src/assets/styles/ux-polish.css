@@ -330,3 +330,112 @@ body.is-routing .view.active {
     transition: none;
   }
 }
+
+/* ============================================================
+   SW Update Banner — "Nova versão disponível. Recarregar?"
+   Aparece fixo no canto inferior quando o Service Worker detecta
+   uma nova versão em waiting. Alto z-index pra sobrepor modals.
+   ============================================================ */
+.sw-update-banner {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--app-nav-height, 0px) + 16px);
+  transform: translate(-50%, 24px);
+  z-index: 220;
+  max-width: calc(100vw - 24px);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--motion-base, 220ms) var(--ease-soft, ease),
+    transform var(--motion-base, 220ms) var(--ease-soft, ease);
+}
+.sw-update-banner.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+.sw-update-banner__inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid rgba(0, 200, 232, 0.18);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.18);
+  color: var(--text);
+  font-size: 14px;
+}
+.sw-update-banner__icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.sw-update-banner__text {
+  flex: 1;
+}
+.sw-update-banner__btn {
+  background: var(--primary);
+  color: var(--bg);
+  border: none;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.sw-update-banner__btn:hover {
+  opacity: 0.92;
+}
+.sw-update-banner__dismiss {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.15s;
+}
+.sw-update-banner__dismiss:hover {
+  color: var(--text);
+}
+
+/* ============================================================
+   View Error Boundary — fallback renderizado pelo router quando
+   onEnter de uma rota falha. Evita tela em branco e oferece
+   caminho de recuperação (recarregar).
+   ============================================================ */
+.view-error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 48px 20px;
+  text-align: center;
+  min-height: 60vh;
+}
+.view-error-boundary__icon {
+  font-size: 40px;
+  line-height: 1;
+}
+.view-error-boundary__title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 4px 0;
+}
+.view-error-boundary__desc {
+  font-size: 14px;
+  color: var(--text-2);
+  line-height: 1.5;
+  max-width: 360px;
+  margin: 0 0 8px;
+}
+.view-error-boundary__retry {
+  min-width: 140px;
+}

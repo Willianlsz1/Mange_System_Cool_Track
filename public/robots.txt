@@ -1,0 +1,17 @@
+# robots.txt — CoolTrack Pro
+# Permite indexação pública da landing e páginas legais.
+# O app interno (dashboard, /registro, /equipamentos, etc.) fica atrás de auth,
+# então não precisa ser bloqueado — não é acessível sem login mesmo.
+
+User-agent: *
+Allow: /
+
+# Não indexar artefatos de build, service worker, manifests e arquivos internos.
+Disallow: /sw.js
+Disallow: /offline.html
+Disallow: /manifest.json
+Disallow: /icons/
+Disallow: /assets/
+Disallow: /.well-known/
+
+Sitemap: https://cool-track-pro.pages.dev/sitemap.xml

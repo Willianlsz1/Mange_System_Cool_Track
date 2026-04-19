@@ -28,23 +28,25 @@ export function renderShellModals() {
 
         <div id="eq-step-1">
           <div class="eq-form-section-head">
-            <span class="eq-form-section-head__label">ESSENCIAIS</span>
+            <span class="eq-form-section-head__label">Essenciais</span>
           </div>
           <div class="form-group">
-            <label class="form-label" for="eq-nome">Como você chama esse equipamento? *</label>
+            <label class="form-label" for="eq-nome">Como você chama esse equipamento? <span class="form-label__req" aria-hidden="true">*</span></label>
             <input id="eq-nome" class="form-control" type="text"
-              placeholder="Ex: Split da recepção, Câmara do estoque..." required autocomplete="off" />
-            <div class="form-hint">Use um nome que você reconheça rapidamente no campo</div>
+              placeholder="Ex: Split da recepção, Câmara do estoque..."
+              required aria-required="true" aria-describedby="eq-nome-hint" autocomplete="off" />
+            <div class="form-hint" id="eq-nome-hint">Use um nome que você reconheça rapidamente no campo</div>
           </div>
           <div class="form-group">
-            <label class="form-label" for="eq-local">Onde ele fica? *</label>
+            <label class="form-label" for="eq-local">Onde ele fica? <span class="form-label__req" aria-hidden="true">*</span></label>
             <input id="eq-local" class="form-control" type="text"
-              placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..." required autocomplete="off" />
+              placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..."
+              required aria-required="true" autocomplete="off" />
           </div>
 
           <div class="eq-context-group" id="eq-context-group" style="display:none">
             <div class="eq-form-section-head">
-              <span class="eq-form-section-head__label">CONTEXTO</span>
+              <span class="eq-form-section-head__label">Contexto</span>
               <span class="eq-form-section-head__meta">— opcional, melhora organização</span>
             </div>
             <div class="eq-context-group__card">
@@ -137,8 +139,9 @@ export function renderShellModals() {
           <div class="eq-details-divider">Detalhes técnicos <span>(opcional — pode preencher depois)</span></div>
           <div class="form-group">
             <label class="form-label" for="eq-tag">TAG / Código de identificação</label>
-            <input id="eq-tag" class="form-control form-control--mono" type="text" placeholder="Ex: AC-01, CF-FARM, VRF-A" />
-            <div class="form-hint">Código que você usa na etiqueta ou plaqueta do equipamento</div>
+            <input id="eq-tag" class="form-control form-control--mono" type="text"
+              placeholder="Ex: AC-01, CF-FARM, VRF-A" aria-describedby="eq-tag-hint" />
+            <div class="form-hint" id="eq-tag-hint">Código que você usa na etiqueta ou plaqueta do equipamento</div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -190,9 +193,9 @@ export function renderShellModals() {
               <label class="form-label" for="eq-criticidade">Criticidade do ativo</label>
               <select id="eq-criticidade" class="form-control">
                 <option value="baixa">Baixa</option>
-                <option value="media" selected>Media</option>
+                <option value="media" selected>Média</option>
                 <option value="alta">Alta</option>
-                <option value="critica">Critica</option>
+                <option value="critica">Crítica</option>
               </select>
             </div>
             <div class="form-group">
@@ -206,8 +209,9 @@ export function renderShellModals() {
           </div>
           <div class="form-group">
             <label class="form-label" for="eq-periodicidade">Periodicidade preventiva (dias)</label>
-            <input id="eq-periodicidade" class="form-control" type="number" min="15" max="365" step="5" value="90" />
-            <div class="form-hint" id="eq-periodicidade-hint">Sugestao automatica conforme tipo e criticidade.</div>
+            <input id="eq-periodicidade" class="form-control" type="number" min="15" max="365" step="5" value="90"
+              aria-describedby="eq-periodicidade-hint" />
+            <div class="form-hint" id="eq-periodicidade-hint">Sugestão automática conforme tipo e criticidade.</div>
           </div>
         </div>
       </div>
@@ -257,14 +261,14 @@ export function renderShellModals() {
         <div class="form-group">
           <label class="form-label">Cor do setor</label>
           <div class="setor-color-picker" id="setor-color-picker" role="group" aria-label="Escolha a cor do setor">
-            <button type="button" class="setor-color-btn setor-color-btn--selected" data-cor="#00bcd4" style="background:#00bcd4" aria-label="Ciano" aria-pressed="true"></button>
+            <button type="button" class="setor-color-btn setor-color-btn--selected" data-cor="#00c8e8" style="background:#00c8e8" aria-label="Ciano" aria-pressed="true"></button>
             <button type="button" class="setor-color-btn" data-cor="#00c853" style="background:#00c853" aria-label="Verde" aria-pressed="false"></button>
             <button type="button" class="setor-color-btn" data-cor="#ffab40" style="background:#ffab40" aria-label="Âmbar" aria-pressed="false"></button>
             <button type="button" class="setor-color-btn" data-cor="#ff5252" style="background:#ff5252" aria-label="Vermelho" aria-pressed="false"></button>
             <button type="button" class="setor-color-btn" data-cor="#7c4dff" style="background:#7c4dff" aria-label="Roxo" aria-pressed="false"></button>
             <button type="button" class="setor-color-btn" data-cor="#448aff" style="background:#448aff" aria-label="Azul" aria-pressed="false"></button>
           </div>
-          <input type="hidden" id="setor-cor" value="#00bcd4" />
+          <input type="hidden" id="setor-cor" value="#00c8e8" />
         </div>
       </div>
       <div class="btn-group modal__footer">
@@ -300,26 +304,33 @@ export function renderShellModals() {
         </div>
 
         <div class="score-info-factors">
-          <div class="score-info-factors__title">O que entra no cálculo</div>
+          <div class="score-info-factors__title">O que aumenta o score</div>
           <div class="score-info-factor">
-            <span class="score-info-factor__icon">📅</span>
+            <span class="score-info-factor__icon">🚦</span>
             <div>
-              <strong>Histórico de manutenção</strong>
-              <p>Quantos dias se passaram desde o último registro. Equipamentos sem manutenção recente acumulam mais risco.</p>
+              <strong>Status atual</strong>
+              <p>Equipamento fora de operação é o fator mais pesado. Operar com restrições também sobe o score.</p>
             </div>
           </div>
           <div class="score-info-factor">
             <span class="score-info-factor__icon">🔧</span>
             <div>
               <strong>Próxima preventiva</strong>
-              <p>Distância em dias até a próxima manutenção preventiva planejada. Quanto mais próxima ou vencida, maior o score.</p>
+              <p>Quanto mais próxima ou vencida a próxima preventiva, maior o score. Preventiva vencida é o segundo maior peso.</p>
+            </div>
+          </div>
+          <div class="score-info-factor">
+            <span class="score-info-factor__icon">📅</span>
+            <div>
+              <strong>Tempo desde o último serviço</strong>
+              <p>Comparado à periodicidade planejada do equipamento. Passou do intervalo, o score sobe.</p>
             </div>
           </div>
           <div class="score-info-factor">
             <span class="score-info-factor__icon">🔁</span>
             <div>
               <strong>Corretivas recentes</strong>
-              <p>Quantidade de manutenções corretivas nos últimos 90 dias. Muitas corretivas indicam instabilidade no equipamento.</p>
+              <p>Quantas corretivas aparecem entre os últimos 3 registros. Reincidência indica instabilidade.</p>
             </div>
           </div>
           <div class="score-info-factor">
@@ -329,16 +340,61 @@ export function renderShellModals() {
               <p>Multiplica o score base: Baixa ×1.0 · Média ×1.1 · Alta ×1.25 · Crítica ×1.4. Equipamentos críticos têm risco amplificado.</p>
             </div>
           </div>
-          <div class="score-info-factor">
-            <span class="score-info-factor__icon">🚦</span>
+        </div>
+
+        <div class="score-info-factors">
+          <div class="score-info-factors__title score-info-factors__title--bonus">O que reduz o score (bônus)</div>
+          <p class="score-info-factors__caption">Bom comportamento derruba o risco. Cada bônus abaixo é subtraído do score técnico:</p>
+          <div class="score-info-factor score-info-factor--bonus">
+            <span class="score-info-factor__icon">✅</span>
             <div>
-              <strong>Status atual</strong>
-              <p>Se o equipamento está operando com restrições ou fora de operação, isso eleva diretamente o score.</p>
+              <strong>Preventivas em dia &minus;10</strong>
+              <p>3 preventivas consecutivas cumpridas dentro do prazo, com a próxima ainda não atrasada.</p>
+            </div>
+          </div>
+          <div class="score-info-factor score-info-factor--bonus">
+            <span class="score-info-factor__icon">🛡️</span>
+            <div>
+              <strong>Sem corretivas &minus;5</strong>
+              <p>Nenhuma corretiva no histórico (com 3+ registros) ou última corretiva há mais de 180 dias.</p>
+            </div>
+          </div>
+          <div class="score-info-factor score-info-factor--bonus">
+            <span class="score-info-factor__icon">💚</span>
+            <div>
+              <strong>Status estável &minus;3</strong>
+              <p>Equipamento em operação normal e registros recentes sem alertas.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="score-info-factors">
+          <div class="score-info-factors__title score-info-factors__title--trend">Tendência de 30 dias</div>
+          <p class="score-info-factors__caption">No card do equipamento, a seta compara o score atual com 30 dias atrás:</p>
+          <div class="score-info-factor score-info-factor--trend">
+            <span class="score-info-factor__icon score-info-factor__icon--improving">↓</span>
+            <div>
+              <strong>Melhorando</strong>
+              <p>O risco caiu nos últimos 30 dias. A manutenção preventiva está surtindo efeito.</p>
+            </div>
+          </div>
+          <div class="score-info-factor score-info-factor--trend">
+            <span class="score-info-factor__icon score-info-factor__icon--worsening">↑</span>
+            <div>
+              <strong>Piorando</strong>
+              <p>O risco subiu nos últimos 30 dias. Vale agendar uma inspeção antes que escale.</p>
+            </div>
+          </div>
+          <div class="score-info-factor score-info-factor--trend">
+            <span class="score-info-factor__icon score-info-factor__icon--stable">→</span>
+            <div>
+              <strong>Estável</strong>
+              <p>Variação pequena ou histórico ainda curto para comparar.</p>
             </div>
           </div>
         </div>
       </div>
-      <div class="btn-group modal__footer">
+      <div class="btn-group modal__footer modal__footer--inline">
         <button class="btn btn--primary" data-action="close-modal" data-id="modal-score-info">Entendi</button>
       </div>
     </div>

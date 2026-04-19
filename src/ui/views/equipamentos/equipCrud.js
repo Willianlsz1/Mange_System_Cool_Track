@@ -1,7 +1,13 @@
 /**
  * CoolTrack Pro - Equipamentos / equipCrud
- * Fluxos CRUD do equipamento: criar/editar (saveEquip), abrir edição (openEditEquip)
- * e excluir (deleteEquip).
+ *
+ * ⚠️  AVISO: este arquivo é CÓDIGO ÓRFÃO — resquício de um refactor não concluído.
+ * A versão CANÔNICA de saveEquip/openEditEquip/deleteEquip está em
+ * `src/ui/views/equipamentos.js` (usada via `equipmentHandlers.js`).
+ *
+ * Ao alterar regras de CRUD de equipamento, edite `equipamentos.js`, NÃO este arquivo.
+ * Mantido aqui apenas por histórico — deve ser removido quando houver certeza
+ * de que nenhuma ferramenta externa (ex: tests de integração) referencia.
  */
 
 import { Utils } from '../../../core/utils.js';
@@ -32,6 +38,58 @@ export function setRenderCallback(fn) {
   _renderAfterChange = typeof fn === 'function' ? fn : () => {};
 }
 
+// Mapa de campo de validação → id do input correspondente no form. Mantido no
+// escopo do módulo pra não recriar a cada save.
+const EQUIP_FIELD_TO_INPUT_ID = Object.freeze({
+  nome: 'eq-nome',
+  local: 'eq-local',
+  modelo: 'eq-modelo',
+  tag: 'eq-tag',
+});
+
+// Ids dos inputs de equipamento — iteramos este array ao limpar aria-invalid
+// antes de uma nova validação.
+const EQUIP_FIELD_INPUT_IDS = Object.freeze(Object.values(EQUIP_FIELD_TO_INPUT_ID));
+
+/**
+ * Limpa aria-invalid de todos os campos do form de equipamento. Chamado antes
+ * de cada tentativa de save para garantir que o estado reflita apenas os
+ * erros da validação atual.
+ */
+function clearEquipFieldInvalidState() {
+  EQUIP_FIELD_INPUT_IDS.forEach((id) => {
+    const input = Utils.getEl(id);
+    if (input) input.removeAttribute('aria-invalid');
+  });
+}
+
+/**
+ * Marca o input correspondente ao primeiro campo com erro como aria-invalid e
+ * move o foco pra ele. Isso garante que leitores de tela anunciem o campo que
+ * precisa de atenção quando o usuário dispensar o toast de aviso.
+ */
+function focusFirstInvalidField(firstErrorField) {
+  const inputId = EQUIP_FIELD_TO_INPUT_ID[firstErrorField];
+  if (!inputId) return;
+  const input = Utils.getEl(inputId);
+  if (!input) return;
+  input.setAttribute('aria-invalid', 'true');
+  // Remove aria-invalid no próximo input pra dar feedback imediato após correção.
+  // `once: true` evita acúmulo de listeners se o usuário abrir/fechar o modal.
+  input.addEventListener(
+    'input',
+    () => {
+      input.removeAttribute('aria-invalid');
+    },
+    { once: true },
+  );
+  try {
+    input.focus();
+  } catch {
+    // Focus pode falhar se o elemento estiver escondido; toast ainda aparece.
+  }
+}
+
 export async function openEditEquip(id) {
   const eq = findEquip(id);
   if (!eq) return;
@@ -48,6 +106,7 @@ export async function openEditEquip(id) {
   Utils.setVal('eq-criticidade', eq.criticidade || 'media');
   Utils.setVal('eq-prioridade', eq.prioridadeOperacional || 'normal');
   Utils.setVal('eq-periodicidade', String(eq.periodicidadePreventivaDias || 90));
+  clearEquipFieldInvalidState();
 
   // Show details panel
   const detailsPanel = Utils.getEl('eq-step-2');
@@ -91,11 +150,17 @@ export async function saveEquip() {
         planCode: planLimit.planCode,
       });
       if (planLimit.isGuest) {
+        // Visitante (sem conta): flow "salve seus dados" (criar conta).
         GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
       } else if (planLimit.planCode === 'pro') {
+        // Pro no teto (30 equipamentos): mensagem específica do Pro.
         GuestConversionModal.open({ reason: 'limit_pro_equipamentos', source: 'save-equip-pro' });
       } else {
-        GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
+        // Free autenticado: flow de UPGRADE para Pro (não "criar conta", já tem).
+        GuestConversionModal.open({
+          reason: 'limit_free_equipamentos',
+          source: 'save-equip-free',
+        });
       }
       return false;
     }
@@ -104,6 +169,9 @@ export async function saveEquip() {
   const tipo = Utils.getVal('eq-tipo');
   const criticidade = Utils.getVal('eq-criticidade') || 'media';
   const prioridadeOperacional = Utils.getVal('eq-prioridade') || 'normal';
+  // Reset aria-invalid antes de revalidar — garante que campos corrigidos não
+  // fiquem com o estado "sujo" de uma tentativa anterior.
+  clearEquipFieldInvalidState();
   const payloadValidation = validateEquipamentoPayload(
     {
       nome: Utils.getVal('eq-nome'),
@@ -115,6 +183,7 @@ export async function saveEquip() {
   );
 
   if (!payloadValidation.valid) {
+    focusFirstInvalidField(payloadValidation.errorFields?.[0]);
     Toast.warning(payloadValidation.errors[0]);
     return false;
   }
@@ -149,6 +218,11 @@ export async function saveEquip() {
       ),
     }));
   } else {
+    // Captura snapshot ANTES do setState pra detectar "primeiro equipamento".
+    // Isso cobre o caminho fora do FTX (usuário que pula onboarding e cria equipamento direto).
+    const { equipamentos: prevEquipamentos } = getState();
+    const isFirstEquipment = prevEquipamentos.length === 0;
+
     setState((prev) => ({
       ...prev,
       equipamentos: [
@@ -169,6 +243,14 @@ export async function saveEquip() {
         },
       ],
     }));
+
+    if (isFirstEquipment) {
+      trackEvent('first_equipment_added', {
+        source: 'equip-form',
+        tipo,
+        fluido: Utils.getVal('eq-fluido'),
+      });
+    }
   }
 
   try {
@@ -200,6 +282,7 @@ export async function saveEquip() {
   _editingEquipId = null;
 
   Utils.clearVals('eq-nome', 'eq-tag', 'eq-local', 'eq-modelo', 'eq-periodicidade');
+  clearEquipFieldInvalidState();
   Utils.setVal('eq-tipo', 'Split Hi-Wall');
   Utils.setVal('eq-fluido', 'R-410A');
   Utils.setVal('eq-criticidade', 'media');

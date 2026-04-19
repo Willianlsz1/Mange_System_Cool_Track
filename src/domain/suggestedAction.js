@@ -16,10 +16,10 @@ export const ACTION_CODE = {
 
 const ACTION_LABEL = {
   [ACTION_CODE.NONE]: 'Nenhuma ação imediata',
-  [ACTION_CODE.SCHEDULE_PREVENTIVE]: 'Programar manutenção preventiva',
-  [ACTION_CODE.REGISTER_PREVENTIVE]: 'Registrar manutenção preventiva',
-  [ACTION_CODE.REGISTER_CORRECTIVE]: 'Registrar manutenção corretiva',
-  [ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE]: 'Registrar manutenção corretiva imediatamente',
+  [ACTION_CODE.SCHEDULE_PREVENTIVE]: 'Programar serviço preventivo',
+  [ACTION_CODE.REGISTER_PREVENTIVE]: 'Registrar serviço preventivo',
+  [ACTION_CODE.REGISTER_CORRECTIVE]: 'Registrar serviço corretivo',
+  [ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE]: 'Registrar serviço corretivo imediatamente',
   [ACTION_CODE.MONITOR]: 'Acompanhar equipamento',
   [ACTION_CODE.REEVALUATE_FIELD]: 'Reavaliar em campo',
   [ACTION_CODE.CHECK_RECURRENT_CAUSE]: 'Verificar causa recorrente',
@@ -59,7 +59,7 @@ export function calculateSuggestedAction({
   if (centralAction.code === 'acao_imediata_preventiva') {
     return buildAction(ACTION_CODE.REGISTER_PREVENTIVE, [
       'Preventiva vencida',
-      'Registrar preventiva imediatamente',
+      'Registrar serviço preventivo imediatamente',
       'Ação imediata obrigatória',
     ]);
   }
@@ -100,14 +100,14 @@ export function calculateSuggestedAction({
     return buildAction(ACTION_CODE.REGISTER_CORRECTIVE, [
       'Prioridade elevada para ação',
       'Contexto exige intervenção no mesmo dia',
-      'Registrar manutenção para rastreabilidade',
+      'Registrar serviço para rastreabilidade',
     ]);
   }
 
   return buildAction(ACTION_CODE.MONITOR, [
     'Cenário sem urgência imediata',
     'Manter acompanhamento de rotina',
-    'Revisar em próximo registro de campo',
+    'Revisar no próximo serviço de campo',
   ]);
 }
 

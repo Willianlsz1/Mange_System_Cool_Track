@@ -16,12 +16,41 @@ import {
   PLAN_CODE_PRO,
   normalizePlanCode,
 } from './subscriptionPlans.js';
+import { trackEvent } from './telemetry.js';
 
 const LS_KEY = 'cooltrack-cached-plan';
 
+/**
+ * Planos pagos (sinal de conversão monetária).
+ */
+const PAID_PLANS = new Set([PLAN_CODE_PLUS, PLAN_CODE_PRO]);
+
 export function setCachedPlan(planCode) {
+  const normalized = normalizePlanCode(planCode);
   try {
-    localStorage.setItem(LS_KEY, normalizePlanCode(planCode));
+    // Lê o valor ANTES de sobrescrever pra detectar transições.
+    // setCachedPlan roda em todo boot; queremos emitir upgrade_completed
+    // somente quando o plano SUBIU (free → plus/pro ou plus → pro).
+    const previous = localStorage.getItem(LS_KEY);
+    localStorage.setItem(LS_KEY, normalized);
+
+    const wasPaid = previous ? PAID_PLANS.has(normalizePlanCode(previous)) : false;
+    const isPaid = PAID_PLANS.has(normalized);
+
+    if (!wasPaid && isPaid) {
+      // Primeira vez que o usuário tem plano pago no cache local.
+      // Marcador monetário principal: assinatura confirmada e propagada ao cliente.
+      trackEvent('upgrade_completed', {
+        from: previous || 'unknown',
+        to: normalized,
+      });
+    } else if (wasPaid && isPaid && previous !== normalized) {
+      // Mudança entre planos pagos (upgrade plus→pro ou downgrade pro→plus).
+      trackEvent('plan_changed', {
+        from: previous,
+        to: normalized,
+      });
+    }
   } catch {
     // ignora erros de storage (modo privado, etc.)
   }

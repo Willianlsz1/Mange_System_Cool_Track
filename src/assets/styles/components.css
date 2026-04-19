@@ -1322,6 +1322,12 @@ textarea.form-control {
   font-size: 12px;
   font-weight: 500;
 }
+.photo-drop__hint {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 4px;
+  line-height: 1.4;
+}
 .photo-drop__limit {
   font-size: 10px;
   color: var(--text-3);
@@ -1403,7 +1409,7 @@ textarea.form-control {
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  background: linear-gradient(90deg, #00bcd4, #7c4dff);
+  background: linear-gradient(90deg, var(--primary), #7c4dff);
   color: #fff;
   padding: 2px 7px;
   border-radius: 4px;
@@ -3884,6 +3890,39 @@ mark,
   color: var(--text-2);
 }
 
+/* Tendência de risco nos últimos 30 dias — retorna feedback imediato ao
+   técnico sobre o efeito de suas intervenções, mesmo antes da próxima
+   rodada de preventivas. */
+.equip-card__risk-trend {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.equip-card__risk-trend--improving {
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+  background: color-mix(in srgb, var(--success) 10%, var(--surface-2));
+}
+
+.equip-card__risk-trend--worsening {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface-2));
+}
+
+.equip-card__risk-trend--stable {
+  color: var(--text-3);
+}
+
 .equip-card__risk-factors {
   flex: 1 1 100%;
   font-size: 10px;
@@ -5142,7 +5181,9 @@ mark,
   overflow: visible;
   width: 336px;
   max-width: calc(100vw - 24px);
-  border-radius: 16px;
+  /* Alinhado ao token global de modal (--premier-radius, 12px).
+     Mantém consistência visual entre accountModal, modais de confirm e demais dialogs. */
+  border-radius: var(--premier-radius, 12px);
   margin-top: 52px;
   margin-right: 12px;
   background: var(--acm-bg);
@@ -5210,7 +5251,8 @@ mark,
   position: relative;
   padding: 18px 20px 16px;
   overflow: hidden;
-  border-radius: 16px 16px 0 0;
+  /* Casa com o radius do wrapper .account-modal pra não aparecer canto "quadrado" dentro do arredondado. */
+  border-radius: var(--premier-radius, 12px) var(--premier-radius, 12px) 0 0;
   border-bottom: 1px solid var(--acm-divider);
   background:
     radial-gradient(120% 120% at 0% 0%, var(--acm-accent-glow), transparent 55%),
@@ -5732,7 +5774,7 @@ mark,
 .auth-card {
   background: #0c1929;
   border: 1px solid rgba(0, 200, 232, 0.15);
-  border-radius: 16px;
+  border-radius: var(--premier-radius, 12px);
   width: 100%;
   max-width: 420px;
   padding: 32px;
@@ -5963,7 +6005,7 @@ mark,
   width: min(420px, calc(100vw - 32px));
   background: #0c1929;
   border: 1px solid rgba(0, 200, 232, 0.15);
-  border-radius: 16px;
+  border-radius: var(--premier-radius, 12px);
   padding: 24px;
 }
 
@@ -6512,6 +6554,54 @@ mark,
   }
 }
 
+/* ─── PDF QUOTA BADGE (toolbar de relatório) ─── */
+/* Badge "X/Y PDFs este mês · restam Z" ao lado do botão Exportar PDF.
+   Tom neutro por default; vira warning em ≥80% e danger em 100% (quando o
+   usuário precisa de sinal claro antes de clicar). */
+.pdf-quota-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  margin-right: 2px;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--text-3) 12%, transparent);
+  color: var(--text-2);
+  border: 1px solid color-mix(in srgb, var(--text-3) 22%, transparent);
+  white-space: nowrap;
+}
+
+.pdf-quota-badge--warning {
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 35%, transparent);
+}
+
+.pdf-quota-badge--danger {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, transparent);
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  /* No mobile a toolbar empilha verticalmente (flex-wrap). Em vez de esconder
+     o badge, damos uma linha inteira pra ele logo acima do botão "Exportar
+     PDF" — é onde o usuário precisa do contador ANTES de clicar. */
+  .pdf-quota-badge {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 4px 0;
+    padding: 6px 10px;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
 /* ─── PRICING ─── */
 /* Canonical rules live in ./components/_pricing.css (imported no topo).
    Mantenha só um: deduplicado em 2026-04 pra destravar classes novas (--plus, --three-col). */
@@ -6530,14 +6620,16 @@ mark,
   gap: 14px;
 }
 
+/* Badge "PRO ATIVO" — dourado #e8b94a alinhado à paleta canônica
+   (espelhado em _pricing.css para sobreviver ordem de cascade). */
 .upgrade-nudge-card__badge {
   position: absolute;
   top: 12px;
   right: 12px;
   font-size: 10px;
-  color: var(--success);
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--success) 28%, var(--border));
+  color: #e8b94a;
+  background: rgba(232, 185, 74, 0.15);
+  border: 1px solid rgba(232, 185, 74, 0.28);
   border-radius: 999px;
   padding: 4px 8px;
   letter-spacing: 0.06em;
@@ -6549,10 +6641,10 @@ mark,
 }
 
 .upgrade-nudge-card--pro-active {
-  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+  border-color: rgba(232, 185, 74, 0.3);
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--success) 12%, var(--surface)),
+    rgba(232, 185, 74, 0.12),
     color-mix(in srgb, var(--primary) 8%, var(--surface))
   );
 }
@@ -7346,7 +7438,7 @@ mark,
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.05em;
-  background: linear-gradient(90deg, #00bcd4, #7c4dff);
+  background: linear-gradient(90deg, var(--primary), #7c4dff);
   color: #fff;
   padding: 1px 5px;
   border-radius: 4px;
@@ -7452,22 +7544,84 @@ mark,
   margin: 0;
 }
 
+/* Subtítulos coloridos para as seções "O que reduz o score" e "Tendência" */
+.score-info-factors__title--bonus {
+  color: var(--success);
+}
+
+.score-info-factors__title--trend {
+  color: var(--text-2);
+}
+
+.score-info-factors__caption {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.5;
+  margin: -6px 0 2px;
+}
+
+/* Bônus — destaque sutil de cor success no valor negativo (embutido no strong) */
+.score-info-factor--bonus strong {
+  color: var(--text);
+}
+
+.score-info-factor--bonus .score-info-factor__icon {
+  filter: saturate(0.9);
+}
+
+/* Tendência — ícones textuais em cor semântica */
+.score-info-factor--trend .score-info-factor__icon {
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  min-width: 22px;
+  text-align: center;
+}
+
+.score-info-factor__icon--improving {
+  color: var(--success);
+}
+
+.score-info-factor__icon--worsening {
+  color: var(--danger);
+}
+
+.score-info-factor__icon--stable {
+  color: var(--text-3);
+}
+
+/* Footer inline — rola junto com o conteúdo (usado no modal do Score de Risco,
+   que é longo e com estrutura seccionada; deixar o CTA fixo corta a leitura). */
+.modal__footer--inline {
+  position: static;
+  border-top: none;
+  padding-top: var(--space-4);
+}
+
 /* ============================================================
    DASHBOARD V2REFINED (hero + KPI grid + pair + accordion)
    Tokens tier-aware via --dsh-accent (cyan/green/gold), reaproveitados
    do Account Modal V2Refined. NADA novo de cor além dos 10 tokens base.
    ============================================================ */
 
-/* Tier defaults — Free (cyan) */
+/* Paleta canônica por tier (alinhada com pricing + account modal + header):
+   Free = cinza neutro (ghost/muted, reforça "desbloqueia ao fazer upgrade")
+   Plus = azul  #3a8ee6
+   Pro  = dourado #e8b94a
+   A cor brand ciano (--primary) NÃO é usada como accent de tier — ficaria
+   confundindo com o azul do Plus em certas telas/monitores. */
 .dash {
   --dsh-gold: #e8b94a;
+  --dsh-blue: #3a8ee6;
   --dsh-red: #ff5577;
+  --dsh-neutral: #8aaac8; /* casa com --text-2 do tema escuro */
 
-  --dsh-accent: var(--primary);
-  --dsh-accent-dim: rgba(0, 200, 232, 0.28);
-  --dsh-accent-soft: rgba(0, 200, 232, 0.08);
-  --dsh-accent-strong: rgba(0, 200, 232, 0.4);
-  --dsh-accent-glow: rgba(0, 200, 232, 0.18);
+  /* Default = Free (cinza neutro). Plus/Pro sobrescrevem via [data-tier]. */
+  --dsh-accent: var(--dsh-neutral);
+  --dsh-accent-dim: rgba(138, 170, 200, 0.22);
+  --dsh-accent-soft: rgba(138, 170, 200, 0.08);
+  --dsh-accent-strong: rgba(138, 170, 200, 0.32);
+  --dsh-accent-glow: rgba(138, 170, 200, 0.14);
 
   --dsh-card-bg: rgba(255, 255, 255, 0.025);
   --dsh-card-border: rgba(255, 255, 255, 0.08);
@@ -7489,11 +7643,11 @@ mark,
 }
 
 .dash[data-tier='plus'] {
-  --dsh-accent: var(--success);
-  --dsh-accent-dim: rgba(0, 200, 112, 0.28);
-  --dsh-accent-soft: rgba(0, 200, 112, 0.08);
-  --dsh-accent-strong: rgba(0, 200, 112, 0.4);
-  --dsh-accent-glow: rgba(0, 200, 112, 0.2);
+  --dsh-accent: var(--dsh-blue);
+  --dsh-accent-dim: rgba(58, 142, 230, 0.28);
+  --dsh-accent-soft: rgba(58, 142, 230, 0.08);
+  --dsh-accent-strong: rgba(58, 142, 230, 0.4);
+  --dsh-accent-glow: rgba(58, 142, 230, 0.2);
 }
 
 .dash[data-tier='pro'] {

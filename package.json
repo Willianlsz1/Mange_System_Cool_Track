@@ -26,11 +26,13 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^2.1.8",
+    "axe-core": "~4.10.0",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.4.0",
     "jsdom": "^25.0.1",
     "prettier": "^3.8.1",
+    "rollup-plugin-visualizer": "^7.0.1",
     "supabase": "^2.89.1",
     "vite": "^5.4.21",
     "vitest": "^2.1.8"

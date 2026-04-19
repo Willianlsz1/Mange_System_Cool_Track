@@ -185,7 +185,7 @@ export function renderShellViews() {
           <div class="card">
             <div id="storage-indicator" class="storage-indicator" role="status" aria-live="polite" hidden></div>
             <div class="registro-quick-actions">
-              <div class="registro-bloco__label">AÇÕES RÁPIDAS</div>
+              <div class="registro-bloco__label">Ações rápidas</div>
               <div class="registro-quick-actions__grid">
                 <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
                   data-template="limpeza">Limpeza</button>
@@ -200,7 +200,7 @@ export function renderShellViews() {
               </div>
             </div>
             <div class="registro-bloco">
-              <div class="registro-bloco__label">CLIENTE DO SERVIÇO <span
+              <div class="registro-bloco__label">Cliente do serviço <span
                   class="registro-bloco__opcional">(opcional — aparece na capa do PDF)</span></div>
               <div class="registro-bloco__desc">Nome, documento, local e contato do cliente que recebeu o serviço. Usamos esses dados no cabeçalho do relatório e na página de assinatura.</div>
               <div class="form-group">
@@ -228,7 +228,7 @@ export function renderShellViews() {
               </div>
             </div>
             <div class="registro-bloco">
-              <div class="registro-bloco__label">O SERVIÇO</div>
+              <div class="registro-bloco__label">O serviço</div>
               <div class="form-group">
                 <label class="form-label" for="r-equip">Em qual equipamento? *</label>
                 <select id="r-equip" class="form-control" required aria-required="true">
@@ -274,7 +274,7 @@ export function renderShellViews() {
               </div>
             </div>
             <div class="registro-bloco">
-              <div class="registro-bloco__label">MATERIAIS E CUSTO <span
+              <div class="registro-bloco__label">Materiais e custo <span
                   class="registro-bloco__opcional">(opcional)</span></div>
               <div class="form-group">
                 <label class="form-label" for="r-pecas">Peças e materiais usados</label>
@@ -295,18 +295,19 @@ export function renderShellViews() {
               </div>
             </div>
             <div class="registro-bloco">
-              <div class="registro-bloco__label">EVIDÊNCIAS <span class="registro-bloco__opcional">(opcional — aumenta
+              <div class="registro-bloco__label">Evidências <span class="registro-bloco__opcional">(opcional — aumenta
                   credibilidade com o cliente)</span></div>
               <div class="photo-drop" id="photo-drop-zone">
                 <input type="file" accept="image/*" multiple id="input-fotos" aria-label="Adicionar fotos" />
                 <div class="photo-drop__icon" aria-hidden="true">📷</div>
-                <div class="photo-drop__text" id="photo-drop-text">Adicionar fotos do serviço</div>
-                <div class="photo-drop__limit">Antes e depois &middot; Máx. 5 fotos</div>
+                <div class="photo-drop__text" id="photo-drop-text">Toque para adicionar fotos</div>
+                <div class="photo-drop__hint">Antes / depois, etiqueta do equipamento, peça trocada</div>
+                <div class="photo-drop__limit">Até 5 fotos &middot; JPG ou PNG</div>
               </div>
               <div class="photo-grid" id="photo-preview" role="list" aria-label="Fotos adicionadas"></div>
             </div>
             <div class="registro-bloco registro-bloco--future">
-              <div class="registro-bloco__label">O QUE VEM A SEGUIR</div>
+              <div class="registro-bloco__label">O que vem a seguir</div>
               <div class="registro-bloco__desc">Como o equipamento saiu do serviço? Quando deve voltar?</div>
               <div class="form-row">
                 <div class="form-group">

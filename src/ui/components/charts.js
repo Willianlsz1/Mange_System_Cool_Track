@@ -28,39 +28,74 @@ function getThemeColors() {
   };
 }
 
-// ── Defaults globais do Chart.js ──────────────────────
-function applyGlobalDefaults(c) {
-  Chart.defaults.font.family = "'Inter', 'JetBrains Mono', sans-serif";
-  Chart.defaults.font.size = 11;
-  Chart.defaults.color = c.text2;
-  Chart.defaults.borderColor = c.border;
-
-  // Tooltip industrial — escuro, bordas finas
-  Object.assign(Chart.defaults.plugins.tooltip, {
-    backgroundColor: c.surface2,
-    titleColor: c.text,
-    bodyColor: c.text2,
-    borderColor: c.border2,
-    borderWidth: 1,
-    padding: 10,
-    cornerRadius: 4,
-    displayColors: true,
-    boxWidth: 10,
-    boxHeight: 10,
-    boxPadding: 4,
-    usePointStyle: true,
-  });
-
-  // Legenda discreta
-  Object.assign(Chart.defaults.plugins.legend.labels, {
+// ── Defaults compartilhados (scoped, sem mutar Chart.defaults global) ──
+// Em vez de mutar Chart.defaults (que afeta qualquer Chart.js futuro da app),
+// construímos um base options aqui e fazemos spread em cada chart individual.
+function buildBaseOptions(c) {
+  return {
+    font: {
+      family: "'Inter', 'JetBrains Mono', sans-serif",
+      size: 11,
+    },
     color: c.text2,
-    boxWidth: 10,
-    boxHeight: 10,
-    padding: 16,
-    usePointStyle: true,
-    pointStyle: 'rectRounded',
-    font: { size: 11 },
-  });
+    borderColor: c.border,
+    plugins: {
+      tooltip: {
+        backgroundColor: c.surface2,
+        titleColor: c.text,
+        bodyColor: c.text2,
+        borderColor: c.border2,
+        borderWidth: 1,
+        padding: 10,
+        cornerRadius: 4,
+        displayColors: true,
+        boxWidth: 10,
+        boxHeight: 10,
+        boxPadding: 4,
+        usePointStyle: true,
+      },
+      legend: {
+        labels: {
+          color: c.text2,
+          boxWidth: 10,
+          boxHeight: 10,
+          padding: 16,
+          usePointStyle: true,
+          pointStyle: 'rectRounded',
+          font: { size: 11 },
+        },
+      },
+    },
+  };
+}
+
+// Merge shallow: options-per-chart vence, mas preserva legend.labels e tooltip
+// do base. Simples (não precisamos de deep-merge full, só 2 níveis).
+function mergeOptions(base, override) {
+  const result = { ...base, ...override };
+  if (base.plugins || override.plugins) {
+    result.plugins = { ...(base.plugins || {}), ...(override.plugins || {}) };
+    // Merge nested: tooltip, legend.labels
+    if (base.plugins?.tooltip || override.plugins?.tooltip) {
+      result.plugins.tooltip = {
+        ...(base.plugins?.tooltip || {}),
+        ...(override.plugins?.tooltip || {}),
+      };
+    }
+    if (base.plugins?.legend || override.plugins?.legend) {
+      result.plugins.legend = {
+        ...(base.plugins?.legend || {}),
+        ...(override.plugins?.legend || {}),
+      };
+      if (base.plugins?.legend?.labels || override.plugins?.legend?.labels) {
+        result.plugins.legend.labels = {
+          ...(base.plugins?.legend?.labels || {}),
+          ...(override.plugins?.legend?.labels || {}),
+        };
+      }
+    }
+  }
+  return result;
 }
 
 // ── Instâncias ativas ─────────────────────────────────
@@ -168,7 +203,7 @@ function buildTypesData(registros, c) {
 }
 
 // ── Render: doughnut status ───────────────────────────
-function renderPie(canvas, equipamentos, c) {
+function renderPie(canvas, equipamentos, c, baseOptions) {
   if (!canvas) return;
   const data = buildStatusData(equipamentos, c);
   if (data.datasets[0].data.every((v) => v === 0)) return;
@@ -176,7 +211,7 @@ function renderPie(canvas, equipamentos, c) {
   _charts.pie = new Chart(canvas, {
     type: 'doughnut',
     data,
-    options: {
+    options: mergeOptions(baseOptions, {
       responsive: true,
       maintainAspectRatio: false,
       cutout: '68%',
@@ -191,18 +226,18 @@ function renderPie(canvas, equipamentos, c) {
           },
         },
       },
-    },
+    }),
   });
 }
 
 // ── Render: line trend ────────────────────────────────
-function renderLine(canvas, registros, c) {
+function renderLine(canvas, registros, c, baseOptions) {
   if (!canvas) return;
 
   _charts.line = new Chart(canvas, {
     type: 'line',
     data: buildTrendData(registros, c),
-    options: {
+    options: mergeOptions(baseOptions, {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
@@ -230,18 +265,18 @@ function renderLine(canvas, registros, c) {
           border: { color: c.border2 },
         },
       },
-    },
+    }),
   });
 }
 
 // ── Render: horizontal bar tipos ─────────────────────
-function renderBar(canvas, registros, c) {
+function renderBar(canvas, registros, c, baseOptions) {
   if (!canvas || !registros.length) return;
 
   _charts.bar = new Chart(canvas, {
     type: 'bar',
     data: buildTypesData(registros, c),
-    options: {
+    options: mergeOptions(baseOptions, {
       responsive: true,
       maintainAspectRatio: false,
       indexAxis: 'y',
@@ -266,7 +301,7 @@ function renderBar(canvas, registros, c) {
           border: { display: false },
         },
       },
-    },
+    }),
   });
 }
 
@@ -275,12 +310,12 @@ export const Charts = {
   refreshAll() {
     const { equipamentos, registros } = getState();
     const colors = getThemeColors();
-    applyGlobalDefaults(colors);
+    const baseOptions = buildBaseOptions(colors);
     destroyAll();
 
-    renderPie(document.getElementById('chart-status-pie'), equipamentos, colors);
-    renderLine(document.getElementById('chart-trend-line'), registros, colors);
-    renderBar(document.getElementById('chart-types-bar'), registros, colors);
+    renderPie(document.getElementById('chart-status-pie'), equipamentos, colors, baseOptions);
+    renderLine(document.getElementById('chart-trend-line'), registros, colors, baseOptions);
+    renderBar(document.getElementById('chart-types-bar'), registros, colors, baseOptions);
   },
 
   destroyAll,

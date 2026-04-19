@@ -50,6 +50,16 @@ vi.mock('../ui/components/shareSuccessToast.js', () => ({
   ShareSuccessToast: { show },
 }));
 
+const pdfToastShow = vi.fn();
+vi.mock('../ui/components/pdfSuccessToast.js', () => ({
+  PdfSuccessToast: { show: pdfToastShow },
+}));
+
+const pdfBadgeRefresh = vi.fn();
+vi.mock('../ui/components/pdfQuotaBadge.js', () => ({
+  PdfQuotaBadge: { refresh: pdfBadgeRefresh, remove: vi.fn() },
+}));
+
 const fetchMyProfileBilling = vi.fn();
 vi.mock('../core/monetization.js', () => ({
   fetchMyProfileBilling,
@@ -151,7 +161,10 @@ describe('reportExportHandlers', () => {
       expect.objectContaining({ planCode: 'free' }),
     );
     expect(incrementMonthlyUsage).toHaveBeenCalledWith('u1', 'pdf_export');
-    expect(success).toHaveBeenCalledWith('PDF gerado: relatorio.pdf');
+    expect(pdfToastShow).toHaveBeenCalledWith(
+      expect.objectContaining({ fileName: 'relatorio.pdf', limit: 5, used: 1 }),
+    );
+    expect(pdfBadgeRefresh).toHaveBeenCalled();
   });
 
   it('blocks Free users once they hit the monthly PDF quota with Plus/Pro nudge', async () => {
@@ -189,7 +202,11 @@ describe('reportExportHandlers', () => {
     );
     // Pro é ilimitado → não incrementa contagem
     expect(incrementMonthlyUsage).not.toHaveBeenCalled();
-    expect(success).toHaveBeenCalledWith('PDF gerado: relatorio.pdf');
+    // Pro não tem quota finita → toast sem contador
+    expect(pdfToastShow).toHaveBeenCalledWith(
+      expect.objectContaining({ fileName: 'relatorio.pdf' }),
+    );
+    expect(pdfToastShow.mock.calls[0][0]).not.toHaveProperty('used');
   });
 
   it('blocks whatsapp share for free users above monthly limit', async () => {

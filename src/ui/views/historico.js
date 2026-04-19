@@ -205,13 +205,19 @@ export function renderHist() {
               title: 'Nenhum resultado para esse filtro',
               description: 'Tente outro termo ou remova o filtro.',
             })}`
-          : `${planLimitBanner}${summaryCard}<section class="engaging-empty-state" aria-label="Histórico vazio">
-              <div class="engaging-empty-state__icon">📋</div>
-              <h3 class="engaging-empty-state__title">Nenhum serviço registrado ainda</h3>
-              <p class="engaging-empty-state__description">Cada serviço registrado vira um relatório profissional pronto para o cliente. Técnicos que registram aqui economizam em média 3 horas por semana.</p>
-              <button class="btn btn--primary engaging-empty-state__cta" data-nav="registro">Registrar meu primeiro serviço &rarr;</button>
-              <div class="engaging-empty-state__microcopy">Leva menos de 2 minutos</div>
-            </section>`;
+          : `${planLimitBanner}${summaryCard}${emptyStateHtml({
+              variant: 'engaging',
+              ariaLabel: 'Histórico vazio',
+              icon: '📋',
+              title: 'Nenhum serviço registrado ainda',
+              description:
+                'Cada serviço registrado vira um relatório profissional pronto para o cliente. Técnicos que registram aqui economizam em média 3 horas por semana.',
+              cta: {
+                label: 'Registrar meu primeiro serviço →',
+                nav: 'registro',
+              },
+              microcopy: 'Leva menos de 2 minutos',
+            })}`;
       el.querySelectorAll('[data-action="hist-pricing-link"]').forEach((btn) =>
         btn.addEventListener('click', () => goTo('pricing', { highlightPlan: 'pro' })),
       );

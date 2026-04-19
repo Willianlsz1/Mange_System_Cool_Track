@@ -28,9 +28,9 @@ function countReportsThisMonth(registros = []) {
 }
 
 function getReportBarColor(percent) {
-  if (percent > 90) return '#e03040';
-  if (percent > 70) return '#e8a020';
-  return '#00C8E8';
+  if (percent > 90) return 'var(--danger)';
+  if (percent > 70) return 'var(--warning)';
+  return 'var(--primary)';
 }
 
 // Classe CSS correspondente ao tom (cores via var() no <style> do render,
@@ -59,13 +59,33 @@ function getUsageState(equipmentCount, reportsThisMonth) {
   };
 }
 
+// Paleta canônica por tier (alinhada com pricing + account modal + header):
+//   Pro  = dourado (#e8b94a)
+//   Plus = azul    (#3a8ee6)
+function getPaidMeterAccent(planCode) {
+  if (planCode === PLAN_CODE_PLUS) {
+    return {
+      solid: '#3a8ee6',
+      soft: 'rgba(58, 142, 230, 0.16)',
+      border: 'rgba(58, 142, 230, 0.3)',
+    };
+  }
+  // Pro default
+  return { solid: '#e8b94a', soft: 'rgba(232, 185, 74, 0.16)', border: 'rgba(232, 185, 74, 0.3)' };
+}
+
 function renderPaidMeter(
   equipmentCount,
   reportsThisMonth,
-  { planLabel = 'Pro', planCopy = 'Recursos premium e limites expandidos liberados.' } = {},
+  {
+    planCode = PLAN_CODE_PRO,
+    planLabel = 'Pro',
+    planCopy = 'Recursos premium e limites expandidos liberados.',
+  } = {},
 ) {
+  const accent = getPaidMeterAccent(planCode);
   return `
-    <section class="usage-meter usage-meter--pro" aria-label="Consumo do plano ${planLabel}">
+    <section class="usage-meter usage-meter--paid usage-meter--${planCode}" aria-label="Consumo do plano ${planLabel}" style="--um-accent:${accent.solid};--um-accent-soft:${accent.soft};--um-accent-border:${accent.border};">
       <style>
         .usage-meter {
           background: var(--surface);
@@ -140,11 +160,11 @@ function renderPaidMeter(
           border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
         }
 
-        .usage-meter--pro {
-          border-color: color-mix(in srgb, var(--success) 28%, var(--border));
+        .usage-meter--paid {
+          border-color: var(--um-accent-border);
           background: linear-gradient(
             135deg,
-            color-mix(in srgb, var(--success) 10%, var(--surface)),
+            color-mix(in srgb, var(--um-accent) 10%, var(--surface)),
             color-mix(in srgb, var(--primary) 7%, var(--surface))
           );
         }
@@ -154,9 +174,9 @@ function renderPaidMeter(
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.06em;
-          color: var(--success);
-          background: color-mix(in srgb, var(--success) 16%, transparent);
-          border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
+          color: var(--um-accent);
+          background: var(--um-accent-soft);
+          border: 1px solid var(--um-accent-border);
           border-radius: 999px;
           padding: 4px 10px;
         }
@@ -344,6 +364,7 @@ export const UsageMeter = {
 
     if (normalizedPlanCode === PLAN_CODE_PRO) {
       return renderPaidMeter(equipmentCount, reportsThisMonth, {
+        planCode: PLAN_CODE_PRO,
         planLabel: 'Pro',
         planCopy: 'Recursos premium e limites expandidos liberados.',
       });
@@ -351,6 +372,7 @@ export const UsageMeter = {
 
     if (normalizedPlanCode === PLAN_CODE_PLUS) {
       return renderPaidMeter(equipmentCount, reportsThisMonth, {
+        planCode: PLAN_CODE_PLUS,
         planLabel: 'Plus',
         planCopy: 'Até 25 equipamentos, registros e histórico ilimitados.',
       });

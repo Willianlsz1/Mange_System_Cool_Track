@@ -4,6 +4,9 @@
  * Orquestrado pelo ui/controller.js que injeta os handlers de cada view
  */
 
+import { Toast } from './toast.js';
+import { handleError, ErrorCodes } from './errors.js';
+
 const _routes = new Map(); // name → { onEnter, onLeave }
 let _current = null;
 let _transitioning = false;
@@ -87,9 +90,18 @@ export function goTo(name, params = {}, options = {}) {
     return;
   }
 
-  // Chamar onLeave da rota anterior
+  // Chamar onLeave da rota anterior — falhas aqui não podem bloquear a navegação
   if (_current && _routes.has(_current)) {
-    _routes.get(_current).onLeave?.();
+    try {
+      _routes.get(_current).onLeave?.();
+    } catch (leaveError) {
+      handleError(leaveError, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: 'Falha ao sair da tela anterior.',
+        context: { route: _current, phase: 'onLeave' },
+        showToast: false,
+      });
+    }
   }
 
   // Animação de saída
@@ -102,6 +114,43 @@ export function goTo(name, params = {}, options = {}) {
   } else {
     _activateRoute(name, nextEl, params, { fromHistory, replaceHistory });
   }
+}
+
+/**
+ * Renderiza fallback dentro do container da view quando o onEnter falha.
+ * Evita tela em branco e oferece caminho de recuperação (recarregar).
+ */
+function _handleViewError(name, el, error) {
+  handleError(error, {
+    code: ErrorCodes.NETWORK_ERROR,
+    message: 'Não foi possível carregar esta tela. Tente novamente.',
+    context: { route: name, phase: 'onEnter' },
+    showToast: false,
+  });
+  Toast.error('Não foi possível carregar esta tela. Tente novamente.');
+
+  // Só escreve fallback se o container existe e parece vazio (evita
+  // sobrescrever conteúdo parcialmente renderizado com mensagem de erro).
+  const container = el?.querySelector('.view-content') || el;
+  if (!container) return;
+  const hasContent = container.children && container.children.length > 0;
+  if (hasContent) return;
+
+  container.innerHTML = `
+    <div class="view-error-boundary" role="alert" aria-live="assertive">
+      <div class="view-error-boundary__icon" aria-hidden="true">⚠️</div>
+      <h2 class="view-error-boundary__title">Não foi possível carregar esta tela</h2>
+      <p class="view-error-boundary__desc">
+        Algo deu errado ao montar o conteúdo. Tente recarregar a página.
+      </p>
+      <button type="button" class="btn btn--primary view-error-boundary__retry">
+        Recarregar
+      </button>
+    </div>
+  `;
+  container.querySelector('.view-error-boundary__retry')?.addEventListener('click', () => {
+    window.location.reload();
+  });
 }
 
 function _activateRoute(name, el, params, options = {}) {
@@ -121,8 +170,17 @@ function _activateRoute(name, el, params, options = {}) {
   // Ativar view
   el.classList.add('active');
 
-  // Chamar onEnter
-  _routes.get(name)?.onEnter(params);
+  // Error boundary de view — se o onEnter estourar (sync ou async),
+  // renderiza fallback dentro do container pra evitar tela em branco
+  // e garante que _transitioning seja resetado.
+  try {
+    const result = _routes.get(name)?.onEnter(params);
+    if (result && typeof result.then === 'function') {
+      result.catch((asyncError) => _handleViewError(name, el, asyncError));
+    }
+  } catch (syncError) {
+    _handleViewError(name, el, syncError);
+  }
 
   _current = name;
   emitRouteChanged(name, previousRoute);

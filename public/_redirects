@@ -1,3 +1,8 @@
+# Pretty URLs para páginas legais estáticas (servidas de /public/legal/*.html)
+/legal/termos         /legal/termos.html         200
+/legal/privacidade    /legal/privacidade.html    200
+/legal/lgpd           /legal/lgpd.html           200
+
 # SPA fallback — todas as rotas não-arquivo entregam index.html
 # Formato compatível com Netlify e Cloudflare Pages.
 /*    /index.html    200

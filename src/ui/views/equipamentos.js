@@ -18,6 +18,7 @@ import { trackEvent } from '../../core/telemetry.js';
 import {
   evaluateEquipmentHealth,
   evaluateEquipmentRisk,
+  evaluateEquipmentRiskTrend,
   getEquipmentMaintenanceContext,
   getSuggestedPreventiveDays,
   normalizePeriodicidadePreventivaDias,
@@ -80,6 +81,23 @@ export function clearEditingState() {
  * o navegador mostra a img quebrada; uma chamada ao `loadFromSupabase`
  * refaz signed URLs. Fallback explícito para o ícone via `onerror`.
  */
+/**
+ * Badge de tendência de risco (últimos 30 dias).
+ * Feedback imediato do efeito das manutenções recentes sobre o score.
+ * · stable    → "→ estável"
+ * · improving → "↓ N" (risco caiu N pontos)
+ * · worsening → "↑ N" (risco subiu N pontos)
+ */
+function renderTrendBadge(trend) {
+  if (!trend || trend.trend === 'stable') {
+    return `<span class="equip-card__risk-trend equip-card__risk-trend--stable" title="Tendência estável nos últimos 30 dias" aria-label="Tendência estável">→ estável</span>`;
+  }
+  if (trend.trend === 'improving') {
+    return `<span class="equip-card__risk-trend equip-card__risk-trend--improving" title="Risco caiu ${Math.abs(trend.delta)} pontos nos últimos 30 dias" aria-label="Tendência melhorando">↓ ${Math.abs(trend.delta)}</span>`;
+  }
+  return `<span class="equip-card__risk-trend equip-card__risk-trend--worsening" title="Risco subiu ${trend.delta} pontos nos últimos 30 dias" aria-label="Tendência piorando">↑ ${trend.delta}</span>`;
+}
+
 function equipCardIconBlock(eq) {
   const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
   const firstPhoto = Array.isArray(eq.fotos) ? eq.fotos.find((p) => p && (p.url || p.path)) : null;
@@ -106,14 +124,15 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
   const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
   const eqRegs = regsForEquip(eq.id);
   const risk = evaluateEquipmentRisk(eq, eqRegs);
+  const riskTrend = evaluateEquipmentRiskTrend(eq, eqRegs);
   const suggestedAction = evaluateEquipmentSuggestedAction(eq, eqRegs);
 
   function getCtaByAction(actionCode) {
     if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE)
-      return 'Registrar corretiva agora';
-    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar corretiva';
-    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar preventiva';
-    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar preventiva';
+      return 'Registrar serviço corretivo agora';
+    if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar serviço corretivo';
+    if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar serviço preventivo';
+    if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar serviço preventivo';
     return 'Registrar serviço';
   }
 
@@ -211,6 +230,7 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
   // ─── Ativo: chips + timeline + action + CTA tonal full-width ──────────────
   const chipsHtml = `<div class="equip-card__chips">
       <span class="equip-card__risk-chip equip-card__risk-chip--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]} · ${risk.score}</span>
+      ${renderTrendBadge(riskTrend)}
       ${risk.factors
         .slice(0, 3)
         .map((f) => `<span class="equip-card__chip-ctx">${Utils.escapeHtml(f)}</span>`)
@@ -270,7 +290,7 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
 /** ID do setor atualmente expandido; null = vista de grid de setores. */
 let _activeSectorId = null;
 
-const _SETOR_CORES = ['#00bcd4', '#00c853', '#ffab40', '#ff5252', '#7c4dff', '#448aff'];
+const _SETOR_CORES = ['#00c8e8', '#00c853', '#ffab40', '#ff5252', '#7c4dff', '#448aff'];
 
 /** Status "pior" de uma lista de equipamentos: danger > warn > ok. */
 function worstStatus(eqs) {
@@ -371,7 +391,7 @@ export function setorCardHtml(
   { isFallback: _isFallback = false } = {},
 ) {
   const count = equipamentosDoSetor.length;
-  const cor = setor.cor || '#00bcd4';
+  const cor = setor.cor || '#00c8e8';
   const safeId = Utils.escapeAttr(setor.id);
   const kpis = getSetorKpis(equipamentosDoSetor);
   const healthTone = setorHealthTone(equipamentosDoSetor);
@@ -849,7 +869,7 @@ export function openEditSetor(id) {
       });
     }
   }
-  if (hiddenInput) hiddenInput.value = setor.cor || '#00bcd4';
+  if (hiddenInput) hiddenInput.value = setor.cor || '#00c8e8';
   const titleEl = Utils.getEl('modal-add-setor-title');
   if (titleEl) titleEl.textContent = 'Editar setor';
   const saveBtn = document.querySelector('[data-action="save-setor"]');
@@ -887,7 +907,7 @@ export async function saveSetor() {
     return false;
   }
 
-  const cor = Utils.getEl('setor-cor')?.value || '#00bcd4';
+  const cor = Utils.getEl('setor-cor')?.value || '#00c8e8';
 
   if (isEditing) {
     const editingId = _editingSetorId;
@@ -918,7 +938,7 @@ export async function saveSetor() {
       b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
     });
     const hi = Utils.getEl('setor-cor');
-    if (hi) hi.value = '#00bcd4';
+    if (hi) hi.value = '#00c8e8';
   }
   clearSetorEditingState();
 
@@ -1058,14 +1078,17 @@ export async function saveEquip() {
         planCode: planLimit.planCode,
       });
       if (planLimit.isGuest) {
-        // Usuário não logado — convite para criar conta
+        // Visitante (sem conta): flow "salve seus dados" (criar conta).
         GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
       } else if (planLimit.planCode === 'pro') {
-        // Usuário Pro que atingiu o teto de 30 equipamentos
+        // Pro no teto (30 equipamentos): mensagem específica do Pro.
         GuestConversionModal.open({ reason: 'limit_pro_equipamentos', source: 'save-equip-pro' });
       } else {
-        // Usuário Free logado — convite para fazer upgrade
-        GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
+        // Free autenticado: flow de UPGRADE para Pro (não "criar conta", já tem).
+        GuestConversionModal.open({
+          reason: 'limit_free_equipamentos',
+          source: 'save-equip-free',
+        });
       }
       return false;
     }

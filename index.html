@@ -10,6 +10,45 @@
       name="description"
       content="Sistema de gest&atilde;o de manuten&ccedil;&atilde;o para t&eacute;cnicos aut&ocirc;nomos de climatiza&ccedil;&atilde;o e refrigera&ccedil;&atilde;o. Registre servi&ccedil;os, gere relat&oacute;rios PDF e assine digitalmente."
     />
+    <link rel="canonical" href="https://cool-track-pro.pages.dev/" />
+
+    <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="CoolTrack Pro" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:url" content="https://cool-track-pro.pages.dev/" />
+    <meta
+      property="og:title"
+      content="CoolTrack Pro — Gestão de manutenção HVAC que funciona offline"
+    />
+    <meta
+      property="og:description"
+      content="Chega de planilha. Técnico registra no celular com foto e assinatura, funciona sem internet e gera PDF pronto em 30 segundos."
+    />
+    <meta property="og:image" content="https://cool-track-pro.pages.dev/icons/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="CoolTrack Pro — Chega de planilha. Seu relatório pronto em 30 segundos."
+    />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="CoolTrack Pro — Gestão de manutenção HVAC que funciona offline"
+    />
+    <meta
+      name="twitter:description"
+      content="Chega de planilha. Técnico registra no celular com foto e assinatura, funciona sem internet e gera PDF pronto em 30 segundos."
+    />
+    <meta name="twitter:image" content="https://cool-track-pro.pages.dev/icons/og-image.png" />
+    <meta
+      name="twitter:image:alt"
+      content="CoolTrack Pro — Chega de planilha. Seu relatório pronto em 30 segundos."
+    />
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
@@ -44,6 +83,54 @@
     <link rel="stylesheet" href="/src/assets/styles/theme-premium.css" />
     <link rel="stylesheet" href="/src/assets/styles/ux-polish.css" />
     <link rel="stylesheet" href="/src/assets/styles/landing.css" />
+
+    <!-- JSON-LD Schema.org — SoftwareApplication (SEO estruturado pro Google) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CoolTrack Pro",
+        "alternateName": "CoolTrack",
+        "description": "Sistema de gestão de manutenção para técnicos de climatização e refrigeração. Registre serviços em campo, gere relatórios PDF com assinatura digital e funcione offline.",
+        "url": "https://cool-track-pro.pages.dev/",
+        "image": "https://cool-track-pro.pages.dev/icons/icon-512x512.png",
+        "inLanguage": "pt-BR",
+        "applicationCategory": "BusinessApplication",
+        "applicationSubCategory": "MaintenanceManagement",
+        "operatingSystem": "Web, iOS, Android",
+        "featureList": "Registro de serviços offline, PDF com assinatura digital do cliente, fotos por equipamento, histórico completo de manutenções, alertas de preventiva, compartilhamento via WhatsApp",
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Free",
+            "price": "0",
+            "priceCurrency": "BRL",
+            "description": "Até 3 equipamentos, 10 registros por mês, 5 PDFs por mês com marca d'água"
+          },
+          {
+            "@type": "Offer",
+            "name": "Plus",
+            "price": "29",
+            "priceCurrency": "BRL",
+            "description": "Até 25 equipamentos, registros ilimitados, 100 PDFs por mês sem marca d'água, assinatura digital"
+          },
+          {
+            "@type": "Offer",
+            "name": "Pro",
+            "price": "49",
+            "priceCurrency": "BRL",
+            "description": "Equipamentos ilimitados, PDFs e compartilhamento via WhatsApp ilimitados, agrupamento por setores, suporte prioritário"
+          }
+        ],
+        "publisher": {
+          "@type": "Organization",
+          "name": "CoolTrack Pro",
+          "url": "https://cool-track-pro.pages.dev/",
+          "email": "suporte@cooltrackpro.com.br",
+          "logo": "https://cool-track-pro.pages.dev/icons/icon-512x512.png"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="app"></div>
@@ -58,7 +145,13 @@
       if ('serviceWorker' in navigator && !_isDev) {
         navigator.serviceWorker
           .register('/sw.js', { scope: '/' })
-          .then((reg) => console.log('[SW] Registrado:', reg.scope))
+          .then((reg) => {
+            console.log('[SW] Registrado:', reg.scope);
+            // Expõe a registration pro app.js wirar o fluxo de update
+            // ("Nova versão disponível. Recarregar?"). Usamos globalThis
+            // por simplicidade — o app lê esta referência uma vez no boot.
+            window.__cooltrackSwRegistration = reg;
+          })
           .catch((err) => console.warn('[SW] Falha no registro:', err));
       } else if (_isDev && 'serviceWorker' in navigator) {
         // Em dev: remove SW anterior para não bloquear atualizações

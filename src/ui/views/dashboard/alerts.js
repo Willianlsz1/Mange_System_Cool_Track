@@ -14,7 +14,7 @@ export function getAlertActionMeta(alert) {
     case 'register-now':
       return { action: 'go-register-equip', id, label: 'Registrar agora' };
     case 'schedule':
-      return { action: 'go-register-equip', id, label: 'Registrar preventiva' };
+      return { action: 'go-register-equip', id, label: 'Registrar serviço preventivo' };
     case 'start-history':
       return { action: 'go-register-equip', id, label: 'Iniciar historico' };
     case 'inspect':

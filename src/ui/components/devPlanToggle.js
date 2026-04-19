@@ -26,15 +26,21 @@ function getLabel(plan) {
 }
 
 function getBadgeStyle(plan) {
-  if (plan === 'pro') return 'background:#00c870;color:#07111f;';
-  if (plan === 'plus') return 'background:#3a8ee6;color:#07111f;';
-  return 'background:#4a6880;color:#e8f2fa;';
+  // Paleta canônica (alinhada com pricing + account modal + header):
+  //   pro  = dourado (#e8b94a)
+  //   plus = azul    (#3a8ee6)
+  //   free = neutro  (--secondary)
+  // Usamos literais porque inline style (HTML string) não resolve var() de
+  // forma performática em múltiplos renders.
+  if (plan === 'pro') return 'background:#e8b94a;color:#2a1f04;';
+  if (plan === 'plus') return 'background:#3a8ee6;color:#041530;';
+  return 'background:var(--secondary);color:var(--text);';
 }
 
 function getBadgeColor(plan) {
-  if (plan === 'pro') return '#00c870';
+  if (plan === 'pro') return '#e8b94a';
   if (plan === 'plus') return '#3a8ee6';
-  return '#4a6880';
+  return 'var(--secondary)';
 }
 
 function loadPos() {

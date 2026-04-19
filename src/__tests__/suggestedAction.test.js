@@ -28,7 +28,7 @@ describe('suggested action engine', () => {
     });
 
     expect(result.actionCode).toBe(ACTION_CODE.REGISTER_PREVENTIVE);
-    expect(result.actionLabel).toBe('Registrar manutenção preventiva');
+    expect(result.actionLabel).toBe('Registrar serviço preventivo');
   });
 
   it('returns recurrent cause investigation for repeated corrective history', () => {
