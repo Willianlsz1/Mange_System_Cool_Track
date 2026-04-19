@@ -1,16 +1,23 @@
 # CoolTrack Pro
 
-Aplicação web (SPA) para gestão de manutenção de equipamentos HVAC.
+Aplicação web (SPA) para gestão de manutenção de equipamentos HVAC, pensada para técnicos em campo.
 
-> Escopo atual: front-end em JavaScript com persistência local (offline-first) e sincronização/autenticação via Supabase.
+> Escopo atual: front-end em JavaScript com persistência local (offline-first), sincronização/autenticação via Supabase, checkout Stripe e telemetria própria.
 
 ## Visão geral do produto
 
-O sistema cobre fluxos de operação técnica:
+O sistema cobre o dia a dia operacional de quem presta serviço de climatização:
 
-- cadastro de equipamentos;
-- registro de manutenções preventivas/corretivas;
-- visualização de dashboard, histórico, alertas e relatórios.
+- **Cadastro de equipamentos** por cliente e setor (splits, chillers, câmaras frias, VRFs), com marca, modelo, NS, periodicidade preventiva e histórico completo.
+- **Registro de serviços** (corretivas, preventivas e visitas técnicas) com fotos, peças, assinatura do cliente e geração de PDF pronto pra WhatsApp.
+- **Score de risco (0–100)** por equipamento, com fatores visíveis, bônus de histórico bom (até −18 pts) e tendência de 30 dias (↓ melhorando, → estável, ↑ piorando).
+- **Painel de alertas** com preventivas vencendo, falhas recentes e clientes sem atendimento, com sugestão da próxima ação.
+- **Dashboard, histórico e relatórios** agregados por equipamento, setor e cliente.
+- **Planos Free / Plus / Pro** com checkout via Stripe e limites progressivos (equipamentos, PDFs, técnicos).
+- **Landing page** institucional com SEO (OG/Twitter Cards + JSON-LD) e páginas legais (Termos, Privacidade, LGPD).
+- **Tour de onboarding** em 6 slides explicando os recursos principais.
+- **Modo convidado** com limites, pra o técnico experimentar sem conta.
+- **Telemetria** via sink próprio (batching + IndexedDB) gravando no Supabase.
 
 ## Stack
 
@@ -211,7 +218,22 @@ Os headers de segurança e o redirect SPA ficam em `public/_headers` e `public/_
 
 ## Contribuição
 
-1. Mantenha mudanças focadas e com contexto técnico no PR.
-2. Atualize testes quando alterar comportamento.
-3. Não introduza credenciais reais em código, commits ou exemplos.
-4. Garanta `lint`, `test` e `build` antes de abrir PR.
+Fluxo completo de contribuição (setup, convenções de commit, branches, testes e abertura de PR) está documentado em [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+Resumo:
+
+1. Branch a partir de `staging` (`feature/*`, `fix/*`, `chore/*`, `refactor/*`).
+2. Commits no padrão Conventional Commits.
+3. Rode `npm run check` (format + lint + test + build) antes de abrir PR.
+4. PR sempre contra `staging`. Merge `staging → main` é feito pelo mantenedor.
+5. Não introduza credenciais reais em código, commits ou exemplos.
+
+## Assets de marca
+
+Logos, lockups e wordmarks oficiais ficam em [`brand/`](./brand) (SVG + PNG, versões horizontal, vertical e monocromática). Consulte antes de usar a identidade do CoolTrack em qualquer material.
+
+## Licença
+
+O CoolTrack Pro é software proprietário. Copyright © 2026 Willian Lopes. Todos os direitos reservados.
+
+Os termos completos — incluindo o que é permitido, o que é proibido, a cláusula de contribuição e o foro aplicável — estão no arquivo [`LICENSE`](./LICENSE). Para uso comercial, licenciamento ou permissões especiais, entre em contato pelo e-mail indicado no arquivo.
