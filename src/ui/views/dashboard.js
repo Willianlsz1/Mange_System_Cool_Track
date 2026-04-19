@@ -493,7 +493,12 @@ function _renderHero({
   // Greeting + datetime
   const greetingEl = document.getElementById('dash-hero-greeting');
   if (greetingEl) {
-    const name = (userName || '').trim().split(/\s+/)[0] || 'Técnico';
+    // Mostra o nome completo como o usuário salvou no Profile ("Guilherme
+    // Brigs" vira "Olá, Guilherme Brigs"). Quem preferir curto pode salvar
+    // só o primeiro nome — a decisão fica com o técnico, não com a lib.
+    // Os fallbacks (user_metadata do OAuth e prettifyEmail) já entregam
+    // strings higienizadas, então o trim simples basta aqui.
+    const name = (userName || '').trim() || 'Técnico';
     greetingEl.textContent = `Olá, ${name}`;
   }
   const dtEl = document.getElementById('dash-hero-datetime');
