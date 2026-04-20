@@ -20,7 +20,13 @@ import { withSkeleton } from '../components/skeleton.js';
 import { validateRegistroPayload } from '../../core/inputValidation.js';
 import { isCachedPlanPlusOrHigher } from '../../core/planCache.js';
 
-const CONTAINER_ID = 'form-progress-container-v5';
+// O meter de progresso vive estático dentro do hero do template.
+// Apontamos pro hero + o contador numérico ao invés de injetar markup na hora.
+const HERO_ID = 'registro-hero';
+const HERO_SUB_ID = 'registro-hero-sub';
+const HERO_PILL_TEXT_ID = 'registro-hero-pill-text';
+const PROGRESS_COUNT_ID = 'form-progress-count';
+const METER_ID = 'registro-hero-meter';
 const QUICK_TEMPLATE_MAP = {
   limpeza: {
     tipo: 'Limpeza de Filtros',
@@ -93,25 +99,82 @@ const _fields = [
   { id: 'r-obs', validate: (v) => v.trim().length >= 10 },
 ];
 
-function _ensureProgressBar(formView) {
-  if (document.getElementById(CONTAINER_ID)) return;
-  const c = document.createElement('div');
-  c.id = CONTAINER_ID;
-  c.className = 'form-progress';
-  c.innerHTML = `<div class="form-progress__text"><span>Campos preenchidos</span><span id="form-progress-count">0/${_fields.length}</span></div>
-    <div class="form-progress__bar"><div class="form-progress__fill" id="form-progress-fill"></div></div>`;
-  formView.querySelector('.card')?.insertBefore(c, formView.querySelector('.card').firstChild);
+// ── Meter de progresso no hero ────────────────────────
+//
+// Desde o redesign (v6), o meter está inline no template (.registro-hero__meter
+// com 5 .registro-hero__seg). A função "ensure" virou só uma garantia de que o
+// hero existe e tá sincronizado; a "update" pinta cada segmento conforme os
+// campos vão sendo preenchidos e troca o data-state do hero pra empty/partial/
+// complete — CSS muda a cor do meter e dos indicadores a partir disso.
+function _ensureProgressBar(_formView) {
+  // No-op mantido pra compatibilidade com o contrato anterior. O markup já vem
+  // do template; se alguma view legado perder o hero, o _updateProgressBar
+  // simplesmente não faz nada (guard clauses abaixo).
 }
 
 function _updateProgressBar() {
+  const total = _fields.length;
   const filled = _fields.filter((f) => {
     const i = Utils.getEl(f.id);
     return i && f.validate(i.value);
   }).length;
-  const bar = document.getElementById('form-progress-fill');
-  const cnt = document.getElementById('form-progress-count');
-  if (bar) bar.style.width = `${(filled / _fields.length) * 100}%`;
-  if (cnt) cnt.textContent = `${filled}/${_fields.length}`;
+
+  const hero = document.getElementById(HERO_ID);
+  const meter = document.getElementById(METER_ID);
+  const cnt = document.getElementById(PROGRESS_COUNT_ID);
+
+  if (cnt) cnt.textContent = String(filled);
+
+  if (meter) {
+    const segs = meter.querySelectorAll('.registro-hero__seg');
+    segs.forEach((seg, idx) => {
+      seg.classList.toggle('is-filled', idx < filled);
+    });
+    meter.setAttribute('aria-valuenow', String(filled));
+    meter.setAttribute('aria-valuemax', String(total));
+  }
+
+  if (hero) {
+    hero.dataset.state = filled === 0 ? 'empty' : filled === total ? 'complete' : 'partial';
+  }
+}
+
+// ── Sub do hero (meta "Domingo · 19 abr · 20:55") ──────
+// Renderiza o sub do hero em português com 3 dots separadores. Se no futuro
+// quisermos atualizar "ao vivo" (ex.: relógio), basta chamar de novo. Hoje só
+// roda no initRegistro — data é a da abertura do formulário.
+function _renderHeroSub() {
+  const sub = document.getElementById(HERO_SUB_ID);
+  if (!sub) return;
+  const now = new Date();
+  const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const meses = [
+    'jan',
+    'fev',
+    'mar',
+    'abr',
+    'mai',
+    'jun',
+    'jul',
+    'ago',
+    'set',
+    'out',
+    'nov',
+    'dez',
+  ];
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const parts = [
+    dias[now.getDay()],
+    `${now.getDate()} ${meses[now.getMonth()]} ${now.getFullYear()}`,
+    `${hh}:${mm}`,
+  ];
+  sub.innerHTML = parts
+    .map(
+      (p, i) =>
+        `<span>${p}</span>${i < parts.length - 1 ? '<span class="registro-hero__sub-dot" aria-hidden="true"></span>' : ''}`,
+    )
+    .join('');
 }
 
 // ── Aviso de manutenção agendada ───────────────────────
@@ -161,6 +224,7 @@ export function initRegistro(params = {}) {
       formView.dataset.bound = '1';
     }
     _updateProgressBar();
+    _renderHeroSub();
 
     // Data padrão
     if (!Utils.getVal('r-data')) Utils.setVal('r-data', Utils.nowDatetime());
@@ -178,10 +242,18 @@ export function initRegistro(params = {}) {
 
     const rPrioridade = Utils.getEl('r-prioridade');
     if (rPrioridade && !rPrioridade.value) rPrioridade.value = 'media';
+
+    // Hint de assinatura só pra Plus/Pro — a captura de assinatura é feature
+    // paga, Free não tem esse fluxo. O elemento vem `hidden` do template pra
+    // evitar flash de conteúdo indevido enquanto o plano ainda carrega.
+    const signatureHint = document.getElementById('registro-signature-hint');
+    if (signatureHint) {
+      signatureHint.hidden = !isCachedPlanPlusOrHigher();
+    }
   });
 }
 
-export function applyQuickTemplate(templateId) {
+export function applyQuickTemplate(templateId, triggerEl = null) {
   const template = QUICK_TEMPLATE_MAP[templateId];
   if (!template) return;
 
@@ -193,6 +265,25 @@ export function applyQuickTemplate(templateId) {
     const def = Profile.getDefaultTecnico();
     if (def) Utils.setVal('r-tecnico', def);
   }
+
+  // Feedback visual: marca o chip clicado como ativo e os demais como inativos.
+  // O botão fica selecionado até o usuário trocar de template ou limpar o form.
+  // Usa o próprio triggerEl quando vindo do handler, ou busca pelo data-template
+  // como fallback (por exemplo, se algum fluxo programático chamar isso direto).
+  const quickRoot = document.querySelector('.registro-quick');
+  if (quickRoot) {
+    const chips = quickRoot.querySelectorAll('[data-action="quick-service-template"]');
+    const active =
+      triggerEl && triggerEl.closest('[data-action="quick-service-template"]')
+        ? triggerEl.closest('[data-action="quick-service-template"]')
+        : quickRoot.querySelector(`[data-template="${templateId}"]`);
+    chips.forEach((chip) => {
+      const isActive = chip === active;
+      chip.classList.toggle('is-active', isActive);
+      chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  }
+
   _updateProgressBar();
   Toast.success('Ação rápida aplicada. Revise e toque em salvar.');
 }
@@ -462,7 +553,20 @@ export function clearRegistro(preserveEquip = false) {
   Utils.setVal('r-prioridade', 'media');
   Utils.setVal('r-data', Utils.nowDatetime());
   Photos.clear();
-  document.getElementById(CONTAINER_ID)?.remove();
+
+  // Reseta o meter do hero pra empty sem remover o markup (ele é estático no
+  // template agora, diferente da v5 que injetava dinamicamente).
+  _updateProgressBar();
+
+  // Reset do estado ativo dos chips de ação rápida — "Recomeçar" deve zerar
+  // a seleção visual pra não sugerir um template que já não se aplica ao
+  // novo registro em branco.
+  document
+    .querySelectorAll('.registro-quick [data-action="quick-service-template"]')
+    .forEach((chip) => {
+      chip.classList.remove('is-active');
+      chip.setAttribute('aria-pressed', 'false');
+    });
 
   const rTecnico = Utils.getEl('r-tecnico');
   if (rTecnico) rTecnico.value = Profile.getDefaultTecnico();
@@ -482,9 +586,18 @@ export function clearRegistro(preserveEquip = false) {
 
   const saveBtn = document.querySelector('[data-action="save-registro"]');
   if (saveBtn) {
-    saveBtn.textContent = 'Salvar registro';
+    // Preserva o SVG do ícone (o redesign v6 colocou svg + span no botão).
+    // Alterar textContent aqui mataria o ícone — por isso só mexemos no span.
+    const saveLabel = saveBtn.querySelector('span');
+    if (saveLabel) saveLabel.textContent = 'Salvar registro';
+    else saveBtn.textContent = 'Salvar registro';
     saveBtn.classList.remove('btn--editing');
   }
+
+  // Hero do redesign v6: pill texto volta pra "Novo registro" quando saímos
+  // do modo edição. Mantém também o fallback pro legado .section-title.
+  const heroPill = document.getElementById(HERO_PILL_TEXT_ID);
+  if (heroPill) heroPill.textContent = 'Novo registro';
   const title = document.querySelector('#view-registro .section-title');
   if (title) title.textContent = 'O que foi feito hoje?';
 }
@@ -515,10 +628,17 @@ export function loadRegistroForEdit(id) {
 
   const btn = document.querySelector('[data-action="save-registro"]');
   if (btn) {
-    btn.textContent = 'Salvar alterações';
+    // Mantém o SVG do ícone intocado — só troca o rótulo interno.
+    const label = btn.querySelector('span');
+    if (label) label.textContent = 'Salvar alterações';
+    else btn.textContent = 'Salvar alterações';
     btn.classList.add('btn--editing');
   }
 
+  // No redesign v6 o hero tem a pill "Novo registro"; no modo edição trocamos
+  // pra "Editando serviço". O .section-title legado é mantido como fallback.
+  const heroPill = document.getElementById(HERO_PILL_TEXT_ID);
+  if (heroPill) heroPill.textContent = 'Editando serviço';
   const title = document.querySelector('#view-registro .section-title');
   if (title) title.textContent = 'Editar serviço';
 }

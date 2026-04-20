@@ -27,7 +27,7 @@ export function bindRegistroHandlers() {
     }
   });
   on('clear-registro', () => clearRegistro());
-  on('quick-service-template', (el) => applyQuickTemplate(el.dataset.template));
+  on('quick-service-template', (el) => applyQuickTemplate(el.dataset.template, el));
 
   on('delete-reg', async (el) => {
     try {

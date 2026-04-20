@@ -4,6 +4,7 @@
  */
 
 export { SignatureModal } from './signature/signature-modal.js';
+export { SignatureViewerModal } from './signature/signature-viewer-modal.js';
 export {
   cleanupOrphanSignatures,
   getSignatureForRecord,

@@ -86,14 +86,17 @@
    • Shadows combinam y-offset real + ring de borda — imitam GH cards.
    ────────────────────────────────────────────────────────────── */
 [data-theme='light'] {
-  --bg: #f6f8fa;
-  --bg-soft: #eff2f5;
+  /* Base "off-white" cool — levemente dessaturada, com hint de azul-acinzentado.
+     Reduz o stark white que ofusca, mantém cards (--card/--surface) em branco
+     puro pra continuarem se destacando do canvas. */
+  --bg: #eff3f8;
+  --bg-soft: #e6ecf2;
   --surface: #ffffff;
-  --surface-2: #f6f8fa;
-  --surface-3: #eaeef2;
+  --surface-2: #eff3f8;
+  --surface-3: #e2e8ee;
 
   --card: #ffffff;
-  --card-hover: #f6f8fa;
+  --card-hover: #eff3f8;
 
   --border: #d8dee4;
   --border-2: #afb8c1;
@@ -123,7 +126,7 @@
   --muted: #596878;
   --muted-light: #768496;
 
-  --surface-strong: #eaeef2;
+  --surface-strong: #e2e8ee;
   --border-strong: #afb8c1;
   --white: #0f172a;
   --black: #ffffff;
