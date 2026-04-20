@@ -10,9 +10,6 @@
   --app-header-height: var(--app-header-total-height);
   --app-content-top-gap: 16px;
   --app-nav-height: 80px;
-  /* Gap = 0: o sticky encosta exatamente no fim do header fixo,
-     sem deixar uma fresta onde conteúdo aparece passando atrás. */
-  --hist-sticky-gap: 0px;
 }
 
 html,
@@ -721,7 +718,6 @@ main:focus {
     --app-header-total-height: var(--app-header-top-height);
     --app-header-height: var(--app-header-total-height);
     --app-content-top-gap: 0px;
-    --hist-sticky-gap: 0px;
   }
 
   html {

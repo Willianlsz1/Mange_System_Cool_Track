@@ -433,7 +433,16 @@ export async function saveRegistro() {
   const eq = findEquip(equipId);
   if (canUseSignature && SignatureModal?.request) {
     try {
-      assinatura = await SignatureModal.request(novoId, eq?.nome || 'Equipamento');
+      const result = await SignatureModal.request(novoId, eq?.nome || 'Equipamento');
+      // X / backdrop / Escape no modal de assinatura devolvem o sentinel
+      // SignatureModal.CANCELED — significa "cancelar tudo", não "pular
+      // assinatura". Interrompe o save do registro aqui pra que o usuário
+      // possa revisar o formulário e salvar de novo quando estiver pronto.
+      if (result === SignatureModal.CANCELED) {
+        Toast.info?.('Registro não salvo. Você pode continuar editando.');
+        return false;
+      }
+      assinatura = result;
       if (assinatura && saveSignatureForRecord) saveSignatureForRecord(novoId, assinatura);
     } catch (error) {
       handleError(error, {

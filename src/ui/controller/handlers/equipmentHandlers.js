@@ -10,6 +10,7 @@ import {
   saveSetor,
   deleteSetor,
   setActiveSector,
+  setActiveQuickFilter,
   initSetorColorPicker,
   openEditSetor,
   clearSetorEditingState,
@@ -22,10 +23,18 @@ import { runAsyncAction } from '../../components/actionFeedback.js';
  */
 let openSetorMenuId = null;
 
+// Seletor estável do kebab — agora ele é um __btn--icon com data-action.
+// Usamos data-action pra evitar acoplar ao nome de classe visual.
+const KEBAB_SELECTOR = '[data-action="toggle-setor-menu"]';
+
+function kebabForId(id) {
+  return document.querySelector(`${KEBAB_SELECTOR}[data-id="${id}"]`);
+}
+
 function closeAllSetorMenus() {
   if (!openSetorMenuId) return;
   const menu = document.getElementById(`setor-menu-${openSetorMenuId}`);
-  const kebab = document.querySelector(`.setor-card__kebab[data-id="${openSetorMenuId}"]`);
+  const kebab = kebabForId(openSetorMenuId);
   if (menu) menu.hidden = true;
   if (kebab) kebab.setAttribute('aria-expanded', 'false');
   openSetorMenuId = null;
@@ -39,7 +48,7 @@ function toggleSetorMenu(id) {
   // Fecha o que estava aberto antes de abrir o novo
   closeAllSetorMenus();
   const menu = document.getElementById(`setor-menu-${id}`);
-  const kebab = document.querySelector(`.setor-card__kebab[data-id="${id}"]`);
+  const kebab = kebabForId(id);
   if (!menu || !kebab) return;
   menu.hidden = false;
   kebab.setAttribute('aria-expanded', 'true');
@@ -54,7 +63,7 @@ export function bindEquipmentHandlers() {
 
     document.addEventListener('click', (e) => {
       if (!openSetorMenuId) return;
-      const insideKebab = e.target.closest('.setor-card__kebab');
+      const insideKebab = e.target.closest(KEBAB_SELECTOR);
       const insideMenu = e.target.closest('.setor-card__menu');
       if (insideKebab || insideMenu) return;
       closeAllSetorMenus();
@@ -64,8 +73,7 @@ export function bindEquipmentHandlers() {
       if (e.key === 'Escape' && openSetorMenuId) {
         closeAllSetorMenus();
         // Devolve foco pro kebab pra não perder contexto
-        const kebab = document.querySelector(`.setor-card__kebab[data-id="${openSetorMenuId}"]`);
-        kebab?.focus?.();
+        kebabForId(openSetorMenuId)?.focus?.();
       }
     });
 
@@ -147,6 +155,12 @@ export function bindEquipmentHandlers() {
     setActiveSector(null);
   });
 
+  // Quick filters do hero/chips — 'todos' limpa, outros setam o filtro ativo.
+  on('equip-quickfilter', (el) => {
+    const id = el.dataset.id || 'todos';
+    setActiveQuickFilter(id === 'todos' ? null : id);
+  });
+
   on('save-setor', async (el) => {
     try {
       await runAsyncAction(el, { loadingLabel: 'Salvando...' }, async () => {
@@ -198,6 +212,20 @@ export function bindEquipmentHandlers() {
         context: { action: 'controller.edit-setor', id: el.dataset.id },
       });
     }
+  });
+
+  // PR4 §12.3 · Toggle expand/collapse do idle-cluster (lista de idles
+  // agrupados quando há ≥5). Pure DOM toggle — sem re-render. CSS cuida
+  // de mostrar/esconder `.equip-idle-cluster__cards` via `[data-expanded]`.
+  on('toggle-idle-cluster', (el) => {
+    const cluster = el.closest('.equip-idle-cluster');
+    if (!cluster) return;
+    const willExpand = cluster.getAttribute('data-expanded') !== 'true';
+    cluster.setAttribute('data-expanded', willExpand ? 'true' : 'false');
+    const btn = cluster.querySelector('.equip-idle-cluster__summary');
+    if (btn) btn.setAttribute('aria-expanded', willExpand ? 'true' : 'false');
+    const ctaText = cluster.querySelector('.equip-idle-cluster__cta-text');
+    if (ctaText) ctaText.textContent = willExpand ? 'Recolher' : 'Ver todos';
   });
 
   // Abre modal de criar setor e inicializa color picker

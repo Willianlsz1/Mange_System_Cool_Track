@@ -14,6 +14,15 @@ describe('Utils', () => {
     expect(Utils.formatDate('invalid')).toBe('—');
   });
 
+  // Regressão: o PDF passava registro.data (datetime completo) para
+  // formatDate, que fazia split('-') cru e produzia '19T21:24:04/04/2026'.
+  // Na coluna 'Último' do autoTable isso quebrava em duas linhas.
+  it('formats datetime ISO strings to date-only output', () => {
+    expect(Utils.formatDate('2026-04-19T21:24:04')).toBe('19/04/2026');
+    expect(Utils.formatDate('2026-04-19T21:24:04.000Z')).toBe('19/04/2026');
+    expect(Utils.formatDate('2026-04-19T21:24')).toBe('19/04/2026');
+  });
+
   it('escapes HTML and attribute special characters', () => {
     const raw = `<div class="x">Tom & Jerry's</div>`;
     expect(Utils.escapeHtml(raw)).toBe(

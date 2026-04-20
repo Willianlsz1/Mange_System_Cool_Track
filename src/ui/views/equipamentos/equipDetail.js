@@ -10,6 +10,89 @@ import { ErrorCodes, handleError } from '../../../core/errors.js';
 import { evaluateEquipmentHealth, evaluateEquipmentRisk } from '../../../domain/maintenance.js';
 import { STATUS_OPERACIONAL, CONDICAO_OBSERVADA, PRIORIDADE_LABEL } from './constants.js';
 
+// ── V3 helpers ────────────────────────────────────────────────────────────
+
+/**
+ * PR3 §12.1 — Headline do hero: nomeia o fator dominante, não o estado
+ * abstrato. Pro técnico, o headline responde _por que_ olhar esse card,
+ * não _que cor_ ele tem. Primeiro match ganha; default por variante é o
+ * fallback se nenhum fator específico se aplica.
+ *
+ * Matriz (brief §12.1):
+ * · ok → "Tudo em dia"
+ * · warn + preventiva próxima → "Preventiva próxima"
+ * · warn + ≥2 corretivas 30d → "Corretivas recorrentes"
+ * · warn (default) → "Atenção necessária"
+ * · danger + parado desde → "Parado"
+ * · danger + preventiva vencida → "Preventiva vencida"
+ * · danger + ≥3 corretivas 30d → "Falhas recorrentes"
+ * · danger (default) → "Intervenção urgente"
+ */
+function _extractCorretivasCount(factors) {
+  for (const f of factors) {
+    const m = String(f).match(/(\d+)\s*corretivas?[^\d]*30d/i);
+    if (m) return Number(m[1]);
+  }
+  return 0;
+}
+function _computeHeroHeadline(cls, risk) {
+  const factors = Array.isArray(risk?.factors) ? risk.factors : [];
+  const has = (re) => factors.some((f) => re.test(String(f)));
+  if (cls === 'ok') return 'Tudo em dia';
+  if (cls === 'danger') {
+    if (has(/parado desde/i)) return 'Parado';
+    if (has(/preventiva vencida/i)) return 'Preventiva vencida';
+    if (_extractCorretivasCount(factors) >= 3) return 'Falhas recorrentes';
+    return 'Intervenção urgente';
+  }
+  // warn
+  if (has(/preventiva pr(ó|o)xima/i)) return 'Preventiva próxima';
+  if (_extractCorretivasCount(factors) >= 2) return 'Corretivas recorrentes';
+  return 'Atenção necessária';
+}
+
+// Mapa de tipo de serviço → tom visual do dot no histórico inline (E6).
+// Strings vêm normalizadas/lowercase e testadas por inclusão, então
+// "Corretiva preventiva" cai em corretiva (danger), "Inspeção geral"
+// cai em inspeção (neutral) etc.
+const _SVC_TYPE_TONE_PATTERNS = [
+  { tone: 'danger', patterns: ['corretiva', 'emergencial', 'reparo'] },
+  { tone: 'ok', patterns: ['preventiva', 'limpeza', 'troca de filtro'] },
+  { tone: 'neutral', patterns: ['inspecao', 'inspeção', 'diagnostico', 'diagnóstico', 'visita'] },
+];
+function _svcTypeTone(tipo) {
+  const lf = String(tipo || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  for (const { tone, patterns } of _SVC_TYPE_TONE_PATTERNS) {
+    if (patterns.some((p) => lf.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g, ''))))
+      return tone;
+  }
+  return 'neutral';
+}
+
+// E9: classificação de factors positive/neutral pro eq-risk-panel.
+// Mesma lógica do equipCardHtml — strings que expressam "rotina em ordem"
+// são positivas (tom verde discreto); as demais ficam neutras.
+const _POSITIVE_FACTOR_PATTERNS = [
+  'em dia',
+  'preventivas consecutivas',
+  'sem corretivas',
+  'dentro da rotina',
+  'rotina estavel',
+  'estavel',
+  'sem alertas',
+  'historico limpo',
+];
+function _classifyFactor(factorStr) {
+  const lf = String(factorStr || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return _POSITIVE_FACTOR_PATTERNS.some((p) => lf.includes(p)) ? 'positive' : 'neutral';
+}
+
 /**
  * Handler invocado quando o select inline de setor muda.
  * Injetado pelo orquestrador para evitar ciclos de import com equipamentos.js.
@@ -40,36 +123,44 @@ export async function viewEquip(id) {
   const statusCode = Utils.safeStatus(eq.status);
   const statusOperacional = STATUS_OPERACIONAL[statusCode] || CONDICAO_OBSERVADA.unknown;
   const condicaoObservada = CONDICAO_OBSERVADA[statusCode] || CONDICAO_OBSERVADA.unknown;
+  // E3 + E7: strings da meta strip em formato curto (value + label separado)
+  // em vez das frases completas antigas. A frase longa dedica repetição visual
+  // com o status do ring e o tone-pill — agora cada cell do meta mostra só o
+  // dado que é próprio dela.
   const fatorOperacao =
-    statusCode === 'ok'
-      ? 'Sem restrições no momento'
-      : statusCode === 'warn'
-        ? 'Operação com restrições'
-        : 'Fora de operação';
+    statusCode === 'ok' ? 'Sem restrições' : statusCode === 'warn' ? 'Com restrições' : 'Parado';
   const fatorPreventiva =
     context?.daysToNext == null
-      ? 'Preventiva sem agenda'
+      ? 'Sem agenda'
       : context.daysToNext < 0
-        ? `Preventiva vencida há ${Math.abs(context.daysToNext)} dia${Math.abs(context.daysToNext) > 1 ? 's' : ''}`
+        ? `Vencida há ${Math.abs(context.daysToNext)}d`
         : context.daysToNext === 0
-          ? 'Preventiva vence hoje'
-          : `Preventiva em ${context.daysToNext} dia${context.daysToNext > 1 ? 's' : ''}`;
+          ? 'Vence hoje'
+          : `Em ${context.daysToNext}d`;
 
   // SVG ring progress
   const ringR = 30;
   const ringC = +(2 * Math.PI * ringR).toFixed(1);
   const ringOffset = +(ringC * (1 - score / 100)).toFixed(1);
 
-  // Cor do fator preventiva
+  // Tom do valor preventiva/operação na meta strip (V3 __meta-value--tone).
   const prevStatCls =
     context?.daysToNext == null
       ? ''
       : context.daysToNext < 0
-        ? ' eq-hero-stat__val--danger'
+        ? ' equip-hero-meta__value--danger'
         : context.daysToNext <= 7
-          ? ' eq-hero-stat__val--warn'
+          ? ' equip-hero-meta__value--warn'
           : '';
-  const opStatCls = statusCode !== 'ok' ? ` eq-hero-stat__val--${statusCode}` : '';
+  const opStatCls = statusCode !== 'ok' ? ` equip-hero-meta__value--${statusCode}` : '';
+  // PR3 §12.1 — headline contextual calculado aqui pra ficar ao lado do
+  // ring no hero (substitui tone-pill + summary redundante).
+  const heroHeadline = _computeHeroHeadline(cls, risk);
+  // Fallback "tudo em dia" quando healthSummary cai no genérico.
+  const heroSummary =
+    healthSummary === 'Historico dentro da rotina prevista'
+      ? 'Histórico dentro da rotina prevista'
+      : healthSummary;
 
   // Setor select (inline na ficha técnica)
   const setorSelectHtml = (() => {
@@ -92,23 +183,26 @@ export async function viewEquip(id) {
     </div>`;
   })();
 
-  // Timeline de serviços
+  // E6: timeline de serviços com dot tonal por tipo — corretiva=danger,
+  // preventiva=ok, inspeção=neutral. Dá hierarquia de leitura sem aumentar
+  // densidade.
   const svcTimeline =
     regs.length === 0
       ? `<div class="eq-svc-empty">Nenhum serviço registrado ainda.</div>`
       : `<div class="eq-svc-timeline">
         ${regs
           .slice(0, 5)
-          .map(
-            (r) => `
+          .map((r) => {
+            const tone = _svcTypeTone(r.tipo);
+            return `
           <div class="eq-svc-item">
-            <div class="eq-svc-item__dot"></div>
+            <div class="eq-svc-item__dot eq-svc-item__dot--${tone}"></div>
             <div class="eq-svc-item__content">
               <span class="eq-svc-item__tipo">${Utils.escapeHtml(r.tipo)}</span>
               <span class="eq-svc-item__data">${Utils.formatDatetime(r.data)}</span>
             </div>
-          </div>`,
-          )
+          </div>`;
+          })
           .join('')}
         ${regs.length > 5 ? `<div class="eq-svc-more">+${regs.length - 5} serviços anteriores</div>` : ''}
       </div>`;
@@ -118,7 +212,13 @@ export async function viewEquip(id) {
 
       <div class="modal__title" id="eq-det-title">${Utils.escapeHtml(eq.nome)}</div>
 
-      <!-- ── Hero: score + status + mini-stats ── -->
+      <!-- ── Hero V3 · T2 (PR3): caption / headline / summary ── -->
+      <!--
+        PR3 §12.1: tone-pill removida do hero. Agora a tripla caption/
+        headline/summary comunica estado sem duplicar o ring. Headline
+        nomeia o fator dominante ("Preventiva vencida", "Parado", etc) —
+        pro técnico, responde _por que_ olhar, não _que cor_ tem.
+      -->
       <div class="eq-detail-hero eq-detail-hero--${cls}">
         <div class="eq-hero-score">
           <div class="eq-score-ring-wrap">
@@ -130,55 +230,60 @@ export async function viewEquip(id) {
             <div class="eq-score-ring__num eq-score-ring__num--${cls}" aria-label="Score ${score}%">${score}%</div>
           </div>
           <div class="eq-hero-score__info">
-            <div class="eq-hero-score__label">SCORE OPERACIONAL</div>
-            <div class="eq-hero-score__status eq-hero-score__status--${cls}">
-              ${cls === 'ok' ? CONDICAO_OBSERVADA.ok : cls === 'warn' ? CONDICAO_OBSERVADA.warn : CONDICAO_OBSERVADA.danger}
-            </div>
-            <div class="eq-hero-score__summary">${healthSummary}</div>
+            <div class="eq-hero-score__caption">Saúde operacional · agora</div>
+            <div class="eq-hero-score__headline">${Utils.escapeHtml(heroHeadline)}</div>
+            <div class="eq-hero-score__summary">${heroSummary}</div>
           </div>
         </div>
-        <div class="eq-hero-stats">
-          <div class="eq-hero-stat">
-            <span class="eq-hero-stat__lbl">Operação</span>
-            <span class="eq-hero-stat__val${opStatCls}">${Utils.escapeHtml(fatorOperacao)}</span>
+        <dl class="equip-hero-meta">
+          <div class="equip-hero-meta__item">
+            <dt class="equip-hero-meta__label">Operação</dt>
+            <dd class="equip-hero-meta__value${opStatCls}">${Utils.escapeHtml(fatorOperacao)}</dd>
           </div>
-          <div class="eq-hero-stat">
-            <span class="eq-hero-stat__lbl">Preventiva</span>
-            <span class="eq-hero-stat__val${prevStatCls}">${Utils.escapeHtml(fatorPreventiva)}</span>
+          <div class="equip-hero-meta__item">
+            <dt class="equip-hero-meta__label">Preventiva</dt>
+            <dd class="equip-hero-meta__value${prevStatCls}">${Utils.escapeHtml(fatorPreventiva)}</dd>
           </div>
-          <div class="eq-hero-stat">
-            <span class="eq-hero-stat__lbl">Prioridade</span>
-            <span class="eq-hero-stat__val">${Utils.escapeHtml(prioridadeLabel)}</span>
+          <div class="equip-hero-meta__item">
+            <dt class="equip-hero-meta__label">Criticidade</dt>
+            <dd class="equip-hero-meta__value">${Utils.escapeHtml(prioridadeLabel)}</dd>
           </div>
-        </div>
+        </dl>
       </div>
 
-      <!-- ── Painel de risco ── -->
+      <!-- ── Painel de risco · T2 (PR3) ──
+        Header passa a ter só label + __score ("acumulado 30d · baixo · 2").
+        Badge redundante com o label tonal cai fora; o __summary migra pro
+        disclosure __analysis (risk.explanation) — o header fica leitura de
+        2 segundos. Painel herda --tone/--tone-soft/--tone-edge (PR3 CSS)
+        pra border-left + wash consistentes com o hero. -->
       <div class="eq-risk-panel eq-risk-panel--${risk.classification}">
         <div class="eq-risk-panel__header">
-          <div>
-            <div class="eq-risk-panel__label">PRIORIDADE DE ATENÇÃO</div>
-            <div class="eq-risk-panel__class">${Utils.escapeHtml(risk.classificationLabel)} · Score ${risk.score}</div>
-          </div>
-          <span class="eq-risk-panel__badge eq-risk-panel__badge--${risk.classification}">${Utils.escapeHtml(risk.classificationLabel)}</span>
+          <div class="eq-risk-panel__label">Fatores de risco</div>
+          <div class="eq-risk-panel__score">acumulado 30d · <b>${Utils.escapeHtml(risk.classificationLabel.toLowerCase())} · ${risk.score}</b></div>
         </div>
-        <div class="eq-risk-panel__summary">${Utils.escapeHtml(risk.explanation)}</div>
         <div class="eq-risk-panel__factors">
           ${(risk.factors.length ? risk.factors : ['rotina estável'])
-            .map((f) => `<span class="eq-risk-panel__factor">${Utils.escapeHtml(f)}</span>`)
+            .map(
+              (f) =>
+                `<span class="eq-risk-panel__factor eq-risk-panel__factor--${_classifyFactor(f)}">${Utils.escapeHtml(f)}</span>`,
+            )
             .join('')}
         </div>
         <details class="eq-risk-panel__analysis">
           <summary>Ver análise detalhada</summary>
-          <ul class="eq-risk-panel__analysis-list">
-            ${risk.details
-              .map(
-                (d) =>
-                  `<li><strong>${Utils.escapeHtml(d.label)}</strong>: ${Utils.escapeHtml(d.detail)}</li>`,
-              )
-              .join('')}
-          </ul>
-          <p class="eq-risk-panel__note">Este score orienta a priorização e não substitui a decisão técnica em campo.</p>
+          <div class="eq-risk-panel__analysis-body">
+            <p class="eq-risk-panel__analysis-intro">${Utils.escapeHtml(risk.explanation)}</p>
+            <ul class="eq-risk-panel__analysis-list">
+              ${risk.details
+                .map(
+                  (d) =>
+                    `<li><strong>${Utils.escapeHtml(d.label)}</strong>: ${Utils.escapeHtml(d.detail)}</li>`,
+                )
+                .join('')}
+            </ul>
+            <p class="eq-risk-panel__note">Este score orienta a priorização e não substitui a decisão técnica em campo.</p>
+          </div>
         </details>
       </div>
 

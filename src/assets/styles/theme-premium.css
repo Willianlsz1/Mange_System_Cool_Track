@@ -1046,22 +1046,6 @@ mark,
 }
 
 /* ════════════════════════════════════════════════════════
-   HIST STICKY HEADER — Premium
-   ════════════════════════════════════════════════════════ */
-/* Fundo OPACO é obrigatório para um sticky-header: se ficar transparente,
-   o conteúdo que rola por baixo aparece atrás dele e cria a sensação
-   de "barra descendo junto da página". Usamos o mesmo `--bg` do app. */
-.hist-sticky-header {
-  background: var(--bg, #07111f);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-bottom-color: var(--border-premium);
-}
-[data-theme='light'] .hist-sticky-header {
-  background: var(--bg, #f6f8fa);
-}
-
-/* ════════════════════════════════════════════════════════
    CLIENT MODE — Premium
    ════════════════════════════════════════════════════════ */
 [data-client-mode] .app-header__tagline::after {

@@ -5,7 +5,6 @@ import { renderEquip } from '../../views/equipamentos.js';
 import { Photos } from '../../components/photos.js';
 import { EquipmentPhotos } from '../../components/equipmentPhotos.js';
 import { getSuggestedPreventiveDays } from '../../../domain/maintenance.js';
-import { initHistScrollAutoHide } from './histScrollAutoHide.js';
 import { initOnlineStatus } from '../../../core/onlineStatus.js';
 
 function resetRegistroEditingState() {
@@ -169,5 +168,4 @@ export function initControllerHelpers() {
   initTheme();
   bindSyncStatusUpdates();
   initOnlineStatus();
-  initHistScrollAutoHide();
 }

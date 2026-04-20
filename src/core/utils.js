@@ -96,7 +96,14 @@ export const Utils = {
 
   formatDate(iso) {
     if (!iso || !iso.includes('-')) return '—';
-    const [y, m, day] = iso.split('-');
+    // Aceita tanto 'YYYY-MM-DD' quanto ISO datetime completo
+    // ('YYYY-MM-DDTHH:mm:ss'). No segundo caso um split('-') cru vazava
+    // o resto do ISO dentro de `day`, produzindo strings como
+    // '19T21:24:04/04/2026' que o autoTable do PDF quebrava em duas
+    // linhas ('19T21:24:0' / '4/2026'). slice(0, 10) isola a porção
+    // de data antes do split — seguro para ambos os formatos.
+    const [y, m, day] = iso.slice(0, 10).split('-');
+    if (!y || !m || !day) return '—';
     return `${day}/${m}/${y}`;
   },
 
@@ -105,6 +112,95 @@ export const Utils = {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return Math.ceil((new Date(`${isoDate}T00:00:00`) - today) / 86400000);
+  },
+
+  // ---- Relatório helpers (hero/kpis/record meta) ----
+  // getRelativeTime(iso) → "hoje às HH:MM" / "ontem às HH:MM" / "há Nd" / "em DD/MM/YY"
+  getRelativeTime(iso, now = new Date()) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    const HH = String(d.getHours()).padStart(2, '0');
+    const MM = String(d.getMinutes()).padStart(2, '0');
+    const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    const diff = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+    if (diff === 0) return `hoje às ${HH}:${MM}`;
+    if (diff === 1) return `ontem às ${HH}:${MM}`;
+    if (diff > 1 && diff <= 30) return `há ${diff} dias`;
+    const DD = String(d.getDate()).padStart(2, '0');
+    const MO = String(d.getMonth() + 1).padStart(2, '0');
+    const YY = String(d.getFullYear()).slice(-2);
+    return `em ${DD}/${MO}/${YY}`;
+  },
+
+  // fmtDateTimeShort(iso) → "19/04 às 10:00"
+  fmtDateTimeShort(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '—';
+    const DD = String(d.getDate()).padStart(2, '0');
+    const MO = String(d.getMonth() + 1).padStart(2, '0');
+    const HH = String(d.getHours()).padStart(2, '0');
+    const MM = String(d.getMinutes()).padStart(2, '0');
+    return `${DD}/${MO} às ${HH}:${MM}`;
+  },
+
+  // daysUntil(iso) → signed days between today and iso (positive=future, negative=past)
+  daysUntil(iso, now = new Date()) {
+    if (!iso) return null;
+    const d = new Date(iso.length === 10 ? `${iso}T00:00:00` : iso);
+    if (Number.isNaN(d.getTime())) return null;
+    const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate());
+    return Math.round((startOfDay(d) - startOfDay(now)) / 86400000);
+  },
+
+  // fmtDueRelative(iso) → "vence hoje" / "daqui Nd" / "atrasada Nd"
+  fmtDueRelative(iso) {
+    const n = Utils.daysUntil(iso);
+    if (n == null) return '—';
+    if (n === 0) return 'vence hoje';
+    if (n > 0) return `daqui ${n}d`;
+    return `atrasada ${-n}d`;
+  },
+
+  // fmtBRL(n) → "R$ 1.234,56"
+  fmtBRL(n) {
+    const num = Number(n) || 0;
+    return `R$ ${num
+      .toFixed(2)
+      .replace('.', ',')
+      .replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+  },
+
+  // fmtShortDateRange("2026-03-14","2026-04-19") → "14 de mar a 19 de abr"
+  // Fallbacks: only de → "desde 14 de mar" / only ate → "até 19 de abr" / none → "Todo período"
+  fmtShortDateRange(de, ate) {
+    const MONTHS_PT = [
+      'jan',
+      'fev',
+      'mar',
+      'abr',
+      'mai',
+      'jun',
+      'jul',
+      'ago',
+      'set',
+      'out',
+      'nov',
+      'dez',
+    ];
+    const parse = (iso) => {
+      if (!iso || !iso.includes('-')) return null;
+      const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+      if (!y || !m || !d) return null;
+      return { d, m, y, label: `${d} de ${MONTHS_PT[m - 1]}` };
+    };
+    const a = parse(de);
+    const b = parse(ate);
+    if (!a && !b) return 'Todo período';
+    if (a && !b) return `desde ${a.label}`;
+    if (!a && b) return `até ${b.label}`;
+    return `${a.label} a ${b.label}`;
   },
 
   truncate(str = '', len = 80) {

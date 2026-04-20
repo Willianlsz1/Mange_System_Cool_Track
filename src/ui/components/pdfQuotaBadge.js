@@ -48,11 +48,17 @@ function buildTone(used, limit) {
   return '';
 }
 
-function getContainer() {
-  // Coloca o badge logo antes do botão de exportar PDF, dentro da toolbar de
-  // ações. Se a toolbar não existir (view ainda não renderizada) retorna null.
+function getSlot() {
+  // Preferência: slot fixo #pdf-quota-slot no toolbar do relatório. Permite que
+  // o badge fique posicionado abaixo do botão (micro-hint) sem depender da
+  // ordem dos nodes. Fallback: antes do botão "Exportar PDF" no mesmo parent,
+  // pra compatibilidade com telas antigas ou outros pontos de entrada.
+  const slot = document.getElementById('pdf-quota-slot');
+  if (slot) return { mode: 'slot', el: slot };
   const exportBtn = document.querySelector('[data-action="export-pdf"]');
-  return exportBtn?.parentElement || null;
+  if (exportBtn?.parentElement)
+    return { mode: 'before', el: exportBtn.parentElement, ref: exportBtn };
+  return null;
 }
 
 function removeBadge() {
@@ -61,8 +67,8 @@ function removeBadge() {
 
 function renderBadge({ planCode, used, limit }) {
   removeBadge();
-  const container = getContainer();
-  if (!container) return null;
+  const target = getSlot();
+  if (!target) return null;
 
   const badge = document.createElement('span');
   badge.id = BADGE_ID;
@@ -71,12 +77,14 @@ function renderBadge({ planCode, used, limit }) {
   badge.setAttribute('aria-live', 'polite');
   badge.textContent = buildLabel({ planCode, used, limit });
 
-  // Insere antes do botão "Exportar PDF" pra ficar na ordem visual de leitura.
-  const exportBtn = container.querySelector('[data-action="export-pdf"]');
-  if (exportBtn) {
-    container.insertBefore(badge, exportBtn);
+  if (target.mode === 'slot') {
+    // Slot dedicado: limpa e insere dentro. O layout (coluna/linha) fica a
+    // cargo do CSS do slot, não da lógica do badge.
+    target.el.textContent = '';
+    target.el.appendChild(badge);
   } else {
-    container.appendChild(badge);
+    // Fallback: insere antes do botão "Exportar PDF" no parent dele.
+    target.el.insertBefore(badge, target.ref);
   }
   return badge;
 }

@@ -1,12 +1,67 @@
-import autoTable from 'jspdf-autotable';
+/**
+ * CoolTrack Pro - PDF Services Section (card-based)
+ *
+ * Arquitetura antiga (removida):
+ *   autoTable + minCellHeight inflado + didDrawCell capturando coordenadas
+ *   + segundo passo desenhando detalhes por cima. Frágil: em registros com
+ *   muita obs/foto os blocos de detalhe se sobrepunham aos seguintes porque
+ *   estimateDetailsHeight e drawServiceDetails divergiam em alguns casos,
+ *   e a v5 do jspdf-autotable não garante que `cell.y` permaneça coerente
+ *   depois de page-breaks automáticos.
+ *
+ * Arquitetura nova:
+ *   Cada registro é um "card" independente desenhado num loop linear. O
+ *   loop mede o card ANTES de desenhar (computeCardHeight) e faz page-break
+ *   explícito se o card não cabe no restante da página. Para os raros casos
+ *   em que um card ultrapassa uma página inteira (muitas fotos), o desenho
+ *   flui o grid de fotos para páginas seguintes preservando o cabeçalho.
+ *
+ * Preservado do layout anterior: paleta navy+teal do PDF_COLORS, cabeçalho
+ * "DETALHES DOS SERVIÇOS" em cada página, 4 fotos no máximo por serviço
+ * (2 por linha, 55mm de altura), status colorido por severidade.
+ */
+
 import { Utils } from '../../../core/utils.js';
 import { resolvePhotoDataUrlForPdf } from '../../../core/photoStorage.js';
 import { PDF_COLORS as C, PDF_TYPO as T, STATUS_CLIENTE } from '../constants.js';
 import { accentLine, fillPage, fillRect, txt } from '../primitives.js';
 
+// ---------- layout constants (mm) ----------
+
+const BOTTOM_MARGIN = 22; // reservado para o rodapé (stampFooterTotals)
+const FIRST_PAGE_CONTENT_Y = 30; // primeiro card da 1a página (após título)
+const NEXT_PAGE_CONTENT_Y = 20; // primeiro card em páginas subsequentes
+
+const CARD_INNER_PAD_X = 4;
+const CARD_INNER_PAD_BOTTOM = 3.5;
+const CARD_GAP = 3; // espaço entre cards
+
+const HEADER_BAND_H = 7; // faixa colorida no topo do card (data + status)
+const HEADER_BAND_ACCENT_W = 2; // stripe teal à esquerda da faixa
+
+const GAP_SM = 1.5; // gap pequeno entre blocos do mesmo grupo
+const GAP_MD = 3; // gap médio antes de fotos
+
+// Alturas de linha (incluem line-height). Se alterar, confirmar que
+// computeCardHeight e drawServiceCardAtomic permanecem coerentes — ambos
+// usam EXATAMENTE estes valores para medir e posicionar.
+const LINE_EQUIP = 5; // 10pt bold
+const LINE_META = 4; // 8pt
+const LINE_OBS = 4; // 8.5pt normal (multiline)
+const LINE_MATERIAL = 4; // 8pt
+const LINE_COST = 4.5; // 8.5pt bold
+
+const PHOTO_LABEL_H = 4; // "Fotos anexadas" (7pt bold) + pequeno gap
+const PHOTO_H = 55;
+const PHOTO_ROW_GAP = 3;
+const PHOTO_GAP_X = 4;
+
+const HEADER_BAND_BG = [232, 245, 247]; // teal @ 8% — combina com C.accent
+
+// ---------- helpers ----------
+
 // Cabeçalho fixo que aparece no topo de cada página de serviço.
-// Identifica produto + OS + empresa do técnico — alinhado ao ASHRAE 180,
-// que exige identificação do emitente em cada folha.
+// Identifica produto + OS + empresa do técnico.
 function drawServicesPageHeader(doc, pageWidth, margin, profile, context = {}) {
   fillRect(doc, 0, 0, pageWidth, 14, C.bg2);
   fillRect(doc, 0, 14, pageWidth, 0.3, C.borderStrong);
@@ -35,6 +90,23 @@ function drawServicesPageHeader(doc, pageWidth, margin, profile, context = {}) {
   }
 }
 
+function drawSectionTitle(doc, pageWidth, margin, total) {
+  const titleY = 22;
+  txt(doc, 'REGISTROS DE SERVIÇO', margin, titleY, {
+    size: T.h1.size,
+    style: T.h1.style,
+    color: C.primary,
+  });
+  txt(
+    doc,
+    `${total} ${total === 1 ? 'registro' : 'registros'} no período`,
+    pageWidth - margin,
+    titleY,
+    { size: 8, color: C.text3, align: 'right' },
+  );
+  accentLine(doc, margin, titleY + 2, pageWidth - margin, C.border);
+}
+
 function getRecordPhotos(registro) {
   return Array.isArray(registro.fotos) ? registro.fotos.filter(Boolean).slice(0, 4) : [];
 }
@@ -46,9 +118,8 @@ function getImageFormat(dataUrl) {
   return formatRaw.toUpperCase();
 }
 
-// Carrega a imagem para descobrir as dimensões naturais. Precisamos disso
-// para preservar a proporção ao desenhar dentro do box do PDF — sem isso
-// fotos 4:3 (1200x900) ficam esticadas como panorama dentro do box 84x20mm.
+// Carrega a imagem para descobrir as dimensões naturais. Preserva a
+// proporção ao desenhar no box (caso contrário fotos 4:3 ficam esticadas).
 function loadImageDimensions(dataUrl) {
   return new Promise((resolve) => {
     if (typeof Image === 'undefined') {
@@ -81,122 +152,311 @@ function fitImageInBox(imgDims, boxWidth, boxHeight) {
   return { drawW, drawH: boxHeight, offsetX: (boxWidth - drawW) / 2, offsetY: 0 };
 }
 
-// Desenha observação + materiais + custo + fotos de um serviço específico
-// abaixo da linha da tabela. Retorna a altura usada.
-async function drawServiceDetails(doc, pageWidth, margin, startY, registro) {
-  // Guarda: se startY for NaN/undefined (ex: data.row.y em v5 do autoTable
-  // não existe), evita explodir dentro de jsPDF.text com mensagem vaga.
-  if (!Number.isFinite(startY)) return 0;
+// ---------- card sizing ----------
 
-  const innerX = margin + 4;
-  const maxW = pageWidth - margin * 2 - 8;
-  let y = startY + 2;
+function splitObsLines(doc, text, width) {
+  if (!text) return [];
+  const prevSize = doc.internal.getFontSize();
+  doc.setFontSize(8.5);
+  const lines = doc.splitTextToSize(text, width);
+  doc.setFontSize(prevSize);
+  return lines;
+}
 
-  // Observação
+/**
+ * Mede a altura de um card em milímetros. IMPORTANTE: a aritmética aqui
+ * precisa espelhar exatamente drawServiceCardAtomic — caso contrário o
+ * loop reserva espaço errado e cards se sobrepõem (o bug original).
+ *
+ * Retorna um objeto com:
+ *  - total: altura total (incluindo bottom padding)
+ *  - textBlock: altura do bloco de texto (até antes das fotos), útil para
+ *    cards oversize onde precisamos quebrar entre texto e fotos.
+ *  - obsLines: linhas pré-quebradas da observação (reusadas no draw).
+ *  - photoRows, photos: para o grid.
+ */
+function computeCardLayout(doc, pageWidth, margin, registro, equipamento) {
+  const innerW = pageWidth - margin * 2 - CARD_INNER_PAD_X * 2;
+  let h = HEADER_BAND_H + GAP_SM;
+
+  // Equipamento
+  h += LINE_EQUIP;
+
+  // Meta (tipo · técnico · custo)
+  h += LINE_META;
+
+  // Obs (multiline)
   const obs = (registro.obs || '').trim();
-  if (obs) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(...C.text2);
-    const lines = doc.splitTextToSize(obs, maxW);
-    doc.text(lines, innerX, y);
-    y += lines.length * 4 + 2;
+  const obsLines = obs ? splitObsLines(doc, obs, innerW) : [];
+  if (obsLines.length) {
+    h += GAP_SM;
+    h += obsLines.length * LINE_OBS;
   }
 
-  // Materiais utilizados
+  // Materiais
   if (registro.pecas?.trim()) {
-    txt(doc, `Materiais: ${registro.pecas.trim()}`, innerX, y, {
-      size: 7.5,
-      color: C.text3,
-    });
-    y += 5;
+    h += GAP_SM + LINE_MATERIAL;
   }
 
-  // Custo
+  // Custo (só mostra se > 0)
   const custo = parseFloat(registro.custoPecas || 0) + parseFloat(registro.custoMaoObra || 0);
   if (custo > 0) {
-    txt(doc, `Custo do serviço: R$ ${custo.toFixed(2).replace('.', ',')}`, innerX, y, {
-      size: 8,
-      style: 'bold',
-      color: C.text,
-    });
-    y += 5;
+    h += GAP_SM + LINE_COST;
   }
+
+  const textBlock = h;
 
   // Fotos
   const photos = getRecordPhotos(registro);
+  let photoRows = 0;
   if (photos.length) {
-    txt(doc, 'Fotos anexadas', innerX, y, {
+    photoRows = Math.ceil(photos.length / 2);
+    h += GAP_MD + PHOTO_LABEL_H;
+    h += photoRows * PHOTO_H + (photoRows - 1) * PHOTO_ROW_GAP;
+  }
+
+  h += CARD_INNER_PAD_BOTTOM;
+
+  return {
+    total: h,
+    textBlock,
+    obsLines,
+    photos,
+    photoRows,
+    innerW,
+    custo,
+    equipamento,
+  };
+}
+
+// ---------- card drawing ----------
+
+function drawCardChrome(doc, pageWidth, margin, startY, totalHeight) {
+  const outerW = pageWidth - margin * 2;
+  // Faixa colorida superior
+  fillRect(doc, margin, startY, outerW, HEADER_BAND_H, HEADER_BAND_BG);
+  // Stripe teal no canto esquerdo da faixa
+  fillRect(doc, margin, startY, HEADER_BAND_ACCENT_W, HEADER_BAND_H, C.accent);
+  // Linha divisória inferior (hairline)
+  accentLine(doc, margin + 2, startY + totalHeight - 1.2, pageWidth - margin - 2, C.border);
+}
+
+function drawCardHeader(doc, pageWidth, margin, startY, registro) {
+  const innerX = margin + CARD_INNER_PAD_X;
+  const bandBaseline = startY + 4.8;
+  txt(doc, Utils.formatDatetime(registro.data), innerX, bandBaseline, {
+    size: 9,
+    style: 'bold',
+    color: C.primary,
+  });
+  const st = STATUS_CLIENTE[registro.status] || STATUS_CLIENTE.ok;
+  txt(doc, `• ${st.label}`, pageWidth - margin - CARD_INNER_PAD_X, bandBaseline, {
+    size: 9,
+    style: 'bold',
+    color: st.color,
+    align: 'right',
+  });
+}
+
+/**
+ * Desenha o bloco de texto do card (header→custo). Retorna o y final
+ * (logo abaixo do custo/materiais, antes das fotos).
+ *
+ * O avanço interno de `y` replica exatamente computeCardLayout — isso é
+ * intencional: as duas funções operam em paralelo sobre as mesmas
+ * constantes, então o bug de descompasso entre medir e desenhar que
+ * existia na versão autoTable não volta.
+ */
+function drawCardTextBlock(doc, pageWidth, margin, startY, registro, profile, layout) {
+  const innerX = margin + CARD_INNER_PAD_X;
+  const { obsLines, custo, equipamento } = layout;
+
+  let y = startY + HEADER_BAND_H + GAP_SM;
+
+  // Equipamento (10pt bold)
+  const equipText = equipamento
+    ? `${equipamento.nome}${equipamento.local ? ' · ' + equipamento.local : ''}`
+    : '—';
+  txt(doc, equipText, innerX, y + 3.8, {
+    size: 10,
+    style: 'bold',
+    color: C.text,
+  });
+  y += LINE_EQUIP;
+
+  // Meta: tipo · técnico · custo (8pt)
+  const tipo = registro.tipo || '—';
+  const tecnico = registro.tecnico || profile?.nome || '—';
+  const parts = [tipo, tecnico];
+  if (custo > 0) parts.push(`R$ ${custo.toFixed(2).replace('.', ',')}`);
+  txt(doc, parts.join(' · '), innerX, y + 3, {
+    size: 8,
+    color: C.text3,
+  });
+  y += LINE_META;
+
+  // Obs (multiline 8.5pt)
+  if (obsLines.length) {
+    y += GAP_SM;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...C.text2);
+    // Baseline da primeira linha a ~3mm do topo do bloco; jsPDF
+    // automaticamente avança as linhas subsequentes por line-height.
+    doc.text(obsLines, innerX, y + 3);
+    y += obsLines.length * LINE_OBS;
+  }
+
+  // Materiais
+  if (registro.pecas?.trim()) {
+    y += GAP_SM;
+    txt(doc, `Materiais: ${registro.pecas.trim()}`, innerX, y + 3, {
+      size: 8,
+      color: C.text3,
+    });
+    y += LINE_MATERIAL;
+  }
+
+  // Custo
+  if (custo > 0) {
+    y += GAP_SM;
+    txt(doc, `Custo do serviço: R$ ${custo.toFixed(2).replace('.', ',')}`, innerX, y + 3.2, {
+      size: 8.5,
+      style: 'bold',
+      color: C.text,
+    });
+    y += LINE_COST;
+  }
+
+  return y;
+}
+
+async function drawPhotoRow(doc, margin, pageWidth, photoY, photos, rowIndex, innerW) {
+  const innerX = margin + CARD_INNER_PAD_X;
+  const photoW = (innerW - PHOTO_GAP_X) / 2;
+
+  for (let col = 0; col < 2; col += 1) {
+    const i = rowIndex * 2 + col;
+    if (i >= photos.length) break;
+    const px = innerX + col * (photoW + PHOTO_GAP_X);
+    const py = photoY;
+    doc.setDrawColor(...C.border);
+    doc.setFillColor(250, 250, 250);
+    doc.roundedRect(px, py, photoW, PHOTO_H, 1.2, 1.2, 'FD');
+    try {
+      const imageData = await resolvePhotoDataUrlForPdf(photos[i]);
+      if (!imageData) throw new Error('Foto indisponível');
+      const format = getImageFormat(imageData);
+      const imgDims = await loadImageDimensions(imageData);
+      const boxInnerW = photoW - 2;
+      const boxInnerH = PHOTO_H - 2;
+      const { drawW, drawH, offsetX, offsetY } = fitImageInBox(imgDims, boxInnerW, boxInnerH);
+      doc.addImage(imageData, format, px + 1 + offsetX, py + 1 + offsetY, drawW, drawH);
+    } catch (_err) {
+      txt(doc, 'Foto indisponível', px + photoW / 2, py + PHOTO_H / 2 + 1, {
+        size: 7,
+        color: C.text3,
+        align: 'center',
+      });
+    }
+  }
+}
+
+/**
+ * Desenha um card que cabe inteiramente na página atual. Assume que quem
+ * chama já fez o page-break check.
+ */
+async function drawServiceCardAtomic(doc, pageWidth, margin, startY, registro, profile, layout) {
+  drawCardChrome(doc, pageWidth, margin, startY, layout.total);
+  drawCardHeader(doc, pageWidth, margin, startY, registro);
+
+  const textEndY = drawCardTextBlock(doc, pageWidth, margin, startY, registro, profile, layout);
+
+  if (layout.photos.length) {
+    const innerX = margin + CARD_INNER_PAD_X;
+    let photoY = textEndY + GAP_MD;
+    txt(doc, 'Fotos anexadas', innerX, photoY + 3, {
       size: 7,
       style: 'bold',
       color: C.text3,
     });
-    y += 3;
+    photoY += PHOTO_LABEL_H;
 
-    const photoW = (maxW - 4) / 2;
-    const photoH = 55; // altura generosa para caber 4:3 sem esticar
-    for (let i = 0; i < photos.length; i += 1) {
-      const row = Math.floor(i / 2);
-      const col = i % 2;
-      const px = innerX + col * (photoW + 4);
-      const py = y + row * (photoH + 3);
-      doc.setDrawColor(...C.border);
-      doc.setFillColor(250, 250, 250);
-      doc.roundedRect(px, py, photoW, photoH, 1, 1, 'FD');
-
-      try {
-        const imageData = await resolvePhotoDataUrlForPdf(photos[i]);
-        if (!imageData) throw new Error('Foto indisponível');
-        const format = getImageFormat(imageData);
-        const imgDims = await loadImageDimensions(imageData);
-        const boxInnerW = photoW - 2;
-        const boxInnerH = photoH - 2;
-        const { drawW, drawH, offsetX, offsetY } = fitImageInBox(imgDims, boxInnerW, boxInnerH);
-        doc.addImage(imageData, format, px + 1 + offsetX, py + 1 + offsetY, drawW, drawH);
-      } catch (_err) {
-        txt(doc, 'Foto indisponível', px + photoW / 2, py + photoH / 2 + 1, {
-          size: 7,
-          color: C.text3,
-          align: 'center',
-        });
-      }
+    for (let r = 0; r < layout.photoRows; r += 1) {
+      await drawPhotoRow(doc, margin, pageWidth, photoY, layout.photos, r, layout.innerW);
+      photoY += PHOTO_H;
+      if (r < layout.photoRows - 1) photoY += PHOTO_ROW_GAP;
     }
-    const photoRows = Math.ceil(photos.length / 2);
-    y += photoRows * (photoH + 3) + 2;
   }
-
-  return y - startY;
 }
 
-// Calcula altura do bloco de detalhes para reservar espaço antes da tabela desenhar.
-function estimateDetailsHeight(doc, pageWidth, margin, registro) {
-  const maxW = pageWidth - margin * 2 - 8;
-  let h = 2;
+/**
+ * Desenha um card que não cabe em uma página inteira (raríssimo — exige
+ * muitas linhas de obs + 4 fotos). Pinta o bloco de texto na página
+ * atual e depois permite que as linhas de fotos fluam para páginas
+ * subsequentes, redesenhando o header da página a cada quebra.
+ *
+ * Retorna { endPage, endY } para o loop principal continuar a partir daí.
+ */
+async function drawServiceCardPaginated(
+  doc,
+  pageWidth,
+  pageHeight,
+  margin,
+  startY,
+  registro,
+  profile,
+  layout,
+  redrawPageHeader,
+) {
+  // Bloco de texto: desenhamos na página atual mesmo que extrapole um
+  // pouco — obs muito longa é o único caso em que o textBlock sozinho
+  // pode passar da página. Nesse cenário raro aceitamos clipping leve
+  // em vez de quebrar um parágrafo no meio.
+  drawCardChrome(doc, pageWidth, margin, startY, layout.textBlock + GAP_MD);
+  drawCardHeader(doc, pageWidth, margin, startY, registro);
+  const textEndY = drawCardTextBlock(doc, pageWidth, margin, startY, registro, profile, layout);
 
-  const obs = (registro.obs || '').trim();
-  if (obs) {
-    doc.setFontSize(8);
-    const lines = doc.splitTextToSize(obs, maxW);
-    h += lines.length * 4 + 2;
+  // Fotos fluem. Nova página, label + 2-per-row.
+  if (!layout.photos.length) {
+    return { endY: startY + layout.total };
   }
-  if (registro.pecas?.trim()) h += 5;
-  const custo = parseFloat(registro.custoPecas || 0) + parseFloat(registro.custoMaoObra || 0);
-  if (custo > 0) h += 5;
 
-  const photos = getRecordPhotos(registro);
-  if (photos.length) {
-    h += 3; // label
-    // 55mm (photoH) + 3mm (gap) = 58mm por linha de fotos.
-    // Precisa bater com o photoH usado em drawServiceDetails — senão o
-    // espaço reservado via minCellHeight sai diferente do desenho e o
-    // layout perde alinhamento.
-    h += Math.ceil(photos.length / 2) * 58 + 2;
+  const maxY = pageHeight - BOTTOM_MARGIN;
+  const innerX = margin + CARD_INNER_PAD_X;
+  let photoY = textEndY + GAP_MD;
+
+  // Se não cabe nem a label, vai pra próxima página.
+  if (photoY + PHOTO_LABEL_H + PHOTO_H > maxY) {
+    doc.addPage();
+    fillPage(doc, pageWidth, pageHeight);
+    redrawPageHeader();
+    photoY = NEXT_PAGE_CONTENT_Y;
   }
 
-  // Linha separadora abaixo do bloco
-  if (h > 2) h += 4;
-  return h;
+  txt(doc, 'Fotos anexadas', innerX, photoY + 3, {
+    size: 7,
+    style: 'bold',
+    color: C.text3,
+  });
+  photoY += PHOTO_LABEL_H;
+
+  for (let r = 0; r < layout.photoRows; r += 1) {
+    if (photoY + PHOTO_H > maxY) {
+      doc.addPage();
+      fillPage(doc, pageWidth, pageHeight);
+      redrawPageHeader();
+      photoY = NEXT_PAGE_CONTENT_Y;
+    }
+    await drawPhotoRow(doc, margin, pageWidth, photoY, layout.photos, r, layout.innerW);
+    photoY += PHOTO_H;
+    if (r < layout.photoRows - 1) photoY += PHOTO_ROW_GAP;
+  }
+
+  return { endY: photoY + CARD_INNER_PAD_BOTTOM };
 }
+
+// ---------- entry point ----------
 
 export async function drawServices(
   doc,
@@ -211,198 +471,55 @@ export async function drawServices(
 ) {
   if (!filtered.length) return;
 
+  // A chamada externa (pdf.js) já fez addPage antes de chamar drawServices,
+  // então estamos em uma página nova. Pinta fundo + header + título.
+  fillPage(doc, pageWidth, pageHeight);
   drawServicesPageHeader(doc, pageWidth, margin, profile, context);
+  drawSectionTitle(doc, pageWidth, margin, filtered.length);
 
-  // Linha de título dentro da página
-  let titleY = 22;
-  txt(doc, 'REGISTROS DE SERVIÇO', margin, titleY, {
-    size: T.h1.size,
-    style: T.h1.style,
-    color: C.primary,
-  });
-  txt(
-    doc,
-    `${filtered.length} ${filtered.length === 1 ? 'registro' : 'registros'} no período`,
-    pageWidth - margin,
-    titleY,
-    { size: 8, color: C.text3, align: 'right' },
-  );
-  accentLine(doc, margin, titleY + 2, pageWidth - margin, C.border);
+  const redrawPageHeader = () => drawServicesPageHeader(doc, pageWidth, margin, profile, context);
 
-  // Monta body da tabela: cada linha = 1 serviço, identificado pelo index.
-  // Detalhes longos (obs/materiais/fotos) são desenhados manualmente abaixo
-  // da linha via didDrawRow, para manter tabela densa e sem quebrar paginação.
-  const body = filtered.map((registro) => {
+  const maxY = pageHeight - BOTTOM_MARGIN;
+  let y = FIRST_PAGE_CONTENT_Y;
+
+  for (let i = 0; i < filtered.length; i += 1) {
+    const registro = filtered[i];
     const equipamento = equipamentos.find((item) => item.id === registro.equipId);
-    const st = STATUS_CLIENTE[registro.status] || STATUS_CLIENTE.ok;
-    const custo = parseFloat(registro.custoPecas || 0) + parseFloat(registro.custoMaoObra || 0);
-    return {
-      data: Utils.formatDatetime(registro.data),
-      equip: equipamento
-        ? `${equipamento.nome}${equipamento.local ? ' · ' + equipamento.local : ''}`
-        : '—',
-      tipo: registro.tipo || '—',
-      tecnico: registro.tecnico || profile?.nome || '—',
-      custo: custo > 0 ? `R$ ${custo.toFixed(2).replace('.', ',')}` : '—',
-      status: st.label,
-      statusColor: st.color,
-      _registro: registro,
-    };
-  });
+    const layout = computeCardLayout(doc, pageWidth, margin, registro, equipamento);
 
-  // Larguras efetivas de cada coluna (em mm). O bloco precisa bater com
-  // `columnStyles` abaixo — uso aqui pra estimar quebra de linha por coluna
-  // e compor a altura natural da linha via splitTextToSize.
-  const COL_WIDTHS_MM = [26, 50, 24, 28, 22];
-  const statusWidth = pageWidth - margin * 2 - COL_WIDTHS_MM.reduce((a, b) => a + b, 0);
-  const columnWidths = [...COL_WIDTHS_MM, statusWidth];
+    const needsGap = i > 0;
+    const requiredSpace = layout.total + (needsGap ? CARD_GAP : 0);
+    const pageBudget = maxY - y;
 
-  // Calcula a altura NATURAL de uma linha da tabela, considerando quebra de
-  // texto em cada célula. Precisamos disso pra:
-  //   (a) dimensionar minCellHeight = natural + extra (detalhes) sem que os
-  //       detalhes fiquem sobrepostos ao texto padrão da linha, e
-  //   (b) posicionar detailY = row.y + naturalHeight, garantindo que os
-  //       detalhes começam LOGO ABAIXO do último baseline da linha.
-  function computeRowBaseHeight(bodyRow) {
-    const texts = [
-      bodyRow.data,
-      bodyRow.equip,
-      bodyRow.tipo,
-      bodyRow.tecnico,
-      bodyRow.custo,
-      bodyRow.status,
-    ];
-    const prevSize = doc.internal.getFontSize();
-    doc.setFontSize(8); // mesmo fontSize do body no autoTable
-    let maxLines = 1;
-    for (let i = 0; i < texts.length; i += 1) {
-      const innerMm = Math.max(columnWidths[i] - 5, 5); // -5 = cellPadding 2.5 de cada lado
-      const lines = doc.splitTextToSize(String(texts[i] || ''), innerMm);
-      if (lines.length > maxLines) maxLines = lines.length;
-    }
-    doc.setFontSize(prevSize);
-    // 8pt ~= 2.82mm; linha ~4mm com espaçamento; +5mm de padding vertical
-    return maxLines * 4 + 5;
-  }
-
-  // autoTable não consegue inserir linhas filhas com altura dinâmica
-  // assincronamente (imagens). Solução: desenha tabela primeiro sem detalhes,
-  // depois, pra cada row com detalhes, reserva espaço via `minCellHeight` na
-  // coluna 1 (equipamento) usando estimateDetailsHeight — e no didDrawCell
-  // (última coluna) guarda coordenadas para pintar detalhes depois de forma
-  // async.
-  const rowDetails = body.map((r) => ({
-    registro: r._registro,
-    height: estimateDetailsHeight(doc, pageWidth, margin, r._registro),
-    baseHeight: computeRowBaseHeight(r),
-  }));
-
-  const drawCoords = []; // { pageNumber, y, rowIndex }
-
-  autoTable(doc, {
-    startY: titleY + 5,
-    head: [['Data', 'Equipamento', 'Tipo', 'Técnico', 'Custo', 'Status']],
-    body: body.map((r) => [r.data, r.equip, r.tipo, r.tecnico, r.custo, r.status]),
-    theme: 'plain',
-    margin: { top: 18, left: margin, right: margin, bottom: 22 },
-    styles: {
-      font: 'helvetica',
-      fontSize: 8,
-      cellPadding: 2.5,
-      textColor: C.text2,
-      lineColor: C.border,
-      lineWidth: 0.15,
-      valign: 'top',
-    },
-    headStyles: {
-      fillColor: C.bg2,
-      textColor: C.text3,
-      fontStyle: 'bold',
-      fontSize: 7,
-      lineColor: C.borderStrong,
-      lineWidth: 0.3,
-    },
-    alternateRowStyles: { fillColor: [252, 252, 253] },
-    columnStyles: {
-      0: { cellWidth: 26 },
-      1: { cellWidth: 50 },
-      2: { cellWidth: 24 },
-      3: { cellWidth: 28, textColor: C.text3 },
-      4: { cellWidth: 22, halign: 'right', fontStyle: 'bold', textColor: C.text },
-      5: { halign: 'right', fontStyle: 'bold' },
-    },
-    didParseCell(data) {
-      if (data.section === 'body' && data.column.index === 5) {
-        const row = body[data.row.index];
-        if (row?.statusColor) data.cell.styles.textColor = row.statusColor;
-      }
-      // Reserva altura extra na linha para o bloco de detalhes.
-      //
-      // baseHeight é calculado por `computeRowBaseHeight` usando
-      // splitTextToSize em cada coluna (ver acima). Isso garante que a
-      // inflação via minCellHeight comporta o texto natural da linha sem
-      // que os detalhes fiquem sobrepostos a "07:25" ou "Funcionando
-      // normalmente" quando as células naturalmente precisam de 2 linhas.
-      if (data.section === 'body' && data.column.index === 0) {
-        const entry = rowDetails[data.row.index];
-        const extra = entry?.height || 0;
-        if (extra > 2) {
-          const baseRowHeight = entry?.baseHeight || 9;
-          data.cell.styles.minCellHeight = baseRowHeight + extra;
-        }
-      }
-    },
-    // IMPORTANTE: jspdf-autotable v5 NÃO expõe um hook `didDrawRow`, e a
-    // classe Row da v5 não tem `y` — só `Cell` tem x/y/height (ver
-    // dist/index.d.ts do pacote). API disponível: didParseCell |
-    // willDrawCell | didDrawCell | willDrawPage | didDrawPage.
-    //
-    // Para saber quando uma linha terminou de ser desenhada usamos
-    // didDrawCell filtrando pela ÚLTIMA coluna (index 5 = Status). Nesse
-    // ponto a célula já foi pintada e `data.cell.y + data.cell.height` dá
-    // o bottom da linha — todas as células compartilham a mesma altura
-    // final por causa do minCellHeight aplicado em didParseCell.
-    didDrawCell(data) {
-      if (data.section !== 'body') return;
-      if (data.column.index !== 5) return; // dispara 1 vez por linha
-      const entry = rowDetails[data.row.index];
-      const extra = entry?.height || 0;
-      if (extra <= 2) return;
-
-      const cellY = Number(data.cell?.y);
-      if (!Number.isFinite(cellY)) return;
-
-      // detailY = topo da célula + altura natural da linha. Assim os
-      // detalhes começam LOGO ABAIXO do último baseline do texto
-      // padrão (evita sobrepor "07:25" da coluna Data ou "Funcionando
-      // normalmente" da coluna Status com a 1a linha de obs).
-      const baseHeight = entry?.baseHeight || 9;
-      const detailY = cellY + baseHeight;
-      drawCoords.push({
-        pageNumber: doc.internal.getCurrentPageInfo().pageNumber,
-        y: detailY,
-        rowIndex: data.row.index,
-      });
-    },
-    willDrawPage() {
-      // Redesenha header em cada página nova da tabela
+    // Card não cabe no restante da página? Tenta começar em uma nova.
+    if (requiredSpace > pageBudget && y > NEXT_PAGE_CONTENT_Y + 0.1) {
+      doc.addPage();
       fillPage(doc, pageWidth, pageHeight);
-      drawServicesPageHeader(doc, pageWidth, margin, profile, context);
-    },
-  });
+      redrawPageHeader();
+      y = NEXT_PAGE_CONTENT_Y;
+    } else if (needsGap) {
+      y += CARD_GAP;
+    }
 
-  // Segundo passo: desenha os blocos de detalhe async em cima das coordenadas
-  // reservadas. Isso roda depois da tabela e pode ser async sem problema.
-  for (const coord of drawCoords) {
-    doc.setPage(coord.pageNumber);
-    await drawServiceDetails(doc, pageWidth, margin, coord.y, body[coord.rowIndex]._registro);
-    // Linha separadora entre registros para legibilidade
-    accentLine(
-      doc,
-      margin + 4,
-      coord.y + rowDetails[coord.rowIndex].height - 2,
-      pageWidth - margin - 4,
-      C.border,
-    );
+    const fullPageBudget = maxY - NEXT_PAGE_CONTENT_Y;
+
+    if (layout.total > fullPageBudget) {
+      // Oversize: divide texto+fotos entre páginas.
+      const { endY } = await drawServiceCardPaginated(
+        doc,
+        pageWidth,
+        pageHeight,
+        margin,
+        y,
+        registro,
+        profile,
+        layout,
+        redrawPageHeader,
+      );
+      y = endY;
+    } else {
+      await drawServiceCardAtomic(doc, pageWidth, margin, y, registro, profile, layout);
+      y += layout.total;
+    }
   }
 }

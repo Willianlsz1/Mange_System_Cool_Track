@@ -525,9 +525,8 @@
   /* ════════════════════════════════════════════════════════
      HISTÓRICO
      ════════════════════════════════════════════════════════ */
-  /* NÃO sobrescrever o `top` aqui — components.css já calcula
-     `top: calc(var(--app-header-total-height) + var(--hist-sticky-gap))`
-     para o sticky grudar abaixo do header global, não atrás dele. */
+  /* Header do Histórico agora é inline (veja components.css) —
+     nada de sticky/top pra sobrescrever aqui. */
   .hist-count {
     font-size: 13px; /* de 11px */
   }
@@ -659,14 +658,6 @@
     width: 36px;
     height: 36px;
     font-size: 18px;
-  }
-
-  /* ════════════════════════════════════════════════════════
-     HISTÓRICO — BOTOES DE AÇÃO
-     ════════════════════════════════════════════════════════ */
-  .hist-sticky-header__actions .btn {
-    font-size: 13px;
-    padding: 9px 16px;
   }
 
   /* ════════════════════════════════════════════════════════

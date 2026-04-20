@@ -274,11 +274,18 @@ export function sanitizePersistedEquipamento(payload) {
 }
 
 const SETOR_NOME_MAX = 80;
+const SETOR_DESCRICAO_MAX = 240;
+const SETOR_RESPONSAVEL_MAX = 120;
 const SETOR_COR_REGEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 /**
  * Normaliza e valida um setor (feature Pro). Retorna `null` se inválido.
- * Campos: id (obrigatório), nome (obrigatório, até 80 chars), cor (hex opcional).
+ * Campos:
+ *   - id (obrigatório)
+ *   - nome (obrigatório, até 80 chars)
+ *   - cor (hex opcional, default #00c8e8)
+ *   - descricao (opcional, até 240 chars — front limita em ~120)
+ *   - responsavel (opcional, até 120 chars — texto livre, NÃO é FK)
  */
 export function sanitizePersistedSetor(payload) {
   if (!payload || typeof payload !== 'object') return null;
@@ -291,7 +298,13 @@ export function sanitizePersistedSetor(payload) {
   const corRaw = String(payload.cor || '').trim();
   const cor = SETOR_COR_REGEX.test(corRaw) ? corRaw : '#00c8e8';
 
-  return { id, nome, cor };
+  const descricaoRaw = normalizeMultilineText(payload.descricao);
+  const descricao = descricaoRaw ? descricaoRaw.slice(0, SETOR_DESCRICAO_MAX) : '';
+
+  const responsavelRaw = normalizeInlineText(payload.responsavel);
+  const responsavel = responsavelRaw ? responsavelRaw.slice(0, SETOR_RESPONSAVEL_MAX) : '';
+
+  return { id, nome, cor, descricao, responsavel };
 }
 
 export function sanitizePersistedRegistro(payload, { existingEquipamentos = [] } = {}) {

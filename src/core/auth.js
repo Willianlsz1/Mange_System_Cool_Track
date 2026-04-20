@@ -5,6 +5,38 @@ import { trackEvent } from './telemetry.js';
 
 const OAUTH_PENDING_KEY = 'cooltrack-oauth-pending-v1';
 
+// Chaves do localStorage que são preferências DO DISPOSITIVO, não da conta.
+// Devem sobreviver ao logout (o usuário que fica depois provavelmente quer
+// o mesmo tema do navegador, por exemplo).
+const DEVICE_SCOPED_KEYS = new Set(['cooltrack-theme']);
+
+/**
+ * Remove do localStorage toda chave com prefixo `cooltrack` (hífen ou
+ * underscore) que NÃO esteja em `DEVICE_SCOPED_KEYS`. Usado no signOut pra
+ * garantir que cache de perfil, plano, dados sincronizados, flags de tour
+ * e demais estados específicos do usuário não vazem pra próxima conta que
+ * logar no mesmo navegador.
+ *
+ * Tolera navegadores em modo privado/storage indisponível (try/catch
+ * silencioso) — a segurança vem do reload após o signOut, que força o boot
+ * a revalidar tudo contra o Supabase de qualquer forma.
+ */
+function clearUserScopedStorage() {
+  try {
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (!key.startsWith('cooltrack-') && !key.startsWith('cooltrack_')) continue;
+      if (DEVICE_SCOPED_KEYS.has(key)) continue;
+      toRemove.push(key);
+    }
+    toRemove.forEach((key) => localStorage.removeItem(key));
+  } catch (_) {
+    /* ignora — storage pode estar inacessível (Safari private mode) */
+  }
+}
+
 function getPasswordResetRedirectUrl() {
   // Prefer explicit environment redirect for production domains (ex.: Netlify custom domain).
   const envRedirect = import.meta.env?.VITE_AUTH_REDIRECT_URL;
@@ -247,18 +279,15 @@ export const Auth = {
 
   async signOut() {
     try {
-      // Limpa flags de dev-mode pra não vazarem entre contas em dispositivos
-      // compartilhados. Se outra conta logar depois e a flag tiver sobrado,
-      // na prod o gate import.meta.env.DEV já bloqueia o efeito — mas
-      // removemos por defense-in-depth e higiene de estado.
-      try {
-        localStorage.removeItem('cooltrack-dev-mode');
-        localStorage.removeItem('cooltrack-dev-plan-override');
-        localStorage.removeItem('cooltrack-dev-toggle-pos');
-        localStorage.removeItem('cooltrack-dev-toggle-minimized');
-      } catch (_) {
-        /* ignora — storage pode estar inacessível (Safari private mode) */
-      }
+      // Higiene completa de estado user-scoped antes de deslogar.
+      // Troca de contas no mesmo navegador (ex.: dispositivo compartilhado,
+      // dev testando várias contas) deixava resquícios no localStorage:
+      // `cooltrack-profile`, `cooltrack-last-tecnico`, `cooltrack-cached-plan`
+      // e afins continuavam apontando pro usuário anterior — o hero do dash
+      // mostrava "Olá, <nome_antigo>" até o novo FTX sobrescrever. Varremos
+      // todas as chaves com prefixo `cooltrack` exceto preferências de
+      // dispositivo (tema), que fazem sentido persistir entre contas.
+      clearUserScopedStorage();
 
       await supabase.auth.signOut();
       window.location.reload();

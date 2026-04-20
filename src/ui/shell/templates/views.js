@@ -161,6 +161,32 @@ export function renderShellViews() {
 
         <!-- EQUIPAMENTOS -->
         <div class="view" id="view-equipamentos">
+          <!-- Sprite local (Lucide stroke 1.75) usado pelo hero e pelos filters. -->
+          <svg class="equip-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+            <defs>
+              <symbol id="eq-ri-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></symbol>
+              <symbol id="eq-ri-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+              <symbol id="eq-ri-alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+              <symbol id="eq-ri-alert-octagon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+              <symbol id="eq-ri-calendar-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h6"/><path d="M16 2v4M8 2v4M3 10h18"/><circle cx="18" cy="17" r="4"/><path d="M18 15v2l1 1"/></symbol>
+              <symbol id="eq-ri-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></symbol>
+            </defs>
+          </svg>
+
+          <!-- Hero "Organizar parque" — visível no overview (PRO com setores ou FREE/Plus). -->
+          <section class="equip-hero" id="equip-hero" aria-labelledby="equip-hero-title" hidden>
+            <span class="equip-hero__orb equip-hero__orb--tl" aria-hidden="true"></span>
+            <span class="equip-hero__orb equip-hero__orb--br" aria-hidden="true"></span>
+            <div class="equip-hero__head">
+              <h1 class="equip-hero__title" id="equip-hero-title">Organizar parque</h1>
+              <p class="equip-hero__sub" id="equip-hero-sub"></p>
+            </div>
+            <div class="equip-hero__kpis" id="equip-hero-kpis" role="list"></div>
+          </section>
+
+          <!-- Quick filters: 5 pílulas (Todos · Sem setor · Em atenção · Críticos · Preventiva ≤30d). -->
+          <nav class="equip-filters" id="equip-filters" aria-label="Filtrar equipamentos" hidden></nav>
+
           <div class="page-toolbar">
             <div class="section-title" id="equip-page-title">Parque de Equipamentos</div>
             <div id="equip-toolbar-actions" style="display:flex;gap:8px;align-items:center">
@@ -570,39 +596,63 @@ export function renderShellViews() {
 
         <!-- RELATÓRIO -->
         <div class="view" id="view-relatorio">
-          <div class="page-toolbar">
-            <div class="section-title">Relatório de Manutenção</div>
-            <div class="page-toolbar__actions">
-              <button class="btn btn--outline btn--sm" data-nav="historico">&larr; Voltar</button>
-              <button class="btn btn--outline btn--sm" id="btn-print" data-action="print">Imprimir</button>
-              <button class="btn btn--outline btn--sm btn--whatsapp" id="btn-whatsapp" data-action="whatsapp-export">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" class="icon-inline--fixed">
-                  <path
-                    d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
+          <div class="rel-toolbar">
+            <button class="rel-toolbar__back" data-nav="historico" type="button" aria-label="Voltar">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Voltar
+            </button>
+            <div class="rel-toolbar__actions">
+              <button class="rel-toolbar__btn rel-toolbar__btn--whatsapp" id="btn-whatsapp" data-action="whatsapp-export" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
                 </svg>
                 WhatsApp
               </button>
-              <button class="btn btn--primary btn--sm" id="btn-export-pdf" data-action="export-pdf">Exportar
-                PDF</button>
+              <div class="rel-toolbar__primary-group">
+                <button class="rel-toolbar__btn rel-toolbar__btn--primary" id="btn-export-pdf" data-action="export-pdf" type="button">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 4v12" />
+                    <path d="M7 11l5 5 5-5" />
+                    <path d="M4 20h16" />
+                  </svg>
+                  Exportar PDF
+                </button>
+                <div id="pdf-quota-slot" class="rel-toolbar__quota-slot"></div>
+              </div>
             </div>
           </div>
-          <div class="form-row form-row--report-filters">
-            <div class="form-group">
-              <label class="form-label" for="rel-equip">Equipamento</label>
-              <select id="rel-equip" class="form-control">
-                <option value="">Todos</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="rel-de">De</label>
-              <input id="rel-de" class="form-control" type="date" />
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="rel-ate">Até</label>
-              <input id="rel-ate" class="form-control" type="date" />
+
+          <h1 class="rel-title">Relatório de Manutenção</h1>
+
+          <div id="rel-hero" class="rel-hero" aria-live="polite"></div>
+
+          <div id="rel-filters" class="rel-filters" role="group" aria-label="Filtros do relatório">
+            <div id="rel-filters-chips" class="rel-filters__chips"></div>
+            <div id="rel-filters-advanced" class="rel-filters__advanced" hidden>
+              <div class="rel-filters__advanced-grid">
+                <div class="form-group">
+                  <label class="form-label" for="rel-equip">Equipamento</label>
+                  <select id="rel-equip" class="form-control">
+                    <option value="">Todos</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="rel-de">De</label>
+                  <input id="rel-de" class="form-control" type="date" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="rel-ate">Até</label>
+                  <input id="rel-ate" class="form-control" type="date" />
+                </div>
+              </div>
             </div>
           </div>
-          <div id="relatorio-corpo"></div>
+
+          <div id="relatorio-corpo" class="rel-records"></div>
         </div>
 
         <!-- PLANOS -->

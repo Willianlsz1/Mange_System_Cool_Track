@@ -119,6 +119,20 @@ function isMissingSetorSchemaError(error) {
   return message.includes('setor') || (message.includes('column') && message.includes('setor_id'));
 }
 
+// Mais granular que isMissingSetorSchemaError: detecta especificamente quando
+// as colunas novas (descricao/responsavel, P1) ainda não foram migradas no
+// schema remoto. Nesses casos a gente faz um retry sem essas colunas em vez
+// de absorver silenciosamente — senão os setores nunca sobem pra nuvem e os
+// equipamentos subsequentes falham com 409 (FK violation em setor_id).
+function isMissingSetorColumnError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  // PostgREST/Supabase retornam "column ... does not exist" ou
+  // "could not find the '...' column of 'setores' in the schema cache".
+  const hitsSetores = message.includes('setores') || message.includes('setor');
+  const hitsNewColumn = message.includes('descricao') || message.includes('responsavel');
+  return hitsSetores && hitsNewColumn;
+}
+
 function normalizeRegistro(r, equipamentoIds) {
   if (!r || typeof r !== 'object') return null;
   if (!r.id || !r.equipId || !equipamentoIds.has(String(r.equipId))) return null;
@@ -382,20 +396,33 @@ async function pushTecnicos(tecnicos, userId) {
 
 async function pushSetores(setores, userId) {
   if (!setores?.length) return;
+  const sanitized = setores.map((s) => sanitizePersistedSetor(s)).filter(Boolean);
+  if (!sanitized.length) return;
+
+  const buildRows = ({ legacy = false } = {}) =>
+    sanitized.map((s) => {
+      const row = { id: s.id, user_id: userId, nome: s.nome, cor: s.cor };
+      if (!legacy) {
+        row.descricao = s.descricao || null;
+        row.responsavel = s.responsavel || null;
+      }
+      return row;
+    });
+
   try {
-    const rows = setores
-      .map((s) => sanitizePersistedSetor(s))
-      .filter(Boolean)
-      .map((s) => ({
-        id: s.id,
-        user_id: userId,
-        nome: s.nome,
-        cor: s.cor,
-      }));
-    if (!rows.length) return;
-    const { error } = await supabase.from('setores').upsert(rows, { onConflict: 'id' });
+    let { error } = await supabase.from('setores').upsert(buildRows(), { onConflict: 'id' });
+
+    // Fallback: schema remoto ainda não rodou a migration de descricao/responsavel.
+    // Reenviamos sem essas colunas pra que pelo menos nome/cor persistam —
+    // assim os equipamentos subsequentes (com setor_id) não quebram no FK.
+    if (error && isMissingSetorColumnError(error)) {
+      ({ error } = await supabase
+        .from('setores')
+        .upsert(buildRows({ legacy: true }), { onConflict: 'id' }));
+    }
+
     if (error) {
-      // Schema antigo sem tabela setores — loga mas não quebra sync
+      // Schema muito antigo sem a tabela setores inteira — sync segue sem bloquear.
       if (isMissingSetorSchemaError(error)) return;
       throw error;
     }
@@ -490,8 +517,18 @@ async function pullFromSupabase(userId) {
       supabase.from('tecnicos').select('nome').eq('user_id', userId),
       // Setores é opcional — se a tabela ainda não existir (schema antigo),
       // o erro é absorvido e seguimos com lista vazia.
-      supabase.from('setores').select('id, nome, cor').eq('user_id', userId),
+      supabase
+        .from('setores')
+        .select('id, nome, cor, descricao, responsavel')
+        .eq('user_id', userId),
     ]);
+    // Fallback: se o schema remoto ainda não tem descricao/responsavel (P1 não
+    // migrado), refaz o SELECT só com as colunas legacy. Assim o pull continua
+    // funcionando e os setores aparecem no app sem descrição/responsável até
+    // a migration rodar.
+    if (setRes?.error && isMissingSetorColumnError(setRes.error)) {
+      setRes = await supabase.from('setores').select('id, nome, cor').eq('user_id', userId);
+    }
     if (eqRes.error || regRes.error || tecRes.error) {
       throw new Error(
         eqRes.error?.message || regRes.error?.message || tecRes.error?.message || 'select failed',

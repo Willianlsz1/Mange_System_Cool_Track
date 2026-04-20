@@ -15,7 +15,15 @@ import { createSignatureCanvas } from './signature-canvas.js';
 
 const OVERLAY_ID = 'modal-signature-overlay';
 
+// Sentinel único devolvido por SignatureModal.request() quando o usuário
+// fecha o modal por X, clique no backdrop ou Escape. Diferente de `null`,
+// que significa "salvar registro sem assinatura" (botão explícito). O
+// caller compara com `SignatureModal.CANCELED` e, se bater, ABORTA o save
+// do registro por inteiro — evita o bug de "cancelei mas salvou mesmo assim".
+export const SIGNATURE_CANCELED = Symbol('signature-canceled');
+
 export const SignatureModal = {
+  CANCELED: SIGNATURE_CANCELED,
   _resolve: null,
 
   request(registroId, equipNome) {
@@ -40,7 +48,7 @@ export const SignatureModal = {
     const safeEquip = Utils.escapeHtml(equipNome || 'Equipamento');
 
     overlay.innerHTML = `
-      <div class="sig-capture-modal__backdrop" data-action="sig-skip" aria-hidden="true"></div>
+      <div class="sig-capture-modal__backdrop" data-action="sig-cancel" aria-hidden="true"></div>
       <div class="sig-capture-modal__card" role="document">
         <div class="sig-capture-modal__header">
           <span class="sig-capture-modal__header-ic" aria-hidden="true">
@@ -52,8 +60,8 @@ export const SignatureModal = {
             </svg>
           </span>
           <h2 class="sig-capture-modal__title" id="sig-title">Assinatura do cliente</h2>
-          <button type="button" class="sig-capture-modal__close" data-action="sig-skip"
-            aria-label="Pular assinatura e fechar">
+          <button type="button" class="sig-capture-modal__close" data-action="sig-cancel"
+            aria-label="Cancelar e fechar">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -105,7 +113,7 @@ export const SignatureModal = {
           </button>
           <div class="sig-capture-modal__footer-primary">
             <button type="button" class="btn-ghost" id="sig-skip" data-action="sig-skip">
-              Pular
+              Salvar sem assinatura
             </button>
             <button type="button" class="btn-primary" id="sig-confirm">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -135,19 +143,33 @@ export const SignatureModal = {
       overlay.remove();
     };
 
-    // Skip é equivalente a fechar sem assinatura (backdrop, X, botão Pular).
+    // Cancelar (X, backdrop, Escape) → resolve com sentinel CANCELED. O caller
+    // usa isso pra ABORTAR o save do registro inteiro — diferente de skip,
+    // que salva sem assinatura.
+    const cancelAndResolve = () => {
+      teardown();
+      this._resolve?.(SIGNATURE_CANCELED);
+    };
+
+    // Skip (botão "Salvar sem assinatura") → resolve com null. Caller salva
+    // o registro sem assinatura normalmente.
     const skipAndResolve = () => {
       teardown();
       this._resolve?.(null);
     };
 
-    const detachA11y = attachDialogA11y(overlay, { onDismiss: skipAndResolve });
+    const detachA11y = attachDialogA11y(overlay, { onDismiss: cancelAndResolve });
     dismiss = detachA11y;
 
-    // Backdrop, X e botão Pular → fecha e resolve(null).
     overlay.addEventListener('click', (event) => {
-      const skipper = event.target.closest?.('[data-action="sig-skip"]');
-      if (skipper) {
+      // Backdrop / X → cancelar save inteiro.
+      if (event.target.closest?.('[data-action="sig-cancel"]')) {
+        event.preventDefault();
+        cancelAndResolve();
+        return;
+      }
+      // Botão "Salvar sem assinatura" → skip (mantém save).
+      if (event.target.closest?.('[data-action="sig-skip"]')) {
         event.preventDefault();
         skipAndResolve();
       }

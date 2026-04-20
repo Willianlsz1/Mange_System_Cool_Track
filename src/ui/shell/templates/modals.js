@@ -246,35 +246,231 @@ export function renderShellModals() {
     </div>
   </div>
 
-  <!-- MODAL: Criar / Editar Setor (PRO) -->
+  <!-- MODAL: Criar / Editar Setor (PRO) — premium redesign -->
   <div class="modal-overlay" id="modal-add-setor" role="dialog" aria-modal="true" aria-labelledby="modal-add-setor-title">
-    <div class="modal modal--sm">
+    <div class="modal setor-modal">
       <div class="modal__handle"></div>
-      <div class="modal__body">
-        <div class="modal__title" id="modal-add-setor-title">Novo setor</div>
-        <div class="modal__subtitle">Agrupe equipamentos por local ou área de trabalho</div>
-        <div class="form-group" style="margin-top:16px">
-          <label class="form-label" for="setor-nome">Nome do setor *</label>
-          <input id="setor-nome" class="form-control" type="text"
-            placeholder="Ex: Bloco Cirúrgico, UTI, Recepção, Galpão A..." autocomplete="off" />
+
+      <header class="setor-modal__hero">
+        <span class="setor-modal__orb setor-modal__orb--tr" aria-hidden="true"></span>
+        <span class="setor-modal__orb setor-modal__orb--bl" aria-hidden="true"></span>
+        <div class="setor-modal__hero-row">
+          <div class="setor-modal__hero-copy">
+            <span class="setor-modal__badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 6l3.5-3L12 6l5.5-3L21 6l-2 12H5L3 6z"/></svg>
+              Pro · Setores
+            </span>
+            <h2 class="setor-modal__title" id="modal-add-setor-title">Novo setor</h2>
+            <p class="setor-modal__subtitle">Agrupe equipamentos por local ou área de trabalho.</p>
+          </div>
+          <button type="button" class="setor-modal__close" data-action="close-modal" data-id="modal-add-setor" aria-label="Fechar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
         </div>
-        <div class="form-group">
-          <label class="form-label">Cor do setor</label>
-          <div class="setor-color-picker" id="setor-color-picker" role="group" aria-label="Escolha a cor do setor">
-            <button type="button" class="setor-color-btn setor-color-btn--selected" data-cor="#00c8e8" style="background:#00c8e8" aria-label="Ciano" aria-pressed="true"></button>
-            <button type="button" class="setor-color-btn" data-cor="#00c853" style="background:#00c853" aria-label="Verde" aria-pressed="false"></button>
-            <button type="button" class="setor-color-btn" data-cor="#ffab40" style="background:#ffab40" aria-label="Âmbar" aria-pressed="false"></button>
-            <button type="button" class="setor-color-btn" data-cor="#ff5252" style="background:#ff5252" aria-label="Vermelho" aria-pressed="false"></button>
-            <button type="button" class="setor-color-btn" data-cor="#7c4dff" style="background:#7c4dff" aria-label="Roxo" aria-pressed="false"></button>
-            <button type="button" class="setor-color-btn" data-cor="#448aff" style="background:#448aff" aria-label="Azul" aria-pressed="false"></button>
+      </header>
+
+      <div class="setor-modal__body">
+        <!-- NOME -->
+        <div class="setor-modal__field">
+          <div class="setor-modal__field-head">
+            <label for="setor-nome" class="setor-modal__label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5" fill="currentColor" stroke="none"/></svg>
+              Nome do setor
+              <span class="setor-modal__label-req" aria-hidden="true">*</span>
+            </label>
+            <span class="setor-modal__counter" id="setor-nome-counter" aria-live="polite">0/40</span>
+          </div>
+          <input
+            id="setor-nome"
+            class="setor-modal__input"
+            type="text"
+            placeholder="Ex: Bloco Cirúrgico, UTI, Cozinha…"
+            autocomplete="off"
+            maxlength="50"
+            required
+            aria-describedby="setor-nome-err"
+          />
+          <div class="setor-modal__error" id="setor-nome-err" hidden>
+            <span class="setor-modal__error-badge" aria-hidden="true">!</span>
+            Dê um nome ao setor pra continuar.
+          </div>
+        </div>
+
+        <!-- COR -->
+        <div class="setor-modal__field">
+          <div class="setor-modal__field-head">
+            <span class="setor-modal__label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 15.8l-1.8-4.6L6 9.4l4.2-1.8L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>
+              Cor do setor
+              <span class="setor-modal__label-req" aria-hidden="true">*</span>
+            </span>
+            <span class="setor-modal__color-readout">
+              <span class="setor-modal__color-name" id="setor-color-name">Ciano</span>
+              <span class="setor-modal__color-sep">·</span>
+              <span class="setor-modal__color-hex" id="setor-color-hex">#00c8e8</span>
+            </span>
+          </div>
+          <div class="setor-modal__swatches" id="setor-color-picker" role="radiogroup" aria-label="Paleta de cores do setor">
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch setor-modal__swatch--selected" data-cor="#00c8e8" data-nome="Ciano" role="radio" aria-checked="true" aria-label="Cor Ciano">
+                <span class="setor-modal__swatch-dot" style="background:#00c8e8"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Ciano</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#00c853" data-nome="Esmeralda" role="radio" aria-checked="false" aria-label="Cor Esmeralda">
+                <span class="setor-modal__swatch-dot" style="background:#00c853"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Esmeralda</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#ffab40" data-nome="Âmbar" role="radio" aria-checked="false" aria-label="Cor Âmbar">
+                <span class="setor-modal__swatch-dot" style="background:#ffab40"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Âmbar</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#ff5252" data-nome="Coral" role="radio" aria-checked="false" aria-label="Cor Coral">
+                <span class="setor-modal__swatch-dot" style="background:#ff5252"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Coral</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#7c4dff" data-nome="Violeta" role="radio" aria-checked="false" aria-label="Cor Violeta">
+                <span class="setor-modal__swatch-dot" style="background:#7c4dff"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Violeta</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#448aff" data-nome="Azul" role="radio" aria-checked="false" aria-label="Cor Azul">
+                <span class="setor-modal__swatch-dot" style="background:#448aff"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Azul</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#f06292" data-nome="Rosa" role="radio" aria-checked="false" aria-label="Cor Rosa">
+                <span class="setor-modal__swatch-dot" style="background:#f06292"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Rosa</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#9ccc65" data-nome="Verde-lima" role="radio" aria-checked="false" aria-label="Cor Verde-lima">
+                <span class="setor-modal__swatch-dot" style="background:#9ccc65"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Verde-lima</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#ff7043" data-nome="Laranja" role="radio" aria-checked="false" aria-label="Cor Laranja">
+                <span class="setor-modal__swatch-dot" style="background:#ff7043"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Laranja</span>
+            </div>
+            <div class="setor-modal__swatch-cell">
+              <button type="button" class="setor-modal__swatch" data-cor="#26a69a" data-nome="Teal" role="radio" aria-checked="false" aria-label="Cor Teal">
+                <span class="setor-modal__swatch-dot" style="background:#26a69a"></span>
+              </button>
+              <span class="setor-modal__swatch-label">Teal</span>
+            </div>
           </div>
           <input type="hidden" id="setor-cor" value="#00c8e8" />
         </div>
+
+        <!-- DESCRIÇÃO -->
+        <div class="setor-modal__field">
+          <div class="setor-modal__field-head">
+            <label for="setor-descricao" class="setor-modal__label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              Descrição
+              <span class="setor-modal__label-opt">(opcional)</span>
+            </label>
+            <span class="setor-modal__counter" id="setor-descricao-counter" aria-live="polite">0/120</span>
+          </div>
+          <textarea
+            id="setor-descricao"
+            class="setor-modal__input setor-modal__input--textarea"
+            rows="2"
+            maxlength="140"
+            placeholder="Ex: Ala cirúrgica com 12 splits e 2 fan coils."
+          ></textarea>
+        </div>
+
+        <!-- RESPONSÁVEL -->
+        <div class="setor-modal__field">
+          <div class="setor-modal__field-head">
+            <label for="setor-responsavel" class="setor-modal__label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
+              Responsável
+              <span class="setor-modal__label-opt">(opcional)</span>
+            </label>
+          </div>
+          <div class="setor-modal__input-wrap">
+            <span class="setor-modal__input-icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
+            </span>
+            <input
+              id="setor-responsavel"
+              class="setor-modal__input setor-modal__input--with-icon"
+              type="text"
+              maxlength="120"
+              placeholder="Ex: Dr. Carlos Silva · Enfª Ana Souza"
+            />
+          </div>
+        </div>
+
+        <!-- PREVIEW -->
+        <div class="setor-modal__preview">
+          <div class="setor-modal__preview-head">
+            <span class="setor-modal__preview-label">
+              <span class="setor-modal__preview-dot" aria-hidden="true"></span>
+              Prévia
+              <span class="setor-modal__preview-hint">· como vai aparecer na grade</span>
+            </span>
+            <span class="setor-modal__contrast" id="setor-contrast" data-aa="pass">AA ✓ · 14.1:1</span>
+          </div>
+          <div class="setor-modal__preview-card" id="setor-modal-preview-card" style="--setor-cor:#00c8e8">
+            <span class="setor-modal__preview-border" aria-hidden="true"></span>
+            <div class="setor-modal__preview-body">
+              <div class="setor-modal__preview-top">
+                <div class="setor-modal__preview-info">
+                  <div class="setor-modal__preview-name" id="setor-modal-preview-name">Novo setor</div>
+                  <div class="setor-modal__preview-meta">
+                    <span class="setor-modal__preview-meta-dot" aria-hidden="true"></span>
+                    <span id="setor-modal-preview-count">0 equipamentos</span>
+                  </div>
+                </div>
+                <div class="setor-modal__preview-score">
+                  <div class="setor-modal__preview-score-label">Score</div>
+                  <div class="setor-modal__preview-score-value" id="setor-modal-preview-score">—</div>
+                </div>
+              </div>
+              <div class="setor-modal__preview-status" id="setor-modal-preview-status">
+                <div class="setor-modal__preview-status-row">
+                  <span class="setor-modal__preview-status-pill">
+                    <span class="setor-modal__preview-status-dot" aria-hidden="true"></span>
+                    <span id="setor-modal-preview-status-label">Aguardando dados</span>
+                  </span>
+                  <span class="setor-modal__preview-status-meta" id="setor-modal-preview-status-meta">—</span>
+                </div>
+                <div class="setor-modal__preview-bar"><span class="setor-modal__preview-bar-fill" id="setor-modal-preview-bar"></span></div>
+              </div>
+              <div class="setor-modal__preview-cta">
+                <span class="setor-modal__preview-cta-text">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                  Ver equipamentos
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="btn-group modal__footer">
-        <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-setor">Cancelar</button>
-        <button class="btn btn--primary" data-action="save-setor">Criar setor →</button>
-      </div>
+
+      <footer class="setor-modal__footer">
+        <button type="button" class="setor-modal__btn setor-modal__btn--ghost" data-action="close-modal" data-id="modal-add-setor">Cancelar</button>
+        <button type="button" class="setor-modal__btn setor-modal__btn--primary" data-action="save-setor" id="setor-save-btn">
+          <span class="setor-modal__btn-label">Criar setor →</span>
+        </button>
+      </footer>
     </div>
   </div>
 

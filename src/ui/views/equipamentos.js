@@ -84,18 +84,123 @@ export function clearEditingState() {
 /**
  * Badge de tendência de risco (últimos 30 dias).
  * Feedback imediato do efeito das manutenções recentes sobre o score.
- * · stable    → "→ estável"
+ * · stable    → não renderiza (reduz ruído, V3 alinhado)
  * · improving → "↓ N" (risco caiu N pontos)
  * · worsening → "↑ N" (risco subiu N pontos)
+ *
+ * Decisão de design V3: badge "estável" foi removido porque não carrega
+ * informação nova (o tone-pill já comunica o estado atual). Mantemos só
+ * os sinais de mudança (improving/worsening), que são actionable.
  */
 function renderTrendBadge(trend) {
-  if (!trend || trend.trend === 'stable') {
-    return `<span class="equip-card__risk-trend equip-card__risk-trend--stable" title="Tendência estável nos últimos 30 dias" aria-label="Tendência estável">→ estável</span>`;
-  }
+  if (!trend || trend.trend === 'stable') return '';
   if (trend.trend === 'improving') {
-    return `<span class="equip-card__risk-trend equip-card__risk-trend--improving" title="Risco caiu ${Math.abs(trend.delta)} pontos nos últimos 30 dias" aria-label="Tendência melhorando">↓ ${Math.abs(trend.delta)}</span>`;
+    return `<span class="equip-card__risk-trend equip-card__risk-trend--improving" title="Risco caiu ${Math.abs(trend.delta)} pontos nos últimos 30 dias" aria-label="Tendência melhorando">↓ ${Math.abs(trend.delta)} <span class="equip-card__risk-trend-word">melhorando</span></span>`;
   }
-  return `<span class="equip-card__risk-trend equip-card__risk-trend--worsening" title="Risco subiu ${trend.delta} pontos nos últimos 30 dias" aria-label="Tendência piorando">↑ ${trend.delta}</span>`;
+  return `<span class="equip-card__risk-trend equip-card__risk-trend--worsening" title="Risco subiu ${trend.delta} pontos nos últimos 30 dias" aria-label="Tendência piorando">↑ ${trend.delta} <span class="equip-card__risk-trend-word">piorando</span></span>`;
+}
+
+/**
+ * Labels do tone-pill V3 para status operacional do equipamento.
+ * Mesma vocabulária do Setor Card V3 (Estável/Em atenção/Crítico/Aguardando)
+ * pra unificar o sistema de pills em todas as superfícies de equipamento.
+ */
+const _EQUIP_TONE_LABELS = {
+  ok: 'Estável',
+  warn: 'Em atenção',
+  danger: 'Crítico',
+};
+
+/**
+ * Classifica um factor do risk panel como positivo (verde) ou neutro.
+ * Positivos são os que expressam "está tudo em ordem" — preventivas em dia,
+ * sem corretivas, rotina estável. Tudo o mais fica neutro.
+ */
+const _POSITIVE_FACTOR_PATTERNS = [
+  'em dia',
+  'preventivas consecutivas',
+  'sem corretivas',
+  'dentro da rotina',
+  'rotina estável',
+  'estável',
+  'sem alertas',
+  'histórico limpo',
+];
+function _classifyFactor(factorStr) {
+  const lf = String(factorStr || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return _POSITIVE_FACTOR_PATTERNS.some((p) =>
+    lf.includes(p.normalize('NFD').replace(/[\u0300-\u036f]/g, '')),
+  )
+    ? 'positive'
+    : 'neutral';
+}
+
+// ── PR4 §12.3 · idle-cluster (threshold baixo + histerese) ────────────────
+//
+// Equipamentos em rotina sem registros/agenda/alerta são "fullyIdle".
+// Brief: mockup sugeriu >10 idles pra ativar cluster — tarde demais; 6 já
+// polui o grid. Decisão: cluster coleta idles quando houver ≥5; solta quando
+// cair ≤2 (histerese 5→2 mata flicker em listas que oscilam perto do limiar).
+//
+// State é módulo-level porque a decisão colapsar/não precisa lembrar do
+// render anterior pra histerese funcionar. Começa null (sem decisão) e
+// resolve no primeiro chamada de _resolveIdleClusterCollapsed.
+const IDLE_CLUSTER_COLLAPSE_AT = 5;
+const IDLE_CLUSTER_RELEASE_AT = 2;
+let _idleClusterCollapsed = null;
+
+function _resolveIdleClusterCollapsed(idleCount) {
+  if (_idleClusterCollapsed === null) {
+    _idleClusterCollapsed = idleCount >= IDLE_CLUSTER_COLLAPSE_AT;
+  } else if (_idleClusterCollapsed && idleCount <= IDLE_CLUSTER_RELEASE_AT) {
+    _idleClusterCollapsed = false;
+  } else if (!_idleClusterCollapsed && idleCount >= IDLE_CLUSTER_COLLAPSE_AT) {
+    _idleClusterCollapsed = true;
+  }
+  return _idleClusterCollapsed;
+}
+
+/** Mesma lógica de `isFullyIdle` do card, extraída pra decisão de partição. */
+function _isEquipFullyIdle(eq) {
+  const context = getEquipmentMaintenanceContext(eq, regsForEquip(eq.id));
+  const scls = Utils.safeStatus(eq.status);
+  if (scls !== 'ok') return false;
+  const eqRegs = regsForEquip(eq.id);
+  const risk = evaluateEquipmentRisk(eq, eqRegs);
+  if (risk.classification !== 'baixo') return false;
+  const suggestedAction = evaluateEquipmentSuggestedAction(eq, eqRegs);
+  const hasAction =
+    suggestedAction.actionCode !== ACTION_CODE.NONE &&
+    suggestedAction.actionCode !== ACTION_CODE.MONITOR;
+  if (hasAction) return false;
+  const hasMetrics = Boolean(context.ultimoRegistro) || Boolean(context.proximaPreventiva);
+  return !hasMetrics;
+}
+
+function _idleClusterHtml(idleCards, count) {
+  // Markup: summary button (clickable row w/ counter + CTA) + hidden cards
+  // container. O toggle-idle-cluster handler só flipa `data-expanded` — CSS
+  // cuida de mostrar/esconder a lista. Zero re-render necessário.
+  const label = `${count} equipamento${count === 1 ? '' : 's'} novo${count === 1 ? '' : 's'} aguardando linha de base`;
+  return `<div class="equip-idle-cluster" data-expanded="false" role="group" aria-label="${label}">
+    <button type="button" class="equip-idle-cluster__summary" data-action="toggle-idle-cluster" aria-expanded="false">
+      <div class="equip-idle-cluster__icon" aria-hidden="true">+</div>
+      <div class="equip-idle-cluster__text">
+        <div class="equip-idle-cluster__title"><b>${count}</b> equipamento${count === 1 ? '' : 's'} novo${count === 1 ? '' : 's'}</div>
+        <div class="equip-idle-cluster__sub">aguardando linha de base</div>
+      </div>
+      <span class="equip-idle-cluster__cta">
+        <span class="equip-idle-cluster__cta-text">Ver todos</span>
+        <span class="equip-idle-cluster__cta-caret" aria-hidden="true">▾</span>
+      </span>
+    </button>
+    <div class="equip-idle-cluster__cards" role="list">
+      ${idleCards}
+    </div>
+  </div>`;
 }
 
 function equipCardIconBlock(eq) {
@@ -186,22 +291,30 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
   const isFullyIdle = scls === 'ok' && risk.classification === 'baixo' && !hasAction && !hasMetrics;
   const cardModifiers = `equip-card--${scls}${isFullyIdle ? ' equip-card--idle' : ''}`;
 
-  const ctaLabel =
-    !last && !hasAction ? 'Primeiro registro' : getCtaByAction(suggestedAction.actionCode);
+  const ctaLabel = !last && !hasAction ? 'Começar' : getCtaByAction(suggestedAction.actionCode);
 
-  // ─── Header right-side: idle = risk chip / ativo = score + EFICIÊNCIA ─────
+  // ─── Header right-side: idle = tone-pill V3 / ativo = score + EFICIÊNCIA ───
+  //
+  // V3: substituímos o risk-chip idle pelo mesmo tone-pill do Setor Card
+  // (Estável/Em atenção/Crítico) pra alinhar vocabulário visual em todas
+  // as superfícies de equipamento. O ativo mantém o score block porque
+  // o % carrega informação adicional ao tom.
+  const toneLabel = _EQUIP_TONE_LABELS[scls] || _EQUIP_TONE_LABELS.ok;
   const headerRightHtml = isFullyIdle
-    ? `<span class="equip-card__risk-chip equip-card__risk-chip--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]}</span>`
+    ? `<span class="equip-card__tone-pill equip-card__tone-pill--${scls}">
+        <span class="equip-card__tone-pill-dot" aria-hidden="true"></span>
+        ${toneLabel}
+      </span>`
     : `<div class="equip-card__score-block">
         <span class="equip-card__score-value equip-card__score-value--${hcls}">${score}%</span>
-        <span class="equip-card__score-label">EFICIÊNCIA</span>
+        <span class="equip-card__score-label">Eficiência</span>
       </div>`;
 
-  const deleteBtnHtml = `<div class="equip-card__actions">
-      <button class="equip-card__delete" data-action="delete-equip" data-id="${safeId}" aria-label="Excluir ${Utils.escapeHtml(eq.nome)}">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-      </button>
-    </div>`;
+  // E4: delete removido do header do card (V3). A ação destrutiva vive agora
+  // só dentro do modal de detalhe do equipamento pra reduzir cliques
+  // acidentais em list view — mesmo padrão do Setor Card V3 onde delete está
+  // escondido no kebab overflow.
+  const deleteBtnHtml = '';
 
   // ─── Idle body: onboarding dashed cyan (substitui bar/risk/metrics/action)
   if (isFullyIdle) {
@@ -227,40 +340,50 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
     </div>`;
   }
 
-  // ─── Ativo: chips + timeline + action + CTA tonal full-width ──────────────
+  // ─── Ativo: chips (c/ timeline inline) + primary row (action + CTA fundidos) ─
+  //
+  // PR2 §12: __action + __cta-bar fundidos em __primary (grid 1fr auto).
+  // Timeline migra pra __timeline-inline dentro do chips row. Tree anterior
+  // (5 zonas: header / bar / chips / timeline / action / cta-bar) colapsa
+  // em 3 zonas de leitura (header / chips+timeline / primary). Reduz ~40%
+  // da altura visual do card sem perder informação.
+  //
+  // E9: factors positivos ganham variante --positive (tom verde discreto);
+  // os demais ficam --neutral. Dá hierarquia imediata de leitura sem
+  // aumentar densidade.
+  const timelineInlineHtml = hasMetrics
+    ? `<span class="equip-card__timeline-inline">
+        Últ. <b>${last ? Utils.escapeHtml(recencia(last.data)) : '—'}</b>
+        <span class="equip-card__timeline-sep" aria-hidden="true"></span>
+        Próx. <b class="equip-card__timeline-inline-next--${proximaTone}">${proximaLabel ? Utils.escapeHtml(proximaLabel) : 'sem agenda'}</b>
+      </span>`
+    : '';
+
   const chipsHtml = `<div class="equip-card__chips">
       <span class="equip-card__risk-chip equip-card__risk-chip--${risk.classification}">${RISK_CLASS_LABEL[risk.classification]} · ${risk.score}</span>
       ${renderTrendBadge(riskTrend)}
       ${risk.factors
         .slice(0, 3)
-        .map((f) => `<span class="equip-card__chip-ctx">${Utils.escapeHtml(f)}</span>`)
+        .map(
+          (f) =>
+            `<span class="equip-card__chip-ctx equip-card__chip-ctx--${_classifyFactor(f)}">${Utils.escapeHtml(f)}</span>`,
+        )
         .join('')}
+      ${timelineInlineHtml}
     </div>`;
 
-  const timelineHtml = hasMetrics
-    ? `<div class="equip-card__timeline">
-        <svg class="equip-card__timeline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
-        <span class="equip-card__timeline-last">
-          Última <b>${last ? Utils.escapeHtml(recencia(last.data)) : '—'}</b>
-        </span>
-        <span class="equip-card__timeline-divider" aria-hidden="true"></span>
-        <span class="equip-card__timeline-next equip-card__timeline-next--${proximaTone}">
-          Próx. <b>${proximaLabel ? Utils.escapeHtml(proximaLabel) : 'sem agenda'}</b>
-        </span>
-      </div>`
-    : '';
-
-  const actionMetaHtml = last?.tecnico
-    ? `<div class="equip-card__action-meta">Por ${Utils.escapeHtml(last.tecnico)} · ${Utils.escapeHtml(recencia(last.data))}</div>`
-    : '';
-
-  const actionHtml = hasAction
-    ? `<div class="equip-card__action">
-        <div class="equip-card__action-label equip-card__action-label--${scls}">AÇÃO RECOMENDADA</div>
-        <div class="equip-card__action-title">${Utils.escapeHtml(suggestedAction.actionLabel)}</div>
-        ${actionMetaHtml}
-      </div>`
-    : '';
+  // PR2 §12.2 — label contextual do __primary: binário (urgente | próxima).
+  // Regra: danger OR factor inclui "parado desde"/"preventiva vencida".
+  // "PRÓXIMA ROTINA" do mockup foi descartado — ruído cognitivo pro tech.
+  const isUrgent =
+    scls === 'danger' ||
+    risk.factors.some((f) => /parado desde|preventiva vencida/i.test(String(f)));
+  const primaryLabelText = isUrgent ? 'AÇÃO URGENTE' : 'PRÓXIMA AÇÃO';
+  const primaryTitle = hasAction ? suggestedAction.actionLabel : ctaLabel;
+  const primaryMetaHtml =
+    hasAction && last?.tecnico
+      ? `<div class="equip-card__primary-meta">Por ${Utils.escapeHtml(last.tecnico)} · ${Utils.escapeHtml(recencia(last.data))}</div>`
+      : '';
 
   return `<div class="equip-card ${cardModifiers}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq.nome)} — ${STATUS_OPERACIONAL[scls]}">
     <div class="equip-card__header">
@@ -276,12 +399,16 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
       <div class="equip-card__health-fill equip-card__health-fill--${hcls}" style="width:${score}%"></div>
     </div>
     ${chipsHtml}
-    ${timelineHtml}
-    ${actionHtml}
-    <button class="equip-card__cta-bar equip-card__cta-bar--${scls}" data-action="go-register-equip" data-id="${safeId}">
-      <span class="equip-card__cta-bar-label">${ctaLabel}</span>
-      <svg class="equip-card__cta-bar-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
-    </button>
+    <div class="equip-card__primary">
+      <div class="equip-card__primary-text">
+        <div class="equip-card__primary-label">${primaryLabelText}</div>
+        <div class="equip-card__primary-title">${Utils.escapeHtml(primaryTitle)}</div>
+        ${primaryMetaHtml}
+      </div>
+      <button class="equip-card__primary-cta" data-action="go-register-equip" data-id="${safeId}" aria-label="${Utils.escapeHtml(ctaLabel)}">
+        <svg class="equip-card__primary-cta-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>
+      </button>
+    </div>
   </div>`;
 }
 
@@ -358,32 +485,39 @@ function setorHealthTone(equipamentosDoSetor) {
   return { tone: 'ok', dangerCount, warnCount };
 }
 
-/** Rótulo do health meter tonal do setor.
- *   · danger → "Atenção requerida"
- *   · warn → "N alerta(s) ativo(s)"
- *   · ok → "Operando normal"
- */
-function setorHealthLabel({ tone, warnCount }) {
-  if (tone === 'danger') return 'Atenção requerida';
-  if (tone === 'warn') {
-    const plural = warnCount !== 1 ? 's' : '';
-    return `${warnCount} alerta${plural} ativo${plural}`;
-  }
-  return 'Operando normal';
+/** Labels do tone pill — mesmas quatro categorias do mockup V3. */
+const _SETOR_TONE_LABELS = {
+  ok: 'Estável',
+  warn: 'Em atenção',
+  danger: 'Crítico',
+  neutral: 'Aguardando',
+};
+
+/** Iniciais (máx 2) pro avatar do responsável. Fallback " · " se vazio. */
+function _setorResponsavelInitials(name) {
+  const clean = String(name || '').trim();
+  if (!clean) return '·';
+  const parts = clean.split(/\s+/).slice(0, 2);
+  return parts
+    .map((p) => p[0] || '')
+    .join('')
+    .toUpperCase();
 }
 
 /**
- * Card de SETOR — Port Claude Design V2 (PR D2).
+ * Card de SETOR — Port Claude Design V3 (P2A).
  *
- * Estrutura nova:
- *  · Head: nome + "N equipamento(s)" (com dot da cor do setor)
- *  · Score lateral direita: "79/100" (valor colorido por tom)
- *  · Health meter tonal: dot + label contextual + "N% em dia"
- *  · 2 barras finas (3px) side-by-side: score + preventiva
- *  · CTA "Ver equipamentos" + ações (editar/excluir) absolute no hover
+ * Novo layout (substitui a versão V2 com score lateral + bars-duo):
+ *  · Left identity bar 4px + wash 10% no topo (ambos puxam --setor-cor)
+ *  · Head: nome + descricao (subtítulo) + tone-pill (Estável/Atenção/Crítico)
+ *  · Meta strip 3 colunas: Equip · Score · Em dia (valores tonificados)
+ *  · Health bar 4px com gradiente --setor-cor → success/warn/danger (% em dia)
+ *  · Footer: responsável (avatar + nome) + Editar inline + kebab overflow + CTA "Ver"
+ *  · Empty state: ícone + copy dentro da mesma shell (meta + health somem)
  *
- * O antigo `isFallback` ("Sem setor") foi promovido a `semSetorStripHtml`
- * e renderizado acima do grid, não mais como card interno.
+ * Fields P1 finalmente surfaçados: `descricao` vira subtítulo (1 linha truncate)
+ * e `responsavel` vira chip com avatar. Kebab mantém só Excluir agora (Editar
+ * ficou inline no footer, mais descobrível).
  */
 export function setorCardHtml(
   setor,
@@ -395,7 +529,9 @@ export function setorCardHtml(
   const safeId = Utils.escapeAttr(setor.id);
   const kpis = getSetorKpis(equipamentosDoSetor);
   const healthTone = setorHealthTone(equipamentosDoSetor);
-  const tone = healthTone.tone; // 'ok' | 'warn' | 'danger'
+  // Empty → neutral (tone pill "Aguardando"). Com dados → usa o healthTone real.
+  const tone = count === 0 ? 'neutral' : healthTone.tone;
+  const toneLabel = _SETOR_TONE_LABELS[tone];
   const cardModifiers = [
     `setor-card--${worstStatus(equipamentosDoSetor)}`,
     count === 0 ? 'setor-card--empty' : '',
@@ -403,155 +539,359 @@ export function setorCardHtml(
     .filter(Boolean)
     .join(' ');
 
-  // Score lateral (canto direito do head) — só aparece em setores com dados.
-  // Em setor vazio, mostra "—/100" em tom muted pra manter a diagramação.
-  const scoreLatHtml = kpis
-    ? `
-      <div class="setor-card__score-lat">
-        <div class="setor-card__score-lat-cap">SCORE</div>
-        <div class="setor-card__score-lat-num">
-          <span class="setor-card__score-lat-val setor-card__score-lat-val--${tone}">${kpis.avgScore}</span><span class="setor-card__score-lat-den">/100</span>
-        </div>
-      </div>`
-    : `
-      <div class="setor-card__score-lat setor-card__score-lat--muted">
-        <div class="setor-card__score-lat-cap">SCORE</div>
-        <div class="setor-card__score-lat-num">
-          <span class="setor-card__score-lat-val">—</span><span class="setor-card__score-lat-den">/100</span>
-        </div>
-      </div>`;
+  const hasDescricao = !!setor.descricao && String(setor.descricao).trim() !== '';
+  const descricaoHtml = hasDescricao
+    ? `<p class="setor-card__descricao">${Utils.escapeHtml(setor.descricao)}</p>`
+    : count === 0
+      ? `<p class="setor-card__descricao">Atribua equipamentos pra começar a acompanhar por área.</p>`
+      : '';
 
-  // Corpo: setores com dados mostram health meter + 2 barras finas.
-  // Setor vazio mostra apenas mensagem muted.
-  const bodyHtml = kpis
+  const tonePillHtml = `
+      <span class="setor-card__tone-pill setor-card__tone-pill--${tone}">
+        <span class="setor-card__tone-pill-dot" aria-hidden="true"></span>
+        ${toneLabel}
+      </span>`;
+
+  // Meta strip (3 KPIs) — só quando há equipamentos. Valores score/em-dia
+  // carregam a classe tonal (__meta-value--ok/warn/danger).
+  const metaHtml = kpis
     ? `
-      <div class="setor-card__health-block">
-        <div class="setor-card__health-meter setor-card__health-meter--${tone}">
-          <span class="setor-card__health-dot"></span>
-          <span class="setor-card__health-label">${Utils.escapeHtml(setorHealthLabel(healthTone))}</span>
-          <span class="setor-card__health-pct">${kpis.pctEmDia}% em dia</span>
+      <dl class="setor-card__meta" aria-label="Resumo do setor">
+        <div class="setor-card__meta-item">
+          <dt class="setor-card__meta-label">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>
+            </svg>
+            Equip.
+          </dt>
+          <dd class="setor-card__meta-value setor-card__meta-value--dot">
+            <span class="setor-card__meta-value-dot" aria-hidden="true"></span>
+            <span>${count}</span>
+          </dd>
         </div>
-        <div class="setor-card__bars-duo" role="presentation">
-          <div class="setor-card__bar-thin setor-card__bar-thin--${tone}">
-            <span style="width:${kpis.avgScore}%"></span>
-          </div>
-          <div class="setor-card__bar-thin setor-card__bar-thin--ok">
-            <span style="width:${kpis.pctEmDia}%"></span>
-          </div>
+        <div class="setor-card__meta-item">
+          <dt class="setor-card__meta-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 17l5-5 4 4 7-8"/><polyline points="14 8 20 8 20 14"/>
+            </svg>
+            Score
+          </dt>
+          <dd class="setor-card__meta-value setor-card__meta-value--${tone}">${kpis.avgScore}<span class="setor-card__meta-value-suffix">/100</span></dd>
+        </div>
+        <div class="setor-card__meta-item">
+          <dt class="setor-card__meta-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
+            </svg>
+            Em dia
+          </dt>
+          <dd class="setor-card__meta-value setor-card__meta-value--${tone}">${kpis.pctEmDia}<span class="setor-card__meta-value-suffix">%</span></dd>
+        </div>
+      </dl>`
+    : '';
+
+  // Health bar — largura = % em dia; gradiente tonificado puxa --setor-cor.
+  const healthHtml = kpis
+    ? `
+      <div class="setor-card__health" role="presentation">
+        <div class="setor-card__health-track">
+          <div class="setor-card__health-fill setor-card__health-fill--${tone}" style="width:${kpis.pctEmDia}%"></div>
         </div>
       </div>`
+    : '';
+
+  // Empty body — só substitui meta + health. Head + footer continuam.
+  const emptyHtml =
+    count === 0
+      ? `
+      <div class="setor-card__empty">
+        <div class="setor-card__empty-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/>
+          </svg>
+        </div>
+        <p class="setor-card__empty-copy">
+          <b>Setor vazio.</b> Arraste equipamentos aqui ou use <b>+ Novo equipamento</b> pra popular.
+        </p>
+      </div>`
+      : '';
+
+  const hasResponsavel = !!setor.responsavel && String(setor.responsavel).trim() !== '';
+  const responsavelHtml = hasResponsavel
+    ? `
+        <span class="setor-card__avatar" aria-hidden="true">${Utils.escapeHtml(_setorResponsavelInitials(setor.responsavel))}</span>
+        <span class="setor-card__responsavel-name" title="${Utils.escapeAttr(setor.responsavel)}">${Utils.escapeHtml(setor.responsavel)}</span>`
     : `
-      <div class="setor-card__empty-body">
-        <span class="setor-card__empty-hint">Nenhum equipamento atribuído ainda.</span>
-      </div>`;
+        <span class="setor-card__responsavel-name setor-card__responsavel-name--empty">Sem responsável</span>`;
 
   const menuId = `setor-menu-${safeId}`;
-  const actionsHtml = `
-      <div class="setor-card__actions">
-        <button class="setor-card__kebab"
-                data-action="toggle-setor-menu"
-                data-id="${safeId}"
-                aria-haspopup="menu"
-                aria-expanded="false"
-                aria-controls="${menuId}"
-                aria-label="Mais ações para o setor ${Utils.escapeHtml(setor.nome)}"
-                title="Mais ações">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="12" cy="5" r="1.8"/>
-            <circle cx="12" cy="12" r="1.8"/>
-            <circle cx="12" cy="19" r="1.8"/>
-          </svg>
-        </button>
-        <div class="setor-card__menu" id="${menuId}" role="menu" hidden>
-          <button type="button" class="setor-card__menu-item" role="menuitem"
-                  data-action="edit-setor" data-id="${safeId}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  const footerHtml = `
+      <div class="setor-card__footer">
+        <div class="setor-card__responsavel">${responsavelHtml}
+        </div>
+        <div class="setor-card__actions">
+          <button class="setor-card__btn"
+                  data-action="edit-setor"
+                  data-id="${safeId}"
+                  type="button"
+                  aria-label="Editar setor ${Utils.escapeHtml(setor.nome)}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 20h9"/>
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
             </svg>
-            <span>Editar</span>
+            Editar
           </button>
-          <button type="button" class="setor-card__menu-item setor-card__menu-item--danger" role="menuitem"
-                  data-action="delete-setor" data-id="${safeId}">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+          <button class="setor-card__btn setor-card__btn--icon"
+                  data-action="toggle-setor-menu"
+                  data-id="${safeId}"
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded="false"
+                  aria-controls="${menuId}"
+                  aria-label="Mais ações para o setor ${Utils.escapeHtml(setor.nome)}"
+                  title="Mais ações">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
             </svg>
-            <span>Excluir</span>
           </button>
+          <button class="setor-card__btn setor-card__btn--cta"
+                  data-action="open-setor"
+                  data-id="${safeId}"
+                  type="button"
+                  aria-label="Ver equipamentos do setor ${Utils.escapeHtml(setor.nome)}">
+            Ver
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 6 15 12 9 18"/>
+            </svg>
+          </button>
+          <div class="setor-card__menu" id="${menuId}" role="menu" hidden>
+            <button type="button" class="setor-card__menu-item setor-card__menu-item--danger" role="menuitem"
+                    data-action="delete-setor" data-id="${safeId}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+              </svg>
+              <span>Excluir</span>
+            </button>
+          </div>
         </div>
       </div>`;
 
   return `
-    <div class="setor-card ${cardModifiers}" data-action="open-setor" data-id="${safeId}"
-         style="--setor-cor:${Utils.escapeHtml(cor)}" role="button" tabindex="0"
-         aria-label="Setor ${Utils.escapeHtml(setor.nome)}: ${count} equipamento${count !== 1 ? 's' : ''}">
+    <article class="setor-card ${cardModifiers}" data-action="open-setor" data-id="${safeId}"
+             style="--setor-cor:${Utils.escapeHtml(cor)}" role="button" tabindex="0"
+             aria-label="Setor ${Utils.escapeHtml(setor.nome)}: ${count} equipamento${count !== 1 ? 's' : ''} — ${toneLabel}">
 
-      <div class="setor-card__head">
-        <div class="setor-card__info">
-          <div class="setor-card__nome">${Utils.escapeHtml(setor.nome)}</div>
-          <div class="setor-card__count">
-            <span class="setor-card__count-dot"></span>
-            ${count} equipamento${count !== 1 ? 's' : ''}
+      <header class="setor-card__head">
+        <div class="setor-card__row-top">
+          <div class="setor-card__title-wrap">
+            <h3 class="setor-card__nome">${Utils.escapeHtml(setor.nome)}</h3>
+            ${descricaoHtml}
           </div>
+          ${tonePillHtml}
         </div>
-        ${scoreLatHtml}
-      </div>
+      </header>
 
-      ${bodyHtml}
+      ${metaHtml}
+      ${healthHtml}
+      ${emptyHtml}
 
-      <div class="setor-card__footer">
-        ${actionsHtml}
-        <div class="setor-card__cta">
-          <span>Ver equipamentos</span>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M5 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-      </div>
-    </div>`;
+      ${footerHtml}
+    </article>`;
 }
 
-/**
- * Strip "Sem setor" — promovida pro topo do grid (PR D2).
+// ─── Hero "Organizar parque" + Quick Filters ────────────────────────────────
+//
+// O hero mora acima da toolbar e é persistente entre views (grid de setores,
+// flat list Free, drill-down de quick filter). Ele NÃO duplica os KPIs do
+// Dashboard (eficiência / anomalias / serviços) — o ângulo aqui é gestão:
+// quantos equipamentos estão órfãos de setor? Quantos pedem atenção ou estão
+// críticos? Quantas preventivas vencem nos próximos 30 dias?
+//
+// Os 4 chips de filtro são drill-downs rápidos pra cada KPI + "Todos" (reset)
+// + "Sem setor" (só aparece como filtro destacado porque já é a dor #1).
+
+/** Quick filter ativo. null = visão padrão (grid/list). */
+let _activeQuickFilter = null;
+
+export function getActiveQuickFilter() {
+  return _activeQuickFilter;
+}
+export function setActiveQuickFilter(id) {
+  // null, 'sem-setor', 'em-atencao', 'criticos', 'preventiva-30d'
+  _activeQuickFilter = id && id !== 'todos' ? id : null;
+  // Ao ativar quick filter, sai do drill-down de setor (evita estados
+  // inconsistentes tipo "setor X + filtro Críticos").
+  if (_activeQuickFilter) _activeSectorId = null;
+  renderEquip();
+}
+
+/** Computa os 4 KPIs do hero a partir do state atual.
+ *  · semSetor: equipamentos sem setorId (órfãos)
+ *  · emAtencao: priority >= ALTA (urgente + alta) + status warn
+ *  · criticos: status danger
+ *  · preventiva30d: preventivas vencendo em até 30 dias (ou já vencidas)
  *
- * Antes era um card interno (dashed) misturado com os setores reais; agora
- * é um strip horizontal fino acima do grid, com CTA direto pra atribuir.
- * Aparece só quando há equipamentos órfãos.
- *
- * A ação `assign-sem-setor` abre a lista flat desses equipamentos (drill-down
- * no bucket __sem_setor__) — mesma semântica que o antigo card fallback.
+ * Blindagem: cada equip é avaliado em try/catch — falha em 1 não derruba o hero.
  */
-export function semSetorStripHtml(count) {
-  if (!count) return '';
-  const plural = count !== 1 ? 's' : '';
-  return `
-    <div class="sem-setor-strip" data-action="open-setor" data-id="__sem_setor__"
-         role="button" tabindex="0"
-         aria-label="${count} equipamento${plural} sem setor atribuído">
-      <div class="sem-setor-strip__icon" aria-hidden="true">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-          <line x1="12" y1="9" x2="12" y2="13"/>
-          <line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-      </div>
-      <div class="sem-setor-strip__body">
-        <div class="sem-setor-strip__title">
-          ${count} equipamento${plural} sem setor
-        </div>
-        <div class="sem-setor-strip__sub">
-          Fora dos KPIs até ser${count !== 1 ? 'em' : ''} atribuído${plural}
-        </div>
-      </div>
-      <button class="sem-setor-strip__cta" data-action="open-setor" data-id="__sem_setor__"
-              type="button">
-        Atribuir setor <span aria-hidden="true">→</span>
-      </button>
-    </div>`;
+export function computeEquipKpis(state = getState()) {
+  const { equipamentos = [], registros = [] } = state || {};
+  let semSetor = 0;
+  let emAtencao = 0;
+  let criticos = 0;
+
+  equipamentos.forEach((eq) => {
+    if (!eq.setorId) semSetor += 1;
+    const status = Utils.safeStatus(eq.status);
+    if (status === 'danger') {
+      criticos += 1;
+    } else {
+      try {
+        const regs = regsForEquip(eq.id);
+        const priority = evaluateEquipmentPriority(eq, regs);
+        // Em atenção = ALTA ou URGENTE (Urgente aparece no chip mesmo sem status:danger
+        // porque pode vir de preventiva muito atrasada). Status warn sozinho já
+        // conta como atenção ainda que a priority engine retorne OK (signal visual).
+        if (priority.priorityLevel >= 3 || status === 'warn') emAtencao += 1;
+      } catch {
+        if (status === 'warn') emAtencao += 1;
+      }
+    }
+  });
+
+  let preventiva30d;
+  try {
+    preventiva30d = getPreventivaDueEquipmentIds(registros, 30).length;
+  } catch {
+    preventiva30d = 0;
+  }
+
+  return { semSetor, emAtencao, criticos, preventiva30d };
+}
+
+/** Copy do subtítulo do hero, derivada dos KPIs (evita "0 de tudo" genérico). */
+function _equipHeroSubCopy({ semSetor, emAtencao, criticos, preventiva30d }) {
+  if (criticos > 0) {
+    const plural = criticos !== 1 ? 's' : '';
+    return `${criticos} equipamento${plural} crítico${plural} precisam de ação imediata.`;
+  }
+  if (emAtencao > 0) {
+    const plural = emAtencao !== 1 ? 's' : '';
+    return `${emAtencao} equipamento${plural} pedindo atenção.`;
+  }
+  if (semSetor > 0) {
+    const plural = semSetor !== 1 ? 's' : '';
+    return `${semSetor} equipamento${plural} sem setor — organize pra acompanhar por área.`;
+  }
+  if (preventiva30d > 0) {
+    const plural = preventiva30d !== 1 ? 's' : '';
+    return `${preventiva30d} preventiva${plural} vencendo nos próximos 30 dias.`;
+  }
+  return 'Parque em ordem. Monitore as preventivas e organize por setor.';
+}
+
+/** Renderiza hero no slot #equip-hero. Idempotente; chamar sempre em render. */
+export function renderEquipHero() {
+  const hero = Utils.getEl('equip-hero');
+  if (!hero) return;
+  const { equipamentos = [] } = getState();
+
+  // Sem equipamentos: hero fica hidden (empty state do lista-equip cuida da CTA).
+  if (!equipamentos.length) {
+    hero.setAttribute('hidden', '');
+    return;
+  }
+
+  hero.removeAttribute('hidden');
+  const kpis = computeEquipKpis();
+  const sub = Utils.getEl('equip-hero-sub');
+  if (sub) sub.textContent = _equipHeroSubCopy(kpis);
+
+  const slot = Utils.getEl('equip-hero-kpis');
+  if (!slot) return;
+
+  const tiles = [
+    {
+      id: 'sem-setor',
+      icon: '#eq-ri-inbox',
+      tone: 'neutral',
+      value: kpis.semSetor,
+      label: 'Sem setor',
+    },
+    {
+      id: 'em-atencao',
+      icon: '#eq-ri-alert-triangle',
+      tone: kpis.emAtencao > 0 ? 'warn' : 'neutral',
+      value: kpis.emAtencao,
+      label: 'Em atenção',
+    },
+    {
+      id: 'criticos',
+      icon: '#eq-ri-alert-octagon',
+      tone: kpis.criticos > 0 ? 'danger' : 'neutral',
+      value: kpis.criticos,
+      label: 'Críticos',
+    },
+    {
+      id: 'preventiva-30d',
+      icon: '#eq-ri-calendar-clock',
+      tone: kpis.preventiva30d > 0 ? 'cyan' : 'neutral',
+      value: kpis.preventiva30d,
+      label: 'Preventivas ≤30d',
+    },
+  ];
+
+  slot.innerHTML = tiles
+    .map((t) => {
+      const safeId = Utils.escapeAttr(t.id);
+      return `
+        <button type="button" class="equip-hero__kpi equip-hero__kpi--${t.tone}" role="listitem"
+                data-action="equip-quickfilter" data-id="${safeId}"
+                aria-label="${Utils.escapeHtml(t.label)}: ${t.value}. Filtrar por ${Utils.escapeHtml(t.label)}">
+          <span class="equip-hero__kpi-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="${t.icon}"/></svg>
+          </span>
+          <span class="equip-hero__kpi-value">${t.value}</span>
+          <span class="equip-hero__kpi-label">${Utils.escapeHtml(t.label)}</span>
+        </button>`;
+    })
+    .join('');
+}
+
+/** Renderiza os chips de quick filter no slot #equip-filters. */
+export function renderEquipFilters() {
+  const bar = Utils.getEl('equip-filters');
+  if (!bar) return;
+  const { equipamentos = [] } = getState();
+  if (!equipamentos.length) {
+    bar.setAttribute('hidden', '');
+    bar.innerHTML = '';
+    return;
+  }
+  bar.removeAttribute('hidden');
+  const active = _activeQuickFilter || 'todos';
+
+  const chips = [
+    { id: 'todos', label: 'Todos' },
+    { id: 'sem-setor', label: 'Sem setor' },
+    { id: 'em-atencao', label: 'Em atenção' },
+    { id: 'criticos', label: 'Críticos' },
+    { id: 'preventiva-30d', label: 'Preventiva ≤30d' },
+  ];
+
+  bar.innerHTML = chips
+    .map((c) => {
+      const isActive = c.id === active;
+      const safeId = Utils.escapeAttr(c.id);
+      return `
+        <button type="button" class="equip-filter${isActive ? ' equip-filter--active' : ''}"
+                data-action="equip-quickfilter" data-id="${safeId}"
+                aria-pressed="${isActive ? 'true' : 'false'}">
+          ${Utils.escapeHtml(c.label)}
+        </button>`;
+    })
+    .join('');
 }
 
 /** Atualiza a toolbar da view de equipamentos. */
@@ -635,6 +975,10 @@ export function populateSetorSelect(isPro = false) {
 /** Navega para dentro de um setor (ou volta ao grid se id === null). */
 export function setActiveSector(id) {
   _activeSectorId = id ?? null;
+  // Sair do quick filter ao entrar num setor — evita estados compostos tipo
+  // "setor X + chip Críticos" que o header não consegue expressar de um jeito
+  // simples.
+  if (_activeSectorId) _activeQuickFilter = null;
   renderEquip();
 }
 
@@ -673,22 +1017,44 @@ function renderSetorGrid() {
     return setorCardHtml(s, eqs);
   });
 
-  // "Sem setor" virou strip no topo do grid (PR D2 — Port Claude Design V2).
-  // Aparece só quando há equipamentos órfãos; CTA direto pra atribuir.
-  const semSetor = equipamentos.filter((e) => !e.setorId);
-  const semSetorStrip = semSetorStripHtml(semSetor.length);
-
-  el.innerHTML = `${semSetorStrip}<div class="setor-grid">${setorCards.join('')}</div>`;
+  // Órfãos ("Sem setor") são surfaçados pelo tile do equip-hero; o drill-down
+  // abre via data-id="sem-setor" → __sem_setor__. Nada aqui no grid.
+  el.innerHTML = `<div class="setor-grid">${setorCards.join('')}</div>`;
 }
 
 /** Renderiza a lista flat de equipamentos (FREE ou drill-down de um setor). */
 function renderFlatList(filtro = '', options = {}, setorId = null) {
   const { equipamentos, registros } = getState();
   const q = filtro.toLowerCase();
-  const preventivas7dIds =
-    options.statusFilter === 'preventiva-7d'
-      ? new Set(getPreventivaDueEquipmentIds(registros, 7))
-      : null;
+  // Filtros por statusFilter — cada um constrói um Set de IDs permitidos (null = sem filtro).
+  //  · 'preventiva-7d' (legado do handler "go-alertas")
+  //  · 'preventiva-30d' (quick filter novo)
+  //  · 'em-atencao' / 'criticos' (quick filters novos, avaliados via priority engine)
+  let allowedIds = null;
+  if (options.statusFilter === 'preventiva-7d') {
+    allowedIds = new Set(getPreventivaDueEquipmentIds(registros, 7));
+  } else if (options.statusFilter === 'preventiva-30d') {
+    allowedIds = new Set(getPreventivaDueEquipmentIds(registros, 30));
+  } else if (options.statusFilter === 'em-atencao') {
+    allowedIds = new Set(
+      equipamentos
+        .filter((e) => {
+          const status = Utils.safeStatus(e.status);
+          if (status === 'danger') return false; // críticos têm chip próprio
+          try {
+            const pr = evaluateEquipmentPriority(e, regsForEquip(e.id));
+            return pr.priorityLevel >= 3 || status === 'warn';
+          } catch {
+            return status === 'warn';
+          }
+        })
+        .map((e) => e.id),
+    );
+  } else if (options.statusFilter === 'criticos') {
+    allowedIds = new Set(
+      equipamentos.filter((e) => Utils.safeStatus(e.status) === 'danger').map((e) => e.id),
+    );
+  }
 
   let list = equipamentos.filter((e) => {
     // Filtra por setor se estiver em drill-down
@@ -697,7 +1063,7 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
     } else if (setorId) {
       if (e.setorId !== setorId) return false;
     }
-    const matchesStatus = !preventivas7dIds || preventivas7dIds.has(e.id);
+    const matchesStatus = !allowedIds || allowedIds.has(e.id);
     const matchesSearch =
       !q ||
       e.nome.toLowerCase().includes(q) ||
@@ -722,27 +1088,86 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
     return rb - ra;
   });
 
+  // Copy contextual do empty state: depende do que o usuário tentou filtrar.
+  const emptyCopy = (() => {
+    if (setorId === '__sem_setor__') {
+      return {
+        title: 'Nenhum equipamento órfão',
+        description: 'Todos os equipamentos já estão atribuídos a um setor. 👏',
+      };
+    }
+    if (setorId) {
+      return {
+        title: 'Nenhum equipamento neste setor',
+        description: 'Atribua equipamentos a este setor ao cadastrá-los.',
+      };
+    }
+    switch (options.statusFilter) {
+      case 'em-atencao':
+        return {
+          title: 'Nenhum equipamento pedindo atenção',
+          description: 'Parque em ordem — nada pra olhar com lupa agora.',
+        };
+      case 'criticos':
+        return {
+          title: 'Nenhum equipamento crítico',
+          description: 'Tudo operacional. Volte aqui se algum alerta aparecer.',
+        };
+      case 'preventiva-7d':
+      case 'preventiva-30d':
+        return {
+          title: 'Nenhuma preventiva vencendo',
+          description: 'Agenda de manutenção em dia.',
+        };
+      default:
+        return {
+          title: 'Nenhum equipamento encontrado',
+          description: 'Tente outro termo ou cadastre um novo.',
+        };
+    }
+  })();
+
+  // PR4 §12.3 · Particiona idle vs ativo pra decidir sobre idle-cluster.
+  //  · Cluster coleta idles quando ≥5 (histerese solta ≤2).
+  //  · Posição: cluster sempre acima dos cards ativos — mas só se houver
+  //    ao menos 1 card ativo pra contrastar. Em lista só-de-idle o cluster
+  //    perde valor (nada pra "esconder") e volta a render linear.
+  const idleList = sortedList.filter((eq) => _isEquipFullyIdle(eq));
+  const activeList = sortedList.filter((eq) => !_isEquipFullyIdle(eq));
+  const clusterActive =
+    _resolveIdleClusterCollapsed(idleList.length) && idleList.length > 0 && activeList.length > 0;
+
   withSkeleton(
     el,
     { enabled: true, variant: 'equipment', count: Math.min(Math.max(list.length, 3), 5) },
     () => {
-      el.innerHTML = sortedList.length
-        ? sortedList.map((eq) => equipCardHtml(eq, { showLocal: !setorId })).join('')
-        : emptyStateHtml({
-            icon: '🔧',
-            title: setorId ? 'Nenhum equipamento neste setor' : 'Nenhum equipamento encontrado',
-            description: setorId
-              ? 'Atribua equipamentos a este setor ao cadastrá-los.'
-              : 'Tente outro termo ou cadastre um novo.',
-            cta: {
-              label: '+ Novo equipamento',
-              action: 'open-modal',
-              id: 'modal-add-eq',
-              tone: 'primary',
-              size: 'sm',
-              autoWidth: true,
-            },
-          });
+      if (!sortedList.length) {
+        el.innerHTML = emptyStateHtml({
+          icon: '🔧',
+          title: emptyCopy.title,
+          description: emptyCopy.description,
+          cta: {
+            label: '+ Novo equipamento',
+            action: 'open-modal',
+            id: 'modal-add-eq',
+            tone: 'primary',
+            size: 'sm',
+            autoWidth: true,
+          },
+        });
+        return;
+      }
+      if (clusterActive) {
+        const idleCardsHtml = idleList
+          .map((eq) => equipCardHtml(eq, { showLocal: !setorId }))
+          .join('');
+        const activeCardsHtml = activeList
+          .map((eq) => equipCardHtml(eq, { showLocal: !setorId }))
+          .join('');
+        el.innerHTML = _idleClusterHtml(idleCardsHtml, idleList.length) + activeCardsHtml;
+      } else {
+        el.innerHTML = sortedList.map((eq) => equipCardHtml(eq, { showLocal: !setorId })).join('');
+      }
     },
   );
 }
@@ -758,6 +1183,36 @@ export async function renderEquip(filtro = '', options = {}) {
     populateSetorSelect(isPro);
   } catch {
     /* fallback FREE */
+  }
+
+  // Hero + filters sempre no topo da view (hidden quando não há equipamentos).
+  // Precisa rodar antes de qualquer return — os slots são estáveis entre modos.
+  renderEquipHero();
+  renderEquipFilters();
+
+  // Quick filter ativo sobrescreve o fluxo normal: vai pra flat list com
+  // statusFilter correspondente. Sempre rende com a toolbar "← Todos" pra dar
+  // caminho de volta claro.
+  if (_activeQuickFilter) {
+    const searchBar = Utils.getEl('equip-search-bar');
+    if (searchBar) searchBar.style.display = '';
+    const titleMap = {
+      'sem-setor': 'Sem setor',
+      'em-atencao': 'Em atenção',
+      criticos: 'Críticos',
+      'preventiva-30d': 'Preventivas ≤30d',
+    };
+    _setToolbar({
+      title: titleMap[_activeQuickFilter] || 'Equipamentos',
+      extraBtn: `<button class="btn btn--outline btn--sm" data-action="equip-quickfilter" data-id="todos">← Todos</button>`,
+    });
+
+    if (_activeQuickFilter === 'sem-setor') {
+      renderFlatList(filtro, options, '__sem_setor__');
+    } else {
+      renderFlatList(filtro, { ...options, statusFilter: _activeQuickFilter }, null);
+    }
+    return;
   }
 
   const searchBar = Utils.getEl('equip-search-bar');
@@ -829,19 +1284,99 @@ async function ensureProForSetores({ action = 'manage' } = {}) {
   return false;
 }
 
+// ── Setor modal: paleta curada, live preview, validation ─────────────────
+//
+// Paleta de 10 cores (expandida de 6) pra dar mais identidade visual aos
+// setores sem virar arco-íris. Default = --primary (#00c8e8, Ciano).
+const SETOR_PALETTE = [
+  { hex: '#00c8e8', nome: 'Ciano' },
+  { hex: '#00c853', nome: 'Esmeralda' },
+  { hex: '#ffab40', nome: 'Âmbar' },
+  { hex: '#ff5252', nome: 'Coral' },
+  { hex: '#7c4dff', nome: 'Violeta' },
+  { hex: '#448aff', nome: 'Azul' },
+  { hex: '#f06292', nome: 'Rosa' },
+  { hex: '#9ccc65', nome: 'Verde-lima' },
+  { hex: '#ff7043', nome: 'Laranja' },
+  { hex: '#26a69a', nome: 'Teal' },
+];
+const SETOR_NOME_LIMIT = 40;
+const SETOR_DESC_LIMIT = 120;
+
+/** Relative luminance (WCAG). hex deve estar em forma #RRGGBB. */
+function _hexLuminance(hex) {
+  const h = String(hex || '').replace('#', '');
+  if (h.length !== 6) return 0;
+  const r = parseInt(h.slice(0, 2), 16) / 255;
+  const g = parseInt(h.slice(2, 4), 16) / 255;
+  const b = parseInt(h.slice(4, 6), 16) / 255;
+  const toLin = (v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  return 0.2126 * toLin(r) + 0.7152 * toLin(g) + 0.0722 * toLin(b);
+}
+
+/** Contraste entre uma cor de acento e branco (pro badge do preview). */
+export function setorContrastWithWhite(hex) {
+  const L = _hexLuminance(hex);
+  return 1.05 / (L + 0.05);
+}
+
+/** Busca metadados da paleta por hex. Retorna null se não encontrado. */
+function _findPaletteEntry(hex) {
+  if (!hex) return null;
+  const target = String(hex).toLowerCase();
+  return SETOR_PALETTE.find((p) => p.hex.toLowerCase() === target) || null;
+}
+
+function _setSaveBtnLabel(text) {
+  const btn = Utils.getEl('setor-save-btn');
+  if (!btn) return;
+  const label = btn.querySelector('.setor-modal__btn-label');
+  if (label) label.textContent = text;
+}
+
 // Estado do fluxo de edição do setor. Quando preenchido, saveSetor()
 // atualiza em vez de criar.
 let _editingSetorId = null;
 export function getEditingSetorId() {
   return _editingSetorId;
 }
+
+/** Reseta todo o form do modal e volta pra modo "criar". */
 export function clearSetorEditingState() {
   _editingSetorId = null;
   const titleEl = Utils.getEl('modal-add-setor-title');
-  if (titleEl) titleEl.textContent = 'Criar setor';
-  const saveBtn = document.querySelector('[data-action="save-setor"]');
-  if (saveBtn) saveBtn.textContent = 'Criar setor';
+  if (titleEl) titleEl.textContent = 'Novo setor';
+  _setSaveBtnLabel('Criar setor →');
+
+  // Limpa os 4 campos do form
+  Utils.setVal('setor-nome', '');
+  Utils.setVal('setor-descricao', '');
+  Utils.setVal('setor-responsavel', '');
+  const hiddenInput = Utils.getEl('setor-cor');
+  if (hiddenInput) hiddenInput.value = SETOR_PALETTE[0].hex;
+
+  // Reseta picker pra primeira cor
+  const picker = Utils.getEl('setor-color-picker');
+  if (picker) {
+    picker.querySelectorAll('.setor-modal__swatch').forEach((btn) => {
+      const cell = btn.closest('.setor-modal__swatch-cell');
+      const isFirst = btn.dataset.cor === SETOR_PALETTE[0].hex;
+      btn.classList.toggle('setor-modal__swatch--selected', isFirst);
+      btn.setAttribute('aria-checked', isFirst ? 'true' : 'false');
+      if (cell) cell.classList.toggle('setor-modal__swatch-cell--selected', isFirst);
+    });
+  }
+
+  // Esconde erro inline
+  const err = Utils.getEl('setor-nome-err');
+  if (err) err.hidden = true;
+  const nomeInput = Utils.getEl('setor-nome');
+  if (nomeInput) nomeInput.setAttribute('aria-invalid', 'false');
+
+  _syncSetorModalPreview();
+  _syncSetorModalCounters();
 }
+
 export function openEditSetor(id) {
   const setor = findSetor(id);
   if (!setor) {
@@ -849,51 +1384,148 @@ export function openEditSetor(id) {
     return;
   }
   _editingSetorId = id;
-  Utils.setVal('setor-nome', setor.nome);
-  // Marca a cor atual no picker
-  const picker = Utils.getEl('setor-color-picker');
+
+  Utils.setVal('setor-nome', setor.nome || '');
+  Utils.setVal('setor-descricao', setor.descricao || '');
+  Utils.setVal('setor-responsavel', setor.responsavel || '');
+
   const hiddenInput = Utils.getEl('setor-cor');
+  const cor = setor.cor || SETOR_PALETTE[0].hex;
+  if (hiddenInput) hiddenInput.value = cor;
+
+  // Marca a cor atual no picker (ou deseleciona tudo se for cor custom)
+  const picker = Utils.getEl('setor-color-picker');
   if (picker) {
-    let matched = false;
-    picker.querySelectorAll('.setor-color-btn').forEach((b) => {
-      const isMatch = b.dataset.cor === setor.cor;
-      b.classList.toggle('setor-color-btn--selected', isMatch);
-      b.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
-      if (isMatch) matched = true;
+    picker.querySelectorAll('.setor-modal__swatch').forEach((btn) => {
+      const cell = btn.closest('.setor-modal__swatch-cell');
+      const isMatch = btn.dataset.cor === cor;
+      btn.classList.toggle('setor-modal__swatch--selected', isMatch);
+      btn.setAttribute('aria-checked', isMatch ? 'true' : 'false');
+      if (cell) cell.classList.toggle('setor-modal__swatch-cell--selected', isMatch);
     });
-    // Cor custom (fora da paleta): deseleciona tudo
-    if (!matched) {
-      picker.querySelectorAll('.setor-color-btn').forEach((b) => {
-        b.classList.remove('setor-color-btn--selected');
-        b.setAttribute('aria-pressed', 'false');
-      });
-    }
   }
-  if (hiddenInput) hiddenInput.value = setor.cor || '#00c8e8';
+
   const titleEl = Utils.getEl('modal-add-setor-title');
   if (titleEl) titleEl.textContent = 'Editar setor';
-  const saveBtn = document.querySelector('[data-action="save-setor"]');
-  if (saveBtn) saveBtn.textContent = 'Salvar alterações';
+  _setSaveBtnLabel('Salvar alterações');
+
+  // Esconde erro inline
+  const err = Utils.getEl('setor-nome-err');
+  if (err) err.hidden = true;
+  const nomeInput = Utils.getEl('setor-nome');
+  if (nomeInput) nomeInput.setAttribute('aria-invalid', 'false');
+
+  _syncSetorModalPreview();
+  _syncSetorModalCounters();
+
   import('../../core/modal.js').then(({ Modal: M }) => M.open('modal-add-setor'));
 }
 
-/** Inicializa o color picker do modal de setor. */
+/**
+ * Atualiza o card de prévia lendo o estado atual do form (nome + cor).
+ * Roda síncrono e barato: altera textContent + CSS custom property.
+ * Também pulsa o card por 350ms pra sinalizar troca de cor.
+ */
+function _syncSetorModalPreview() {
+  const card = Utils.getEl('setor-modal-preview-card');
+  if (!card) return;
+
+  const nome = (Utils.getVal('setor-nome') || '').trim();
+  const cor = Utils.getEl('setor-cor')?.value || SETOR_PALETTE[0].hex;
+  const entry = _findPaletteEntry(cor);
+
+  // Nome do card (placeholder "Novo setor" quando vazio)
+  const nameEl = Utils.getEl('setor-modal-preview-name');
+  if (nameEl) nameEl.textContent = nome || 'Novo setor';
+
+  // Cor: CSS custom property no card raiz + readout do nome/hex
+  card.style.setProperty('--setor-cor', cor);
+  const nameReadout = Utils.getEl('setor-color-name');
+  if (nameReadout) nameReadout.textContent = entry?.nome || 'Custom';
+  const hexReadout = Utils.getEl('setor-color-hex');
+  if (hexReadout) hexReadout.textContent = cor;
+
+  // Contraste AA (branco sobre a cor de acento — serve só de guia visual)
+  const contrastEl = Utils.getEl('setor-contrast');
+  if (contrastEl) {
+    const ratio = setorContrastWithWhite(cor);
+    const pass = ratio >= 4.5;
+    contrastEl.dataset.aa = pass ? 'pass' : 'warn';
+    contrastEl.textContent = `${pass ? 'AA ✓' : 'AA ⚠'} · ${ratio.toFixed(1)}:1`;
+  }
+
+  // Pulso visual quando muda
+  card.classList.remove('is-pulsing');
+  // Force reflow to restart animation
+  void card.offsetWidth;
+  card.classList.add('is-pulsing');
+}
+
+/** Atualiza contadores (0/40, 0/120) + marca como over quando passa do limite. */
+function _syncSetorModalCounters() {
+  const nome = Utils.getVal('setor-nome') || '';
+  const desc = Utils.getVal('setor-descricao') || '';
+  const nomeCounter = Utils.getEl('setor-nome-counter');
+  if (nomeCounter) {
+    nomeCounter.textContent = `${nome.length}/${SETOR_NOME_LIMIT}`;
+    nomeCounter.classList.toggle('setor-modal__counter--over', nome.length > SETOR_NOME_LIMIT);
+  }
+  const descCounter = Utils.getEl('setor-descricao-counter');
+  if (descCounter) {
+    descCounter.textContent = `${desc.length}/${SETOR_DESC_LIMIT}`;
+    descCounter.classList.toggle('setor-modal__counter--over', desc.length > SETOR_DESC_LIMIT);
+  }
+}
+
+/**
+ * Inicializa o color picker + live preview do modal de setor. Idempotente:
+ * Se já foi wirado, apenas sincroniza o preview sem rebindar listeners.
+ */
 export function initSetorColorPicker() {
   const picker = Utils.getEl('setor-color-picker');
   const hiddenInput = Utils.getEl('setor-cor');
   if (!picker || !hiddenInput) return;
 
-  picker.querySelectorAll('.setor-color-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      picker.querySelectorAll('.setor-color-btn').forEach((b) => {
-        b.classList.remove('setor-color-btn--selected');
-        b.setAttribute('aria-pressed', 'false');
+  // Bind único: marca com data attr pra não duplicar listeners em reabertura.
+  if (!picker.dataset.setorModalBound) {
+    picker.dataset.setorModalBound = '1';
+
+    picker.querySelectorAll('.setor-modal__swatch').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        picker.querySelectorAll('.setor-modal__swatch').forEach((b) => {
+          const cell = b.closest('.setor-modal__swatch-cell');
+          b.classList.remove('setor-modal__swatch--selected');
+          b.setAttribute('aria-checked', 'false');
+          if (cell) cell.classList.remove('setor-modal__swatch-cell--selected');
+        });
+        btn.classList.add('setor-modal__swatch--selected');
+        btn.setAttribute('aria-checked', 'true');
+        const cell = btn.closest('.setor-modal__swatch-cell');
+        if (cell) cell.classList.add('setor-modal__swatch-cell--selected');
+        hiddenInput.value = btn.dataset.cor;
+        _syncSetorModalPreview();
       });
-      btn.classList.add('setor-color-btn--selected');
-      btn.setAttribute('aria-pressed', 'true');
-      if (hiddenInput) hiddenInput.value = btn.dataset.cor;
     });
-  });
+
+    // Inputs do form → sincroniza preview + counters + limpa erro inline
+    const nomeInput = Utils.getEl('setor-nome');
+    if (nomeInput) {
+      nomeInput.addEventListener('input', () => {
+        const err = Utils.getEl('setor-nome-err');
+        if (err && !err.hidden) {
+          err.hidden = true;
+          nomeInput.setAttribute('aria-invalid', 'false');
+        }
+        _syncSetorModalPreview();
+        _syncSetorModalCounters();
+      });
+    }
+    const descInput = Utils.getEl('setor-descricao');
+    if (descInput) descInput.addEventListener('input', _syncSetorModalCounters);
+  }
+
+  _syncSetorModalPreview();
+  _syncSetorModalCounters();
 }
 
 export async function saveSetor() {
@@ -903,22 +1535,34 @@ export async function saveSetor() {
 
   const nome = (Utils.getVal('setor-nome') || '').trim();
   if (!nome) {
+    // Validação inline: mostra erro abaixo do input + foco + toast leve
+    const err = Utils.getEl('setor-nome-err');
+    if (err) err.hidden = false;
+    const nomeInput = Utils.getEl('setor-nome');
+    if (nomeInput) {
+      nomeInput.setAttribute('aria-invalid', 'true');
+      nomeInput.focus();
+    }
     Toast.warning('Digite um nome para o setor.');
     return false;
   }
 
-  const cor = Utils.getEl('setor-cor')?.value || '#00c8e8';
+  const cor = Utils.getEl('setor-cor')?.value || SETOR_PALETTE[0].hex;
+  const descricao = (Utils.getVal('setor-descricao') || '').trim().slice(0, SETOR_DESC_LIMIT);
+  const responsavel = (Utils.getVal('setor-responsavel') || '').trim();
 
   if (isEditing) {
     const editingId = _editingSetorId;
     setState((prev) => ({
       ...prev,
-      setores: (prev.setores || []).map((s) => (s.id === editingId ? { ...s, nome, cor } : s)),
+      setores: (prev.setores || []).map((s) =>
+        s.id === editingId ? { ...s, nome, cor, descricao, responsavel } : s,
+      ),
     }));
   } else {
     setState((prev) => ({
       ...prev,
-      setores: [...(prev.setores || []), { id: Utils.uid(), nome, cor }],
+      setores: [...(prev.setores || []), { id: Utils.uid(), nome, cor, descricao, responsavel }],
     }));
   }
 
@@ -930,16 +1574,6 @@ export async function saveSetor() {
   }
 
   // Limpa form + reseta estado de edição
-  Utils.setVal('setor-nome', '');
-  const picker = Utils.getEl('setor-color-picker');
-  if (picker) {
-    picker.querySelectorAll('.setor-color-btn').forEach((b, i) => {
-      b.classList.toggle('setor-color-btn--selected', i === 0);
-      b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
-    });
-    const hi = Utils.getEl('setor-cor');
-    if (hi) hi.value = '#00c8e8';
-  }
   clearSetorEditingState();
 
   Toast.success(isEditing ? `Setor "${nome}" atualizado.` : `Setor "${nome}" criado.`);
@@ -1441,7 +2075,7 @@ export async function viewEquip(id) {
         <div class="eq-risk-panel__header">
           <div>
             <div class="eq-risk-panel__label-row">
-              <span class="eq-risk-panel__label">PRIORIDADE DE ATENÇÃO</span>
+              <span class="eq-risk-panel__label">Fatores de risco</span>
               <button type="button" class="eq-risk-panel__help" data-action="open-modal"
                       data-id="modal-score-info" title="Como calculamos o score"
                       aria-label="Como calculamos o score de risco">?</button>

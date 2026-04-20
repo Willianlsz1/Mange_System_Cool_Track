@@ -1,0 +1,252 @@
+/* ============================================================
+   _equip-hero.css — Hero + Quick filters da view Equipamentos
+   ------------------------------------------------------------
+   Hero "Organizar parque" (acima da toolbar, ângulo de gestão —
+   NÃO duplica os KPIs de saúde global do Dashboard) + pílulas
+   de quick filter (Todos · Sem setor · Em atenção · Críticos ·
+   Preventiva ≤30d).
+
+   Padrão visual emprestado do rel-hero + registro-hero:
+   · gradiente cyan translúcido
+   · borda esquerda 3px primary
+   · orbs decorativas nos cantos
+   · KPI tiles clicáveis (chip + valor + label)
+
+   Tokens usados: --primary, --bg, --surface, --text, --text-2,
+   --text-3, --muted, --border-2, --warning, --danger, --success,
+   --premier-radius, --space-*
+   ============================================================ */
+
+#view-equipamentos .equip-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* ── Hero ─────────────────────────────────────────────────── */
+.equip-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(0, 200, 232, 0.05) 0%, rgba(0, 200, 232, 0.02) 100%);
+  border: 1px solid rgba(0, 200, 232, 0.18);
+  border-left: 3px solid var(--primary, #00c8e8);
+  border-radius: 16px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  isolation: isolate;
+}
+
+.equip-hero[hidden] {
+  display: none;
+}
+
+.equip-hero__orb {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.28;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.equip-hero__orb--tl {
+  top: -70px;
+  left: -50px;
+  background: radial-gradient(circle, rgba(0, 200, 232, 0.55), transparent 70%);
+}
+
+.equip-hero__orb--br {
+  right: -60px;
+  bottom: -60px;
+  background: radial-gradient(circle, rgba(0, 200, 232, 0.35), transparent 70%);
+}
+
+.equip-hero__head {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 14px;
+}
+
+.equip-hero__title {
+  margin: 0;
+  font: 700 20px/1.2 var(--font-body);
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+.equip-hero__sub {
+  margin: 4px 0 0;
+  font: 400 13px/1.5 var(--font-body);
+  color: var(--text-2);
+}
+
+/* ── KPIs grid ────────────────────────────────────────────── */
+.equip-hero__kpis {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.equip-hero__kpi {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border-2, rgba(255, 255, 255, 0.06));
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+  min-width: 0;
+}
+
+.equip-hero__kpi:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: color-mix(in srgb, var(--primary, #00c8e8) 35%, transparent);
+  transform: translateY(-1px);
+}
+
+.equip-hero__kpi:focus-visible {
+  outline: 2px solid var(--border-focus, var(--primary, #00c8e8));
+  outline-offset: 2px;
+}
+
+.equip-hero__kpi-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  color: var(--text-3);
+}
+
+.equip-hero__kpi-value {
+  font: 700 22px/1.05 var(--font-body);
+  color: var(--text);
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.equip-hero__kpi-label {
+  font: 500 11px/1.2 var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Tones: colorem o ícone + o valor pra dar sinal semântico sem exagerar */
+.equip-hero__kpi--cyan .equip-hero__kpi-icon,
+.equip-hero__kpi--cyan .equip-hero__kpi-value {
+  color: var(--primary, #00c8e8);
+}
+
+.equip-hero__kpi--warn .equip-hero__kpi-icon,
+.equip-hero__kpi--warn .equip-hero__kpi-value {
+  color: var(--warning, #e8b94a);
+}
+
+.equip-hero__kpi--danger .equip-hero__kpi-icon,
+.equip-hero__kpi--danger .equip-hero__kpi-value {
+  color: var(--danger, #ff5577);
+}
+
+/* ── Quick filter chips ───────────────────────────────────── */
+.equip-filters {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 4px;
+  margin-bottom: 10px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.equip-filters[hidden] {
+  display: none;
+}
+
+.equip-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.equip-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid var(--border-strong, rgba(255, 255, 255, 0.1));
+  background: transparent;
+  font: 600 12px/1 var(--font-body);
+  color: var(--text-2);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+  flex-shrink: 0;
+}
+
+.equip-filter:hover {
+  color: var(--text);
+  border-color: var(--primary-dim, color-mix(in srgb, var(--primary, #00c8e8) 50%, transparent));
+}
+
+.equip-filter:focus-visible {
+  outline: 2px solid var(--primary, #00c8e8);
+  outline-offset: 1px;
+}
+
+.equip-filter--active {
+  color: var(--primary, #00c8e8);
+  border-color: var(--primary-dim, color-mix(in srgb, var(--primary, #00c8e8) 55%, transparent));
+  background: var(--primary-soft, color-mix(in srgb, var(--primary, #00c8e8) 12%, transparent));
+}
+
+/* ── Mobile ───────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .equip-hero {
+    padding: 16px 16px 18px;
+    border-radius: 14px;
+  }
+
+  .equip-hero__title {
+    font-size: 17px;
+  }
+
+  .equip-hero__sub {
+    font-size: 12.5px;
+  }
+
+  .equip-hero__kpis {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .equip-hero__kpi {
+    padding: 10px 12px;
+  }
+
+  .equip-hero__kpi-value {
+    font-size: 20px;
+  }
+
+  .equip-hero__orb {
+    width: 130px;
+    height: 130px;
+  }
+}

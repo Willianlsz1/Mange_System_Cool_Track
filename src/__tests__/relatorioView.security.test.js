@@ -25,10 +25,15 @@ async function loadRelatorioView({ state = { registros: [] }, equipamento = null
 describe('relatorio view security', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    // Fixture alinhada com renderRelatorio v6 (task #169): além do corpo,
+    // a view precisa do hero e do container de chips pra não retornar cedo.
     document.body.innerHTML = `
       <select id="rel-equip"><option value="" selected>Todos</option></select>
       <input id="rel-de" value="" />
       <input id="rel-ate" value="" />
+      <div id="rel-hero"></div>
+      <div id="rel-filters-chips"></div>
+      <div id="rel-filters-advanced" hidden></div>
       <div id="relatorio-corpo"></div>
     `;
   });

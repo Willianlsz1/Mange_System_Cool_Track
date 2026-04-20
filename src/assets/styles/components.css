@@ -9,6 +9,8 @@
    o primeiro conteúdo do arquivo além de @charset) ─── */
 @import './components/_setor-card.css';
 @import './components/_pricing.css';
+@import './components/_equip-hero.css';
+@import './components/_setor-modal.css';
 
 /* ─── SECTION TITLE ─── */
 .section-title {
@@ -304,9 +306,17 @@
 
 /* ─── EQUIPMENT CARD — módulo de controle ─── */
 .equip-card {
+  /* PR1 (P2B): contrato de tom V3. Cada variante (--ok/--warn/--danger) só
+     sobrescreve os 4 tokens abaixo; filhos (risk-chip, type-icon, primary CTA,
+     etc.) consomem via color-mix sem precisar saber o estado. Defaults
+     neutros pros casos sem variante aplicada. */
+  --tone: var(--border-2);
+  --tone-soft: transparent;
+  --tone-edge: var(--border-2);
+  --tone-text: var(--text-2);
   background: var(--card);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--border-2);
+  border-left: 4px solid var(--tone);
   border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: pointer;
@@ -317,6 +327,34 @@
   display: block;
   position: relative;
   box-shadow: 0 6px 18px rgba(3, 8, 16, 0.18);
+  /* E2: isolation cria stacking context pra ::after wash ficar atrás do conteúdo
+     sem escapar do card nem puxar layout. */
+  isolation: isolate;
+}
+
+/* E2: header wash tonal 88px alinhado com Setor Card V3.
+   Pintado só nas variantes tonalizadas (ok/warn/danger); a base fica limpa.
+   Clipado pelo overflow: hidden do card e pelo isolation stacking context. */
+.equip-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 88px;
+  pointer-events: none;
+  z-index: 0;
+  background: transparent;
+}
+
+.equip-card__header,
+.equip-card__body,
+.equip-card__health-bar-full,
+.equip-card__chips,
+.equip-card__primary,
+.equip-card__onboard {
+  position: relative;
+  z-index: 1;
 }
 
 .equip-card:hover,
@@ -327,15 +365,32 @@
   outline: none;
 }
 
+/* PR1 (P2B): variantes só sobrescrevem os 4 tokens --tone*. O border-left
+   e o ::after consomem via var(--tone) e var(--tone-soft) — sem repetir
+   gradientes por variante. */
 .equip-card--ok {
-  border-left-color: var(--success);
+  --tone: var(--success);
+  --tone-soft: color-mix(in srgb, var(--success) 10%, transparent);
+  --tone-edge: color-mix(in srgb, var(--success) 32%, var(--border-2));
+  --tone-text: color-mix(in srgb, var(--success) 70%, #ffffff);
 }
 .equip-card--warn {
-  border-left-color: var(--warning);
+  --tone: var(--warning);
+  --tone-soft: color-mix(in srgb, var(--warning) 10%, transparent);
+  --tone-edge: color-mix(in srgb, var(--warning) 32%, var(--border-2));
+  --tone-text: color-mix(in srgb, var(--warning) 70%, #ffffff);
 }
 .equip-card--danger {
-  border-left-color: var(--danger);
+  --tone: var(--danger);
+  --tone-soft: color-mix(in srgb, var(--danger) 12%, transparent);
+  --tone-edge: color-mix(in srgb, var(--danger) 35%, var(--border-2));
+  --tone-text: color-mix(in srgb, var(--danger) 70%, #ffffff);
   animation: fault-pulse 2.5s ease-in-out infinite;
+}
+.equip-card--ok::after,
+.equip-card--warn::after,
+.equip-card--danger::after {
+  background: linear-gradient(180deg, var(--tone-soft), transparent 90%);
 }
 
 @keyframes fault-pulse {
@@ -1512,6 +1567,9 @@ mark,
   margin-bottom: var(--space-3);
 }
 
+/* E5: info-row alinhado com tokens do Setor Card V3 __meta (label uppercase
+   9.5px, letter-spacing ampliado, value tabular). Mesma gramática visual
+   entre ficha técnica (info-row) e meta strip do hero (equip-hero-meta). */
 .info-row {
   display: flex;
   justify-content: space-between;
@@ -1526,13 +1584,18 @@ mark,
 }
 .info-row__label {
   color: var(--text-3);
-  font-size: 11px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 .info-row__value {
   max-width: 62%;
   text-align: right;
   font-weight: 600;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
 }
 
 .info-row__value--mono {
@@ -1800,6 +1863,972 @@ mark,
   color: var(--text-2);
   font-size: 12px;
   line-height: 1.45;
+}
+
+/* ============================================================
+   RELATÓRIO DE MANUTENÇÃO v6.0 (redesign)
+   Classes BEM: .rel-*
+   Design: Hero + chips + cards expansíveis
+   ============================================================ */
+
+/* ── Toolbar ───────────────────────────────────────────────── */
+.rel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.rel-toolbar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  font: 500 13px/1 var(--font-body);
+  cursor: pointer;
+  border-radius: 8px;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.rel-toolbar__back:hover,
+.rel-toolbar__back:focus-visible {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+.rel-toolbar__back:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+.rel-toolbar__actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rel-toolbar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 36px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-2);
+  font: 600 13px/1 var(--font-body);
+  border: 1px solid rgba(138, 170, 200, 0.3);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.rel-toolbar__btn:hover:not(:disabled),
+.rel-toolbar__btn:focus-visible {
+  color: var(--text);
+  border-color: rgba(138, 170, 200, 0.5);
+  background: rgba(255, 255, 255, 0.03);
+}
+.rel-toolbar__btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+.rel-toolbar__btn--whatsapp {
+  color: #25d366;
+  border-color: rgba(37, 211, 102, 0.4);
+}
+.rel-toolbar__btn--whatsapp:hover:not(:disabled),
+.rel-toolbar__btn--whatsapp:focus-visible {
+  color: #25d366;
+  border-color: rgba(37, 211, 102, 0.7);
+  background: rgba(37, 211, 102, 0.06);
+}
+.rel-toolbar__primary-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.rel-toolbar__btn--primary {
+  color: #06101e;
+  background: linear-gradient(135deg, #00c8e8 0%, #0090c8 100%);
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 200, 232, 0.25);
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+.rel-toolbar__btn--primary:hover:not(:disabled),
+.rel-toolbar__btn--primary:focus-visible {
+  color: #06101e;
+  background: linear-gradient(135deg, #15d0ed 0%, #0098d0 100%);
+  box-shadow: 0 3px 10px rgba(0, 200, 232, 0.35);
+}
+.rel-toolbar__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rel-toolbar__quota-slot {
+  min-height: 0;
+  text-align: right;
+}
+.rel-toolbar__quota-slot:empty {
+  display: none;
+}
+.rel-toolbar__quota-slot .pdf-quota-badge {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+/* ── Title ─────────────────────────────────────────────────── */
+.rel-title {
+  margin: 0 0 20px;
+  font: 700 20px/1.2 var(--font-body);
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+/* ── Hero summary ──────────────────────────────────────────── */
+.rel-hero {
+  background: linear-gradient(135deg, rgba(0, 200, 232, 0.05) 0%, rgba(0, 200, 232, 0.02) 100%);
+  border: 1px solid rgba(0, 200, 232, 0.18);
+  border-left: 3px solid #00c8e8;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.rel-hero:empty {
+  display: none;
+}
+.rel-hero__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.rel-hero__title {
+  margin: 0;
+  font: 700 20px/1.2 var(--font-body);
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.rel-hero__meta {
+  margin-top: 6px;
+  font: 400 13px/1.5 var(--font-body);
+  color: var(--text-2);
+}
+.rel-hero__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 20px 0;
+}
+.rel-hero__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* ── Segmented control (Compacto | Detalhado) ──────────────── */
+.rel-segmented {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.rel-segmented__opt {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font: 500 12px/1 var(--font-body);
+  cursor: pointer;
+  letter-spacing: 0.1px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.rel-segmented__opt:hover {
+  color: var(--text-2);
+}
+.rel-segmented__opt.is-active {
+  background: rgba(0, 200, 232, 0.12);
+  color: #00c8e8;
+  font-weight: 600;
+}
+.rel-segmented__opt:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ── KPI tile ──────────────────────────────────────────────── */
+.rel-kpi {
+  min-width: 0;
+}
+.rel-kpi__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rel-kpi__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rel-kpi__icon--cyan {
+  color: #00c8e8;
+}
+.rel-kpi__icon--gold {
+  color: #e8b94a;
+}
+.rel-kpi__icon--red {
+  color: #ff5577;
+}
+.rel-kpi__value {
+  font: 700 22px/1.1 var(--font-body);
+  color: var(--text);
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  margin-left: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rel-kpi__value--compact {
+  font-size: 16px;
+}
+.rel-kpi__value--gold {
+  color: #e8b94a;
+}
+.rel-kpi__value--red {
+  color: #ff5577;
+}
+.rel-kpi__label {
+  margin-top: 6px;
+  font: 500 11px/1.2 var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* ── Filter chips + advanced disclosure ────────────────────── */
+.rel-filters {
+  margin-bottom: 16px;
+}
+.rel-filters__chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.rel-filters__advanced {
+  margin-top: 12px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+}
+.rel-filters__advanced[hidden] {
+  display: none;
+}
+.rel-filters__advanced-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.rel-filters__advanced-grid .form-group {
+  margin: 0;
+}
+
+/* ── Chip (filter indicator) ───────────────────────────────── */
+.rel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-2);
+  font: 500 12px/1 var(--font-body);
+  cursor: pointer;
+  white-space: nowrap;
+  max-width: 220px;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.rel-chip:hover,
+.rel-chip:focus-visible {
+  color: var(--text);
+  border-color: rgba(0, 200, 232, 0.3);
+  background: rgba(0, 200, 232, 0.05);
+}
+.rel-chip:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+.rel-chip.is-active {
+  color: var(--text);
+  border-color: rgba(0, 200, 232, 0.3);
+  background: rgba(0, 200, 232, 0.05);
+}
+.rel-chip--dashed {
+  border-style: dashed;
+  color: #00c8e8;
+}
+.rel-chip__icon {
+  display: inline-flex;
+  color: inherit;
+  flex-shrink: 0;
+}
+.rel-chip.is-active .rel-chip__icon {
+  color: #00c8e8;
+}
+.rel-chip__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rel-chip__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font: 500 12px/1 var(--font-body);
+  padding: 6px 8px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+.rel-chip__clear:hover,
+.rel-chip__clear:focus-visible {
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.04);
+}
+.rel-chip__clear:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ── Records list container ────────────────────────────────── */
+.rel-records {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Record card ───────────────────────────────────────────── */
+.rel-record {
+  background: #0c1929;
+  border: 1px solid rgba(0, 200, 232, 0.1);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.rel-record.is-expanded {
+  border-color: rgba(0, 200, 232, 0.18);
+}
+.rel-record__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rel-record__title {
+  flex: 1;
+  min-width: 0;
+  font: 600 15px/1.3 var(--font-body);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rel-tipo-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rel-tipo-icon--cyan {
+  color: #00c8e8;
+  background: rgba(0, 200, 232, 0.08);
+  border: 1px solid rgba(0, 200, 232, 0.15);
+}
+.rel-tipo-icon--cyan-soft {
+  color: #7ddfef;
+  background: rgba(125, 223, 239, 0.08);
+  border: 1px solid rgba(125, 223, 239, 0.15);
+}
+.rel-tipo-icon--cyan-strong {
+  color: #0090c8;
+  background: rgba(0, 144, 200, 0.1);
+  border: 1px solid rgba(0, 144, 200, 0.18);
+}
+.rel-tipo-icon--gold {
+  color: #e8b94a;
+  background: rgba(232, 185, 74, 0.08);
+  border: 1px solid rgba(232, 185, 74, 0.15);
+}
+.rel-tipo-icon--gold-soft {
+  color: #f0cc7a;
+  background: rgba(240, 204, 122, 0.08);
+  border: 1px solid rgba(240, 204, 122, 0.15);
+}
+.rel-tipo-icon--muted {
+  color: var(--text-2);
+  background: rgba(138, 170, 200, 0.06);
+  border: 1px solid rgba(138, 170, 200, 0.12);
+}
+
+/* Status badge — alinhado com STATUS_LABEL (ok/warn/danger) */
+.rel-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font: 600 11px/1.4 var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+.rel-status--ok {
+  background: rgba(0, 200, 112, 0.12);
+  color: #00c870;
+}
+.rel-status--warn {
+  background: rgba(232, 185, 74, 0.12);
+  color: #e8b94a;
+}
+.rel-status--danger {
+  background: rgba(255, 85, 119, 0.12);
+  color: #ff5577;
+}
+
+.rel-record__meta {
+  margin-top: 4px;
+  margin-left: 40px;
+  font: 400 12px/1.4 var(--font-body);
+  color: var(--muted);
+}
+.rel-record__sep {
+  margin: 0 6px;
+  color: var(--muted);
+}
+.rel-record__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  margin: 16px 0;
+}
+
+/* Record body: summary + (optional) big cost */
+.rel-record__body {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: center;
+}
+.rel-record__body.is-cost-zero {
+  grid-template-columns: 1fr;
+}
+.rel-record__summary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.rel-record__summary-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font: 400 13px/1.5 var(--font-body);
+  color: var(--text-2);
+}
+.rel-record__equip-name {
+  color: var(--text);
+  font-weight: 500;
+}
+.rel-record__equip-tag {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.rel-record__tech {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  font-weight: 500;
+}
+.rel-record__tech-ic {
+  display: inline-flex;
+  color: var(--muted);
+}
+.rel-record__cost {
+  text-align: right;
+}
+.rel-record__cost-value {
+  font: 700 18px/1.1 var(--font-body);
+  color: #00c8e8;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+}
+.rel-record__cost-label {
+  margin-top: 4px;
+  font: 500 11px/1 var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Signature thumb (inline) */
+.rel-record__signature {
+  margin-top: 2px;
+}
+.rel-sigthumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  font: 500 11px/1 var(--font-body);
+}
+.rel-sigthumb--btn {
+  padding: 2px;
+  width: 88px;
+  height: 28px;
+  background: #f5f7fa;
+  border: 1px solid rgba(0, 200, 232, 0.22);
+  border-radius: 6px;
+  cursor: pointer;
+  justify-content: center;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.rel-sigthumb--btn:hover,
+.rel-sigthumb--btn:focus-visible {
+  border-color: rgba(0, 200, 232, 0.5);
+  box-shadow: 0 0 0 2px rgba(0, 200, 232, 0.15);
+}
+.rel-sigthumb--btn:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+.rel-sigthumb--btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.rel-sigthumb--unavailable {
+  color: var(--text-3);
+}
+
+/* Disclosure toggle */
+.rel-record__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  color: #00c8e8;
+  font: 600 12px/1 var(--font-body);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+.rel-record__toggle:hover {
+  background: rgba(0, 200, 232, 0.06);
+}
+.rel-record__toggle:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+.rel-record__toggle-chev {
+  display: inline-flex;
+  transition: transform 0.2s ease;
+}
+.rel-record__toggle[aria-expanded='true'] .rel-record__toggle-chev {
+  transform: rotate(180deg);
+}
+
+/* Details (collapsed) */
+.rel-record__details {
+  margin-top: 14px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.rel-record__details[hidden] {
+  display: none;
+}
+.rel-record__section-title {
+  font: 600 11px/1 var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 10px;
+}
+
+/* Specs grid */
+.rel-record__specs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.rel-spec {
+  min-width: 0;
+}
+.rel-spec__label {
+  font: 500 10px/1 var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.rel-spec__value {
+  font: 500 13px/1.4 var(--font-body);
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rel-spec__value--mono {
+  font-family: var(--font-mono);
+}
+
+/* Peças */
+.rel-record__pecas {
+  font: 400 13px/1.55 var(--font-body);
+  color: var(--text-2);
+}
+
+/* Cost breakdown */
+.rel-record__cost-breakdown {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  row-gap: 6px;
+  column-gap: 24px;
+  max-width: 320px;
+}
+.rel-cost-row__label {
+  font: 400 13px/1.5 var(--font-body);
+  color: var(--text-2);
+}
+.rel-cost-row__value {
+  font: 500 13px/1.5 var(--font-body);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.rel-cost-row__rule {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.rel-cost-row__label--total {
+  font-weight: 600;
+  color: var(--text);
+}
+.rel-cost-row__value--total {
+  font-weight: 700;
+  font-size: 14px;
+  color: #00c8e8;
+}
+
+/* Próxima manutenção */
+.rel-record__prox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rel-record__prox-date {
+  font: 500 13px/1.4 var(--font-body);
+  color: var(--text);
+}
+.rel-record__prox-badge {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font: 600 11px/1.4 var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.rel-record__prox-badge--default {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+}
+.rel-record__prox-badge--gold {
+  background: rgba(232, 185, 74, 0.12);
+  color: #e8b94a;
+}
+.rel-record__prox-badge--red {
+  background: rgba(255, 85, 119, 0.12);
+  color: #ff5577;
+}
+
+/* Observações — block quote */
+.rel-record__obs {
+  border-left: 2px solid var(--muted);
+  padding-left: 12px;
+  font: italic 400 13px/1.55 var(--font-body);
+  color: var(--text-2);
+}
+
+/* ── Empty state ───────────────────────────────────────────── */
+.rel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px;
+}
+.rel-empty__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(0, 200, 232, 0.05);
+  border: 1px solid rgba(0, 200, 232, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #00c8e8;
+}
+.rel-empty__title {
+  margin: 20px 0 0;
+  font: 700 20px/1.3 var(--font-body);
+  color: var(--text);
+  letter-spacing: -0.3px;
+  text-align: center;
+}
+.rel-empty__desc {
+  margin: 8px 0 0;
+  max-width: 460px;
+  text-align: center;
+  font: 400 14px/1.55 var(--font-body);
+  color: var(--text-2);
+}
+.rel-empty__preview {
+  margin-top: 24px;
+  width: 100%;
+  max-width: 520px;
+  background: #0c1929;
+  border: 1px solid rgba(0, 200, 232, 0.1);
+  border-radius: 14px;
+  padding: 20px;
+}
+.rel-empty__preview-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 12px/1 var(--font-body);
+  color: var(--text);
+}
+.rel-empty__preview-flake {
+  color: #00c8e8;
+  display: inline-flex;
+}
+.rel-empty__preview-meta {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.rel-empty__preview-meta > div {
+  min-width: 0;
+}
+.rel-empty__preview-meta span {
+  font: 500 10px/1 var(--font-body);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: block;
+  margin-bottom: 4px;
+}
+.rel-empty__preview-meta strong {
+  font: 500 13px/1.4 var(--font-body);
+  color: var(--text);
+  font-weight: 500;
+}
+.rel-empty__preview-table {
+  margin-top: 14px;
+  width: 100%;
+  border-collapse: collapse;
+  font: 400 12px/1.4 var(--font-body);
+  color: var(--text);
+}
+.rel-empty__preview-table th {
+  text-align: left;
+  padding: 6px 8px;
+  font: 600 11px/1 var(--font-body);
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  border-bottom: 1px solid rgba(0, 200, 232, 0.1);
+}
+.rel-empty__preview-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.rel-empty__preview-table tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+.rel-empty__cta {
+  margin-top: 24px;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #00c8e8 0%, #0090c8 100%);
+  border: none;
+  color: #06101e;
+  font: 600 14px/1 var(--font-body);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(0, 200, 232, 0.25);
+  cursor: pointer;
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+.rel-empty__cta:hover {
+  box-shadow: 0 4px 12px rgba(0, 200, 232, 0.35);
+  transform: translateY(-1px);
+}
+.rel-empty__cta:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .rel-toolbar {
+    gap: 8px;
+  }
+  .rel-toolbar__actions {
+    gap: 6px;
+  }
+  .rel-toolbar__btn {
+    padding: 0 10px;
+    font-size: 12px;
+    height: 34px;
+  }
+  .rel-hero {
+    padding: 18px;
+  }
+  .rel-hero__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .rel-hero__kpis {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  .rel-kpi__value {
+    font-size: 18px;
+  }
+  .rel-kpi__value--compact {
+    font-size: 14px;
+  }
+  .rel-kpi__label {
+    font-size: 10px;
+  }
+  .rel-filters__advanced-grid {
+    grid-template-columns: 1fr;
+  }
+  .rel-record {
+    padding: 14px;
+  }
+  .rel-record__body {
+    grid-template-columns: 1fr;
+  }
+  .rel-record__cost {
+    text-align: left;
+  }
+  .rel-record__specs {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .rel-record__meta {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .rel-toolbar__primary-group {
+    flex: 1;
+  }
+  .rel-chip {
+    max-width: 180px;
+  }
+  .rel-record__specs {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Print rules (PDF export / browser print) ──────────────── */
+@media print {
+  .rel-toolbar,
+  .rel-filters,
+  .rel-segmented,
+  .rel-record__toggle,
+  .rel-empty__cta,
+  .pdf-quota-badge {
+    display: none !important;
+  }
+  .rel-hero,
+  .rel-record {
+    background: #fff !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    color: #000 !important;
+    page-break-inside: avoid;
+  }
+  .rel-hero__title,
+  .rel-record__title,
+  .rel-record__equip-name,
+  .rel-record__tech,
+  .rel-spec__value {
+    color: #000 !important;
+  }
+  .rel-hero__meta,
+  .rel-record__meta,
+  .rel-record__summary-line,
+  .rel-spec__label,
+  .rel-record__section-title,
+  .rel-kpi__label {
+    color: #555 !important;
+  }
+  .rel-record__details {
+    display: flex !important;
+  }
+  .rel-record__details[hidden] {
+    display: flex !important;
+  }
 }
 
 /* ─── STORAGE INDICATOR ─── */
@@ -2098,8 +3127,12 @@ mark,
   box-shadow: 0 4px 20px rgba(3, 8, 16, 0.22);
   position: relative;
   overflow: hidden;
+  /* E2: isolation pra o ::after wash ficar clipado ao hero sem transbordar */
+  isolation: isolate;
 }
 
+/* E2: 3px top identity bar (já existia) + 88px wash tonal atrás do conteúdo,
+   mesmo padrão do Setor Card V3 (setor-card::after) e do equip-card. */
 .eq-detail-hero::before {
   content: '';
   position: absolute;
@@ -2107,15 +3140,56 @@ mark,
   left: 0;
   right: 0;
   height: 3px;
+  z-index: 2;
+}
+.eq-detail-hero::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 88px;
+  pointer-events: none;
+  z-index: 0;
+  background: transparent;
 }
 .eq-detail-hero--ok::before {
   background: var(--success);
 }
+.eq-detail-hero--ok::after {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--success) 10%, transparent),
+    transparent 90%
+  );
+}
 .eq-detail-hero--warn::before {
   background: var(--warning);
 }
+.eq-detail-hero--warn::after {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--warning) 10%, transparent),
+    transparent 90%
+  );
+}
 .eq-detail-hero--danger::before {
   background: var(--danger);
+}
+.eq-detail-hero--danger::after {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--danger) 12%, transparent),
+    transparent 90%
+  );
+}
+
+/* Conteúdo do hero acima do wash */
+.eq-detail-hero > .eq-hero-score,
+.eq-detail-hero > .equip-hero-meta,
+.eq-detail-hero__body {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Hero com foto: grid 2-col (foto 140px + body 1fr) ─────
@@ -2276,154 +3350,255 @@ mark,
 .eq-hero-score__info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.eq-hero-score__label {
-  font-size: 9px;
+/* Legacy — PR3: tone-pill + summary único foram substituídos pela tripla
+   caption/headline/summary. Labels antigas seguem em display:none pra
+   qualquer consumer que ainda renderize o markup V2. */
+.eq-hero-score__label,
+.eq-hero-score__status {
+  display: none;
+}
+
+/* PR3 §12.1 — caption fixo (fica acima do headline). "SAÚDE OPERACIONAL
+   · AGORA" em CAPS pequenos só pro técnico enquadrar o que vem a seguir. */
+.eq-hero-score__caption {
+  font-size: 9.5px;
   font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 2px;
+}
+
+/* PR3 §12.1 — headline contextual: nomeia o fator dominante
+   ("Preventiva vencida", "Parado", "Tudo em dia", etc). É o elemento
+   mais visível do hero; substitui a tone-pill + SCORE OPERACIONAL da V2. */
+.eq-hero-score__headline {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.005em;
+  line-height: 1.2;
+}
+
+.eq-hero-score__summary {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  line-height: 1.45;
+}
+
+/* E1: tone-pill V3 no hero do detalhe — mesma API visual do setor-card__tone-pill
+   e do equip-card__tone-pill, unificando o vocabulário entre as três superfícies
+   (card lista, card setor, modal detalhe). */
+.equip-tone-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.equip-tone-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.equip-tone-pill--ok {
+  background: rgba(0, 200, 83, 0.12);
+  color: #8ee8b2;
+  border-color: rgba(0, 200, 83, 0.3);
+}
+
+.equip-tone-pill--warn {
+  background: rgba(232, 185, 74, 0.12);
+  color: #f2d38a;
+  border-color: rgba(232, 185, 74, 0.3);
+}
+
+.equip-tone-pill--danger {
+  background: rgba(255, 85, 119, 0.14);
+  color: #ffb0bf;
+  border-color: rgba(255, 85, 119, 0.3);
+}
+
+.equip-tone-pill--neutral {
+  background: rgba(107, 129, 150, 0.14);
+  color: var(--text-2);
+  border-color: var(--border-2);
+}
+
+/* E3: meta strip do hero do detalhe — mesma estrutura dl/dt/dd do
+   setor-card__meta V3. Substitui eq-hero-stats (flexbox improvisado) por
+   grid 3-col com divisores, labels uppercase e valores tabulares. */
+.equip-hero-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-2);
+}
+
+.equip-hero-meta__item {
+  padding: 10px 12px;
+  border-right: 1px solid var(--border-2);
+  margin: 0;
+  min-width: 0;
+}
+
+.equip-hero-meta__item:last-child {
+  border-right: none;
+}
+
+.equip-hero-meta__label {
+  margin: 0;
+  font-size: 9.5px;
+  font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-3);
 }
 
-.eq-hero-score__status {
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.2;
-  margin-top: 3px;
-  color: var(--text);
-}
-
-.eq-hero-score__status--ok {
-  color: var(--success);
-}
-.eq-hero-score__status--warn {
-  color: var(--warning);
-}
-.eq-hero-score__status--danger {
-  color: var(--danger);
-}
-
-.eq-hero-score__summary {
-  font-size: 11px;
-  color: var(--text-3);
-  margin-top: 5px;
-  line-height: 1.4;
-}
-
-/* Mini 3-col stats strip */
-.eq-hero-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border: 1px solid var(--border-2);
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.eq-hero-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 10px 10px;
-  background: var(--bg-soft, var(--surface-2));
-}
-
-.eq-hero-stat + .eq-hero-stat {
-  border-left: 1px solid var(--border-2);
-}
-
-.eq-hero-stat__lbl {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-3);
-}
-
-.eq-hero-stat__val {
-  font-size: 11px;
+.equip-hero-meta__value {
+  margin: 3px 0 0;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-2);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.005em;
   line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.eq-hero-stat__val--warn {
-  color: var(--warning);
-}
-.eq-hero-stat__val--danger {
-  color: var(--danger);
+.equip-hero-meta__value--warn {
+  color: #f2d38a;
 }
 
-/* ── Risk panel ────────────────────────────────────────── */
+.equip-hero-meta__value--danger {
+  color: #ffb0bf;
+}
+
+/* Legacy alias: styles antigas de eq-hero-stats mantidas em display:none
+   pra evitar flashes caso algum código legado ainda renderize. */
+.eq-hero-stats,
+.eq-hero-stat {
+  display: none;
+}
+
+/* ── Risk panel · T2 (PR3) ────────────────────────────────
+   Tokens --tone/--tone-soft/--tone-edge/--tone-text espelham a
+   convenção do equip-card e do hero. Border-left + ::after wash
+   dão assinatura tonal; __score substitui __class/__badge (essas
+   duplicavam o label tonal); __summary migrou pro disclosure. */
 .eq-risk-panel {
+  --tone: var(--border-2);
+  --tone-soft: transparent;
+  --tone-edge: var(--border-2);
+  --tone-text: var(--text-2);
+  position: relative;
   background: var(--card);
   border: 1px solid var(--border-2);
-  border-left: 3px solid var(--border-2);
-  border-radius: 10px;
+  border-left: 3px solid var(--tone);
+  border-radius: var(--premier-radius);
   padding: 14px 16px;
   box-shadow: 0 4px 16px rgba(3, 8, 16, 0.18);
+  overflow: hidden;
+  isolation: isolate;
 }
 
-.eq-risk-panel--alto {
-  border-left-color: var(--danger);
+.eq-risk-panel::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 60px;
+  background: linear-gradient(180deg, var(--tone-soft), transparent 90%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.eq-risk-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.eq-risk-panel--baixo {
+  --tone: var(--success);
+  --tone-soft: color-mix(in srgb, var(--success) 10%, transparent);
+  --tone-edge: color-mix(in srgb, var(--success) 32%, var(--border-2));
+  --tone-text: color-mix(in srgb, var(--success) 70%, #ffffff);
 }
 .eq-risk-panel--medio {
-  border-left-color: var(--warning);
+  --tone: var(--warning);
+  --tone-soft: color-mix(in srgb, var(--warning) 10%, transparent);
+  --tone-edge: color-mix(in srgb, var(--warning) 32%, var(--border-2));
+  --tone-text: color-mix(in srgb, var(--warning) 70%, #ffffff);
 }
-.eq-risk-panel--baixo {
-  border-left-color: var(--success);
+.eq-risk-panel--alto {
+  --tone: var(--danger);
+  --tone-soft: color-mix(in srgb, var(--danger) 12%, transparent);
+  --tone-edge: color-mix(in srgb, var(--danger) 35%, var(--border-2));
+  --tone-text: color-mix(in srgb, var(--danger) 70%, #ffffff);
 }
 
 .eq-risk-panel__header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .eq-risk-panel__label {
-  font-size: 9px;
-  letter-spacing: 0.1em;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
   font-weight: 700;
   text-transform: uppercase;
+  color: var(--tone-text);
+}
+
+/* PR3 §12 — nova linha factual no header: "acumulado 30d · baixo · 2".
+   Substitui o __class (redundante com o label) e o __badge (redundante
+   com o border-left tonal). */
+.eq-risk-panel__score {
+  font-size: 11px;
   color: var(--text-3);
-}
-
-.eq-risk-panel__class {
-  margin-top: 3px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.eq-risk-panel__badge {
-  flex-shrink: 0;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 999px;
+  font-family: var(--font-mono);
   white-space: nowrap;
 }
 
-.eq-risk-panel__badge--alto {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-.eq-risk-panel__badge--medio {
-  background: var(--warning-soft);
-  color: var(--warning);
-}
-.eq-risk-panel__badge--baixo {
-  background: var(--success-soft);
-  color: var(--success);
+.eq-risk-panel__score b {
+  color: var(--text-2);
+  font-weight: 700;
 }
 
+/* Legacy — escondidos pra qualquer consumer antigo não quebrar o layout
+   enquanto migra pro novo markup. */
+.eq-risk-panel__class,
+.eq-risk-panel__badge,
 .eq-risk-panel__summary {
-  font-size: 12px;
-  color: var(--text-2);
-  margin-bottom: 10px;
-  line-height: 1.45;
+  display: none;
 }
 
 .eq-risk-panel__factors {
@@ -2440,6 +3615,19 @@ mark,
   background: var(--bg-soft, var(--surface-2));
   border-radius: 999px;
   padding: 3px 10px;
+  color: var(--text-2);
+}
+
+/* E9: factor positivo em tom verde discreto pro painel de risco — espelha
+   o equip-card__chip-ctx--positive, mantendo a gramática visual. */
+.eq-risk-panel__factor--positive {
+  color: color-mix(in srgb, var(--success) 90%, white 10%);
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border-2));
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+}
+
+.eq-risk-panel__factor--neutral {
+  /* idêntico ao base — mantido pra explicitar o tom na hierarquia */
   color: var(--text-2);
 }
 
@@ -2468,6 +3656,24 @@ mark,
 
 .eq-risk-panel__analysis[open] summary::before {
   transform: rotate(90deg);
+}
+
+/* PR3 §12 — body envolve intro + list + note com uma separação tonal
+   sutil (border-left com --tone-edge) pra comunicar "esse conteúdo é
+   o mesmo assunto do painel". */
+.eq-risk-panel__analysis-body {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--tone-edge);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 0 8px 8px 0;
+}
+
+.eq-risk-panel__analysis-intro {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-2);
 }
 
 .eq-risk-panel__analysis-list {
@@ -2567,6 +3773,26 @@ mark,
   background: var(--primary);
   flex-shrink: 0;
   margin-top: 4px;
+}
+
+/* E6: dot tonal por tipo de serviço — dá hierarquia de leitura sem aumentar
+   densidade. corretiva/emergencial/reparo = danger, preventiva/limpeza/
+   troca de filtro = ok, inspeção/diagnóstico/visita = neutral. */
+.eq-svc-item__dot--ok {
+  background: var(--success);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 22%, transparent);
+}
+.eq-svc-item__dot--warn {
+  background: var(--warning);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 22%, transparent);
+}
+.eq-svc-item__dot--danger {
+  background: var(--danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 22%, transparent);
+}
+.eq-svc-item__dot--neutral {
+  background: var(--text-3);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--text-3) 22%, transparent);
 }
 
 .eq-svc-item__content {
@@ -3926,162 +5152,227 @@ mark,
   white-space: nowrap;
 }
 
-/* ── Timeline strip (substitui grid 2-col Último/Próxima) ── */
-.equip-card__timeline {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  margin: 0 var(--space-3) var(--space-2);
-  background: rgba(0, 0, 0, 0.18);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xs);
-  font-size: 11.5px;
-  color: var(--text-2);
+/* E9: factors positivos em tom verde discreto, neutros mantém o visual base.
+   Dá hierarquia imediata de leitura sem aumentar densidade. */
+.equip-card__chip-ctx--positive {
+  color: color-mix(in srgb, var(--success) 90%, white 10%);
+  border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+  background: color-mix(in srgb, var(--success) 8%, transparent);
 }
 
-.equip-card__timeline-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--text-3);
+.equip-card__chip-ctx--neutral {
+  /* mesmo da base — mantido pra explicitar o tom e facilitar overrides */
+  color: var(--text-2);
+  border-color: var(--border);
+}
+
+/* E1: tone-pill V3 no idle state — mesma API visual do setor-card__tone-pill.
+   Substitui o score-block 0% + score-label "Eficiência" que dava impressão
+   errada de "equipamento com nota 0". */
+.equip-card__tone-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.equip-card__tone-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
   flex-shrink: 0;
 }
 
-.equip-card__timeline-last,
-.equip-card__timeline-next {
+.equip-card__tone-pill--ok {
+  background: rgba(0, 200, 83, 0.12);
+  color: #8ee8b2;
+  border-color: rgba(0, 200, 83, 0.3);
+}
+
+.equip-card__tone-pill--warn {
+  background: rgba(232, 185, 74, 0.12);
+  color: #f2d38a;
+  border-color: rgba(232, 185, 74, 0.3);
+}
+
+.equip-card__tone-pill--danger {
+  background: rgba(255, 85, 119, 0.14);
+  color: #ffb0bf;
+  border-color: rgba(255, 85, 119, 0.3);
+}
+
+.equip-card__tone-pill--neutral {
+  background: rgba(107, 129, 150, 0.14);
+  color: var(--text-2);
+  border-color: var(--border-2);
+}
+
+/* ── PR2 §12: Timeline inline (dentro do chips row) ──
+   Substitui o strip timeline full-row por um pill inline leve, colado
+   na direita do chips row (margin-left:auto via flex). Reduz altura do
+   card em ~28px sem perder "Últ. / Próx.". */
+.equip-card__timeline-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-3);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.equip-card__timeline-inline b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.equip-card__timeline-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border-2);
+  flex-shrink: 0;
+}
+
+.equip-card__timeline-inline-next--warn {
+  color: var(--warning);
+}
+.equip-card__timeline-inline-next--danger {
+  color: var(--danger);
+}
+
+/* ── PR2 §12: Primary row — funde ação recomendada + CTA em uma linha
+   grid 1fr auto. Wash tonal leve (color-mix 8%→14% on hover) garante
+   leitura da severidade; o texto ganha o verdadeiro protagonismo sem
+   precisar de uma label extra em CAPS full-width (como era antes). */
+.equip-card__primary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px var(--space-3);
+  margin-top: 4px;
+  border-top: 1px dashed var(--border-2);
+  background: color-mix(in srgb, var(--tone) 8%, transparent);
+  cursor: pointer;
+  transition: background 0.15s ease;
+  animation: equip-card-fade-rise 0.4s ease 0.1s both;
+}
+
+.equip-card__primary:hover,
+.equip-card__primary:focus-within {
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+}
+
+.equip-card__primary-text {
   min-width: 0;
 }
 
-.equip-card__timeline-last b {
-  color: var(--text);
+.equip-card__primary-label {
+  font-size: 9.5px;
   font-weight: 700;
-}
-
-.equip-card__timeline-next b {
-  font-weight: 700;
-  color: var(--text);
-}
-
-.equip-card__timeline-next--warn b {
-  color: var(--warning);
-}
-.equip-card__timeline-next--danger b {
-  color: var(--danger);
-}
-
-.equip-card__timeline-divider {
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-  min-width: 20px;
-}
-
-/* ── Ação recomendada com meta autor/tempo ── */
-.equip-card__action {
-  padding: 0 var(--space-3) var(--space-2);
-  display: grid;
-  gap: 2px;
-}
-
-.equip-card__action-label {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-3);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: var(--tone-text);
+  margin-bottom: 2px;
 }
 
-.equip-card__action-label--warn {
-  color: var(--warning);
-}
-.equip-card__action-label--danger {
-  color: var(--danger);
-}
-
-.equip-card__action-title {
+.equip-card__primary-title {
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
-  line-height: 1.3;
-  margin-top: 2px;
+  line-height: 1.25;
 }
 
-.equip-card__action-meta {
-  font-size: 10.5px;
+.equip-card__primary-meta {
+  margin-top: 2px;
+  font-size: 11px;
   color: var(--text-3);
-  margin-top: 2px;
 }
 
-/* ── CTA tonal full-width colada no rodapé ── */
-.equip-card__cta-bar {
-  width: 100%;
-  display: flex;
+/* PR2 §12.5 — CTA sempre ciano (--primary) cross-state.
+   Decisão: tech não decodifica "vermelho sólido = avançar". O card já
+   grita severidade via border-left + wash + chip. Botão só precisa
+   significar "faça", e a cor de ação do sistema é ciano. */
+.equip-card__primary-cta {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 11px 16px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   border: 0;
-  border-top: 1px solid var(--border);
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #001018;
   cursor: pointer;
+  flex-shrink: 0;
   font-family: var(--font-body);
   transition:
-    background 0.15s ease,
-    color 0.15s ease;
+    filter 0.15s ease,
+    transform 0.1s ease;
 }
 
-.equip-card__cta-bar-arrow {
-  width: 13px;
-  height: 13px;
-  flex-shrink: 0;
+.equip-card__primary-cta:hover {
+  filter: brightness(1.1);
 }
 
-.equip-card__cta-bar--ok {
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
-  color: var(--primary);
-  border-top-color: color-mix(in srgb, var(--primary) 25%, var(--border));
-}
-.equip-card__cta-bar--ok:hover {
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
+.equip-card__primary-cta:active {
+  transform: scale(0.96);
 }
 
-.equip-card__cta-bar--warn {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--warning) 18%, transparent),
-    color-mix(in srgb, var(--warning) 9%, transparent)
-  );
-  color: var(--warning);
-  border-top-color: color-mix(in srgb, var(--warning) 35%, var(--border));
-}
-.equip-card__cta-bar--warn:hover {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--warning) 24%, transparent),
-    color-mix(in srgb, var(--warning) 12%, transparent)
-  );
+.equip-card__primary-cta:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
-.equip-card__cta-bar--danger {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--danger) 20%, transparent),
-    color-mix(in srgb, var(--danger) 10%, transparent)
-  );
-  color: var(--danger);
-  border-top-color: color-mix(in srgb, var(--danger) 35%, var(--border));
+.equip-card__primary-cta-arrow {
+  width: 16px;
+  height: 16px;
 }
-.equip-card__cta-bar--danger:hover {
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--danger) 26%, transparent),
-    color-mix(in srgb, var(--danger) 13%, transparent)
-  );
+
+/* PR2 §12: palavrinha "piorando"/"melhorando" do trend badge.
+   Em mobile (≤420px) some pra não estourar o chips row — o ícone
+   + delta já comunicam a direção. */
+.equip-card__risk-trend-word {
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@media (max-width: 420px) {
+  .equip-card__risk-trend-word {
+    display: none;
+  }
+}
+
+/* PR2 §12: fade-rise sutil quando o primary row monta (ex.: após
+   registrar serviço, a sugestão troca e o DOM re-render ganha
+   micro-interação que mostra "o que mudou"). */
+@keyframes equip-card-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equip-card__primary {
+    animation: none;
+  }
 }
 
 /* ── Idle: bloco de onboarding dashed cyan ── */
@@ -4130,9 +5421,9 @@ mark,
   color: var(--primary-strong);
 }
 
-/* Idle não usa health-bar-full/chips/timeline/action/cta-bar — nada a fazer */
+/* Idle não usa health-bar-full/chips/primary — nada a fazer */
 
-/* ── Mobile ajustes (substitui regras v5 que referenciavam metrics) ── */
+/* ── Mobile ajustes ── */
 @media (max-width: 640px) {
   .equip-card__score-value {
     font-size: 17px;
@@ -4140,20 +5431,187 @@ mark,
   .equip-card__score-label {
     font-size: 8.5px;
   }
-  .equip-card__timeline {
-    font-size: 11px;
-    padding: 7px 10px;
-    gap: 8px;
+  .equip-card__timeline-inline {
+    font-size: 10.5px;
+    gap: 6px;
   }
-  .equip-card__action-title {
+  .equip-card__primary {
+    padding: 10px var(--space-3);
+    gap: 10px;
+  }
+  .equip-card__primary-title {
     font-size: 12.5px;
   }
-  .equip-card__cta-bar {
-    padding: 10px 14px;
-    font-size: 12px;
+  .equip-card__primary-cta {
+    width: 34px;
+    height: 34px;
   }
   .equip-card__onboard {
     padding: 9px 11px;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   IDLE-CLUSTER (PR4 §12.3)
+   Agrupa equip-cards idle quando houver ≥5 (histerese solta ≤2).
+   Posição sempre acima dos cards ativos; expand inline (não modal).
+   ════════════════════════════════════════════════════════ */
+
+.equip-idle-cluster {
+  --tone: var(--primary);
+  --tone-soft: color-mix(in srgb, var(--primary) 8%, transparent);
+  --tone-edge: color-mix(in srgb, var(--primary) 32%, var(--border-2));
+  position: relative;
+  isolation: isolate;
+  border: 1px dashed var(--tone-edge);
+  border-radius: var(--premier-radius);
+  background: var(--tone-soft);
+  padding: 0;
+  margin-bottom: var(--space-3);
+  overflow: hidden;
+}
+
+.equip-idle-cluster::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tone) 6%, transparent) 0%,
+    transparent 55%
+  );
+}
+
+.equip-idle-cluster > * {
+  position: relative;
+  z-index: 1;
+}
+
+.equip-idle-cluster__summary {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.equip-idle-cluster__summary:hover,
+.equip-idle-cluster__summary:focus-visible {
+  background: color-mix(in srgb, var(--tone) 6%, transparent);
+  outline: none;
+}
+
+.equip-idle-cluster__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+  color: var(--tone);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.equip-idle-cluster__text {
+  min-width: 0;
+}
+
+.equip-idle-cluster__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.equip-idle-cluster__title b {
+  color: var(--tone);
+  font-weight: 700;
+}
+
+.equip-idle-cluster__sub {
+  font-size: 11.5px;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+.equip-idle-cluster__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--tone);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.equip-idle-cluster__cta-caret {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+
+.equip-idle-cluster[data-expanded='true'] .equip-idle-cluster__cta-caret {
+  transform: rotate(180deg);
+}
+
+.equip-idle-cluster__cards {
+  display: none;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 14px 14px;
+}
+
+.equip-idle-cluster[data-expanded='true'] .equip-idle-cluster__cards {
+  display: flex;
+}
+
+/* Cards dentro do cluster ficam um pouco mais compactos e perdem a
+   border-left de tom — o cluster já é o "agrupador" visual. */
+.equip-idle-cluster__cards .equip-card {
+  border-left-width: 1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .equip-idle-cluster__cta-caret {
+    transition: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .equip-idle-cluster__summary {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .equip-idle-cluster__icon {
+    width: 26px;
+    height: 26px;
+    font-size: 16px;
+  }
+  .equip-idle-cluster__title {
+    font-size: 12.5px;
+  }
+  .equip-idle-cluster__sub {
+    font-size: 11px;
+  }
+  .equip-idle-cluster__cta {
+    font-size: 11px;
+  }
+  .equip-idle-cluster__cards {
+    padding: 0 12px 12px;
   }
 }
 
@@ -6705,82 +8163,168 @@ mark,
 /* ══════════════════════════════════════════════════════════
    Profile Modal (pm)
    ══════════════════════════════════════════════════════════ */
-.pm-modal {
+/* ═══════════════════════════════════════════════════════
+   PROFILE MODAL (Meu Perfil)
+   Portado pra casar com o design do accountModal: mesmo
+   --premier-radius, hero com orb radial + gradient sutil,
+   BEM consistente .profile-modal__*.
+   ═══════════════════════════════════════════════════════ */
+
+.profile-modal {
   padding: 0;
   overflow: hidden;
-  width: min(440px, calc(100vw - 32px));
-  border-radius: 16px;
+  width: min(480px, calc(100vw - 32px));
+  border-radius: var(--premier-radius, 12px);
 }
 
-.pm-header {
+/* ─── HERO ─── */
+/* Espelha o pattern do .account-modal__hero: orbs radiais em lados opostos
+   criando profundidade + 2-layer gradient (accent glow no canto + leve wash
+   descendo). Intensidade batida no mesmo range pra ficar tão visível quanto
+   o account-modal no mesmo tema escuro. */
+.profile-modal__hero {
+  position: relative;
+  padding: 24px 22px 20px;
+  overflow: hidden;
+  border-radius: var(--premier-radius, 12px) var(--premier-radius, 12px) 0 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--primary, #00c8e8) 14%, transparent);
+  background:
+    radial-gradient(
+      130% 130% at 0% 0%,
+      color-mix(in srgb, var(--primary, #00c8e8) 20%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      130% 130% at 100% 100%,
+      color-mix(in srgb, var(--primary, #00c8e8) 10%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--primary, #00c8e8) 8%, transparent),
+      transparent
+    );
+}
+
+.profile-modal__hero-orb {
+  position: absolute;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.profile-modal__hero-orb--a {
+  top: -50px;
+  right: -50px;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary, #00c8e8) 28%, transparent),
+    transparent 70%
+  );
+}
+
+.profile-modal__hero-orb--b {
+  bottom: -70px;
+  left: -50px;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--primary, #00c8e8) 18%, transparent),
+    transparent 70%
+  );
+}
+
+.profile-modal__hero-top {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 22px 22px 18px;
-  background: linear-gradient(135deg, var(--primary-soft), var(--primary-dim));
-  border-bottom: 1px solid var(--border);
 }
 
-.pm-avatar {
-  width: 52px;
-  height: 52px;
+/* Avatar com anel sutil (box-shadow) pra reforçar o hero sem ficar carregado */
+.profile-modal__avatar {
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   border: 2px solid;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
   flex-shrink: 0;
   letter-spacing: 0.02em;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--primary, #00c8e8) 10%, transparent),
+    0 6px 14px rgba(0, 0, 0, 0.28);
   transition:
     background 0.2s,
-    color 0.2s;
+    color 0.2s,
+    box-shadow 0.2s;
 }
 
-.pm-header__info {
+.profile-modal__hero-info {
   flex: 1;
   min-width: 0;
 }
 
-.pm-header__title {
-  font-size: 16px;
+.profile-modal__title {
+  font-size: 19px;
   font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--text);
+  margin: 0;
+  line-height: 1.15;
 }
 
-.pm-header__sub {
-  font-size: 12px;
+.profile-modal__sub {
+  font-size: 12.5px;
   color: var(--text-3);
-  margin-top: 2px;
+  margin: 4px 0 0;
+  line-height: 1.4;
 }
 
-.pm-close {
-  border: none;
-  background: rgba(0, 0, 0, 0.06);
+.profile-modal__close {
+  border: 1px solid var(--border);
+  background: transparent;
   color: var(--text-3);
-  font-size: 13px;
   cursor: pointer;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
-.pm-close:hover {
+.profile-modal__close:hover {
   background: var(--surface-3);
   color: var(--text);
+  border-color: var(--text-3);
 }
 
-.pm-body {
+.profile-modal__close:focus-visible {
+  outline: 2px solid var(--primary, #00c8e8);
+  outline-offset: 2px;
+}
+
+/* ─── BODY ─── */
+.profile-modal__body {
   padding: 20px 22px 22px;
 }
 
-.pm-section-label {
+.profile-modal__section + .profile-modal__section {
+  margin-top: 18px;
+}
+
+.profile-modal__section-label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -6789,11 +8333,15 @@ mark,
   margin-bottom: 10px;
 }
 
-.pm-field {
+.profile-modal__field {
   margin-bottom: 14px;
 }
 
-.pm-label {
+.profile-modal__field:last-child {
+  margin-bottom: 0;
+}
+
+.profile-modal__label {
   display: block;
   font-size: 12px;
   font-weight: 600;
@@ -6802,37 +8350,44 @@ mark,
   letter-spacing: 0.02em;
 }
 
-.pm-required {
+.profile-modal__required {
   color: var(--danger);
+  margin-left: 2px;
 }
 
-.pm-input-icon {
+/* ─── INPUT COM ÍCONE ─── */
+.profile-modal__input-wrap {
   position: relative;
   display: flex;
   align-items: center;
 }
 
-.pm-input-icon__icon {
+.profile-modal__input-icon {
   position: absolute;
-  left: 11px;
-  font-size: 15px;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3);
   pointer-events: none;
   z-index: 1;
+  display: inline-flex;
+  line-height: 0;
 }
 
-.pm-input-icon__input {
+.profile-modal__input--has-icon {
   padding-left: 36px;
 }
 
-.pm-actions {
+/* ─── ACTIONS ─── */
+.profile-modal__actions {
   display: flex;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 22px;
   padding-top: 16px;
   border-top: 1px solid var(--border);
 }
 
-.pm-actions .btn {
+.profile-modal__btn {
   flex: 1;
   display: flex;
   align-items: center;
@@ -7074,12 +8629,52 @@ mark,
   background: var(--danger);
 }
 
-/* Corpo "empty" — setor novo ou fallback sem KPIs pra computar. */
+/* Corpo "empty" — setor novo ou fallback sem KPIs pra computar.
+   Redesenhado (PR eq-hero): ícone à esquerda + copy de 2 linhas no lugar do
+   antigo hint italic. O card ganha presença de "convite pra ação" em vez de
+   ficar com "—/100" fantasma e texto cinza de 1 linha. */
 .setor-card__empty-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 14px 16px 12px;
   border-top: 1px solid var(--border-2);
 }
 
+.setor-card__empty-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--setor-cor, var(--primary)) 10%, transparent);
+  color: var(--setor-cor, var(--primary));
+}
+
+.setor-card__empty-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.setor-card__empty-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  line-height: 1.3;
+}
+
+.setor-card__empty-sub {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+/* Legado: usado apenas pelo fallback "Sem setor". Mantido pra não quebrar
+   historicos; a nova empty-body usa os elementos __empty-icon/__empty-copy. */
 .setor-card__empty-hint {
   font-size: 12px;
   color: var(--text-3);
@@ -9193,8 +10788,12 @@ mark,
    Visual upgrade (v5.3): era uma micro-linha 11px muito sutil. Agora é um
    callout com accent cyan, ícone de pen-tool e badge "Incluso" pra deixar
    claro que a feature está disponível no plano do usuário. Permanece
-   `hidden` por padrão no template e `registro.js` só revela pra Plus/Pro. */
-#view-registro .registro-sig-hint {
+   `hidden` por padrão no template e `registro.js` só revela pra Plus/Pro.
+
+   IMPORTANTE: o seletor :not([hidden]) é obrigatório — o user-agent stylesheet
+   aplica `display: none` via atributo `hidden`, mas `display: flex` aqui tem
+   especificidade maior e sobrescreveria o gate do Free, expondo a feature paga. */
+#view-registro .registro-sig-hint:not([hidden]) {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -9327,27 +10926,14 @@ mark,
   --r-hero: 16px;
 }
 
-/* ─── Sticky header glass ─── */
+/* ─── Header do Histórico (inline, segue o flow da página).
+   Antes era sticky com glass/blur; removido para casar com o padrão
+   das outras views (Parque, Alertas), onde o header simplesmente
+   rola junto com o conteúdo. Classes BEM mantidas para não invadir
+   o markup — só o comportamento visual mudou. ───────────────── */
 #view-historico .hist-sticky-header {
-  position: sticky;
-  top: calc(var(--app-header-total-height, 56px) + var(--hist-sticky-gap, 8px));
-  z-index: 40;
-  background: rgba(7, 17, 31, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(0, 200, 232, 0.08);
-  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform;
-  padding: 12px 16px 10px;
-  margin: 0 -16px 16px;
-}
-#view-historico .hist-sticky-header.is-hidden {
-  transform: translateY(-120%);
-}
-@media (prefers-reduced-motion: reduce) {
-  #view-historico .hist-sticky-header {
-    transition: none;
-  }
+  padding: 0;
+  margin: 0 0 16px;
 }
 #view-historico .hist-sticky-header__row {
   display: flex;
@@ -9468,6 +11054,16 @@ mark,
   color: var(--text);
   font-size: 13px;
   height: 100%;
+}
+
+/* ─── Contraste dos <option> (dark + light).
+   Sem isso, o dropdown nativo usa o estilo do SO — texto escuro em
+   fundo escuro vira invisível no tema dark. Aplicado globalmente
+   porque o problema existe em todos os <select> do app, não só no
+   hist. Tokens cobrem light/dark automaticamente. ─────────────── */
+select option {
+  background: var(--bg, #07111f);
+  color: var(--text);
 }
 
 /* ─── Quickfilters (pills scroll horizontal: período + tipo) ─── */
@@ -10764,8 +12360,8 @@ mark,
 /* ─── Mobile (≤640px): sticky header + KPIs colapsam pra 1 coluna ─── */
 @media (max-width: 640px) {
   #view-historico .hist-sticky-header {
-    padding: 10px 16px 8px;
-    margin: 0 -16px 14px;
+    padding: 0;
+    margin: 0 0 14px;
   }
   #view-historico .hist-search-row {
     grid-template-columns: 1fr;

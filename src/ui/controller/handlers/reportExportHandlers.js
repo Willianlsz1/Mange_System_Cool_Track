@@ -1,5 +1,6 @@
 import { on } from '../../../core/events.js';
 import { Toast } from '../../../core/toast.js';
+import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
 // PDFGenerator é dynamic-imported dentro do handler pra evitar bundlar
 // jspdf + jspdf-autotable + pako (~150 KB gz) no chunk principal. Só baixa
@@ -58,57 +59,107 @@ async function resolvePlanAndUsage(userId) {
   return { planCode, usageSnapshot };
 }
 
+function buildPdfLimitMessage(planCode, pdfLimit) {
+  if (planCode === PLAN_CODE_FREE) {
+    return `Você atingiu ${pdfLimit} PDFs este mês no plano Free. Faça upgrade para Plus (100/mês, sem marca d'água) ou Pro (ilimitado).`;
+  }
+  if (planCode === PLAN_CODE_PLUS) {
+    return `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`;
+  }
+  return `Você atingiu o limite mensal de ${pdfLimit} PDFs.`;
+}
+
+/**
+ * ensureReportBudget
+ * -------------------
+ * Porta de entrada compartilhada por "Exportar PDF" e "Imprimir" — ambos
+ * consomem a mesma quota mensal (USAGE_RESOURCE_PDF_EXPORT). Centraliza:
+ *   1. Auth.getUser() + modal de conversão para convidados
+ *   2. fetchMyProfileBilling() + getEffectivePlan() para o plano efetivo
+ *   3. getMonthlyUsageSnapshot + hasReachedMonthlyLimit + modal de limite
+ *   4. commit(): incremento condicional (apenas planos com limite finito)
+ *
+ * Retorna `{ ok: false }` quando bloqueia (guest ou limite) e o caller sai.
+ * Retorna `{ ok: true, user, planCode, pdfUsed, pdfLimit, commit }` no happy path.
+ */
+async function ensureReportBudget({
+  attemptedEvent,
+  blockedEvent,
+  guestSource,
+  guestPreview,
+  limitSource,
+}) {
+  const user = await Auth.getUser();
+  const isGuest = !user;
+  if (isGuest) {
+    trackEvent(attemptedEvent, { isGuest: true, plan: 'guest' });
+    trackEvent(blockedEvent, { reason: 'guest' });
+    GuestConversionModal.open({
+      reason: 'save_attempt',
+      source: guestSource,
+      ...(guestPreview ? { preview: guestPreview } : {}),
+    });
+    return { ok: false };
+  }
+
+  const { profile } = await fetchMyProfileBilling();
+  const planCode = getEffectivePlan(profile);
+  trackEvent(attemptedEvent, { isGuest: false, plan: planCode });
+
+  // ── Quota mensal: Free=5 (com marca d'água), Plus=100, Pro=ilimitado ─
+  const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
+  const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
+  const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
+
+  if (
+    hasReachedMonthlyLimit({
+      planCode,
+      resource: USAGE_RESOURCE_PDF_EXPORT,
+      usedCount: pdfUsed,
+    })
+  ) {
+    trackEvent(blockedEvent, { reason: 'limit_reached', plan: planCode });
+    GuestConversionModal.open({
+      reason: 'limit_pdf',
+      source: limitSource,
+      title: 'Limite mensal atingido',
+      message: buildPdfLimitMessage(planCode, pdfLimit),
+    });
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    user,
+    planCode,
+    pdfUsed,
+    pdfLimit,
+    async commit() {
+      // Incrementa contagem só se o plano tem limite finito (Free/Plus).
+      // Pro (limit=Infinity) não consome quota.
+      if (!Number.isFinite(pdfLimit)) return pdfUsed;
+      return incrementMonthlyUsage(user.id, USAGE_RESOURCE_PDF_EXPORT);
+    },
+  };
+}
+
 function bindPdfExport() {
   on('export-pdf', async (el) => {
     const filters = getReportFilters();
     try {
       await runAsyncAction(el, { loadingLabel: 'Gerando PDF...' }, async () => {
-        const user = await Auth.getUser();
-        const isGuest = !user;
-        if (isGuest) {
-          trackEvent('pdf_export_attempted', { isGuest: true, plan: 'guest' });
-          trackEvent('pdf_export_blocked', { reason: 'guest' });
-          GuestConversionModal.open({
-            reason: 'save_attempt',
-            source: 'pdf_export_attempt',
-            preview: buildPdfPreview(filters),
-          });
-          return;
-        }
+        const budget = await ensureReportBudget({
+          attemptedEvent: 'pdf_export_attempted',
+          blockedEvent: 'pdf_export_blocked',
+          guestSource: 'pdf_export_attempt',
+          guestPreview: buildPdfPreview(filters),
+          limitSource: 'pdf_export_limit',
+        });
+        if (!budget.ok) return;
 
-        const { profile } = await fetchMyProfileBilling();
-        const planCode = getEffectivePlan(profile);
-        trackEvent('pdf_export_attempted', { isGuest: false, plan: planCode });
+        const { planCode, pdfLimit } = budget;
 
-        // ── 1. Quota mensal: Free=5 (com marca d'água), Plus=100, Pro=ilimitado ─
-        const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
-        const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
-        const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
-
-        if (
-          hasReachedMonthlyLimit({
-            planCode,
-            resource: USAGE_RESOURCE_PDF_EXPORT,
-            usedCount: pdfUsed,
-          })
-        ) {
-          trackEvent('pdf_export_blocked', { reason: 'limit_reached', plan: planCode });
-          const limitMessage =
-            planCode === PLAN_CODE_FREE
-              ? `Você atingiu ${pdfLimit} PDFs este mês no plano Free. Faça upgrade para Plus (100/mês, sem marca d'água) ou Pro (ilimitado).`
-              : planCode === PLAN_CODE_PLUS
-                ? `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`
-                : `Você atingiu o limite mensal de ${pdfLimit} PDFs.`;
-          GuestConversionModal.open({
-            reason: 'limit_pdf',
-            source: 'pdf_export_limit',
-            title: 'Limite mensal atingido',
-            message: limitMessage,
-          });
-          return;
-        }
-
-        // ── 2. Gera o PDF (planCode controla marca d'água "CoolTrack Free") ──
+        // ── Gera o PDF (planCode controla marca d'água "CoolTrack Free") ──
         const { PDFGenerator } = await import('../../../domain/pdf.js');
         const fileName = await PDFGenerator.generateMaintenanceReport(filters, { planCode });
         if (!fileName) {
@@ -116,11 +167,7 @@ function bindPdfExport() {
           return;
         }
 
-        // ── 3. Incrementa contagem só se o plano tem limite finito (Free/Plus) ─
-        let newUsedCount = pdfUsed;
-        if (Number.isFinite(pdfLimit)) {
-          newUsedCount = await incrementMonthlyUsage(user.id, USAGE_RESOURCE_PDF_EXPORT);
-        }
+        const newUsedCount = await budget.commit();
 
         // Toast enriquecido com contador "X/Y · restam Z" para Free/Plus.
         // Pro (limit=Infinity) fica com o subtítulo default ("Pronto para enviar").
@@ -147,7 +194,11 @@ function bindPdfExport() {
 function bindWhatsAppExport() {
   on('whatsapp-export', async (el) => {
     try {
-      await runAsyncAction(el, { loadingLabel: 'Preparando...' }, async () => {
+      // Fase 1 (dentro do runAsyncAction): valida auth + quota. Sai retornando
+      // um "approved" payload se tudo ok; null se bloqueado (guest/limite).
+      // Colocamos o CustomConfirm DEPOIS do runAsyncAction pra não segurar
+      // o estado de loading do botão enquanto o usuário decide no diálogo.
+      const approved = await runAsyncAction(el, { loadingLabel: 'Preparando...' }, async () => {
         const user = await Auth.getUser();
         const isGuest = !user;
         trackEvent('whatsapp_share_attempted', { isGuest });
@@ -158,7 +209,7 @@ function bindWhatsAppExport() {
             reason: 'save_attempt',
             source: 'whatsapp_share_attempt',
           });
-          return;
+          return null;
         }
 
         const { planCode, usageSnapshot } = await resolvePlanAndUsage(user.id);
@@ -183,24 +234,55 @@ function bindWhatsAppExport() {
             title: 'Limite mensal atingido',
             message: upgradeMessage,
           });
-          return;
+          return null;
         }
 
-        const ok = WhatsAppExport.send(getReportFilters());
-        if (!ok) {
-          Toast.warning('Nenhum registro para enviar.');
-          return;
-        }
-
-        let newUsedCount = whatsappUsed;
-        if (Number.isFinite(whatsappLimit)) {
-          newUsedCount = await incrementMonthlyUsage(user.id, USAGE_RESOURCE_WHATSAPP_SHARE);
-        }
-
-        ShareSuccessToast.show(
-          Number.isFinite(whatsappLimit) ? { used: newUsedCount, limit: whatsappLimit } : {},
-        );
+        return { user, planCode, whatsappUsed, whatsappLimit };
       });
+
+      if (!approved) return;
+
+      // Fase 2: confirmação explícita ANTES de abrir wa.me. Sem isso, qualquer
+      // clique acidental abre uma aba nova E consome 1 compartilhamento — até
+      // se o usuário fechar o WhatsApp sem enviar, a cota já foi gasta.
+      // O padrão aqui é "confirme a ação, depois a execução". Free gasta na
+      // abertura mesmo (limitação técnica — não temos como saber se o user
+      // apertou "enviar" no WhatsApp), mas pelo menos não é por engano.
+      const limitHint = Number.isFinite(approved.whatsappLimit)
+        ? ` Isso consumirá 1 de ${approved.whatsappLimit} envios do seu plano este mês.`
+        : '';
+      const confirmed = await CustomConfirm.show(
+        'Abrir WhatsApp?',
+        `O WhatsApp será aberto em uma nova aba com o resumo pronto pra enviar.${limitHint}`,
+        {
+          confirmLabel: 'Abrir WhatsApp',
+          cancelLabel: 'Cancelar',
+          tone: 'primary',
+          focus: 'confirm',
+        },
+      );
+
+      if (!confirmed) {
+        trackEvent('whatsapp_share_canceled', { plan: approved.planCode });
+        return;
+      }
+
+      const ok = WhatsAppExport.send(getReportFilters());
+      if (!ok) {
+        Toast.warning('Nenhum registro para enviar.');
+        return;
+      }
+
+      let newUsedCount = approved.whatsappUsed;
+      if (Number.isFinite(approved.whatsappLimit)) {
+        newUsedCount = await incrementMonthlyUsage(approved.user.id, USAGE_RESOURCE_WHATSAPP_SHARE);
+      }
+
+      ShareSuccessToast.show(
+        Number.isFinite(approved.whatsappLimit)
+          ? { used: newUsedCount, limit: approved.whatsappLimit }
+          : {},
+      );
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,

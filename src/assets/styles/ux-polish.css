@@ -283,11 +283,6 @@ body.is-routing .view.active {
     width: calc(100% - 16px);
   }
 
-  .hist-sticky-header {
-    padding-top: 9px;
-    margin-bottom: 12px;
-  }
-
   .hist-filters {
     align-items: stretch;
     gap: 6px;
