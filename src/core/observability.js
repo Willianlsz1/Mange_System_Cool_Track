@@ -101,15 +101,22 @@ export async function initObservability(config = {}) {
 
   initPromise = (async () => {
     try {
-      // Dynamic import: @sentry/browser só entra no bundle quando DSN
-      // está setado. Em dev (sem DSN) o chunk nem é baixado.
+      // Dynamic import estático-analisável: o Vite gera um chunk
+      // dedicado (`sentry.*.js`) e o browser só baixa esse chunk quando
+      // initObservability() é chamado E o DSN está setado. Em dev (sem
+      // DSN) a função retorna antes deste bloco e o chunk nunca é
+      // requisitado pelo browser.
       //
-      // O comentário @vite-ignore instrui o Vite a não tentar resolver
-      // o módulo em build/tempo-de-parsing. Isso é necessário porque
-      // @sentry/browser é uma optionalDependency — o build pode rodar
-      // sem ele instalado (ex.: CI sem Sentry, forks).
-      const moduleName = '@sentry/browser';
-      const mod = await import(/* @vite-ignore */ moduleName);
+      // ⚠️  NÃO usar @vite-ignore aqui. Com @vite-ignore o bundler
+      // ignora o import, o Sentry não vira chunk no dist/, e o browser
+      // tenta resolver o bare specifier '@sentry/browser' em runtime —
+      // falha silenciosa, Sentry nunca carrega. Já caímos nesse buraco.
+      //
+      // @sentry/browser está em optionalDependencies do package.json,
+      // então `npm install` em fork sem Sentry continua funcionando.
+      // Pra forks que não querem Sentry basta não setar VITE_SENTRY_DSN
+      // — o código nem chega aqui.
+      const mod = await import('@sentry/browser');
       sentry = mod;
 
       sentry.init({
