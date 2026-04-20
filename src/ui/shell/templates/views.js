@@ -181,68 +181,123 @@ export function renderShellViews() {
 
         <!-- REGISTRO -->
         <div class="view" id="view-registro">
-          <div class="section-title">O que foi feito hoje?</div>
-          <div class="card">
+          <!-- Icon sprite (lucide-style, stroke 1.75) — usado só pelas novas classes registro-* -->
+          <svg class="registro-sprite" width="0" height="0" aria-hidden="true" focusable="false">
+            <defs>
+              <symbol id="ri-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h4"/></symbol>
+              <symbol id="ri-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/></symbol>
+              <symbol id="ri-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+              <symbol id="ri-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18l-7 9v6l-4 2v-8L3 4z"/></symbol>
+              <symbol id="ri-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+              <symbol id="ri-wrench" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5 5L3 18l3 3 6.7-6.7a4 4 0 0 0 5-5l-3 1.5-2-2 1.5-3z"/></symbol>
+              <symbol id="ri-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+              <symbol id="ri-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></symbol>
+              <symbol id="ri-check-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></symbol>
+              <symbol id="ri-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+              <symbol id="ri-package" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"/><path d="M3 7l9 4 9-4M12 11v10"/></symbol>
+              <symbol id="ri-camera" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="4"/></symbol>
+              <symbol id="ri-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></symbol>
+              <symbol id="ri-map-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-7 7-13a7 7 0 0 0-14 0c0 6 7 13 7 13z"/><circle cx="12" cy="9" r="2.5"/></symbol>
+              <symbol id="ri-signal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h2M7 15h2M12 10h2M17 5h2"/><path d="M4 20v0M9 15v5M14 10v10M19 5v15"/></symbol>
+              <symbol id="ri-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-11 11H3v-6L14 4z"/></symbol>
+              <symbol id="ri-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M8 3v5h8V3M8 21v-7h8v7"/></symbol>
+              <symbol id="ri-rewind" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></symbol>
+              <symbol id="ri-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></symbol>
+            </defs>
+          </svg>
+          <div class="section-title section-title--registro" hidden>O que foi feito hoje?</div>
+          <div class="card card--registro">
             <div id="storage-indicator" class="storage-indicator" role="status" aria-live="polite" hidden></div>
-            <div class="registro-quick-actions">
-              <div class="registro-bloco__label">Ações rápidas</div>
-              <div class="registro-quick-actions__grid">
-                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
-                  data-template="limpeza">Limpeza</button>
-                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
-                  data-template="recarga_gas">Recarga de gás</button>
-                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
-                  data-template="troca_filtro">Troca de filtro</button>
-                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
-                  data-template="inspecao">Inspeção</button>
-                <button class="btn btn--outline registro-quick-actions__btn" data-action="quick-service-template"
-                  data-template="manutencao_corretiva">Manutenção corretiva</button>
-              </div>
-            </div>
-            <div class="registro-bloco">
-              <div class="registro-bloco__label">Cliente do serviço <span
-                  class="registro-bloco__opcional">(opcional — aparece na capa do PDF)</span></div>
-              <div class="registro-bloco__desc">Nome, documento, local e contato do cliente que recebeu o serviço. Usamos esses dados no cabeçalho do relatório e na página de assinatura.</div>
-              <div class="form-group">
-                <label class="form-label" for="r-cliente-nome">Nome ou razão social</label>
-                <input id="r-cliente-nome" class="form-control" type="text"
-                  maxlength="200" placeholder="Ex: Supermercado Boa Compra LTDA" autocomplete="organization" />
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="r-cliente-documento">CPF / CNPJ</label>
-                  <input id="r-cliente-documento" class="form-control" type="text"
-                    maxlength="30" placeholder="00.000.000/0000-00" autocomplete="off" />
+
+            <!-- ============== HERO (status + progresso) ============== -->
+            <section class="registro-hero" id="registro-hero" data-state="empty" aria-labelledby="registro-hero-title">
+              <span class="registro-hero__orb registro-hero__orb--tl" aria-hidden="true"></span>
+              <span class="registro-hero__orb registro-hero__orb--br" aria-hidden="true"></span>
+
+              <span class="registro-hero__pill">
+                <svg aria-hidden="true"><use href="#ri-clipboard"/></svg>
+                <span id="registro-hero-pill-text">Novo registro</span>
+              </span>
+
+              <h1 id="registro-hero-title" class="registro-hero__title">O que foi feito hoje?</h1>
+              <p class="registro-hero__sub" id="registro-hero-sub"></p>
+
+              <div class="registro-hero__progress" aria-label="Progresso dos campos obrigatórios">
+                <div class="registro-hero__meter" id="registro-hero-meter" role="progressbar" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
+                  <span class="registro-hero__seg"></span>
+                  <span class="registro-hero__seg"></span>
+                  <span class="registro-hero__seg"></span>
+                  <span class="registro-hero__seg"></span>
+                  <span class="registro-hero__seg"></span>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="r-cliente-contato">Telefone / contato</label>
-                  <input id="r-cliente-contato" class="form-control" type="text"
-                    maxlength="120" placeholder="(11) 9 0000-0000" autocomplete="tel" />
+                <div class="registro-hero__count">
+                  <b id="form-progress-count">0</b>/5
                 </div>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="r-local-atendimento">Local do atendimento</label>
-                <input id="r-local-atendimento" class="form-control" type="text"
-                  maxlength="300" placeholder="Endereço completo — rua, número, bairro, cidade/UF" autocomplete="street-address" />
-                <div class="form-hint">Pode ser diferente do local cadastrado no equipamento</div>
+
+              <div class="registro-hero__chips">
+                <span class="registro-hero__chip"><svg aria-hidden="true"><use href="#ri-check-circle"/></svg> Offline-first</span>
+                <span class="registro-hero__chip"><svg aria-hidden="true"><use href="#ri-check-circle"/></svg> PDF em 1 toque</span>
               </div>
+            </section>
+
+            <!-- ============== Ações rápidas ============== -->
+            <div class="registro-kicker">Ações rápidas</div>
+            <div class="registro-quick" role="group" aria-label="Modelos rápidos de serviço">
+              <button type="button" class="registro-quick__tile" data-action="quick-service-template"
+                data-template="limpeza" data-color="cyan" aria-pressed="false">
+                <span class="registro-quick__icon" aria-hidden="true"><svg><use href="#ri-sparkles"/></svg></span>
+                <span class="registro-quick__label">Limpeza<small>preventiva</small></span>
+              </button>
+              <button type="button" class="registro-quick__tile" data-action="quick-service-template"
+                data-template="recarga_gas" data-color="amber" aria-pressed="false">
+                <span class="registro-quick__icon" aria-hidden="true"><svg><use href="#ri-bolt"/></svg></span>
+                <span class="registro-quick__label">Recarga<small>de gás</small></span>
+              </button>
+              <button type="button" class="registro-quick__tile" data-action="quick-service-template"
+                data-template="troca_filtro" data-color="teal" aria-pressed="false">
+                <span class="registro-quick__icon" aria-hidden="true"><svg><use href="#ri-filter"/></svg></span>
+                <span class="registro-quick__label">Troca<small>de filtro</small></span>
+              </button>
+              <button type="button" class="registro-quick__tile" data-action="quick-service-template"
+                data-template="inspecao" data-color="violet" aria-pressed="false">
+                <span class="registro-quick__icon" aria-hidden="true"><svg><use href="#ri-eye"/></svg></span>
+                <span class="registro-quick__label">Inspeção<small>técnica</small></span>
+              </button>
+              <button type="button" class="registro-quick__tile" data-action="quick-service-template"
+                data-template="manutencao_corretiva" data-color="red" aria-pressed="false">
+                <span class="registro-quick__icon" aria-hidden="true"><svg><use href="#ri-wrench"/></svg></span>
+                <span class="registro-quick__label">Manutenção<small>corretiva</small></span>
+              </button>
             </div>
-            <div class="registro-bloco">
-              <div class="registro-bloco__label">O serviço</div>
-              <div class="form-group">
-                <label class="form-label" for="r-equip">Em qual equipamento? *</label>
-                <select id="r-equip" class="form-control" required aria-required="true">
+
+            <!-- ============== Bloco obrigatório ============== -->
+            <div class="registro-kicker">O serviço</div>
+            <section class="registro-bloco registro-bloco--required">
+              <div class="registro-bloco__header">
+                <h2 class="registro-bloco__title">Dados do atendimento</h2>
+                <span class="registro-bloco__required-tag"><svg aria-hidden="true"><use href="#ri-check"/></svg> Obrigatório</span>
+              </div>
+              <p class="registro-bloco__hint">Preencha os 5 campos para liberar o PDF do cliente.</p>
+
+              <div class="registro-field registro-field--select">
+                <label class="registro-field__label" for="r-equip">Em qual equipamento?<span class="req">*</span></label>
+                <select id="r-equip" class="registro-field__select" required aria-required="true">
                   <option value="">Selecione o equipamento...</option>
                 </select>
               </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="r-data">Quando foi? *</label>
-                  <input id="r-data" class="form-control" type="datetime-local" required aria-required="true" />
+
+              <div class="registro-field__row">
+                <div class="registro-field">
+                  <label class="registro-field__label" for="r-data">Quando foi?<span class="req">*</span></label>
+                  <div class="registro-field__with-icon">
+                    <svg aria-hidden="true"><use href="#ri-calendar"/></svg>
+                    <input id="r-data" class="registro-field__input" type="datetime-local" required aria-required="true" />
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="r-tipo">O que foi feito? *</label>
-                  <select id="r-tipo" class="form-control" required aria-required="true">
+                <div class="registro-field registro-field--select">
+                  <label class="registro-field__label" for="r-tipo">O que foi feito?<span class="req">*</span></label>
+                  <select id="r-tipo" class="registro-field__select" required aria-required="true">
                     <option value="">Selecione o tipo...</option>
                     <option>Manutenção Preventiva</option>
                     <option>Manutenção Corretiva</option>
@@ -259,121 +314,247 @@ export function renderShellViews() {
                   </select>
                 </div>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="r-obs">Descreva o serviço</label>
-                <textarea id="r-obs" class="form-control registro-obs"
+
+              <div class="registro-field">
+                <label class="registro-field__label" for="r-obs">Descreva o serviço</label>
+                <textarea id="r-obs" class="registro-field__textarea registro-obs"
                   placeholder="O que foi encontrado e o que foi feito. Ex: Filtros sujos, limpeza realizada. Pressão de sucção 68 psi, dentro do normal. Sistema operando corretamente."
                   ></textarea>
-                <div class="form-hint">Seja específico — esse texto vai no relatório que você envia ao cliente</div>
+                <p class="registro-field__help">Seja específico — esse texto vai no relatório que você envia ao cliente.</p>
               </div>
-              <div class="form-group">
-                <label class="form-label" for="r-tecnico">Quem fez? *</label>
-                <input list="lista-tecnicos" id="r-tecnico" class="form-control"
-                  placeholder="Seu nome ou o nome do técnico..." autocomplete="off" required aria-required="true" />
-                <datalist id="lista-tecnicos"></datalist>
-              </div>
-            </div>
-            <div class="registro-bloco">
-              <div class="registro-bloco__label">Materiais e custo <span
-                  class="registro-bloco__opcional">(opcional)</span></div>
-              <div class="form-group">
-                <label class="form-label" for="r-pecas">Peças e materiais usados</label>
-                <input id="r-pecas" class="form-control" type="text"
-                  placeholder="Ex: Filtro G4, R-410A 1 kg, Capacitor 30µF 440V" />
-                <div class="form-hint">Liste o que foi substituído ou consumido — aparece no relatório</div>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="r-custo-pecas">Custo das peças (R$)</label>
-                  <input id="r-custo-pecas" class="form-control" type="number" min="0" step="0.01" placeholder="0,00" />
-                </div>
-                <div class="form-group">
-                  <label class="form-label" for="r-custo-mao-obra">Mão de obra (R$)</label>
-                  <input id="r-custo-mao-obra" class="form-control" type="number" min="0" step="0.01"
-                    placeholder="0,00" />
+
+              <div class="registro-field">
+                <label class="registro-field__label" for="r-tecnico">Quem fez?<span class="req">*</span></label>
+                <div class="registro-field__with-icon">
+                  <svg aria-hidden="true"><use href="#ri-user"/></svg>
+                  <input id="r-tecnico" class="registro-field__input" list="lista-tecnicos" type="text"
+                    placeholder="Seu nome ou o nome do técnico..." autocomplete="off" required aria-required="true" />
+                  <datalist id="lista-tecnicos"></datalist>
                 </div>
               </div>
-            </div>
-            <div class="registro-bloco">
-              <div class="registro-bloco__label">Evidências <span class="registro-bloco__opcional">(opcional — aumenta
-                  credibilidade com o cliente)</span></div>
-              <div class="photo-drop" id="photo-drop-zone">
-                <input type="file" accept="image/*" multiple id="input-fotos" aria-label="Adicionar fotos" />
-                <div class="photo-drop__icon" aria-hidden="true">📷</div>
-                <div class="photo-drop__text" id="photo-drop-text">Toque para adicionar fotos</div>
-                <div class="photo-drop__hint">Antes / depois, etiqueta do equipamento, peça trocada</div>
-                <div class="photo-drop__limit">Até 5 fotos &middot; JPG ou PNG</div>
+            </section>
+
+            <!-- ============== Blocos opcionais ============== -->
+            <div class="registro-kicker">Detalhes opcionais</div>
+
+            <details class="registro-details">
+              <summary class="registro-details__summary">
+                <span class="registro-details__icon" aria-hidden="true"><svg><use href="#ri-user"/></svg></span>
+                <div class="registro-details__titles">
+                  <div class="registro-details__title">Cliente do serviço</div>
+                  <div class="registro-details__subtitle">opcional — aparece na capa do PDF</div>
+                </div>
+                <span class="registro-details__add" aria-hidden="true"><svg><use href="#ri-plus"/></svg><span class="registro-details__add-label"> Adicionar</span></span>
+              </summary>
+              <div class="registro-details__body">
+                <div class="registro-field">
+                  <label class="registro-field__label" for="r-cliente-nome">Nome ou razão social</label>
+                  <input id="r-cliente-nome" class="registro-field__input" type="text"
+                    maxlength="200" placeholder="Ex: Supermercado Boa Compra LTDA" autocomplete="organization" />
+                </div>
+                <div class="registro-field__row">
+                  <div class="registro-field">
+                    <label class="registro-field__label" for="r-cliente-documento">CPF / CNPJ</label>
+                    <input id="r-cliente-documento" class="registro-field__input" type="text"
+                      maxlength="30" placeholder="00.000.000/0000-00" autocomplete="off" />
+                  </div>
+                  <div class="registro-field">
+                    <label class="registro-field__label" for="r-cliente-contato">Telefone / contato</label>
+                    <input id="r-cliente-contato" class="registro-field__input" type="text"
+                      maxlength="120" placeholder="(11) 9 0000-0000" autocomplete="tel" />
+                  </div>
+                </div>
+                <div class="registro-field">
+                  <label class="registro-field__label" for="r-local-atendimento">Local do atendimento</label>
+                  <div class="registro-field__with-icon">
+                    <svg aria-hidden="true"><use href="#ri-map-pin"/></svg>
+                    <input id="r-local-atendimento" class="registro-field__input" type="text"
+                      maxlength="300" placeholder="Endereço completo — rua, número, bairro, cidade/UF" autocomplete="street-address" />
+                  </div>
+                  <p class="registro-field__help">Pode ser diferente do local cadastrado no equipamento.</p>
+                </div>
               </div>
-              <div class="photo-grid" id="photo-preview" role="list" aria-label="Fotos adicionadas"></div>
-            </div>
-            <div class="registro-bloco registro-bloco--future">
-              <div class="registro-bloco__label">O que vem a seguir</div>
-              <div class="registro-bloco__desc">Como o equipamento saiu do serviço? Quando deve voltar?</div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label" for="r-prioridade">Prioridade sugerida</label>
-                  <select id="r-prioridade" class="form-control">
-                    <option value="baixa">Baixa</option>
-                    <option value="media" selected>Média</option>
-                    <option value="alta">Alta</option>
-                  </select>
+            </details>
+
+            <details class="registro-details">
+              <summary class="registro-details__summary">
+                <span class="registro-details__icon" aria-hidden="true"><svg><use href="#ri-package"/></svg></span>
+                <div class="registro-details__titles">
+                  <div class="registro-details__title">Materiais e custo</div>
+                  <div class="registro-details__subtitle">opcional — entra no relatório</div>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="r-status">Como ficou?</label>
-                  <select id="r-status" class="form-control">
-                    <option value="ok">Operando normalmente</option>
-                    <option value="warn">Requer atenção em breve</option>
-                    <option value="danger">Fora de operação</option>
-                  </select>
+                <span class="registro-details__add" aria-hidden="true"><svg><use href="#ri-plus"/></svg><span class="registro-details__add-label"> Adicionar</span></span>
+              </summary>
+              <div class="registro-details__body">
+                <div class="registro-field">
+                  <label class="registro-field__label" for="r-pecas">Peças e materiais usados</label>
+                  <input id="r-pecas" class="registro-field__input" type="text"
+                    placeholder="Ex: Filtro G4, R-410A 1 kg, Capacitor 30µF 440V" />
+                  <p class="registro-field__help">Liste o que foi substituído ou consumido.</p>
                 </div>
-                <div class="form-group">
-                  <label class="form-label" for="r-proxima">Quando retornar para preventiva?</label>
-                  <input id="r-proxima" class="form-control" type="date" />
-                  <div class="form-hint">Deixe em branco se não souber agora</div>
+                <div class="registro-field__row">
+                  <div class="registro-field">
+                    <label class="registro-field__label" for="r-custo-pecas">Custo das peças</label>
+                    <div class="registro-field__money">
+                      <input id="r-custo-pecas" class="registro-field__input" type="number" min="0" step="0.01" placeholder="0,00" />
+                    </div>
+                  </div>
+                  <div class="registro-field">
+                    <label class="registro-field__label" for="r-custo-mao-obra">Mão de obra</label>
+                    <div class="registro-field__money">
+                      <input id="r-custo-mao-obra" class="registro-field__input" type="number" min="0" step="0.01" placeholder="0,00" />
+                    </div>
+                  </div>
                 </div>
               </div>
+            </details>
+
+            <details class="registro-details">
+              <summary class="registro-details__summary">
+                <span class="registro-details__icon" aria-hidden="true"><svg><use href="#ri-camera"/></svg></span>
+                <div class="registro-details__titles">
+                  <div class="registro-details__title">Evidências</div>
+                  <div class="registro-details__subtitle">opcional — aumenta a credibilidade</div>
+                </div>
+                <span class="registro-details__add" aria-hidden="true"><svg><use href="#ri-plus"/></svg><span class="registro-details__add-label"> Adicionar</span></span>
+              </summary>
+              <div class="registro-details__body">
+                <label id="photo-drop-zone" class="registro-photo-drop" for="input-fotos">
+                  <span class="registro-photo-drop__icon" aria-hidden="true"><svg><use href="#ri-camera"/></svg></span>
+                  <div class="registro-photo-drop__title" id="photo-drop-text">Toque para adicionar fotos</div>
+                  <p class="registro-photo-drop__hint">Antes / depois, etiqueta do equipamento, peça trocada</p>
+                  <div class="registro-photo-drop__meta">ATÉ 5 FOTOS · JPG OU PNG</div>
+                  <input type="file" accept="image/*" multiple id="input-fotos" aria-label="Adicionar fotos" />
+                </label>
+                <div class="photo-grid" id="photo-preview" role="list" aria-label="Fotos adicionadas"></div>
+              </div>
+            </details>
+
+            <details class="registro-details registro-details--next">
+              <summary class="registro-details__summary">
+                <span class="registro-details__icon" aria-hidden="true"><svg><use href="#ri-signal"/></svg></span>
+                <div class="registro-details__titles">
+                  <div class="registro-details__title">O que vem a seguir <span class="registro-details__pri">Recomendado</span></div>
+                  <div class="registro-details__subtitle">prioridade, status e próxima preventiva</div>
+                </div>
+                <span class="registro-details__add" aria-hidden="true"><svg><use href="#ri-plus"/></svg><span class="registro-details__add-label"> Adicionar</span></span>
+              </summary>
+              <div class="registro-details__body">
+                <p class="registro-bloco__hint">Como o equipamento saiu do serviço? Quando deve voltar?</p>
+                <div class="registro-field__row">
+                  <div class="registro-field registro-field--select">
+                    <label class="registro-field__label" for="r-prioridade">Prioridade sugerida</label>
+                    <select id="r-prioridade" class="registro-field__select">
+                      <option value="baixa">Baixa</option>
+                      <option value="media" selected>Média</option>
+                      <option value="alta">Alta</option>
+                    </select>
+                  </div>
+                  <div class="registro-field registro-field--select">
+                    <label class="registro-field__label" for="r-status">Como ficou?</label>
+                    <select id="r-status" class="registro-field__select">
+                      <option value="ok">Operando normalmente</option>
+                      <option value="warn">Requer atenção em breve</option>
+                      <option value="danger">Fora de operação</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="registro-field">
+                  <label class="registro-field__label" for="r-proxima">Quando retornar para preventiva?</label>
+                  <div class="registro-field__with-icon">
+                    <svg aria-hidden="true"><use href="#ri-calendar"/></svg>
+                    <input id="r-proxima" class="registro-field__input" type="date" />
+                  </div>
+                  <p class="registro-field__help">Deixe em branco se não souber agora.</p>
+                </div>
+              </div>
+            </details>
+
+            <!-- ============== Rodapé de ação ============== -->
+            <div class="registro-actions" id="tour-signature-anchor">
+              <button class="btn btn--ghost registro-actions__ghost" data-action="clear-registro"
+                title="Limpa todos os campos">
+                <svg aria-hidden="true"><use href="#ri-rewind"/></svg>
+                <span>Recomeçar</span>
+              </button>
+              <button class="btn btn--primary registro-actions__primary" data-action="save-registro">
+                <svg aria-hidden="true"><use href="#ri-save"/></svg>
+                <span>Salvar registro</span>
+              </button>
             </div>
-            <div class="btn-group registro-btn-group" id="tour-signature-anchor">
-              <button class="btn btn--outline" data-action="clear-registro"
-                title="Limpa todos os campos">Recomeçar</button>
-              <button class="btn btn--primary" data-action="save-registro">Salvar registro</button>
+            <div class="registro-sig-hint" id="registro-signature-hint" hidden>
+              <span class="registro-sig-hint__ic" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                  <path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/>
+                </svg>
+              </span>
+              <div class="registro-sig-hint__body">
+                <div class="registro-sig-hint__head">
+                  <strong class="registro-sig-hint__title">Assinatura do cliente</strong>
+                  <span class="registro-sig-hint__badge">Incluso</span>
+                </div>
+                <p class="registro-sig-hint__desc">
+                  Ao salvar, solicitamos a rubrica do cliente —
+                  fica anexada ao registro e aparece no PDF oficial do serviço.
+                </p>
+              </div>
             </div>
-            <div class="tour-signature-hint">✍️ A assinatura do cliente é solicitada logo após salvar o registro.</div>
           </div>
         </div>
 
         <!-- HISTÓRICO -->
         <div class="view" id="view-historico">
           <div class="hist-sticky-header" id="hist-sticky-header">
-            <div class="hist-sticky-header__top">
-              <div class="section-title section-title--toolbar">Histórico de Serviços</div>
-              <div class="hist-sticky-header__actions">
-                <span class="hist-count" id="hist-count"></span>
-                <button class="btn btn--outline btn--sm" data-nav="relatorio">Gerar Relatório</button>
+            <div class="hist-sticky-header__row">
+              <div class="hist-title">Histórico de Serviços</div>
+              <span class="hist-count" id="hist-count" aria-live="polite"></span>
+              <div class="hist-sticky-header__spacer"></div>
+              <button class="btn-ghost btn-ghost--report desktop-only" data-nav="relatorio">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/>
+                  <path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/>
+                </svg>
+                Gerar Relatório
+              </button>
+            </div>
+            <div class="hist-sticky-header__row">
+              <div class="hist-search-row">
+                <label class="hist-input" for="hist-busca">
+                  <span class="hist-input__icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+                    </svg>
+                  </span>
+                  <input id="hist-busca" type="search"
+                    placeholder="Buscar equipamento, tipo, técnico…" aria-label="Buscar no histórico" />
+                </label>
+                <div class="hist-select">
+                  <select id="hist-setor" aria-label="Filtrar por setor" style="display:none">
+                    <option value="">Todos os setores</option>
+                  </select>
+                </div>
+                <div class="hist-select">
+                  <select id="hist-equip" aria-label="Filtrar por equipamento">
+                    <option value="">Todos os equipamentos</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div class="hist-filters">
-              <div class="search-bar search-bar--compact search-bar--grow">
-                <span class="search-bar__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14"
-                    fill="none">
-                    <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" />
-                    <path d="M9.5 9.5L12 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-                  </svg></span>
-                <input class="form-control search-bar__input" id="hist-busca" type="text"
-                  placeholder="Buscar equipamento, tipo, técnico..." aria-label="Buscar no histórico" />
-              </div>
-              <select id="hist-setor" class="form-control hist-equip-select" aria-label="Filtrar por setor" style="display:none">
-                <option value="">Todos os setores</option>
-              </select>
-              <select id="hist-equip" class="form-control hist-equip-select" aria-label="Filtrar por equipamento">
-                <option value="">Todos</option>
-              </select>
+            <div class="hist-sticky-header__row hist-sticky-header__row--quickfilters"
+              id="hist-quickfilters-slot">
+              <!-- preenchido por renderHist com .hist-quickfilters -->
             </div>
           </div>
+          <div id="hist-active-chips-slot"><!-- preenchido por renderHist --></div>
           <div class="hist-chrono-label" id="hist-chrono-label">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1" />
-              <path d="M6 3v3l2 1.2" stroke="currentColor" stroke-width="1" stroke-linecap="round" />
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
             </svg>
             Mais recente primeiro
           </div>

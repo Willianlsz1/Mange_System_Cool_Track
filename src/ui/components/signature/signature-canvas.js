@@ -16,8 +16,11 @@ export function createSignatureCanvas(canvas, placeholderEl) {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = 480 * dpr;
   canvas.height = 180 * dpr;
+  // O display é controlado pelo CSS do container — não forçamos altura fixa
+  // pra que o aspect-ratio do wrapper (.sig-capture-modal__canvas) prevaleça
+  // e o canvas ocupe 100% da área disponível em qualquer largura.
   canvas.style.width = '100%';
-  canvas.style.height = '180px';
+  canvas.style.height = '100%';
   ctx.scale(dpr, dpr);
 
   ctx.strokeStyle = '#E8F2FA';
