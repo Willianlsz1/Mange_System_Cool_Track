@@ -33,7 +33,7 @@ function buildReasonMessage(reason) {
   if (reason === 'limit_free_equipamentos')
     return 'Você já cadastrou 3 equipamentos — o limite do plano Free. Faça upgrade para o Pro e cadastre até 30.';
   if (reason === 'limit_free_registros')
-    return 'Você atingiu 10 registros este mês no plano Free. Faça upgrade para o Pro e tenha registros ilimitados.';
+    return 'Você atingiu 5 registros este mês no plano Free. Faça upgrade para o Plus e tenha registros ilimitados.';
   if (reason === 'limit_pdf')
     return 'Você gerou 3 relatórios este mês. O plano Pro tem relatórios ilimitados.';
   if (reason === 'limit_whatsapp')
@@ -118,8 +118,8 @@ export const GuestConversionModal = {
              <span class="guest-conv-plan__label">Plano Free</span>
              <ul class="guest-conv-plan__list">
                <li>Até 3 equipamentos</li>
-               <li>10 registros de serviço/mês</li>
-               <li>Histórico dos últimos 30 dias</li>
+               <li>5 registros de serviço/mês</li>
+               <li>Histórico dos últimos 15 dias</li>
              </ul>
            </div>
            <div class="guest-conv-plan__card guest-conv-plan__card--pro">

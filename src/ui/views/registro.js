@@ -90,14 +90,63 @@ function resetEditingState() {
   if (formView) formView.dataset.editMode = '0';
 }
 
+// Prefixo usado quando o usuário escolhe "Outro" e descreve o serviço num campo
+// livre. O valor final persistido em `registro.tipo` fica tipo "Outro · Teste
+// de estanqueidade" — é só uma string única, sem coluna extra no Supabase. Para
+// edição, o loadRegistroForEdit detecta o prefixo e repopula o select + o input
+// custom automaticamente.
+const TIPO_OUTRO_PREFIX = 'Outro · ';
+const TIPO_CUSTOM_MAX = 40;
+
 // ── Barra de progresso do formulário ──────────────────
+// O campo r-tipo-custom é condicional: só conta como "preenchido" quando o tipo
+// = "Outro". Nos outros tipos ele fica oculto e nem é considerado na barra.
 const _fields = [
   { id: 'r-equip', validate: (v) => v !== '' },
   { id: 'r-data', validate: (v) => v !== '' },
-  { id: 'r-tipo', validate: (v) => v !== '' },
+  {
+    id: 'r-tipo',
+    validate: (v) => {
+      if (v === '') return false;
+      if (v === 'Outro') {
+        // Quando "Outro", só consideramos o tipo "preenchido" se o custom label
+        // também estiver válido (>=1 char, sem exceder o limite). Sem isso, a
+        // barra de progresso marcaria Outro como ok mesmo com o label em branco.
+        const custom = (Utils.getEl('r-tipo-custom')?.value || '').trim();
+        return custom.length >= 1 && custom.length <= TIPO_CUSTOM_MAX;
+      }
+      return true;
+    },
+  },
   { id: 'r-tecnico', validate: (v) => v.trim() !== '' },
   { id: 'r-obs', validate: (v) => v.trim().length >= 10 },
 ];
+
+// Mostra/esconde o input custom conforme a seleção do tipo. Também gerencia o
+// atributo `required` e o foco automático quando o usuário escolhe "Outro" —
+// assim a UX flui: escolheu Outro → cursor já no campo pra descrever.
+function _syncTipoCustomVisibility({ focusOnShow = false } = {}) {
+  const sel = Utils.getEl('r-tipo');
+  const wrap = document.getElementById('r-tipo-custom-wrap');
+  const input = Utils.getEl('r-tipo-custom');
+  if (!sel || !wrap || !input) return;
+
+  const isOutro = sel.value === 'Outro';
+  wrap.hidden = !isOutro;
+  if (isOutro) {
+    input.setAttribute('required', '');
+    input.setAttribute('aria-required', 'true');
+    if (focusOnShow) {
+      // pequeno delay pra evitar quebra de foco quando o change vem de click
+      // no select nativo em alguns browsers mobile (iOS Safari especialmente)
+      setTimeout(() => input.focus(), 30);
+    }
+  } else {
+    input.removeAttribute('required');
+    input.removeAttribute('aria-required');
+    input.value = '';
+  }
+}
 
 // ── Meter de progresso no hero ────────────────────────
 //
@@ -221,8 +270,27 @@ export function initRegistro(params = {}) {
         }
       });
       _bindEquipChangeWarning();
+
+      // Toggle do campo custom quando tipo muda. Rebind só uma vez (bound flag),
+      // por isso fica dentro do guard.
+      const tipoSel = Utils.getEl('r-tipo');
+      if (tipoSel) {
+        tipoSel.addEventListener('change', () => {
+          _syncTipoCustomVisibility({ focusOnShow: true });
+          _updateProgressBar();
+        });
+      }
+      // Atualiza a barra conforme o usuário digita o custom label — a validação
+      // do r-tipo depende dele quando Outro está selecionado.
+      const tipoCustomInput = Utils.getEl('r-tipo-custom');
+      if (tipoCustomInput) {
+        tipoCustomInput.addEventListener('input', _updateProgressBar);
+      }
+
       formView.dataset.bound = '1';
     }
+    // Garante o estado correto na entrada da view (inclusive vindo de edit).
+    _syncTipoCustomVisibility();
     _updateProgressBar();
     _renderHeroSub();
 
@@ -243,13 +311,80 @@ export function initRegistro(params = {}) {
     const rPrioridade = Utils.getEl('r-prioridade');
     if (rPrioridade && !rPrioridade.value) rPrioridade.value = 'media';
 
-    // Hint de assinatura só pra Plus/Pro — a captura de assinatura é feature
-    // paga, Free não tem esse fluxo. O elemento vem `hidden` do template pra
+    // Hint de assinatura: Plus/Pro veem "Incluso" confirmando que a captura
+    // vai rolar no save. Free vê variante upsell clicável que leva pro
+    // /pricing?highlightPlan=plus. O elemento vem `hidden` do template pra
     // evitar flash de conteúdo indevido enquanto o plano ainda carrega.
-    const signatureHint = document.getElementById('registro-signature-hint');
-    if (signatureHint) {
-      signatureHint.hidden = !isCachedPlanPlusOrHigher();
-    }
+    applySignatureHint();
+  });
+}
+
+function applySignatureHint() {
+  const signatureHint = document.getElementById('registro-signature-hint');
+  if (!signatureHint) return;
+
+  const isPlusOrHigher = isCachedPlanPlusOrHigher();
+  signatureHint.hidden = false;
+
+  // Limpa handler anterior antes de remontar conteúdo.
+  signatureHint.onclick = null;
+  signatureHint.classList.remove('registro-sig-hint--upsell');
+  signatureHint.removeAttribute('role');
+  signatureHint.removeAttribute('tabindex');
+
+  if (isPlusOrHigher) {
+    signatureHint.innerHTML = `
+      <span class="registro-sig-hint__ic" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+          <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+          <path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/>
+        </svg>
+      </span>
+      <div class="registro-sig-hint__body">
+        <div class="registro-sig-hint__head">
+          <strong class="registro-sig-hint__title">Assinatura do cliente</strong>
+          <span class="registro-sig-hint__badge">Incluso</span>
+        </div>
+        <p class="registro-sig-hint__desc">
+          Ao salvar, solicitamos a rubrica do cliente —
+          fica anexada ao registro e aparece no PDF oficial do serviço.
+        </p>
+      </div>`;
+    return;
+  }
+
+  // Variante Free: upsell clicável. Botão aninhado pra ter semântica correta
+  // (o container não pode ser <button> porque já está dentro de um form).
+  signatureHint.classList.add('registro-sig-hint--upsell');
+  signatureHint.innerHTML = `
+    <span class="registro-sig-hint__ic registro-sig-hint__ic--upsell" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="11" width="16" height="10" rx="2"/>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      </svg>
+    </span>
+    <div class="registro-sig-hint__body">
+      <div class="registro-sig-hint__head">
+        <strong class="registro-sig-hint__title">Assinatura do cliente no PDF</strong>
+        <span class="registro-sig-hint__badge registro-sig-hint__badge--plus">Plus</span>
+      </div>
+      <p class="registro-sig-hint__desc">
+        Feche o serviço com a rubrica do cliente diretamente no app —
+        recurso do plano Plus.
+      </p>
+    </div>
+    <button type="button" class="registro-sig-hint__cta"
+      data-action="signature-upsell-cta">
+      Conhecer Plus →
+    </button>`;
+
+  const cta = signatureHint.querySelector('[data-action="signature-upsell-cta"]');
+  cta?.addEventListener('click', () => {
+    trackEvent('signature_upsell_clicked', { source: 'registro_form' });
+    goTo('pricing', { highlightPlan: 'plus' });
   });
 }
 
@@ -258,6 +393,10 @@ export function applyQuickTemplate(templateId, triggerEl = null) {
   if (!template) return;
 
   Utils.setVal('r-tipo', template.tipo);
+  // Utils.setVal muda o .value sem disparar 'change' — então o listener que
+  // toggla o campo "Qual serviço?" não rodaria sozinho. Chamada explícita aqui
+  // pra garantir que o wrap volte a ficar oculto ao sair de "Outro" via chip.
+  _syncTipoCustomVisibility();
   if (!Utils.getVal('r-obs').trim()) Utils.setVal('r-obs', template.descricao);
   Utils.setVal('r-prioridade', template.prioridade);
   Utils.setVal('r-data', Utils.nowDatetime());
@@ -310,11 +449,31 @@ export async function saveRegistro() {
   }
   const prioridade = Utils.getVal('r-prioridade') || 'media';
   const { equipamentos } = getState();
+
+  // Quando o tipo é "Outro", combinamos com o label livre → "Outro · {custom}".
+  // Validamos o custom ANTES de mandar pra validateRegistroPayload porque o
+  // validador trata tipo como um blob só e não sabe sobre o campo auxiliar.
+  let tipoForPayload = Utils.getVal('r-tipo');
+  if (tipoForPayload === 'Outro') {
+    const custom = Utils.getVal('r-tipo-custom').trim();
+    if (!custom) {
+      Toast.warning('Descreva o serviço no campo "Qual serviço?" pra continuar.');
+      Utils.getEl('r-tipo-custom')?.focus();
+      return false;
+    }
+    if (custom.length > TIPO_CUSTOM_MAX) {
+      Toast.warning(`A descrição do serviço passa do limite de ${TIPO_CUSTOM_MAX} caracteres.`);
+      Utils.getEl('r-tipo-custom')?.focus();
+      return false;
+    }
+    tipoForPayload = `${TIPO_OUTRO_PREFIX}${custom}`;
+  }
+
   const payloadValidation = validateRegistroPayload(
     {
       equipId: Utils.getVal('r-equip'),
       data: Utils.getVal('r-data'),
-      tipo: Utils.getVal('r-tipo'),
+      tipo: tipoForPayload,
       obs: Utils.getVal('r-obs'),
       tecnico: Utils.getVal('r-tecnico'),
       status: Utils.getVal('r-status'),
@@ -543,6 +702,7 @@ export async function saveRegistro() {
 export function clearRegistro(preserveEquip = false) {
   const toClear = [
     'r-tipo',
+    'r-tipo-custom',
     'r-pecas',
     'r-obs',
     'r-proxima',
@@ -562,6 +722,9 @@ export function clearRegistro(preserveEquip = false) {
   Utils.setVal('r-prioridade', 'media');
   Utils.setVal('r-data', Utils.nowDatetime());
   Photos.clear();
+
+  // Garante que o campo custom volte a ficar oculto junto com o reset do tipo.
+  _syncTipoCustomVisibility();
 
   // Reseta o meter do hero pra empty sem remover o markup (ele é estático no
   // template agora, diferente da v5 que injetava dinamicamente).
@@ -621,7 +784,19 @@ export function loadRegistroForEdit(id) {
 
   Utils.setVal('r-equip', r.equipId);
   Utils.setVal('r-data', r.data);
-  Utils.setVal('r-tipo', r.tipo);
+
+  // Se o tipo foi salvo com prefixo "Outro · ", separamos de volta em select=Outro
+  // + input custom. Caso contrário, repopulamos normalmente e deixamos o wrap
+  // escondido. O _syncTipoCustomVisibility no initRegistro finaliza o estado.
+  if (typeof r.tipo === 'string' && r.tipo.startsWith(TIPO_OUTRO_PREFIX)) {
+    Utils.setVal('r-tipo', 'Outro');
+    Utils.setVal('r-tipo-custom', r.tipo.slice(TIPO_OUTRO_PREFIX.length));
+  } else {
+    Utils.setVal('r-tipo', r.tipo);
+    Utils.setVal('r-tipo-custom', '');
+  }
+  _syncTipoCustomVisibility();
+
   Utils.setVal('r-obs', r.obs);
   Utils.setVal('r-tecnico', r.tecnico);
   Utils.setVal('r-prioridade', r.prioridade || 'media');

@@ -1,4 +1,5 @@
 import { queueEvent } from './telemetrySink.js';
+import { addBreadcrumb } from './observability.js';
 
 const TELEMETRY_EVENT = 'cooltrack:telemetry';
 
@@ -29,6 +30,19 @@ export function trackEvent(name, payload = {}) {
     if (import.meta.env?.DEV) {
       console.warn('[telemetry] queueEvent falhou (silenciado):', err);
     }
+  }
+
+  // Emite também como breadcrumb no Sentry pra contextualizar erros.
+  // No-op se observability não está inicializado (DSN ausente).
+  try {
+    addBreadcrumb({
+      category: 'telemetry',
+      message: eventName,
+      data,
+      level: 'info',
+    });
+  } catch {
+    // nunca propaga
   }
 
   if (import.meta.env?.DEV) {

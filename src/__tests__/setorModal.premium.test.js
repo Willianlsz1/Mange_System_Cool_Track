@@ -58,12 +58,16 @@ vi.mock('../ui/components/skeleton.js', () => ({
 vi.mock('../core/monetization.js', () => ({
   fetchMyProfileBilling: vi.fn(async () => ({ profile: { plan_code: 'pro' } })),
 }));
-vi.mock('../core/subscriptionPlans.js', () => ({
-  hasProAccess: () => true,
-  PLAN_CODE_FREE: 'free',
-  PLAN_CODE_PLUS: 'plus',
-  PLAN_CODE_PRO: 'pro',
-}));
+vi.mock('../core/subscriptionPlans.js', async (importOriginal) => {
+  // Mantém exports reais (PLAN_CATALOG, helpers, etc.) e só força hasProAccess
+  // pra passar o gate do modal nos testes. Sem isso, qualquer import novo
+  // em subscriptionPlans (ex.: PLAN_CATALOG) quebra esse arquivo.
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    hasProAccess: () => true,
+  };
+});
 
 // modal.js — dynamic import dentro de saveSetor/openEditSetor.
 vi.mock('../core/modal.js', () => ({

@@ -21,11 +21,19 @@ const testGlobals = {
 
 export default [
   {
-    ignores: ['node_modules/**', 'dist/**', 'dist-*/**', 'coverage/**'],
+    ignores: [
+      'node_modules/**',
+      'dist/**',
+      'dist-*/**',
+      'coverage/**',
+      // Vite gera arquivos `vite.config.js.timestamp-*.mjs` durante dev/build.
+      // São cache transitório (não versionados) e quebravam `npm run lint`.
+      'vite.config.js.timestamp-*.mjs',
+    ],
   },
   js.configs.recommended,
   {
-    files: ['**/*.js'],
+    files: ['**/*.js', '**/*.mjs'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',

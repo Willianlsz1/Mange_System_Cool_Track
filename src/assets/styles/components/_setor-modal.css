@@ -709,7 +709,12 @@
 /* ── Mobile ───────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .setor-modal {
-    max-width: 360px;
+    /* Antes travava em 360px e deixava bandas laterais em aparelhos maiores.
+       Agora ocupa toda a largura útil (o overlay já tem padding interno) e
+       arredonda só o topo — visual de bottom-sheet consistente com o resto
+       dos modais mobile. */
+    max-width: 100%;
+    border-radius: 14px 14px 0 0;
   }
 
   .setor-modal__hero {
@@ -720,14 +725,23 @@
     font-size: 17px;
   }
 
+  .setor-modal__subtitle {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
   .setor-modal__body {
     padding: 14px 16px;
     gap: 14px;
-    max-height: calc(100vh - 240px);
+    /* Usa svh quando disponível (evita saltos com a URL bar do mobile) e
+       reserva ~200px pro hero+footer — menos apertado que o 240px anterior. */
+    max-height: calc(100svh - 200px);
   }
 
   .setor-modal__footer {
     padding: 12px 16px;
+    /* Respeita a safe-area inferior em iOS pra CTA não ficar sob o home bar. */
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
   }
 
   .setor-modal__swatches {
@@ -741,6 +755,15 @@
 
   .setor-modal__swatch-label {
     font-size: 9.5px;
+  }
+}
+
+/* Fallback pra browsers sem suporte a svh — usa vh tradicional. */
+@supports not (height: 100svh) {
+  @media (max-width: 640px) {
+    .setor-modal__body {
+      max-height: calc(100vh - 200px);
+    }
   }
 }
 

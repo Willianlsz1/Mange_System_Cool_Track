@@ -6,8 +6,8 @@
  *
  * Comportamento por plano:
  *  - Guest: não mostra (faz prompt de login ao clicar no botão)
- *  - Free:  "2/5 PDFs este mês" — tom warning quando >=80%, danger em 100%
- *  - Plus:  "45/100 PDFs este mês"
+ *  - Free:  "1/2 PDFs este mês" — tom warning quando >=80%, danger em 100%
+ *  - Plus:  "12/30 PDFs este mês"
  *  - Pro:   esconde (ilimitado)
  *
  * O fetch é lazy — só dispara quando o usuário entra na view de relatório.

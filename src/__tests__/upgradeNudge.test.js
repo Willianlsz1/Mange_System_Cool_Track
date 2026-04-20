@@ -7,11 +7,11 @@ describe('UpgradeNudge', () => {
 
       expect(html).toContain('Fazer upgrade para o CoolTrack Plus');
       expect(html).toContain('POPULAR');
-      expect(html).toContain('Até 25 equipamentos cadastrados');
+      expect(html).toContain('Até 15 equipamentos cadastrados');
       expect(html).toContain('Registros e histórico ilimitados');
       expect(html).toContain('PDFs sem marca');
       expect(html).toContain('assinatura do cliente');
-      expect(html).toContain('50 envios de WhatsApp/mês');
+      expect(html).toContain('20 envios de WhatsApp/mês');
       expect(html).toContain('Fazer upgrade &rarr;');
       expect(html).toContain('data-highlight-plan="plus"');
       // Menciona Pro como caminho futuro

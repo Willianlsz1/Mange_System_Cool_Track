@@ -100,14 +100,14 @@ describe('PdfQuotaBadge', () => {
       profile: { id: 'u1', plan_code: 'plus' },
     });
     getEffectivePlan.mockReturnValueOnce('plus');
-    getMonthlyLimitForPlan.mockReturnValueOnce(100);
-    getMonthlyUsageSnapshot.mockResolvedValueOnce({ pdf_export: 100 });
+    getMonthlyLimitForPlan.mockReturnValueOnce(30);
+    getMonthlyUsageSnapshot.mockResolvedValueOnce({ pdf_export: 30 });
 
     await PdfQuotaBadge.refresh();
 
     const badge = document.getElementById('pdf-quota-badge');
     expect(badge.className).toContain('pdf-quota-badge--danger');
-    expect(badge.textContent).toBe('Limite atingido: 100/100 PDFs (Plus)');
+    expect(badge.textContent).toBe('Limite atingido: 30/30 PDFs (Plus)');
   });
 
   it('fails silently on network error (no badge rendered)', async () => {

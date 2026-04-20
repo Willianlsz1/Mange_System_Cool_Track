@@ -32,20 +32,16 @@ import { validateEquipamentoPayload } from '../../core/inputValidation.js';
 import { EquipmentPhotos } from '../components/equipmentPhotos.js';
 import { Photos } from '../components/photos.js';
 import { uploadPendingPhotos, normalizePhotoList } from '../../core/photoStorage.js';
-
-const STATUS_OPERACIONAL = {
-  ok: 'OPERANDO NORMALMENTE',
-  warn: 'OPERANDO COM RESTRIÇÕES',
-  danger: 'FORA DE OPERAÇÃO',
-};
-const CONDICAO_OBSERVADA = {
-  ok: 'Sem anormalidades',
-  warn: 'Condição fora do padrão',
-  danger: 'Intervenção necessária',
-  unknown: 'Não avaliado',
-};
-const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
-const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'Alto risco' };
+import { isCachedPlanPlusOrHigher } from '../../core/planCache.js';
+// Labels de UI (rótulos de status/condição/prioridade) ficam em módulo
+// separado pra permitir reuso pelo dashboard/historico sem arrastar toda
+// a view junto. Single source of truth.
+import {
+  STATUS_OPERACIONAL,
+  CONDICAO_OBSERVADA,
+  PRIORIDADE_LABEL,
+  RISK_CLASS_LABEL,
+} from './equipamentos/constants.js';
 
 // ── Edit mode tracking ─────────────────────────────────────────────────────
 // Quando preenchido, saveEquip() atualiza o equipamento existente em vez de criar um novo.
@@ -908,6 +904,28 @@ function _setToolbar({ title, extraBtn } = {}) {
 }
 
 /**
+ * Markup do "+ Novo setor" em modo locked (plano Free/Plus).
+ * Visual cinza, disabled de verdade (não dispara o handler open-setor-modal)
+ * e com um cadeado + pill PRO pra deixar explícito que é feature paga.
+ * Tooltip nativo via `title` explica porque está bloqueado.
+ */
+function _lockedSetorBtnHtml() {
+  return `
+    <button
+      type="button"
+      class="btn btn--outline btn--sm btn--locked"
+      disabled
+      aria-disabled="true"
+      title="Setores é uma feature do plano Pro"
+    >
+      <span aria-hidden="true">🔒</span>
+      + Novo setor
+      <span class="btn__pro-pill" aria-hidden="true">PRO</span>
+    </button>
+  `;
+}
+
+/**
  * Mostra/esconde o container CONTEXTO do modal de cadastro — só aparece
  * quando ao menos um filho (setor ou fotos) está visível. Mantém o modal
  * enxuto pra usuários Free (sem setor Pro, sem fotos Plus).
@@ -1250,8 +1268,12 @@ export async function renderEquip(filtro = '', options = {}) {
       extraBtn: `<button class="btn btn--outline btn--sm" data-action="back-to-setores">← Setores</button>`,
     });
   } else {
-    // Vista FREE: toolbar padrão
-    _setToolbar({ title: 'Parque de Equipamentos' });
+    // Vista FREE/Plus: toolbar padrão + "+ Novo setor" em modo locked, pra
+    // sinalizar que a feature existe mas pede upgrade pro Pro.
+    _setToolbar({
+      title: 'Parque de Equipamentos',
+      extraBtn: _lockedSetorBtnHtml(),
+    });
   }
 
   renderFlatList(filtro, options, _activeSectorId);
@@ -1371,7 +1393,10 @@ export function clearSetorEditingState() {
   const err = Utils.getEl('setor-nome-err');
   if (err) err.hidden = true;
   const nomeInput = Utils.getEl('setor-nome');
-  if (nomeInput) nomeInput.setAttribute('aria-invalid', 'false');
+  if (nomeInput) {
+    nomeInput.setAttribute('aria-invalid', 'false');
+    delete nomeInput.dataset.touched;
+  }
 
   _syncSetorModalPreview();
   _syncSetorModalCounters();
@@ -1413,7 +1438,10 @@ export function openEditSetor(id) {
   const err = Utils.getEl('setor-nome-err');
   if (err) err.hidden = true;
   const nomeInput = Utils.getEl('setor-nome');
-  if (nomeInput) nomeInput.setAttribute('aria-invalid', 'false');
+  if (nomeInput) {
+    nomeInput.setAttribute('aria-invalid', 'false');
+    delete nomeInput.dataset.touched;
+  }
 
   _syncSetorModalPreview();
   _syncSetorModalCounters();
@@ -1507,14 +1535,24 @@ export function initSetorColorPicker() {
       });
     });
 
-    // Inputs do form → sincroniza preview + counters + limpa erro inline
+    // Inputs do form → sincroniza preview + counters + gerencia erro inline
+    // Regra: depois que o usuário já foi avisado uma vez (data-touched=1), o
+    // erro some ao digitar e volta ao esvaziar o campo. Antes do primeiro
+    // aviso o campo fica "limpo" enquanto o usuário não tenta salvar.
     const nomeInput = Utils.getEl('setor-nome');
     if (nomeInput) {
       nomeInput.addEventListener('input', () => {
         const err = Utils.getEl('setor-nome-err');
-        if (err && !err.hidden) {
-          err.hidden = true;
-          nomeInput.setAttribute('aria-invalid', 'false');
+        const isEmpty = !nomeInput.value.trim();
+        const wasTouched = nomeInput.dataset.touched === '1';
+        if (err) {
+          if (isEmpty && wasTouched) {
+            err.hidden = false;
+            nomeInput.setAttribute('aria-invalid', 'true');
+          } else {
+            err.hidden = true;
+            nomeInput.setAttribute('aria-invalid', 'false');
+          }
         }
         _syncSetorModalPreview();
         _syncSetorModalCounters();
@@ -1535,11 +1573,14 @@ export async function saveSetor() {
 
   const nome = (Utils.getVal('setor-nome') || '').trim();
   if (!nome) {
-    // Validação inline: mostra erro abaixo do input + foco + toast leve
+    // Validação inline: mostra erro abaixo do input + foco + toast leve.
+    // Marca o campo como "touched" pra que o erro passe a reaparecer
+    // automaticamente se o usuário esvaziar o input depois de digitar.
     const err = Utils.getEl('setor-nome-err');
     if (err) err.hidden = false;
     const nomeInput = Utils.getEl('setor-nome');
     if (nomeInput) {
+      nomeInput.dataset.touched = '1';
       nomeInput.setAttribute('aria-invalid', 'true');
       nomeInput.focus();
     }
@@ -1759,30 +1800,51 @@ export async function saveEquip() {
   // 2. `uploadPendingPhotos` sobe só as pending e normaliza as existing;
   //    mantém a ordem. Se falhar o upload, a foto pending é preservada como
   //    dataURL (fallback) — o próximo save tenta de novo.
+  // 3. Runtime gate: o `applyEquipPhotosGate` esconde o wrapper no Free, mas
+  //    um usuário com dev tools pode desesconder e adicionar fotos. Aqui a
+  //    gente força a mão: se não for Plus+, o pending é descartado antes do
+  //    upload. `existing` é preservado (usuário pode ter degradado de Plus e
+  //    as fotos antigas devem persistir até ele limpar/editar explicitamente).
   const equipId = _editingEquipId || Utils.uid();
+  const canUploadPhotos = isCachedPlanPlusOrHigher();
   let fotosPayload = [];
-  try {
-    const uploaded = await uploadPendingPhotos(EquipmentPhotos.getAll(), {
-      recordId: equipId,
-      scope: 'equipamentos',
-    });
-    fotosPayload = uploaded.photos;
-    if (uploaded.failedCount > 0) {
-      Toast.warning(
-        'Algumas fotos não foram enviadas para a nuvem e permaneceram salvas localmente.',
-      );
+
+  if (!canUploadPhotos) {
+    const pendingCount = EquipmentPhotos.pending?.length || 0;
+    if (pendingCount > 0) {
+      // Telemetria pra rastrear tentativas de bypass do UI gate.
+      trackEvent('photo_upload_blocked_non_plus', {
+        equipId,
+        pendingCount,
+        isEdit: Boolean(_editingEquipId),
+      });
+      Toast.warning('Fotos no equipamento são um recurso do plano Plus. Upgrade pra liberar.');
     }
-  } catch (err) {
-    // Se não está autenticado ou outro erro de upload, segue sem fotos novas.
-    // Em edit mode, preserva as existing que já estão persistidas.
     fotosPayload = normalizePhotoList(EquipmentPhotos.existing);
-    handleError(err, {
-      code: ErrorCodes.SYNC_FAILED,
-      severity: 'warning',
-      message: 'Foto não enviada. Suas alterações foram salvas.',
-      context: { action: 'equipamentos.saveEquip.uploadPhotos', equipId },
-      showToast: false,
-    });
+  } else {
+    try {
+      const uploaded = await uploadPendingPhotos(EquipmentPhotos.getAll(), {
+        recordId: equipId,
+        scope: 'equipamentos',
+      });
+      fotosPayload = uploaded.photos;
+      if (uploaded.failedCount > 0) {
+        Toast.warning(
+          'Algumas fotos não foram enviadas para a nuvem e permaneceram salvas localmente.',
+        );
+      }
+    } catch (err) {
+      // Se não está autenticado ou outro erro de upload, segue sem fotos novas.
+      // Em edit mode, preserva as existing que já estão persistidas.
+      fotosPayload = normalizePhotoList(EquipmentPhotos.existing);
+      handleError(err, {
+        code: ErrorCodes.SYNC_FAILED,
+        severity: 'warning',
+        message: 'Foto não enviada. Suas alterações foram salvas.',
+        context: { action: 'equipamentos.saveEquip.uploadPhotos', equipId },
+        showToast: false,
+      });
+    }
   }
 
   if (_editingEquipId) {

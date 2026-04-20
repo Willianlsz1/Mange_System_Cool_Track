@@ -22,6 +22,16 @@
 -- Substitui: Set User Plan to Free, Activate Plus/Pro,
 -- Update User Plan to Pro, Mark User as Developer.
 -- Troque EMAIL_AQUI e descomente a ação desejada.
+--
+-- IMPORTANTE: desde 2026-04-19 existe o trigger
+-- `protect_profile_fields_trigger` que bloqueia UPDATE em
+-- plan/plan_code/subscription_status/is_dev/stripe_* quando a
+-- sessão não é service_role. No SQL Editor do Dashboard não há
+-- JWT de service_role, então os UPDATEs abaixo usam
+-- `set local session_replication_role = 'replica'` pra desligar
+-- os triggers SÓ dentro da transação (volta ao normal no commit).
+-- NUNCA faça `alter table ... disable trigger` solto — isso
+-- afeta todas as sessões, inclusive o webhook do Kiwify.
 
 -- -------- VER PLANO ATUAL --------
 select u.email, p.plan_code, p.plan, p.subscription_status, p.is_dev,
@@ -31,25 +41,41 @@ join auth.users u on u.id = p.id
 where u.email = 'EMAIL_AQUI@exemplo.com';
 
 -- -------- PROMOVER PARA PRO --------
--- update public.profiles
--- set plan_code = 'pro', plan = 'pro', subscription_status = 'active'
--- where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- begin;
+--   set local session_replication_role = 'replica';
+--   update public.profiles
+--   set plan_code = 'pro', plan = 'pro', subscription_status = 'active'
+--   where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- commit;
 
 -- -------- PROMOVER PARA PLUS --------
--- update public.profiles
--- set plan_code = 'plus', plan = 'plus', subscription_status = 'active'
--- where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- begin;
+--   set local session_replication_role = 'replica';
+--   update public.profiles
+--   set plan_code = 'plus', plan = 'plus', subscription_status = 'active'
+--   where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- commit;
 
 -- -------- REVERTER PARA FREE --------
--- update public.profiles
--- set plan_code = 'free', plan = 'free', subscription_status = 'inactive'
--- where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- begin;
+--   set local session_replication_role = 'replica';
+--   update public.profiles
+--   set plan_code = 'free', plan = 'free', subscription_status = 'inactive'
+--   where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- commit;
 
 -- -------- LIGAR / DESLIGAR DEV --------
--- update public.profiles set is_dev = true
---   where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
--- update public.profiles set is_dev = false
---   where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- begin;
+--   set local session_replication_role = 'replica';
+--   update public.profiles set is_dev = true
+--     where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- commit;
+--
+-- begin;
+--   set local session_replication_role = 'replica';
+--   update public.profiles set is_dev = false
+--     where id = (select id from auth.users where email = 'EMAIL_AQUI@exemplo.com');
+-- commit;
 
 
 -- ============================================================

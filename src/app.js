@@ -20,6 +20,7 @@ import { setCachedPlan } from './core/planCache.js';
 import { getEffectivePlan } from './core/subscriptionPlans.js';
 import { supabase } from './core/supabase.js';
 import { initTelemetrySink } from './core/telemetrySink.js';
+import { initObservability, setUser as setObservabilityUser } from './core/observability.js';
 import { initSwUpdate } from './core/swUpdate.js';
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
@@ -50,6 +51,26 @@ async function bootstrap() {
             /* sem SW registrado — OK, seguimos sem update flow */
           });
       }
+    }
+
+    // Observability (Sentry) — lazy-inicializado se VITE_SENTRY_DSN estiver
+    // setado. Fire-and-forget: se falhar ou DSN estiver ausente, no-op
+    // silencioso. Precisa rodar ANTES do telemetrySink pra que breadcrumbs
+    // do fluxo de auth já entrem no contexto.
+    initObservability().catch(() => {
+      // initObservability() já é defensivo; essa linha cobre edge cases
+      // onde o import falha antes de entrarmos no try/catch interno.
+    });
+
+    // Liga o user_id do Supabase ao Sentry quando a sessão muda. Só passa
+    // o UUID — nada de email/nome (config sendDefaultPii=false + filtro
+    // em observability.setUser).
+    try {
+      supabase.auth.onAuthStateChange((_event, session) => {
+        setObservabilityUser(session?.user ? { id: session.user.id } : null);
+      });
+    } catch {
+      // no-op: observability nunca pode quebrar boot
     }
 
     // Inicializa sink de telemetria cedo — antes de LandingPage.render() pra

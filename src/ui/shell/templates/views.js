@@ -341,6 +341,17 @@ export function renderShellViews() {
                 </div>
               </div>
 
+              <!-- Campo custom aparece só quando tipo = "Outro". Controlado via JS
+                   em registro.js (_bindTipoCustomToggle). Limite 40 chars: entra
+                   compacto no PDF / histórico / relatório como "Outro · {custom}". -->
+              <div class="registro-field registro-field--tipo-custom" id="r-tipo-custom-wrap" hidden>
+                <label class="registro-field__label" for="r-tipo-custom">Qual serviço?<span class="req">*</span></label>
+                <input id="r-tipo-custom" class="registro-field__input" type="text"
+                  maxlength="40" autocomplete="off"
+                  placeholder="Ex: Teste de estanqueidade, alinhamento de ventilador..." />
+                <p class="registro-field__help">Descreva em poucas palavras (até 40 caracteres).</p>
+              </div>
+
               <div class="registro-field">
                 <label class="registro-field__label" for="r-obs">Descreva o serviço</label>
                 <textarea id="r-obs" class="registro-field__textarea registro-obs"

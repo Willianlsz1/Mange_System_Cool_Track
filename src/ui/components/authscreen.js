@@ -657,7 +657,7 @@ export const AuthScreen = {
             <label class="auth-label" for="signup-confirm">Confirmar senha</label>
             ${passwordInputHTML('signup-confirm', 'repita a senha', 'new-password')}
             <button class="auth-btn" id="btn-signup" type="button">Começar gratuitamente ${ICON_ARROW_RIGHT}</button>
-            <div class="auth-hint">Plano gratuito · Sem cartão · 5 PDFs/mês</div>
+            <div class="auth-hint">Plano gratuito · Sem cartão · 2 PDFs/mês</div>
           </div>
 
         </div>

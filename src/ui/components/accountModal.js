@@ -132,7 +132,7 @@ function getEquipmentCount() {
 }
 
 // Renderiza a seção inferior do hero: CTA primário no Free, bar de uso
-// no Plus/Pro. Plus mostra "count / 25", Pro mostra "count · ilimitado".
+// no Plus/Pro. Plus mostra "count / 15", Pro mostra "count · ilimitado".
 function renderHeroFooter(planCode, planData) {
   if (planCode === PLAN_CODE_FREE) {
     return `

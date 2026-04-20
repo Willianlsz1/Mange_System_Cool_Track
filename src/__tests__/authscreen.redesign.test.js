@@ -80,9 +80,9 @@ describe('AuthScreen V2Refined redesign', () => {
     expect(meter.getAttribute('role')).toBe('progressbar');
     expect(meter.querySelectorAll('.auth-strength__seg').length).toBe(3);
 
-    // Updated hint — fix #7: no "cancele quando quiser", real limit
+    // Updated hint — fix #7: no "cancele quando quiser", real limit (Free = 2 PDFs/mês)
     const hint = document.querySelector('#auth-form-signup .auth-hint');
-    expect(hint?.textContent).toContain('5 PDFs/mês');
+    expect(hint?.textContent).toContain('2 PDFs/mês');
     expect(hint?.textContent).not.toContain('cancele');
   });
 

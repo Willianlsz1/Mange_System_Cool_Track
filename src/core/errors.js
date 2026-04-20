@@ -1,4 +1,5 @@
 import { Toast } from './toast.js';
+import { captureError } from './observability.js';
 
 export const ErrorCodes = Object.freeze({
   AUTH_FAILED: 'AUTH_FAILED',
@@ -84,6 +85,19 @@ export function handleError(error, options = {}) {
 
   if (shouldReport) {
     appendErrorLog(appError);
+    // Observability — no-op se VITE_SENTRY_DSN não está setado.
+    // Passa a exceção original pra Sentry pegar o stack correto,
+    // e anexa o AppError wrapper como contexto.
+    try {
+      captureError(error ?? appError, {
+        code: appError.code,
+        severity: appError.severity,
+        context: { ...appError.context, wrapperMessage: appError.message },
+      });
+    } catch {
+      // captureError() já é defensivo, mas protegemos contra qualquer
+      // edge case (ex.: stubs quebrados em testes).
+    }
   }
 
   if (shouldToast) {

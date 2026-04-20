@@ -14,7 +14,7 @@ export function isGuestMode() {
 
 /**
  * Conta quantos registros de serviço foram criados no mês corrente.
- * O pricing promete "10 registros/mês" no Free — o limite é JANELA MENSAL,
+ * O pricing promete "5 registros/mês" no Free — o limite é JANELA MENSAL,
  * não total histórico. Usado por checkPlanLimit('registros') e usageMeter.
  *
  * Referência: `registro.data` é salvo como ISO datetime ('YYYY-MM-DDTHH:mm').
@@ -33,9 +33,9 @@ export function getUsageSnapshot() {
   const state = getState();
   return {
     equipamentos: state.equipamentos.length,
-    // Registros é contagem do MÊS CORRENTE — o limit free (10) é mensal.
+    // Registros é contagem do MÊS CORRENTE — o limit free (5) é mensal.
     // Usar state.registros.length (total histórico) bloqueia a conta cedo
-    // demais e não bate com o pricing ("10 registros/mês").
+    // demais e não bate com o pricing ("5 registros/mês").
     registros: countRegistrosThisMonth(state.registros),
   };
 }

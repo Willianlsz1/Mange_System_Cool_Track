@@ -37,6 +37,49 @@ async function resolveCurrentPlanCode() {
   }
 }
 
+// ── Ícones SVG: apenas pra tabela comparativa ────────────────────────────
+const ICON_CHECK = `<svg class="pricing-features__icon pricing-features__icon--yes" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const ICON_X = `<svg class="pricing-features__icon pricing-features__icon--no" width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`;
+
+// ──────────────────────────────────────────────────────────────────────────
+// Feature lists por tier — seguem o padrão "Tudo do X, mais:" pra evitar
+// repetir features entre tiers. Free mostra tudo; Plus mostra o delta sobre
+// Free; Pro mostra o delta sobre Plus.
+// ──────────────────────────────────────────────────────────────────────────
+const FREE_FEATURES = [
+  'Até 3 equipamentos cadastrados',
+  '5 registros de serviço/mês',
+  'Histórico dos últimos 15 dias',
+  '2 PDFs/mês <span class="pricing-features__note">(com marca d\'água)</span>',
+  '3 envios via WhatsApp/mês',
+  'Fotos nos registros de serviço',
+  'Alertas de manutenção preventiva',
+  'Funciona offline',
+];
+
+const PLUS_DELTA_FEATURES = [
+  'Até <strong>15 equipamentos</strong> cadastrados',
+  '<strong>Registros de serviço ilimitados</strong>',
+  '<strong>Todo o histórico</strong> de manutenções',
+  "<strong>30 PDFs/mês</strong> sem marca d'água",
+  '20 envios via WhatsApp/mês',
+  '<strong>Assinatura digital</strong> do cliente no PDF',
+  '<strong>Fotos dos equipamentos</strong> (até 3 por equip.)',
+];
+
+const PRO_DELTA_FEATURES = [
+  '<strong>Equipamentos ilimitados</strong>',
+  '<strong>PDFs ilimitados</strong>',
+  '<strong>WhatsApp ilimitado</strong>',
+  '<strong>Agrupamento por setores</strong>',
+  'Suporte prioritário',
+];
+
+function renderFeaturesList(features) {
+  const items = features.map((f) => `<li>${f}</li>`).join('');
+  return `<ul class="pricing-features" role="list">${items}</ul>`;
+}
+
 function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}) {
   const isPro = planCode === PLAN_CODE_PRO;
   const isPlus = planCode === PLAN_CODE_PLUS;
@@ -100,24 +143,22 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             ${isFree ? 'PLANO ATUAL' : 'BASE'}
           </span>
           <h2 class="pricing-card__title">Gratuito</h2>
-          <p class="pricing-card__price">R$ 0 <span class="pricing-card__price-period">/ sempre</span></p>
-          <ul class="pricing-features" aria-label="Recursos do plano gratuito">
-            <li>Até 3 equipamentos cadastrados</li>
-            <li>10 registros de serviço por mês</li>
-            <li>Histórico dos últimos 30 dias</li>
-            <li>5 relatórios PDF/mês <span style="color:var(--text-3);font-size:12px">(com marca d'água CoolTrack)</span></li>
-            <li>10 envios via WhatsApp/mês</li>
-            <li>Fotos nos registros de serviço</li>
-            <li>Alertas de manutenção preventiva</li>
-            <li>Funciona offline</li>
-            <li class="pricing-features__excluded">Sem fotos no cadastro de equipamentos</li>
-            <li class="pricing-features__excluded">Sem assinatura digital no PDF</li>
-          </ul>
-          <div class="pricing-card__footer">
+          <p class="pricing-card__subtitle">Pra avaliar o CoolTrack</p>
+
+          <div class="pricing-card__price-group">
+            <p class="pricing-card__price">R$ 0</p>
+            <p class="pricing-card__price-desc">Grátis para sempre</p>
+          </div>
+
+          <div class="pricing-card__cta-group">
             <button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">
               ${isFree ? 'Plano atual' : 'Downgrade disponível no portal'}
             </button>
           </div>
+
+          <hr class="pricing-card__divider" aria-hidden="true" />
+
+          ${renderFeaturesList(FREE_FEATURES)}
         </article>
 
         <!-- ═══════ PLUS ═══════ -->
@@ -130,37 +171,29 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             ${isPlus ? 'PLANO ATUAL' : 'INTERMEDIÁRIO'}
           </span>
           <h2 class="pricing-card__title">Plus</h2>
+          <p class="pricing-card__subtitle">Pra técnico autônomo</p>
 
           <div class="pricing-card__price-group">
             <p class="pricing-card__price pricing-card__price--plus" id="plus-price-monthly">
               R$ 29 <span class="pricing-card__price-period">/ mês</span>
             </p>
+            <p class="pricing-card__price-desc" id="plus-price-desc-monthly">
+              Cobrado mensalmente. Cancele quando quiser.
+            </p>
             <div id="plus-price-annual" style="display:none">
               <p class="pricing-card__price pricing-card__price--plus">
                 R$ 20<span class="pricing-card__price-cents">,75</span> <span class="pricing-card__price-period">/ mês</span>
               </p>
-              <p class="pricing-card__annual-detail">
-                cobrado como R$ 249/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 99</span>
+              <p class="pricing-card__price-desc">
+                Cobrado como R$ 249/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 99</span>
               </p>
             </div>
           </div>
 
-          <ul class="pricing-features" aria-label="Recursos do plano Plus">
-            <li>Até 25 equipamentos cadastrados</li>
-            <li>Registros de serviço ilimitados</li>
-            <li>Todo o histórico de manutenções</li>
-            <li>100 relatórios PDF/mês <strong>sem marca d'água</strong></li>
-            <li><strong>Assinatura digital</strong> do cliente no PDF</li>
-            <li>50 envios via WhatsApp/mês</li>
-            <li><strong>Fotos dos equipamentos</strong> (até 3 por equipamento)</li>
-            <li>Fotos nos registros de serviço</li>
-            <li>Alertas de manutenção preventiva</li>
-          </ul>
-          <div class="pricing-card__footer">
+          <div class="pricing-card__cta-group">
             ${
               isPlus
                 ? `<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Plano atual</button>
-                   <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>
                    <button
                      class="pricing-cancel-btn"
                      type="button"
@@ -177,13 +210,17 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
                        data-upgrade-source="pricing"
                      >
                        Assinar Plus &rarr;
-                     </button>
-                     <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>`
+                     </button>`
                   : `<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">
                        Downgrade via portal
                      </button>`
             }
           </div>
+
+          <hr class="pricing-card__divider" aria-hidden="true" />
+
+          <p class="pricing-card__includes">Tudo do <strong>Gratuito</strong>, mais:</p>
+          ${renderFeaturesList(PLUS_DELTA_FEATURES)}
         </article>
 
         <!-- ═══════ PRO ═══════ -->
@@ -196,38 +233,29 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             ${isPro ? 'PLANO ATUAL' : 'MAIS POPULAR'}
           </span>
           <h2 class="pricing-card__title">Pro</h2>
+          <p class="pricing-card__subtitle">Pra pequena empresa</p>
 
           <div class="pricing-card__price-group">
             <p class="pricing-card__price pricing-card__price--pro" id="pro-price-monthly">
               R$ 49 <span class="pricing-card__price-period">/ mês</span>
             </p>
+            <p class="pricing-card__price-desc" id="pro-price-desc-monthly">
+              Cobrado mensalmente. Cancele quando quiser.
+            </p>
             <div id="pro-price-annual" style="display:none">
               <p class="pricing-card__price pricing-card__price--pro">
                 R$ 34<span class="pricing-card__price-cents">,92</span> <span class="pricing-card__price-period">/ mês</span>
               </p>
-              <p class="pricing-card__annual-detail">
-                cobrado como R$ 419/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 169</span>
+              <p class="pricing-card__price-desc">
+                Cobrado como R$ 419/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 169</span>
               </p>
             </div>
           </div>
 
-          <ul class="pricing-features" aria-label="Recursos do plano Pro">
-            <li><strong>Equipamentos ilimitados</strong></li>
-            <li>Registros de serviço ilimitados</li>
-            <li>Todo o histórico de manutenções</li>
-            <li>Relatórios PDF <strong>ilimitados</strong> sem marca d'água</li>
-            <li>Assinatura digital do cliente no PDF</li>
-            <li>Envios de WhatsApp <strong>ilimitados</strong></li>
-            <li><strong>Fotos dos equipamentos</strong> (até 3 por equipamento)</li>
-            <li>Fotos nos registros de serviço</li>
-            <li><strong>Agrupamento por setores</strong></li>
-            <li>Suporte prioritário</li>
-          </ul>
-          <div class="pricing-card__footer">
+          <div class="pricing-card__cta-group">
             ${
               isPro
                 ? `<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">Plano atual</button>
-                   <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>
                    <button
                      class="pricing-cancel-btn"
                      type="button"
@@ -244,16 +272,111 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
                        data-upgrade-source="pricing"
                      >
                        Assinar Pro &rarr;
-                     </button>
-                     <p class="pricing-card__microcopy">Cancele quando quiser &bull; Sem fidelidade</p>`
+                     </button>`
                   : `<button class="btn btn--outline pricing-card__cta" type="button" disabled aria-disabled="true">
                        Plano atual ou inferior
                      </button>`
             }
           </div>
+
+          <hr class="pricing-card__divider" aria-hidden="true" />
+
+          <p class="pricing-card__includes">Tudo do <strong>Plus</strong>, mais:</p>
+          ${renderFeaturesList(PRO_DELTA_FEATURES)}
         </article>
 
       </div>
+
+      <!-- ── Tabela comparativa ── -->
+      <section class="pricing-compare" aria-label="Comparativo detalhado dos planos">
+        <h3 class="pricing-compare__title">Compare os planos lado a lado</h3>
+        <div class="pricing-compare__scroll">
+          <table class="pricing-compare__table">
+            <thead>
+              <tr>
+                <th scope="col" class="pricing-compare__feature-col">Recurso</th>
+                <th scope="col">Gratuito</th>
+                <th scope="col" class="pricing-compare__col--plus">Plus</th>
+                <th scope="col" class="pricing-compare__col--pro">Pro</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Equipamentos cadastrados</th>
+                <td>3</td>
+                <td>15</td>
+                <td>Ilimitado</td>
+              </tr>
+              <tr>
+                <th scope="row">Registros de serviço</th>
+                <td>5 / mês</td>
+                <td>Ilimitado</td>
+                <td>Ilimitado</td>
+              </tr>
+              <tr>
+                <th scope="row">Histórico</th>
+                <td>15 dias</td>
+                <td>Completo</td>
+                <td>Completo</td>
+              </tr>
+              <tr>
+                <th scope="row">Relatórios PDF</th>
+                <td>2 / mês <small>(com marca d'água)</small></td>
+                <td>30 / mês</td>
+                <td>Ilimitado</td>
+              </tr>
+              <tr>
+                <th scope="row">Envios por WhatsApp</th>
+                <td>3 / mês</td>
+                <td>20 / mês</td>
+                <td>Ilimitado</td>
+              </tr>
+              <tr>
+                <th scope="row">Assinatura digital no PDF</th>
+                <td>${ICON_X}</td>
+                <td>${ICON_CHECK}</td>
+                <td>${ICON_CHECK}</td>
+              </tr>
+              <tr>
+                <th scope="row">Fotos no cadastro de equipamentos</th>
+                <td>${ICON_X}</td>
+                <td>${ICON_CHECK}</td>
+                <td>${ICON_CHECK}</td>
+              </tr>
+              <tr>
+                <th scope="row">Fotos nos registros de serviço</th>
+                <td>${ICON_CHECK}</td>
+                <td>${ICON_CHECK}</td>
+                <td>${ICON_CHECK}</td>
+              </tr>
+              <tr>
+                <th scope="row">Alertas de manutenção preventiva</th>
+                <td>${ICON_CHECK}</td>
+                <td>${ICON_CHECK}</td>
+                <td>${ICON_CHECK}</td>
+              </tr>
+              <tr>
+                <th scope="row">Agrupamento por setores</th>
+                <td>${ICON_X}</td>
+                <td>${ICON_X}</td>
+                <td>${ICON_CHECK}</td>
+              </tr>
+              <tr>
+                <th scope="row">Suporte prioritário</th>
+                <td>${ICON_X}</td>
+                <td>${ICON_X}</td>
+                <td>${ICON_CHECK}</td>
+              </tr>
+              <tr>
+                <th scope="row">Funciona offline</th>
+                <td>${ICON_CHECK}</td>
+                <td>${ICON_CHECK}</td>
+                <td>${ICON_CHECK}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <!-- ── Management section (Plus ou Pro) ── -->
       ${
@@ -287,8 +410,8 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
         <details class="pricing-faq__item">
           <summary>Qual a diferença entre Plus e Pro?</summary>
           <p>
-            <strong>Plus</strong> é o tier intermediário: até 25 equipamentos, 100 PDFs/mês sem marca d'água, assinatura digital do cliente e 50 envios de WhatsApp/mês — ideal pra técnico autônomo ou pequeno negócio.
-            <strong>Pro</strong> é ilimitado: equipamentos, PDFs e WhatsApp sem limite, agrupamento por setores e suporte prioritário — pensado pra empresas com operação maior.
+            <strong>Plus</strong> é pensado pra <strong>técnico autônomo</strong>: até 15 equipamentos, 30 PDFs/mês sem marca d'água, assinatura digital do cliente e 20 envios de WhatsApp/mês.
+            <strong>Pro</strong> é pra <strong>pequena empresa</strong> com operação maior: equipamentos, PDFs e WhatsApp ilimitados, agrupamento por setores e suporte prioritário.
           </p>
         </details>
 
@@ -304,7 +427,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
         <details class="pricing-faq__item">
           <summary>O que acontece com meus dados se cancelar?</summary>
-          <p>Seus dados ficam salvos. Você volta ao plano Gratuito com acesso a tudo que já foi registrado — apenas novos cadastros ficam limitados (máx. 3 equipamentos e 10 registros/mês).</p>
+          <p>Seus dados ficam salvos. Você volta ao plano Gratuito com acesso a tudo que já foi registrado — apenas novos cadastros ficam limitados (máx. 3 equipamentos e 5 registros/mês).</p>
         </details>
 
         <details class="pricing-faq__item">
@@ -320,11 +443,6 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
         <details class="pricing-faq__item">
           <summary>Como funciona o plano anual?</summary>
           <p>Você paga o valor anual de uma vez (Plus R$ 249, Pro R$ 419) e economiza ~28% em relação ao mensal. Pode cancelar a qualquer momento — o reembolso proporcional é feito conforme a política do Stripe.</p>
-        </details>
-
-        <details class="pricing-faq__item">
-          <summary>Já sou assinante — o reajuste de preços me afeta?</summary>
-          <p>Não. Assinaturas ativas continuam nos valores originais (Plus R$ 15/mês e Pro R$ 29/mês). Os novos valores (Plus R$ 29, Pro R$ 49) valem apenas pra novas contratações. Seu preço travado continua enquanto a assinatura estiver ativa.</p>
         </details>
       </section>
 
@@ -355,8 +473,10 @@ export async function renderPricing(params = {}) {
     '.pricing-billing-toggle--global .pricing-billing-toggle__btn',
   );
   const plusMonthly = view.querySelector('#plus-price-monthly');
+  const plusMonthlyDesc = view.querySelector('#plus-price-desc-monthly');
   const plusAnnual = view.querySelector('#plus-price-annual');
   const proMonthly = view.querySelector('#pro-price-monthly');
+  const proMonthlyDesc = view.querySelector('#pro-price-desc-monthly');
   const proAnnual = view.querySelector('#pro-price-annual');
   const plusCheckoutBtn = view.querySelector('#btn-checkout-plus');
   const proCheckoutBtn = view.querySelector('#btn-checkout-pro');
@@ -370,8 +490,10 @@ export async function renderPricing(params = {}) {
       const showAnnual = billing === 'annual';
 
       if (plusMonthly) plusMonthly.style.display = showAnnual ? 'none' : '';
+      if (plusMonthlyDesc) plusMonthlyDesc.style.display = showAnnual ? 'none' : '';
       if (plusAnnual) plusAnnual.style.display = showAnnual ? '' : 'none';
       if (proMonthly) proMonthly.style.display = showAnnual ? 'none' : '';
+      if (proMonthlyDesc) proMonthlyDesc.style.display = showAnnual ? 'none' : '';
       if (proAnnual) proAnnual.style.display = showAnnual ? '' : 'none';
 
       if (plusCheckoutBtn) {

@@ -26,9 +26,11 @@ import { Photos } from '../components/photos.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { updateHeader } from './dashboard.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
-import { isCachedPlanPro } from '../../core/planCache.js';
+import { isCachedPlanPlusOrHigher } from '../../core/planCache.js';
 
-const HIST_FREE_LIMIT_DAYS = 30;
+// Free: histórico limitado aos últimos 15 dias (apertado pro usuário sentir o
+// valor do Plus/Pro sem deixar a conta inútil — cobre 2 semanas de operação).
+const HIST_FREE_LIMIT_DAYS = 15;
 
 // Filtros auxiliares persistem na sessão — desaparecem ao fechar o app (intencional).
 const HIST_PERIOD_KEY = 'cooltrack-hist-period';
@@ -631,12 +633,13 @@ export function renderHist() {
     ? new Set(equipamentos.filter((e) => e.setorId === filtSetor).map((e) => e.id))
     : null;
 
-  // Plano Free: limita histórico aos últimos 30 dias
-  const isPro = isCachedPlanPro();
+  // Plano Free: limita histórico aos últimos HIST_FREE_LIMIT_DAYS dias (15).
+  // Plus e Pro têm histórico completo — Plus é o menor tier que destrava isso.
+  const hasFullHistoryAccess = isCachedPlanPlusOrHigher();
   let histLimitedByPlan = false;
   let list = [...registros].sort((a, b) => b.data.localeCompare(a.data));
 
-  if (!isPro) {
+  if (!hasFullHistoryAccess) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - HIST_FREE_LIMIT_DAYS);
     const cutoffStr = cutoff.toISOString().slice(0, 10);
@@ -703,7 +706,9 @@ export function renderHist() {
       activeFilterCount,
     });
 
-    const planLimitBanner = !isPro
+    // Banner só aparece pro Free — Plus e Pro já têm histórico completo.
+    // CTA aponta pra Plus (menor tier que destrava) em vez de Pro.
+    const planLimitBanner = !hasFullHistoryAccess
       ? `<div class="hist-plan-limit-banner">
            <span class="hist-plan-limit-banner__ic" aria-hidden="true">
              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -718,7 +723,7 @@ export function renderHist() {
                : `Plano Free · histórico limitado aos últimos <b>${HIST_FREE_LIMIT_DAYS} dias</b>.`
            }</span>
            <button type="button" class="hist-plan-limit-banner__link"
-             data-action="hist-pricing-link">Ver plano Pro →</button>
+             data-action="hist-pricing-link">Ver plano Plus →</button>
          </div>`
       : '';
 
@@ -802,8 +807,10 @@ function attachFilterHandlers(container) {
     });
   };
 
+  // CTA aponta pra Plus (menor tier que destrava histórico completo),
+  // alinhando com o texto do banner.
   each('[data-action="hist-pricing-link"]', (btn) =>
-    btn.addEventListener('click', () => goTo('pricing', { highlightPlan: 'pro' })),
+    btn.addEventListener('click', () => goTo('pricing', { highlightPlan: 'plus' })),
   );
 
   each('[data-action="hist-filter-period"]', (btn) =>

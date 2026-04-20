@@ -24,39 +24,6 @@
   letter-spacing: 0.02em;
 }
 
-.section-title--toolbar {
-  margin: 0;
-}
-
-/* Linha técnica separadora */
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-.section-header__label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--text-3);
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-}
-
-.section-header__line {
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
-.section-header__count {
-  font-size: 10px;
-  color: var(--text-3);
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-
 /* ─── CARD ─── */
 .card {
   background: var(--card);
@@ -206,102 +173,6 @@
 .critical-incident__cta:hover {
   transform: translateY(-1px);
   filter: brightness(1.06);
-}
-
-/* ─── KPI CARDS (bento) ─── */
-.bento-kpi {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--border-2);
-  border-radius: var(--radius-sm);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  box-shadow: 0 8px 20px rgba(3, 8, 16, 0.2);
-}
-
-.bento-kpi--alert {
-  border-top-color: var(--success);
-}
-.bento-kpi--health {
-  border-top-color: var(--primary);
-}
-.bento-kpi--mes {
-  border-top-color: var(--warning);
-}
-.bento-kpi--fail {
-  border-top-color: var(--danger);
-}
-
-.bento-kpi:hover {
-  border-color: var(--border-2);
-  background: var(--card-hover);
-  transition: background 0.15s ease;
-}
-
-.bento-kpi__label {
-  font-size: 9px;
-  font-weight: 700;
-  color: var(--text-2);
-  letter-spacing: 0.1em;
-  margin-bottom: 6px;
-}
-
-.bento-kpi__value {
-  font-family: var(--font-mono);
-  font-size: 46px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.04em;
-  line-height: 0.95;
-  text-shadow: 0 0 20px rgba(0, 0, 0, 0.16);
-}
-
-.bento-kpi__value--ok {
-  color: var(--success);
-}
-.bento-kpi__value--warn {
-  color: var(--warning);
-}
-.bento-kpi__value--danger {
-  color: var(--danger);
-}
-.bento-kpi__value--cyan {
-  color: var(--primary);
-}
-
-.bento-kpi__sub {
-  margin-top: 5px;
-  font-size: 9px;
-  color: var(--text-2);
-  font-weight: 500;
-}
-
-/* Health bar — agora é barra de eficiência */
-.health-bar {
-  height: 5px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 2px;
-  margin-top: var(--space-2);
-  overflow: hidden;
-}
-.health-bar__fill {
-  height: 100%;
-  border-radius: 2px;
-  width: 0%;
-  transition: width 0.6s ease;
-  box-shadow: 0 0 12px rgba(0, 0, 0, 0.22);
-}
-.health-bar__fill--ok {
-  background: var(--success);
-}
-.health-bar__fill--warn {
-  background: var(--warning);
-}
-.health-bar__fill--danger {
-  background: var(--danger);
 }
 
 /* ─── EQUIPMENT CARD — módulo de controle ─── */
@@ -6887,6 +6758,42 @@ mark,
   transform: none;
 }
 
+/* Botão "locked": visual apagado + pill PRO, usado pra indicar feature
+   paga não liberada (ex: "+ Novo setor" no plano Free/Plus). O estado
+   `disabled` garante que não dispara handlers; o `cursor: not-allowed`
+   já vem do seletor `.btn:disabled` acima. */
+.btn--locked {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-3, #6b8196) !important;
+  border-color: var(--border-2, rgba(255, 255, 255, 0.1)) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  opacity: 0.75;
+}
+
+.btn--locked:hover {
+  /* Anula o hover do .btn--outline pra reforçar o "não clicável". */
+  color: var(--text-3, #6b8196) !important;
+  border-color: var(--border-2, rgba(255, 255, 255, 0.1)) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.btn__pro-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffd597;
+  background: rgba(232, 185, 74, 0.14);
+  border: 1px solid rgba(232, 185, 74, 0.35);
+  line-height: 1;
+  margin-left: 2px;
+}
+
 .btn.is-busy,
 .auth-btn.is-busy,
 .auth-btn-guest.is-busy,
@@ -10362,6 +10269,13 @@ mark,
   margin-top: 12px;
 }
 
+/* Respeita o atributo `hidden` do HTML — a regra acima com display:flex
+   sobrescreve o display:none que o `hidden` traz do User Agent. Usado pelo
+   campo "Qual serviço?" (r-tipo-custom-wrap) que toggla conforme o tipo. */
+#view-registro .registro-field[hidden] {
+  display: none;
+}
+
 #view-registro .registro-field__label {
   font-size: 10px;
   font-weight: 700;
@@ -10861,6 +10775,53 @@ mark,
   color: var(--text-2);
   line-height: 1.5;
   margin: 0;
+}
+
+/* ---------- Variante Free: upsell pro plano Plus ---------- */
+/* Usa a mesma estrutura do hint padrão, mas troca a paleta pra
+   azul-Plus (em vez do ciano primary) e adiciona um CTA no fim. */
+#view-registro .registro-sig-hint.registro-sig-hint--upsell {
+  border: 1px solid rgba(58, 142, 230, 0.28);
+  border-left: 3px solid #3a8ee6;
+  background: linear-gradient(90deg, rgba(58, 142, 230, 0.1) 0%, rgba(58, 142, 230, 0.03) 100%);
+}
+
+#view-registro .registro-sig-hint__ic--upsell {
+  background: rgba(58, 142, 230, 0.14);
+  color: #3a8ee6;
+}
+
+#view-registro .registro-sig-hint__badge--plus {
+  background: rgba(58, 142, 230, 0.14);
+  color: #3a8ee6;
+  border: 1px solid rgba(58, 142, 230, 0.28);
+}
+
+#view-registro .registro-sig-hint__cta {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #3a8ee6;
+  background: transparent;
+  border: 1px solid rgba(58, 142, 230, 0.35);
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+#view-registro .registro-sig-hint__cta:hover {
+  background: rgba(58, 142, 230, 0.08);
+  border-color: rgba(58, 142, 230, 0.5);
+}
+
+#view-registro .registro-sig-hint__cta:focus-visible {
+  outline: 2px solid rgba(58, 142, 230, 0.6);
+  outline-offset: 2px;
 }
 
 /* ---------- Small screen adjustments ---------- */

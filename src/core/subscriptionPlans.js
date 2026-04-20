@@ -47,36 +47,39 @@ export const PLAN_CATALOG = {
     label: 'Free',
     limits: {
       equipamentos: 3,
-      registros: 10,
+      registros: 5,
+      // Histórico em dias visível na view do Histórico (filtrado em runtime).
+      // Registros mais antigos continuam salvos, mas aparecem bloqueados com CTA.
+      historicoDias: 15,
     },
     perks: [
       'Até 3 equipamentos cadastrados',
-      'Até 10 registros de serviço/mês',
-      'Histórico dos últimos 30 dias',
-      '10 envios de relatório via WhatsApp/mês',
+      'Até 5 registros de serviço/mês',
+      'Histórico dos últimos 15 dias',
+      '3 envios de relatório via WhatsApp/mês',
     ],
     accountTagline: 'Recursos básicos para começar. Desbloqueie mais com o Plus.',
     // Chips aspiracionais no Free: mostram o que vem ao fazer upgrade (estilo ghost/muted).
-    accountChips: ['Até 25 equipamentos', 'PDFs sem marca d\u2019água', 'Registros ilimitados'],
+    accountChips: ['Até 15 equipamentos', 'PDFs sem marca d\u2019água', 'Registros ilimitados'],
   },
   [PLAN_CODE_PLUS]: {
     key: PLAN_CODE_PLUS,
     label: 'Plus',
     limits: {
-      equipamentos: 25,
+      equipamentos: 15,
       registros: Number.POSITIVE_INFINITY,
     },
     perks: [
-      'Até 25 equipamentos cadastrados',
+      'Até 15 equipamentos cadastrados',
       'Registros de serviço ilimitados',
       'Todo o histórico de manutenções',
-      '100 relatórios PDF/mês sem marca d\u2019água',
-      '50 envios via WhatsApp/mês',
+      '30 relatórios PDF/mês sem marca d\u2019água',
+      '20 envios via WhatsApp/mês',
       'Assinatura digital do cliente no PDF',
       'Fotos dos equipamentos (até 3 por equipamento)',
     ],
-    accountTagline: 'Até 25 equipamentos, PDFs sem marca d\u2019água e assinatura digital.',
-    accountChips: ['Até 25 equipamentos', 'PDFs sem marca d\u2019água', 'Assinatura digital'],
+    accountTagline: 'Até 15 equipamentos, PDFs sem marca d\u2019água e assinatura digital.',
+    accountChips: ['Até 15 equipamentos', 'PDFs sem marca d\u2019água', 'Assinatura digital'],
   },
   [PLAN_CODE_PRO]: {
     key: PLAN_CODE_PRO,

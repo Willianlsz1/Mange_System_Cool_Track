@@ -1106,13 +1106,19 @@ export async function renderDashboard() {
 
     const usageMeterHost = document.getElementById('dash-usage-meter');
     if (usageMeterHost) {
-      usageMeterHost.innerHTML = UsageMeter.render({ planCode: planContext.planCode });
+      // Em contas Pro o badge "Plano Pro ativo" já aparece no hero superior,
+      // então escondemos o medidor de uso para manter a tela mais clean.
+      usageMeterHost.innerHTML = planContext.hasPro
+        ? ''
+        : UsageMeter.render({ planCode: planContext.planCode });
     }
 
     const upgradeCardHost = document.getElementById('dash-upgrade-card');
     if (upgradeCardHost) {
+      // Mesma ideia: suprime o card "Plano Pro ativo" redundante e mantém
+      // apenas o nudge de upgrade para quem ainda não tem Pro.
       upgradeCardHost.innerHTML = planContext.hasPro
-        ? _renderProStatusCard()
+        ? ''
         : UpgradeNudge.renderDashboardCard({ planCode: planContext.planCode });
     }
 

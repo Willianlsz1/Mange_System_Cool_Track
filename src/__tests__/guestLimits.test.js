@@ -106,8 +106,8 @@ describe('guestLimits', () => {
     const now = new Date();
     const iso = (day) =>
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T10:00`;
-    // 10 registros no mês corrente — bate o teto mensal do Free.
-    mockState.registros = Array.from({ length: 10 }, (_, i) => ({
+    // 5 registros no mês corrente — bate o teto mensal do Free.
+    mockState.registros = Array.from({ length: 5 }, (_, i) => ({
       id: `r-${i}`,
       data: iso((i % 28) + 1),
     }));
@@ -117,17 +117,17 @@ describe('guestLimits', () => {
     const planResult = await checkPlanLimit('registros');
 
     expect(guestResult.blocked).toBe(true);
-    expect(guestResult.limit).toBe(10);
+    expect(guestResult.limit).toBe(5);
     expect(planResult.blocked).toBe(true);
     expect(planResult.isGuest).toBe(true);
     expect(planResult.planCode).toBe('free');
   });
 
-  it('blocks authenticated free users when monthly registros reaches free limit (10)', async () => {
+  it('blocks authenticated free users when monthly registros reaches free limit (5)', async () => {
     const now = new Date();
     const iso = (day) =>
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T10:00`;
-    mockState.registros = Array.from({ length: 10 }, (_, i) => ({
+    mockState.registros = Array.from({ length: 5 }, (_, i) => ({
       id: `r-${i}`,
       data: iso((i % 28) + 1),
     }));
@@ -136,8 +136,8 @@ describe('guestLimits', () => {
     const result = await checkPlanLimit('registros');
 
     expect(result.blocked).toBe(true);
-    expect(result.limit).toBe(10);
-    expect(result.current).toBe(10);
+    expect(result.limit).toBe(5);
+    expect(result.current).toBe(5);
     expect(result.isGuest).toBe(false);
     expect(result.planCode).toBe('free');
   });

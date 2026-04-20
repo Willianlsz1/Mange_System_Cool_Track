@@ -1,8 +1,15 @@
-import { PLAN_CODE_FREE, PLAN_CODE_PLUS, PLAN_CODE_PRO } from '../../core/subscriptionPlans.js';
+import {
+  PLAN_CATALOG,
+  PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
+  PLAN_CODE_PRO,
+} from '../../core/subscriptionPlans.js';
 import { getState } from '../../core/state.js';
 
-const FREE_PLAN_EQUIP_LIMIT = 3;
-const FREE_PLAN_REPORT_LIMIT = 10;
+// Source de verdade é PLAN_CATALOG — se mudar o tier Free lá, o medidor
+// automaticamente reflete. Evita drift tipo "catálogo diz 5, medidor diz 10".
+const FREE_PLAN_EQUIP_LIMIT = PLAN_CATALOG[PLAN_CODE_FREE].limits.equipamentos;
+const FREE_PLAN_REPORT_LIMIT = PLAN_CATALOG[PLAN_CODE_FREE].limits.registros;
 
 function clampPercent(value, total) {
   if (!total) return 0;
@@ -220,8 +227,10 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
   const reportTone = usageState.hasOverLimit
     ? 'danger'
     : getReportBarTone(usageState.reportPercent);
+  // Plus já destrava registros ilimitados e até 15 equipamentos — CTA aponta
+  // pra Plus, não Pro. Pro só ganha sentido quando a frota passa de 15.
   const upgradeText = usageState.hasOverLimit
-    ? 'Você precisa do plano Pro para continuar &rarr;'
+    ? 'Você precisa do plano Plus para continuar &rarr;'
     : 'Desbloquear ilimitado &rarr;';
   const badgeHtml = usageState.hasOverLimit
     ? '<span class="usage-meter__badge usage-meter__badge--danger">LIMITE ULTRAPASSADO</span>'
@@ -374,7 +383,7 @@ export const UsageMeter = {
       return renderPaidMeter(equipmentCount, reportsThisMonth, {
         planCode: PLAN_CODE_PLUS,
         planLabel: 'Plus',
-        planCopy: 'Até 25 equipamentos, registros e histórico ilimitados.',
+        planCopy: 'Até 15 equipamentos, registros e histórico ilimitados.',
       });
     }
 

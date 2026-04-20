@@ -17,10 +17,10 @@ const NUDGE_CONFIGS = {
     icon: '⚡',
     title: 'Fazer upgrade para o CoolTrack Plus',
     bullets: [
-      'Até 25 equipamentos cadastrados',
+      'Até 15 equipamentos cadastrados',
       'Registros e histórico ilimitados',
       'PDFs sem marca d\u2019água + assinatura do cliente',
-      '50 envios de WhatsApp/mês',
+      '20 envios de WhatsApp/mês',
     ],
     footer:
       'Tem frota maior? Conheça também o <strong>Pro</strong> — equipamentos ilimitados, tudo sem limite e setores.',

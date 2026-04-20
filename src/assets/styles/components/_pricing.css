@@ -224,12 +224,63 @@
   background: var(--surface-2);
 }
 
-/* Card content */
+/* ────────────────────────────────────────────────────────────────
+   Card content — layout linear inspirado no padrão claude.ai/pricing:
+   badge → título → subtítulo → preço → CTA → divisor → features
+   ──────────────────────────────────────────────────────────────── */
 .pricing-card__title {
   margin-top: 14px;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.4px;
+  line-height: 1.15;
+}
+
+/* Subtítulo descritivo (persona) — tom secundário, abaixo do título */
+.pricing-card__subtitle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-2);
+  line-height: 1.35;
+}
+
+/* Descrição curta abaixo do preço ("Grátis para sempre", "Cobrado
+   mensalmente...") — mesmo peso visual do subtítulo */
+.pricing-card__price-desc {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-3);
+}
+
+/* Grupo de CTAs — fica entre o preço e o divisor */
+.pricing-card__cta-group {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Divisor horizontal entre CTA e lista de features — mesmo tom das bordas */
+.pricing-card__divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0 16px;
+  width: 100%;
+}
+
+/* Header "Tudo do X, mais:" — precede a lista de features nos tiers pagos */
+.pricing-card__includes {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.1px;
+}
+
+.pricing-card__includes strong {
+  font-weight: 700;
 }
 
 .pricing-card__price {
@@ -349,53 +400,73 @@
   margin-left: 4px;
 }
 
-/* Features */
+/* ────────────────────────────────────────────────────────────────
+   Features — lista linear com "✓" simples (padrão claude.ai/pricing)
+   Sem círculos, sem badges, só um check verde indentando cada linha.
+   ──────────────────────────────────────────────────────────────── */
 .pricing-features {
   list-style: none;
-  margin-top: 20px;
+  margin: 0;
+  padding: 0;
   display: grid;
-  gap: 9px;
+  gap: 10px;
   font-size: 14px;
   flex: 1;
 }
 
 .pricing-features li {
   color: var(--text-2);
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  line-height: 1.4;
+  padding-left: 24px;
+  position: relative;
 }
 
 .pricing-features li::before {
   content: '✓';
+  position: absolute;
+  left: 0;
+  top: 0.05em;
+  color: var(--success);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.pricing-features li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* "(com marca d'água)" e similares — nota sutil após a feature */
+.pricing-features__note {
+  color: var(--text-3);
+  font-size: 12px;
+  margin-left: 2px;
+}
+
+/* Ícones SVG inline usados APENAS na tabela comparativa (pricing-compare) */
+.pricing-features__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--success) 14%, transparent);
-  color: var(--success);
-  font-size: 11px;
-  font-weight: 700;
   flex-shrink: 0;
 }
 
-/* Itens explicitamente não incluídos (mostra limitação do tier) */
-.pricing-features__excluded {
-  color: var(--text-3) !important;
-  opacity: 0.75;
+.pricing-features__icon--yes {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
 }
 
-.pricing-features__excluded::before {
-  content: '×' !important;
-  background: color-mix(in srgb, var(--text-3) 18%, transparent) !important;
-  color: var(--text-3) !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
+.pricing-features__icon--no {
+  background: color-mix(in srgb, var(--text-3) 18%, transparent);
+  color: var(--text-3);
 }
 
-/* Card footer */
+/* Card footer — legado, substituído por .pricing-card__cta-group no layout
+   linear novo (CTA antes do divisor). Mantido apenas pra possíveis usos
+   externos que ainda referenciem essa classe. */
 .pricing-card__footer {
   margin-top: 24px;
   display: flex;
@@ -901,6 +972,129 @@
 
 /* Profile Modal: canonical styles moved to components.css as .profile-modal__*
    (BEM, alinhado com o hero pattern do .account-modal). */
+
+/* ═══════════════════════════════════════════════════════
+   TABELA COMPARATIVA DE PLANOS
+   ─────────────────────────────────────────
+   Mostra todos os recursos lado-a-lado. Pro-destaca coluna Pro/Plus via
+   variant classes. Scroll horizontal em mobile (pricing-compare__scroll).
+   ═══════════════════════════════════════════════════════ */
+.pricing-compare {
+  margin-top: 40px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.pricing-compare__title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--text);
+}
+
+.pricing-compare__scroll {
+  overflow-x: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+
+.pricing-compare__table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.pricing-compare__table thead th {
+  padding: 12px 10px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border-bottom: 2px solid var(--border);
+  background: var(--surface-2);
+}
+
+.pricing-compare__table thead .pricing-compare__feature-col {
+  text-align: left;
+}
+
+.pricing-compare__col--plus {
+  color: #3a8ee6 !important;
+}
+
+[data-theme='light'] .pricing-compare__col--plus {
+  color: #1d4f8e !important;
+}
+
+.pricing-compare__col--pro {
+  background: linear-gradient(135deg, #e8b94a, #00c8e8) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  color: transparent !important;
+}
+
+.pricing-compare__table tbody tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.pricing-compare__table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.pricing-compare__table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--surface-2) 40%, transparent);
+}
+
+.pricing-compare__table tbody th {
+  padding: 12px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text);
+  font-size: 13.5px;
+}
+
+.pricing-compare__table tbody td {
+  padding: 12px 10px;
+  text-align: center;
+  color: var(--text-2);
+  font-size: 13.5px;
+}
+
+.pricing-compare__table tbody td small {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Ícones dentro da tabela herdam a cor do container */
+.pricing-compare__table td .pricing-features__icon {
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) {
+  .pricing-compare {
+    padding: 16px;
+  }
+  .pricing-compare__table {
+    font-size: 13px;
+  }
+  .pricing-compare__table thead th {
+    padding: 10px 6px;
+  }
+  .pricing-compare__table tbody th,
+  .pricing-compare__table tbody td {
+    padding: 10px 6px;
+  }
+}
 
 /* ═══════════════════════════════════════════════════════
    SETORES (PRO)
