@@ -128,6 +128,31 @@ export function renderShellModals() {
           </div>
         </div>
 
+        <!--
+          Banner de "conquista" mostrado só após a IA preencher o form com
+          sucesso. Dois propósitos:
+            1. Dar ao user o "ahá, funcionou" (vira o Plus em valor percebido)
+            2. Direcionar o olho pros campos que ainda precisam de revisão
+          Controlado por showAiBanner() em nameplateCapture.js. Fica escondido
+          no render inicial e entre aberturas do modal.
+        -->
+        <div class="eq-ai-banner" id="eq-ai-banner" hidden>
+          <div class="eq-ai-banner__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3l2.09 4.26L18.5 8l-3.25 3.16.77 4.48L12 13.5l-4.02 2.14.77-4.48L5.5 8l4.41-.74L12 3z"
+                fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="eq-ai-banner__body">
+            <div class="eq-ai-banner__title" id="eq-ai-banner-title">
+              Dados preenchidos automaticamente
+            </div>
+            <div class="eq-ai-banner__sub" id="eq-ai-banner-sub">
+              Revise rapidamente e finalize o cadastro.
+            </div>
+          </div>
+        </div>
+
         <div id="eq-step-1">
           <div class="eq-form-section-head">
             <span class="eq-form-section-head__label">Essenciais</span>
@@ -387,7 +412,7 @@ export function renderShellModals() {
 
       <div class="btn-group modal__footer">
         <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button>
-        <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento &rarr;</button>
+        <button class="btn btn--primary" data-action="save-equip">&#10003; Confirmar e cadastrar</button>
       </div>
       <p class="modal-trust-note modal-trust-note--footer">&#10003; Você pode editar ou excluir a qualquer momento
       </p>

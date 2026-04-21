@@ -98,4 +98,68 @@ describe('pricing view', () => {
     expect(html).not.toContain('pricing-cancel-btn');
     expect(html).not.toContain('Cancelar assinatura');
   });
+
+  it('mostra linha "Cadastro por foto (IA)" com cotas reais na tabela comparativa', async () => {
+    // Motivação: antes a IA sumia da tabela comparativa, dando a falsa
+    // impressão de que era Pro-only ou ilimitado. Agora ela aparece no topo
+    // com Free=1/mês (teste), Plus=30/mês, Pro=200/mês.
+    const { renderPricing } = await loadPricingModule({
+      user: { id: 'user-1' },
+      profile: { plan: 'free', subscription_status: 'inactive', is_dev: false },
+    });
+
+    await renderPricing();
+
+    const html = document.getElementById('view-pricing').innerHTML;
+    expect(html).toContain('Cadastro por foto (IA)');
+    expect(html).toContain('1 / mês');
+    expect(html).toContain('30 / mês');
+    expect(html).toContain('200 / mês');
+    // Sanity: não deve mais dizer "ilimitado" pra cadastro por foto
+    // (o regex garante que a string "200" aparece como cota do Pro)
+    expect(html).toMatch(/Cadastro por foto \(IA\)[\s\S]*200/);
+  });
+
+  it('Pro subtítulo referencia equipe/15+, não "pequena empresa"', async () => {
+    // Sincroniza com a landing (L-D). "Pequena empresa" soa vago; "equipe ou
+    // 15+ equipamentos" é concreto e casa com o break-even de mudar de Plus.
+    const { renderPricing } = await loadPricingModule({
+      user: { id: 'user-1' },
+      profile: { plan: 'pro', subscription_status: 'active', is_dev: false },
+    });
+
+    await renderPricing();
+
+    const html = document.getElementById('view-pricing').innerHTML;
+    expect(html).toContain('Pra equipe ou 15+ equipamentos');
+    expect(html).not.toContain('Pra pequena empresa');
+  });
+
+  it('heroSubtitle do Pro não mostra emoji 🙌', async () => {
+    // Regressão: o glyph renderizava "👀" em alguns user-agents mobile. Copy
+    // sem emoji é neutra e evita esse tipo de bug por plataforma.
+    const { renderPricing } = await loadPricingModule({
+      user: { id: 'user-1' },
+      profile: { plan: 'pro', subscription_status: 'active', is_dev: false },
+    });
+
+    await renderPricing();
+
+    const html = document.getElementById('view-pricing').innerHTML;
+    expect(html).not.toContain('🙌');
+    expect(html).toContain('Obrigado por confiar no CoolTrack');
+  });
+
+  it('Plus badge usa "TÉCNICO AUTÔNOMO" (sincroniza com landing)', async () => {
+    const { renderPricing } = await loadPricingModule({
+      user: { id: 'user-1' },
+      profile: { plan: 'free', subscription_status: 'inactive', is_dev: false },
+    });
+
+    await renderPricing();
+
+    const html = document.getElementById('view-pricing').innerHTML;
+    expect(html).toContain('TÉCNICO AUTÔNOMO');
+    expect(html).not.toContain('INTERMEDIÁRIO');
+  });
 });

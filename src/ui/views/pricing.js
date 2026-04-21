@@ -63,6 +63,7 @@ const PLUS_DELTA_FEATURES = [
   '<strong>Todo o histórico</strong> de manutenções',
   "<strong>30 PDFs/mês</strong> sem marca d'água",
   '20 envios via WhatsApp/mês',
+  '<strong>Cadastro por foto (IA)</strong> — até 30 análises/mês',
   '<strong>Assinatura digital</strong> do cliente no PDF',
   '<strong>Fotos dos equipamentos</strong> (até 3 por equip.)',
 ];
@@ -71,6 +72,7 @@ const PRO_DELTA_FEATURES = [
   '<strong>Equipamentos ilimitados</strong>',
   '<strong>PDFs ilimitados</strong>',
   '<strong>WhatsApp ilimitado</strong>',
+  '<strong>Cadastro por foto (IA)</strong> — até 200 análises/mês',
   '<strong>Agrupamento por setores</strong>',
   'Suporte prioritário',
 ];
@@ -94,7 +96,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
   const showProCheckout = isFree || isPlus; // Free/Plus → Pro (upgrade)
 
   const heroSubtitle = isPro
-    ? 'Você está no plano Pro. Obrigado pelo apoio! 🙌'
+    ? 'Você está no plano Pro. Obrigado por confiar no CoolTrack.'
     : isPlus
       ? 'Você está no Plus. Faça upgrade pra Pro quando precisar de mais.'
       : 'Comece grátis. Faça upgrade quando precisar.';
@@ -168,10 +170,10 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
           aria-label="Plano Plus"
         >
           <span class="pricing-badge ${isPlus ? 'pricing-badge--current' : 'pricing-badge--plus'}">
-            ${isPlus ? 'PLANO ATUAL' : 'INTERMEDIÁRIO'}
+            ${isPlus ? 'PLANO ATUAL' : 'TÉCNICO AUTÔNOMO'}
           </span>
           <h2 class="pricing-card__title">Plus</h2>
-          <p class="pricing-card__subtitle">Pra técnico autônomo</p>
+          <p class="pricing-card__subtitle">Pra quem atende sozinho</p>
 
           <div class="pricing-card__price-group">
             <p class="pricing-card__price pricing-card__price--plus" id="plus-price-monthly">
@@ -233,7 +235,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             ${isPro ? 'PLANO ATUAL' : 'RECOMENDADO PRA EMPRESA'}
           </span>
           <h2 class="pricing-card__title">Pro</h2>
-          <p class="pricing-card__subtitle">Pra pequena empresa</p>
+          <p class="pricing-card__subtitle">Pra equipe ou 15+ equipamentos</p>
 
           <div class="pricing-card__price-group">
             <p class="pricing-card__price pricing-card__price--pro" id="pro-price-monthly">
@@ -301,6 +303,12 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
               </tr>
             </thead>
             <tbody>
+              <tr>
+                <th scope="row">Cadastro por foto (IA)</th>
+                <td>1 / mês <small>(teste grátis)</small></td>
+                <td>30 / mês</td>
+                <td>200 / mês</td>
+              </tr>
               <tr>
                 <th scope="row">Equipamentos cadastrados</th>
                 <td>3</td>
@@ -410,8 +418,15 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
         <details class="pricing-faq__item">
           <summary>Qual a diferença entre Plus e Pro?</summary>
           <p>
-            <strong>Plus</strong> é pensado pra <strong>técnico autônomo</strong>: até 15 equipamentos, 30 PDFs/mês sem marca d'água, assinatura digital do cliente e 20 envios de WhatsApp/mês.
-            <strong>Pro</strong> é pra <strong>pequena empresa</strong> com operação maior: equipamentos, PDFs e WhatsApp ilimitados, agrupamento por setores e suporte prioritário.
+            <strong>Plus</strong> é pensado pra <strong>técnico autônomo</strong>: até 15 equipamentos, 30 PDFs/mês sem marca d'água, assinatura digital do cliente, 20 envios de WhatsApp/mês e <strong>30 cadastros por foto (IA) por mês</strong>.
+            <strong>Pro</strong> é pra <strong>equipe ou operação maior</strong>: equipamentos, PDFs e WhatsApp ilimitados, <strong>200 cadastros por foto (IA) por mês</strong>, agrupamento por setores e suporte prioritário.
+          </p>
+        </details>
+
+        <details class="pricing-faq__item">
+          <summary>Por que o cadastro por foto (IA) tem limite mensal?</summary>
+          <p>
+            Cada análise de placa usa uma IA que tem custo real por uso (pago em dólar, por token). Os limites (30/mês no Plus, 200/mês no Pro) cobrem com folga o uso de um técnico autônomo (Plus) ou de uma equipe pequena (Pro) sem inflacionar o preço do plano. Se você costuma cadastrar mais que isso por mês, fala com a gente — conseguimos ajustar.
           </p>
         </details>
 

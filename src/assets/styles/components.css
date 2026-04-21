@@ -239,26 +239,36 @@
 /* PR1 (P2B): variantes só sobrescrevem os 4 tokens --tone*. O border-left
    e o ::after consomem via var(--tone) e var(--tone-soft) — sem repetir
    gradientes por variante. */
+/* Estado "OK": intencionalmente neutro — usa a borda padrão do card em vez
+   de uma borda verde saturada. Se todos os cards tiverem borda colorida
+   brilhante, warn/danger deixam de se destacar na lista. Com ok neutro, o
+   olho corre direto pros cards que precisam de atenção. */
 .equip-card--ok {
-  --tone: var(--success);
-  --tone-soft: color-mix(in srgb, var(--success) 10%, transparent);
-  --tone-edge: color-mix(in srgb, var(--success) 32%, var(--border-2));
-  --tone-text: color-mix(in srgb, var(--success) 70%, #ffffff);
+  --tone: var(--border-2);
+  --tone-soft: transparent;
+  --tone-edge: var(--border-2);
+  --tone-text: var(--text-2);
 }
 .equip-card--warn {
   --tone: var(--warning);
-  --tone-soft: color-mix(in srgb, var(--warning) 10%, transparent);
+  /* Tint mais intenso (14% vs 10%) pra que a barra lateral + fundo somem em
+     "precisa de atenção" em vez de só um fio amarelo no canto. */
+  --tone-soft: color-mix(in srgb, var(--warning) 14%, transparent);
   --tone-edge: color-mix(in srgb, var(--warning) 32%, var(--border-2));
   --tone-text: color-mix(in srgb, var(--warning) 70%, #ffffff);
+  border-left-width: 5px;
 }
 .equip-card--danger {
   --tone: var(--danger);
-  --tone-soft: color-mix(in srgb, var(--danger) 12%, transparent);
+  --tone-soft: color-mix(in srgb, var(--danger) 16%, transparent);
   --tone-edge: color-mix(in srgb, var(--danger) 35%, var(--border-2));
   --tone-text: color-mix(in srgb, var(--danger) 70%, #ffffff);
+  border-left-width: 5px;
   animation: fault-pulse 2.5s ease-in-out infinite;
 }
-.equip-card--ok::after,
+/* Gradiente ::after só em warn/danger — ok fica sem tint pra preservar a
+   hierarquia visual (cards em ordem ficam "invisíveis" e só os que pedem
+   ação ganham presença). */
 .equip-card--warn::after,
 .equip-card--danger::after {
   background: linear-gradient(180deg, var(--tone-soft), transparent 90%);
@@ -1396,7 +1406,8 @@ textarea.form-control {
   display: none;
 }
 .nameplate-cta[data-state='active'] .nameplate-cta__btn--active,
-.nameplate-cta[data-state='busy'] .nameplate-cta__btn--active {
+.nameplate-cta[data-state='busy'] .nameplate-cta__btn--active,
+.nameplate-cta[data-state='trial'] .nameplate-cta__btn--active {
   display: inline-flex;
 }
 .nameplate-cta[data-state='locked'] .nameplate-cta__btn--locked {
@@ -1418,6 +1429,20 @@ textarea.form-control {
 .nameplate-cta[data-state='locked'] {
   background: color-mix(in srgb, var(--primary) 5%, var(--card));
   border-style: dashed;
+}
+
+/* Estado "trial" (Free com quota): reforço positivo sem gritar. Tom
+   âmbar/success leve — sinaliza "bônus" sem virar notificação de alerta.
+   Intencional: NÃO mudar a cor do botão primário — queremos que o user
+   perceba que o fluxo é idêntico ao de Plus+ (senão parece hack/segunda
+   classe). O sinal visual fica na borda + subtitle. */
+.nameplate-cta[data-state='trial'] {
+  background: color-mix(in srgb, var(--success) 6%, var(--card));
+  border-color: color-mix(in srgb, var(--success) 45%, var(--border));
+}
+.nameplate-cta[data-state='trial'] .nameplate-cta__icon {
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: color-mix(in srgb, var(--success) 85%, var(--text));
 }
 
 /* Mobile: empilha o CTA embaixo pra não espremer o título. */
@@ -2345,6 +2370,23 @@ mark,
 .rel-hero:empty {
   display: none;
 }
+.rel-hero__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 3px 10px;
+  border: 1px solid rgba(0, 200, 232, 0.22);
+  border-radius: 999px;
+  color: #00c8e8;
+  font: 600 11px/1 var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background: rgba(0, 200, 232, 0.06);
+}
+.rel-hero__brand-ic {
+  display: inline-flex;
+}
 .rel-hero__head {
   display: flex;
   align-items: center;
@@ -2361,6 +2403,27 @@ mark,
   margin-top: 6px;
   font: 400 13px/1.5 var(--font-body);
   color: var(--text-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rel-hero__emitted {
+  color: var(--muted);
+  font: 500 11px/1.2 var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.rel-hero__narrative {
+  margin: 10px 0 0 0;
+  font: 400 13px/1.5 var(--font-body);
+  color: var(--text-2);
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .rel-hero__divider {
   height: 1px;
@@ -2449,6 +2512,10 @@ mark,
 }
 .rel-kpi__value--red {
   color: #ff5577;
+}
+.rel-kpi__value--muted {
+  color: var(--muted);
+  font-weight: 600;
 }
 .rel-kpi__label {
   margin-top: 6px;
@@ -2568,6 +2635,121 @@ mark,
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* ── Banner âmbar de corretivas (contextual, topo do corpo) ── */
+.rel-corretivas-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(232, 185, 74, 0.08);
+  border: 1px solid rgba(232, 185, 74, 0.25);
+  border-left: 3px solid #e8b94a;
+  color: var(--text);
+}
+.rel-corretivas-banner__icon {
+  display: inline-flex;
+  color: #e8b94a;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.rel-corretivas-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: 400 13px/1.45 var(--font-body);
+}
+.rel-corretivas-banner__text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.rel-corretivas-banner__text span {
+  color: var(--text-2);
+}
+
+/* ── Próximas ações recomendadas ───────────────────────────── */
+.rel-proximas {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.rel-proximas__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.rel-proximas__icon {
+  display: inline-flex;
+  color: #00c8e8;
+}
+.rel-proximas__title {
+  margin: 0;
+  font: 600 13px/1.2 var(--font-body);
+  color: var(--text);
+  letter-spacing: -0.1px;
+}
+.rel-proximas__count {
+  margin-left: auto;
+  font: 600 11px/1 var(--font-body);
+  color: var(--muted);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  font-variant-numeric: tabular-nums;
+}
+.rel-proximas__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rel-proximas__item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  font: 400 12px/1.3 var(--font-body);
+}
+.rel-proximas__equip {
+  color: var(--text);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.rel-proximas__date {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rel-proximas__label {
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+}
+.rel-proximas__label--warn {
+  color: #e8b94a;
+  background: rgba(232, 185, 74, 0.1);
+  border: 1px solid rgba(232, 185, 74, 0.2);
+}
+.rel-proximas__label--danger {
+  color: #ff5577;
+  background: rgba(255, 85, 119, 0.1);
+  border: 1px solid rgba(255, 85, 119, 0.22);
 }
 
 /* ── Record card ───────────────────────────────────────────── */
@@ -5752,6 +5934,18 @@ mark,
   min-width: 0;
 }
 
+/* Label small-caps — mesma espinha dorsal visual do .equip-card__primary-label
+   do card ativo. Cor usa --primary em vez de --tone-text porque no idle o
+   card é neutro (ok), então precisa do accent do sistema pra não sumir. */
+.equip-card__onboard-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+
 .equip-card__onboard-title {
   font-size: 12.5px;
   font-weight: 600;
@@ -6380,16 +6574,35 @@ mark,
 /* Estado "não detectado" aplicado por applyFieldsToForm:
    - placeholder cinza-claro com itálico indica que o campo foi consultado
      pela IA mas não veio valor. Não é erro, só info.
-   - cor mais apagada do borda pra visual "opaco". */
+   - cor mais apagada do borda pra visual "opaco".
+   - filete âmbar na esquerda diferencia de campos neutros (ainda intocados)
+     e reforça "precisa da sua atenção" sem gritar. */
 .form-control.is-not-detected {
   border-color: var(--border-2);
+  border-left: 3px solid color-mix(in srgb, var(--warning) 55%, var(--border-2));
   background: color-mix(in srgb, var(--card) 98%, var(--text-3) 2%);
 }
 .form-control.is-not-detected::placeholder {
   font-style: italic;
   color: color-mix(in srgb, var(--text-3) 80%, transparent);
 }
-/* Badge opcional ao lado do label dos campos que IA preencheu com sucesso */
+
+/* Estado "preenchido pela IA" — companheiro visual do is-not-detected.
+   Filete azul + tint azul no bg (um pouco mais forte que o neutro pra dar
+   contraste real contra campos não detectados). Some quando o user edita o
+   campo (input/change com isTrusted) pra sinalizar "assumi controle". */
+.form-control.is-ai-filled {
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border-2));
+  border-left: 3px solid var(--primary);
+  background: color-mix(in srgb, var(--primary-soft) 70%, var(--surface-2));
+}
+.form-control.is-ai-filled:focus {
+  /* preserva o filete azul mesmo no focus, só intensifica o ring */
+  border-left-color: var(--primary);
+}
+
+/* Badge pequeno ao lado do label dos campos que IA preencheu com sucesso.
+   Injetado dinamicamente pelo markAiFilled(); sai junto quando o user edita. */
 .form-label .form-label__ai-badge {
   display: inline-flex;
   align-items: center;
@@ -6404,6 +6617,129 @@ mark,
   letter-spacing: 0.04em;
   text-transform: uppercase;
   vertical-align: middle;
+}
+
+/* Badge de "não encontrei na etiqueta" — espelho do AI badge em tom âmbar.
+   Traz pro label o contexto que saiu do placeholder. O ⚠ fica solto numa
+   span pra poder ter tamanho próprio sem afetar o line-height da badge. */
+.form-label .form-label__missing-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 6px 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--warning) 16%, transparent);
+  color: var(--warning);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+.form-label .form-label__missing-badge__dot {
+  font-size: 10px;
+  line-height: 1;
+  /* o glifo de warning fica ligeiramente alto — compensa visualmente */
+  transform: translateY(-0.5px);
+}
+
+/* Banner de "conquista" logo acima do step 1 depois da IA preencher.
+   Visualmente: gradiente sutil azul→verde, border primary, sombra interna
+   suave pra destacar sem competir com os CTAs do modal. Renderiza hidden
+   por padrão; showAiBanner() desabilita o [hidden] e dispara a entrada. */
+.eq-ai-banner[hidden] {
+  display: none;
+}
+.eq-ai-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary-soft) 90%, transparent) 0%,
+    color-mix(in srgb, var(--success-soft) 80%, transparent) 100%
+  );
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary) 15%, transparent);
+}
+.eq-ai-banner__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  color: var(--primary);
+}
+.eq-ai-banner__body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.eq-ai-banner__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.eq-ai-banner__sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  line-height: 1.35;
+}
+/* Entrada suave: o is-enter é aplicado no JS via force-reflow pra poder
+   replayar em reanálises dentro da mesma abertura do modal. */
+.eq-ai-banner.is-enter {
+  animation: eq-ai-banner-enter 0.38s ease-out;
+}
+@keyframes eq-ai-banner-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eq-ai-banner.is-enter {
+    animation: none;
+  }
+}
+
+/* Flash contextual no meta da subseção "Dados da etiqueta" logo após a IA
+   preencher. Troca cor pra success + pulse curto pra chamar atenção sem
+   interromper. Volta ao tom neutro depois do frame final da animação. */
+.eq-details-subhead__meta.is-flash {
+  color: var(--success);
+  font-weight: 600;
+  animation: eq-etiqueta-flash 2.4s ease-out;
+}
+@keyframes eq-etiqueta-flash {
+  0% {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eq-details-subhead__meta.is-flash {
+    animation: none;
+  }
 }
 
 /* Nota de confiança no rodapé do modal */
@@ -8218,6 +8554,64 @@ mark,
   }
 }
 
+/* Variante com CTAs (PostSaveRegistroToast). Toast mais alto pra acomodar
+   uma linha de botões sob o subtítulo. Botões usam pílulas com contraste
+   contra o fundo verde — o "pdf" é mais proeminente (ação primária).
+   O "whatsapp" fica outline pra não competir visualmente com o primeiro. */
+.share-success-toast--with-actions {
+  padding-bottom: 10px;
+}
+
+.share-success-toast__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.share-success-toast__action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font: 600 12px/1 var(--font-body);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.share-success-toast__action:hover {
+  transform: translateY(-1px);
+}
+
+.share-success-toast__action:focus-visible {
+  outline: 2px solid rgba(4, 43, 26, 0.45);
+  outline-offset: 2px;
+}
+
+.share-success-toast__action--pdf {
+  background: #042b1a;
+  color: #ffffff;
+}
+
+.share-success-toast__action--pdf:hover {
+  background: #0a3e29;
+}
+
+.share-success-toast__action--whatsapp {
+  background: transparent;
+  color: #042b1a;
+  border-color: rgba(4, 43, 26, 0.35);
+}
+
+.share-success-toast__action--whatsapp:hover {
+  background: rgba(4, 43, 26, 0.08);
+  border-color: rgba(4, 43, 26, 0.55);
+}
+
 /* ─── PDF QUOTA BADGE (toolbar de relatório) ─── */
 /* Badge "X/Y PDFs este mês · restam Z" ao lado do botão Exportar PDF.
    Tom neutro por default; vira warning em ≥80% e danger em 100% (quando o
@@ -9619,6 +10013,9 @@ mark,
   position: relative;
   z-index: 1;
   margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .dash__hero-cta {
@@ -9658,6 +10055,29 @@ mark,
 .dash__hero[data-tone='alert'] .dash__hero-cta {
   background: linear-gradient(135deg, var(--dsh-red), #c43558);
   box-shadow: 0 6px 18px rgba(255, 85, 119, 0.24);
+}
+
+/* CTA secundário: outline/ghost sobre o fundo escuro do hero. Fica visível
+   mas não compete com o primário. Usado no estado "has equipment, no alert"
+   pra oferecer o atalho direto de "Registrar serviço" sem roubar o destaque
+   do CTA primário "Cadastrar com foto". */
+.dash__hero-cta--secondary {
+  height: 40px;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--dsh-accent) 45%, transparent);
+  color: color-mix(in srgb, var(--dsh-accent) 85%, #ffffff);
+  box-shadow: none;
+}
+.dash__hero-cta--secondary:hover {
+  background: color-mix(in srgb, var(--dsh-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--dsh-accent) 70%, transparent);
+  transform: none;
+  box-shadow: none;
+}
+.dash__hero-cta--secondary[hidden] {
+  display: none;
 }
 
 .dash__hero-cta-icon {
@@ -12170,8 +12590,123 @@ select option {
 #view-historico .meta-warn {
   color: var(--warning);
 }
+#view-historico .meta-danger {
+  color: var(--danger);
+  font-weight: 700;
+}
+#view-historico .meta-neutral {
+  color: var(--text-2);
+}
 #view-historico .meta-details {
   color: var(--text-3);
+}
+
+/* ─── Summary card · Insights row (frente A) ─────────────────────────── */
+#view-historico .hist-summary-card__insights {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+#view-historico .hist-summary-card__insight-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+#view-historico .hist-summary-card__insight-chip b {
+  color: var(--text-1);
+  font-weight: 700;
+}
+#view-historico .hist-summary-card__insight-chip--cyan {
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-color: var(--primary-dim);
+}
+#view-historico .hist-summary-card__insight-chip--cyan b {
+  color: var(--primary);
+}
+#view-historico .hist-summary-card__insight-chip--amber {
+  color: var(--warning);
+  background: var(--warning-soft);
+  border-color: var(--warning-dim);
+}
+#view-historico .hist-summary-card__insight-chip--amber b {
+  color: var(--warning);
+}
+#view-historico .hist-summary-card__insight-chip--danger {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: var(--danger-dim);
+}
+#view-historico .hist-summary-card__insight-chip--danger b {
+  color: var(--danger);
+}
+
+/* ─── Summary card · Recurring alert (frente D) ──────────────────────── */
+#view-historico .hist-summary-card__recurring {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--warning-soft);
+  border: 1px solid var(--warning-dim);
+  color: var(--warning);
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+#view-historico .hist-summary-card__recurring-ic {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+#view-historico .hist-summary-card__recurring-text {
+  color: var(--text-1);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+#view-historico .hist-summary-card__recurring-text b {
+  color: var(--warning);
+}
+#view-historico .hist-summary-card__recurring-link {
+  color: var(--warning);
+  font-weight: 600;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+#view-historico .hist-summary-card__recurring-link:hover {
+  text-decoration: underline;
+}
+
+/* ─── Timeline item · "Ver tudo deste equipamento" atalho (frente E) ─── */
+#view-historico .timeline__item__focus-equip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px dashed var(--primary-dim);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#view-historico .timeline__item__focus-equip:hover {
+  background: var(--primary-soft);
+  border-style: solid;
 }
 
 /* Photos strip */

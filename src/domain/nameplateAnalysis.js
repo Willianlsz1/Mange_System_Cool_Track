@@ -13,11 +13,13 @@
 import { supabase } from '../core/supabase.js';
 
 // ── Erros canônicos ────────────────────────────────────────────────────────
-// Os mesmos codes vêm da função (PLAN_GATE_FREE, AUTH_REQUIRED, etc), mais
-// alguns client-only pra estados que só existem no browser (NO_SESSION,
-// NETWORK, FILE_TOO_LARGE).
+// Os mesmos codes vêm da função (PLAN_GATE_FREE/PLUS/PRO, AUTH_REQUIRED, etc),
+// mais alguns client-only pra estados que só existem no browser (NO_SESSION,
+// NETWORK, FILE_TOO_LARGE). ERR_PLAN_GATE é o "umbrella" pra qualquer gate de
+// plano (Free trial esgotado, Plus atingiu 30/mês, Pro atingiu 200/mês). O
+// detalhamento fica em `details.currentPlan` pra o UI escolher a mensagem.
 export const ERR_NO_SESSION = 'NO_SESSION';
-export const ERR_PLAN_GATE = 'PLAN_GATE_FREE';
+export const ERR_PLAN_GATE = 'PLAN_GATE';
 export const ERR_NETWORK = 'NETWORK';
 export const ERR_UPSTREAM_BUSY = 'UPSTREAM_BUSY';
 export const ERR_NOT_IDENTIFIED = 'NOT_IDENTIFIED';
@@ -29,11 +31,16 @@ const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export class NameplateAnalysisError extends Error {
-  constructor(code, message, cause) {
+  constructor(code, message, cause, details) {
     super(message);
     this.name = 'NameplateAnalysisError';
     this.code = code;
     this.cause = cause ?? null;
+    // `details` carrega metadados específicos do código. Pra ERR_PLAN_GATE:
+    // { currentPlan, monthlyLimit, used, quotaExhausted, trialExhausted,
+    // trialLimit, trialUsed } — o UI escolhe a mensagem/CTA de upgrade com
+    // base em currentPlan ('free' | 'plus' | 'pro').
+    this.details = details ?? null;
   }
 }
 
@@ -265,8 +272,37 @@ export async function analyzeNameplate(file, { supabaseClient = supabase } = {})
     const code = payload?.code || response.status;
     const message = payload?.error || `Falha na análise (${response.status}).`;
 
-    if (code === 'PLAN_GATE_FREE') {
-      throw new NameplateAnalysisError(ERR_PLAN_GATE, message);
+    if (typeof code === 'string' && code.startsWith('PLAN_GATE_')) {
+      const currentPlan =
+        typeof payload?.current_plan === 'string' && payload.current_plan.length > 0
+          ? String(payload.current_plan).toLowerCase()
+          : code === 'PLAN_GATE_PRO'
+            ? 'pro'
+            : code === 'PLAN_GATE_PLUS'
+              ? 'plus'
+              : 'free';
+      const monthlyLimit = Number.isFinite(Number(payload?.monthly_limit))
+        ? Number(payload.monthly_limit)
+        : Number.isFinite(Number(payload?.trial_limit))
+          ? Number(payload.trial_limit)
+          : null;
+      const used = Number.isFinite(Number(payload?.used))
+        ? Number(payload.used)
+        : Number.isFinite(Number(payload?.trial_used))
+          ? Number(payload.trial_used)
+          : null;
+      throw new NameplateAnalysisError(ERR_PLAN_GATE, message, null, {
+        currentPlan,
+        monthlyLimit,
+        used,
+        quotaExhausted: Boolean(payload?.quota_exhausted ?? payload?.trial_exhausted),
+        // Aliases Free-only mantidos pra UI existente (nameplateCapture.js)
+        trialExhausted: Boolean(payload?.trial_exhausted),
+        trialLimit: Number.isFinite(Number(payload?.trial_limit))
+          ? Number(payload.trial_limit)
+          : null,
+        trialUsed: Number.isFinite(Number(payload?.trial_used)) ? Number(payload.trial_used) : null,
+      });
     }
     if (code === 'UPSTREAM_BUSY' || response.status === 503) {
       throw new NameplateAnalysisError(
@@ -288,6 +324,20 @@ export async function analyzeNameplate(file, { supabaseClient = supabase } = {})
       mapped.notas ||
         'Não deu pra ler a etiqueta. Tenta uma foto mais nítida, com a etiqueta preenchendo o quadro.',
     );
+  }
+  // Propaga metadata do teste grátis vindo da edge function — quando o user é
+  // Free e acabou de gastar um uso do mês, o client usa pra atualizar o CTA
+  // (ex: mudar pra estado 'locked' porque a próxima tentativa vai falhar).
+  if (payload && payload.trial && typeof payload.trial === 'object') {
+    mapped._trial = {
+      consumed: Boolean(payload.trial.consumed),
+      limit: Number.isFinite(Number(payload.trial.limit)) ? Number(payload.trial.limit) : null,
+      remaining: Number.isFinite(Number(payload.trial.remaining))
+        ? Number(payload.trial.remaining)
+        : null,
+    };
+  } else {
+    mapped._trial = null;
   }
   return mapped;
 }

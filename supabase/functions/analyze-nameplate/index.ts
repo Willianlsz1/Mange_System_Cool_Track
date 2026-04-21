@@ -23,9 +23,12 @@
  * internamente via admin API com service role — mesmo padrão que as funções
  * create-checkout-session, create-portal-session, stripe-webhook.
  *
- * Gate de plano: Plus+ obrigatório. Free é bloqueado com PLAN_GATE_FREE pro
- * client renderizar upsell. Motivação: custo variável real (~$0.015/análise)
- * + feature que destrava o hábito (feedback do Job Ney Palmeira, ver README).
+ * Gate de plano: cada tier tem cota mensal própria pra conter custo variável
+ * em USD (~$0.015/análise). Free ganha 1 uso/mês como teste grátis recorrente
+ * (demonstra valor sem liberar workflow real). Plus: 30/mês — cobre técnico
+ * autônomo com folga. Pro: 200/mês — cobre equipe pequena. Acima da cota o
+ * client recebe PLAN_GATE_<TIER> com quota_exhausted=true, usado_/limite_
+ * e current_plan pra renderizar o upsell certo.
  */
 
 import { getCorsHeaders } from '../_shared/cors.ts';
@@ -192,14 +195,214 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-/** Conjunto canônico de plan_codes que liberam nameplate analysis. */
-const ALLOWED_PLANS = new Set(['plus', 'pro']);
+/** Resource key alinhado com usage_monthly.resource_check e usageLimits.js. */
+const USAGE_RESOURCE = 'nameplate_analysis';
+
+/**
+ * Cotas mensais por plano — alinhadas com src/core/usageLimits.js.
+ * Free: 1/mês (teste grátis recorrente, não ferramenta).
+ * Plus: 30/mês (técnico autônomo — ~1 cadastro por dia útil com folga).
+ * Pro:  200/mês (equipe pequena em rollout).
+ * Existem pra proteger margem — o custo por análise é em USD via API da
+ * Anthropic. "Ilimitado" nesse recurso vira risco de cauda longa/abuso.
+ */
+const NAMEPLATE_FREE_MONTHLY_LIMIT = 1;
+const NAMEPLATE_PLUS_MONTHLY_LIMIT = 30;
+const NAMEPLATE_PRO_MONTHLY_LIMIT = 200;
+
+function monthlyLimitForPlan(planCode: string): number {
+  if (planCode === 'pro') return NAMEPLATE_PRO_MONTHLY_LIMIT;
+  if (planCode === 'plus') return NAMEPLATE_PLUS_MONTHLY_LIMIT;
+  return NAMEPLATE_FREE_MONTHLY_LIMIT;
+}
+
+function planGateCode(planCode: string): string {
+  if (planCode === 'pro') return 'PLAN_GATE_PRO';
+  if (planCode === 'plus') return 'PLAN_GATE_PLUS';
+  return 'PLAN_GATE_FREE';
+}
+
+/**
+ * Pricing table do modelo usado. Valores em USD por 1M tokens (fonte:
+ * https://www.anthropic.com/pricing#api — snapshot de 2026-04). Se trocarmos
+ * o modelo, atualizar aqui. Cache mais novo é ignorado: nameplate tem
+ * mensagem sempre nova (imagem única), cache hit ratio ~0.
+ */
+const CLAUDE_SONNET_4_6_PRICING = {
+  inputUsdPer1M: 3, // $3 por 1M tokens de input
+  outputUsdPer1M: 15, // $15 por 1M tokens de output
+};
+
+function computeCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  // Só Sonnet 4-6 por enquanto — se adicionarmos mais modelos, generalizar.
+  if (model !== 'claude-sonnet-4-6') return 0;
+  const p = CLAUDE_SONNET_4_6_PRICING;
+  const cost =
+    (Math.max(0, inputTokens) * p.inputUsdPer1M) / 1_000_000 +
+    (Math.max(0, outputTokens) * p.outputUsdPer1M) / 1_000_000;
+  // Arredonda pra 6 casas (limite da coluna numeric(10,6)). Evita erros
+  // raros de precision flutuante gerarem valores tipo 0.0000012500000003.
+  return Math.round(cost * 1_000_000) / 1_000_000;
+}
+
+/**
+ * Registra uma chamada à IA na tabela ai_usage_cost. Best-effort — falhas
+ * são logadas e engolidas pra não quebrar a resposta principal.
+ */
+async function logAiUsageCost(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  row: {
+    user_id: string;
+    resource: string;
+    model: string;
+    input_tokens: number;
+    output_tokens: number;
+    cost_usd: number;
+    success: boolean;
+  },
+): Promise<void> {
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/ai_usage_cost`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(row),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      console.warn('[analyze-nameplate] ai_usage_cost insert failed', {
+        user_id: row.user_id,
+        status: res.status,
+        body: txt.slice(0, 200),
+      });
+    }
+  } catch (err) {
+    console.error('[analyze-nameplate] ai_usage_cost insert threw', err);
+  }
+}
+
+function planGateMessage(planCode: string, limit: number): string {
+  if (planCode === 'pro') {
+    return `Você já usou as ${limit} análises por foto do plano Pro neste mês. A cota reseta no dia 1º. Se precisa de mais, fala com a gente — conseguimos ajustar.`;
+  }
+  if (planCode === 'plus') {
+    return `Você já usou as ${limit} análises por foto do plano Plus neste mês. Faça upgrade pra Pro pra ter até ${NAMEPLATE_PRO_MONTHLY_LIMIT} análises/mês, ou aguarde o próximo ciclo.`;
+  }
+  return 'Você já usou seu teste grátis de análise por foto este mês. Assine o Plus pra escanear até 30/mês ou o Pro pra 200/mês.';
+}
 
 function estimateBase64Bytes(base64: string): number {
   // base64 cresce ~4/3 vs binário. Isto é aproximado — o padding final
   // varia em até 2 bytes, mas pra gate de tamanho é mais que suficiente.
   const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
   return Math.floor((base64.length * 3) / 4) - padding;
+}
+
+/**
+ * Retorna o primeiro dia do mês UTC no formato "YYYY-MM-01". Alinhado com
+ * normalizeMonthStart() do usageLimits.js do client — garante que o contador
+ * mensal é o mesmo independente de onde o fetch parte.
+ */
+function firstDayOfMonthUtc(): string {
+  const now = new Date();
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}-01`;
+}
+
+/**
+ * Carrega o used_count do resource pra este mês. Usa service_role — bypass
+ * de RLS intencional (gate de quota é lógica de servidor, não de client).
+ * Retorna 0 em qualquer erro pra não bloquear o feature por infra quebrada.
+ */
+async function loadMonthlyUsed(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  userId: string,
+  resource: string,
+  monthStart: string,
+): Promise<number> {
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/usage_monthly?user_id=eq.${userId}&month_start=eq.${monthStart}&resource=eq.${resource}&select=used_count`,
+      {
+        headers: {
+          apikey: serviceRoleKey,
+          Authorization: `Bearer ${serviceRoleKey}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+    if (!res.ok) {
+      console.warn('[analyze-nameplate] usage lookup failed', {
+        userId,
+        resource,
+        status: res.status,
+      });
+      return 0;
+    }
+    const rows = (await res.json()) as Array<{ used_count?: number | string }>;
+    const parsed = Number.parseInt(String(rows?.[0]?.used_count ?? 0), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  } catch (err) {
+    console.error('[analyze-nameplate] usage lookup threw', err);
+    return 0;
+  }
+}
+
+/**
+ * Incrementa (ou cria) o contador mensal do usuário pra este resource.
+ * Chama a RPC via user JWT — a RPC exige auth.uid() == p_user_id, então
+ * precisa ser a sessão do user, não service_role. Retorna o novo used_count
+ * ou null em caso de falha (não propagamos — a resposta principal já foi
+ * entregue; contagem quebrada é só telemetria perdida).
+ */
+async function incrementMonthlyUsage(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  userJwt: string,
+  userId: string,
+  resource: string,
+  monthStart: string,
+): Promise<number | null> {
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/rpc/increment_monthly_usage`, {
+      method: 'POST',
+      headers: {
+        apikey: serviceRoleKey,
+        Authorization: `Bearer ${userJwt}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        p_user_id: userId,
+        p_resource: resource,
+        p_month_start: monthStart,
+        p_delta: 1,
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      console.warn('[analyze-nameplate] increment RPC failed', {
+        userId,
+        resource,
+        status: res.status,
+        body: txt.slice(0, 200),
+      });
+      return null;
+    }
+    const payload = await res.json();
+    const used = typeof payload === 'number' ? payload : Number(payload);
+    return Number.isFinite(used) ? used : null;
+  } catch (err) {
+    console.error('[analyze-nameplate] increment RPC threw', err);
+    return null;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -293,14 +496,41 @@ Deno.serve(async (req: Request) => {
     console.error('[analyze-nameplate] profile fetch threw', err);
   }
 
-  if (!ALLOWED_PLANS.has(planCode)) {
-    return errorResponse(
+  // ── Quota mensal por plano ─────────────────────────────────────────────
+  // Cada tier tem seu próprio limite (Free=1, Plus=30, Pro=200). O gate é
+  // aplicado ANTES da chamada à IA (pra não gastar token à toa) e o
+  // incremento é feito DEPOIS do sucesso (pra não cobrar em caso de falha).
+  const monthStart = firstDayOfMonthUtc();
+  const monthlyLimit = monthlyLimitForPlan(planCode);
+  const usedBefore = await loadMonthlyUsed(
+    supabaseUrl,
+    serviceRoleKey,
+    userId,
+    USAGE_RESOURCE,
+    monthStart,
+  );
+
+  if (usedBefore >= monthlyLimit) {
+    return jsonResponse(
       req,
-      'PLAN_GATE_FREE',
-      'Cadastro por foto da placa é recurso Plus+. Faça upgrade pra destravar.',
+      {
+        ok: false,
+        code: planGateCode(planCode),
+        error: planGateMessage(planCode, monthlyLimit),
+        current_plan: planCode,
+        quota_exhausted: true,
+        monthly_limit: monthlyLimit,
+        used: usedBefore,
+        // Mantém compat com clients legados que leem trial_*
+        trial_exhausted: planCode === 'free',
+        trial_limit: planCode === 'free' ? monthlyLimit : undefined,
+        trial_used: planCode === 'free' ? usedBefore : undefined,
+      },
       403,
     );
   }
+
+  const quotaRemainingBefore = Math.max(0, monthlyLimit - usedBefore - 1);
 
   let body: { image_base64?: string; media_type?: string };
   try {
@@ -421,9 +651,61 @@ Deno.serve(async (req: Request) => {
     return errorResponse(req, 'NO_TOOL_CALL', 'IA não retornou extração estruturada', 502);
   }
 
+  // Log de custo USD (best-effort). Rodamos SEMPRE que a Claude API retornou
+  // tokens — mesmo se depois a gente falhar em parsear o tool_use. Assim
+  // capturamos os tokens gastos, que é o que nos custa. success=true só se
+  // o tool_block veio bem-formado (toolBlock.input presente).
+  const usageIn = Number(claudeData?.usage?.input_tokens ?? 0);
+  const usageOut = Number(claudeData?.usage?.output_tokens ?? 0);
+  const costUsd = computeCostUsd(CLAUDE_MODEL, usageIn, usageOut);
+  // Fire-and-forget — não queremos atrasar a resposta em ~100ms de round-trip
+  // ao Postgres pra algo que é pura telemetria.
+  logAiUsageCost(supabaseUrl, serviceRoleKey, {
+    user_id: userId,
+    resource: USAGE_RESOURCE,
+    model: CLAUDE_MODEL,
+    input_tokens: Number.isFinite(usageIn) ? usageIn : 0,
+    output_tokens: Number.isFinite(usageOut) ? usageOut : 0,
+    cost_usd: costUsd,
+    success: true,
+  });
+
+  // Incrementa o contador DEPOIS do sucesso — vale pra Free/Plus/Pro. Falha
+  // aqui não deve matar a resposta; o user já recebeu o valor e no pior caso
+  // o próximo uso do mês não será bloqueado. Trade-off aceito em troca de
+  // simplicidade e robustez (quota quebrada é só telemetria perdida).
+  const newUsed = await incrementMonthlyUsage(
+    supabaseUrl,
+    serviceRoleKey,
+    token,
+    userId,
+    USAGE_RESOURCE,
+    monthStart,
+  );
+  const remaining = newUsed !== null ? Math.max(0, monthlyLimit - newUsed) : quotaRemainingBefore;
+
+  const quotaPayload = {
+    consumed: true,
+    plan: planCode,
+    limit: monthlyLimit,
+    used: newUsed ?? usedBefore + 1,
+    remaining,
+  };
+
   return jsonResponse(req, {
     ok: true,
     fields: toolBlock.input,
+    // `quota` é o shape novo, `trial` fica como alias só pra clients Free
+    // antigos não quebrarem. Novos consumidores devem ler `quota`.
+    quota: quotaPayload,
+    trial:
+      planCode === 'free'
+        ? {
+            consumed: true,
+            limit: monthlyLimit,
+            remaining,
+          }
+        : null,
     raw: {
       model: CLAUDE_MODEL,
       stop_reason: claudeData.stop_reason ?? null,

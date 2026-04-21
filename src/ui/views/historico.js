@@ -201,12 +201,214 @@ function getSummaryMetrics(list) {
   return { totalServicos, custoTotal, mediaDiasPreventiva };
 }
 
+/**
+ * Insights do período — extensão do getSummaryMetrics pra alimentar a segunda
+ * linha do summary card. Fica puro / sem DOM pra ser testável.
+ *
+ * - preventivasCount / corretivasCount: contagem por match no `tipo`.
+ * - equipsAtendidos: cardinalidade de equipIds únicos no período.
+ * - equipsAtencao: quantos desses equipamentos estão com `status` warn/danger
+ *   (status vem de equipmentRules.getOperationalStatus, já populado no state).
+ */
+export function getHistInsights(list, equipamentos = []) {
+  const equipsAtendidosSet = new Set();
+  let preventivasCount = 0;
+  let corretivasCount = 0;
+
+  list.forEach((reg) => {
+    if (reg.equipId) equipsAtendidosSet.add(reg.equipId);
+    const tipoNorm = (reg.tipo || '').toLowerCase();
+    if (tipoNorm.includes('preventiva')) preventivasCount += 1;
+    if (tipoNorm.includes('corretiva')) corretivasCount += 1;
+  });
+
+  const equipsById = new Map((equipamentos || []).map((e) => [e.id, e]));
+  let equipsAtencao = 0;
+  equipsAtendidosSet.forEach((equipId) => {
+    const eq = equipsById.get(equipId);
+    const status = (eq?.status || '').toLowerCase();
+    if (status === 'warn' || status === 'danger') equipsAtencao += 1;
+  });
+
+  return {
+    preventivasCount,
+    corretivasCount,
+    equipsAtendidos: equipsAtendidosSet.size,
+    equipsAtencao,
+  };
+}
+
+/**
+ * Detecção determinística de equipamentos com alta recorrência — usada no
+ * summary card pra sinalizar "olha aqui, tá saindo do padrão". Não chama
+ * LLM nem tenta diagnosticar causa: só aponta o fato.
+ *
+ * @param {Array} list registros já filtrados pelo período ativo
+ * @param {number} days janela em dias (default 14)
+ * @param {number} threshold mínimo de registros no mesmo equip pra contar (default 3)
+ * @returns {Array<{equipId: string, count: number}>}
+ */
+export function getRecurringEquips(list, days = 14, threshold = 3) {
+  if (!Array.isArray(list) || !list.length) return [];
+  const cutoffMs = Date.now() - days * 86400000;
+  const byEquip = new Map();
+  list.forEach((reg) => {
+    if (!reg.equipId || !reg.data) return;
+    const ts = new Date(reg.data).getTime();
+    if (!Number.isFinite(ts) || ts < cutoffMs) return;
+    byEquip.set(reg.equipId, (byEquip.get(reg.equipId) || 0) + 1);
+  });
+  return Array.from(byEquip.entries())
+    .filter(([, count]) => count >= threshold)
+    .map(([equipId, count]) => ({ equipId, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Converte dias até a próxima manutenção em um estado visual acionável.
+ * Usa Utils.daysDiff (dias relativos a hoje, negativo=passado).
+ *
+ * - vencida: data no passado → vermelho ("Vencida há X dias")
+ * - hoje: data é hoje → âmbar ("Vence hoje")
+ * - proxima: ≤7 dias no futuro → âmbar ("Vence em X dias")
+ * - distante: >7 dias no futuro → neutro ("Próxima em X dias")
+ */
+export function getProximaStatus(proximaIso) {
+  if (!proximaIso) return null;
+  const diasRaw = Utils.daysDiff(String(proximaIso).slice(0, 10));
+  if (!Number.isFinite(diasRaw)) return null;
+
+  if (diasRaw < 0) {
+    const abs = Math.abs(diasRaw);
+    return {
+      tone: 'danger',
+      label: `Vencida há ${abs} ${abs === 1 ? 'dia' : 'dias'}`,
+      days: diasRaw,
+    };
+  }
+  if (diasRaw === 0) {
+    return { tone: 'warn', label: 'Vence hoje', days: 0 };
+  }
+  if (diasRaw <= 7) {
+    return {
+      tone: 'warn',
+      label: `Vence em ${diasRaw} ${diasRaw === 1 ? 'dia' : 'dias'}`,
+      days: diasRaw,
+    };
+  }
+  return {
+    tone: 'neutral',
+    label: `Próxima em ${diasRaw} dias`,
+    days: diasRaw,
+  };
+}
+
+/**
+ * Label humanizado pro status operacional do equipamento. Prefere o
+ * `statusDescricao` já calculado pelo equipmentRules (se existir), senão
+ * cai num default curto coerente com o tone.
+ */
+export function getEquipStatusPill(eq) {
+  const status = (eq?.status || '').toLowerCase();
+  if (!status) return null;
+  const defaultLabels = {
+    ok: 'Em dia',
+    warn: 'Atenção',
+    danger: 'Crítico',
+  };
+  const tone = status === 'danger' ? 'danger' : status === 'warn' ? 'warn' : 'ok';
+  const label =
+    (eq?.statusDescricao && String(eq.statusDescricao).trim()) || defaultLabels[tone] || 'Em dia';
+  return { tone, label };
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Render blocks
 // ──────────────────────────────────────────────────────────────────────
 
-function renderSummaryCard(list, { filtered, activeFilterCount }) {
+/**
+ * Linha fina logo abaixo dos KPIs principais com splits tipicos do período.
+ * Só renderiza se houve ao menos 1 serviço — evita mostrar zeros sem sentido.
+ */
+function renderInsightsRow(insights, hasData) {
+  if (!hasData) return '';
+  const { preventivasCount, corretivasCount, equipsAtendidos, equipsAtencao } = insights;
+  const chips = [];
+  if (preventivasCount) {
+    chips.push(
+      `<span class="hist-summary-card__insight-chip hist-summary-card__insight-chip--cyan">
+        <b>${preventivasCount}</b> ${preventivasCount === 1 ? 'preventiva' : 'preventivas'}
+      </span>`,
+    );
+  }
+  if (corretivasCount) {
+    chips.push(
+      `<span class="hist-summary-card__insight-chip hist-summary-card__insight-chip--amber">
+        <b>${corretivasCount}</b> ${corretivasCount === 1 ? 'corretiva' : 'corretivas'}
+      </span>`,
+    );
+  }
+  if (equipsAtendidos) {
+    chips.push(
+      `<span class="hist-summary-card__insight-chip">
+        <b>${equipsAtendidos}</b> ${equipsAtendidos === 1 ? 'equipamento' : 'equipamentos'}
+      </span>`,
+    );
+  }
+  if (equipsAtencao > 0) {
+    chips.push(
+      `<span class="hist-summary-card__insight-chip hist-summary-card__insight-chip--danger">
+        <b>${equipsAtencao}</b> em atenção
+      </span>`,
+    );
+  }
+  if (!chips.length) return '';
+  return `<div class="hist-summary-card__insights" role="list" aria-label="Splits do período">
+    ${chips.join('')}
+  </div>`;
+}
+
+/**
+ * Aviso determinístico: N equipamentos acumularam 3+ serviços em 14 dias.
+ * Não diagnostica causa (ambiente sujo / filtro etc) — só aponta o fato e
+ * oferece filtro rápido quando é um único equipamento.
+ */
+function renderRecurringAlert(recurring, equipamentos) {
+  if (!Array.isArray(recurring) || !recurring.length) return '';
+  const equipsById = new Map((equipamentos || []).map((e) => [e.id, e]));
+  const n = recurring.length;
+
+  const ctaBtn =
+    n === 1
+      ? `<button type="button" class="hist-summary-card__recurring-link"
+          data-action="hist-filter-equip" data-equip-id="${Utils.escapeAttr(recurring[0].equipId)}">
+          Ver serviços →
+        </button>`
+      : '';
+
+  const detailText =
+    n === 1
+      ? `<b>${Utils.escapeHtml(equipsById.get(recurring[0].equipId)?.nome || 'Um equipamento')}</b> acumulou <b>${recurring[0].count}</b> serviços nos últimos 14 dias.`
+      : `<b>${n}</b> equipamentos acumularam 3+ serviços nos últimos 14 dias.`;
+
+  return `<div class="hist-summary-card__recurring" role="status" aria-live="polite">
+    <span class="hist-summary-card__recurring-ic" aria-hidden="true">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>
+      </svg>
+    </span>
+    <span class="hist-summary-card__recurring-text">${detailText}</span>
+    ${ctaBtn}
+  </div>`;
+}
+
+function renderSummaryCard(
+  list,
+  { filtered, activeFilterCount, equipamentos = [], recurring = [] },
+) {
   const { totalServicos, custoTotal, mediaDiasPreventiva } = getSummaryMetrics(list);
+  const insights = getHistInsights(list, equipamentos);
   const hasData = totalServicos > 0;
   const mediaLabel = mediaDiasPreventiva !== null ? `${mediaDiasPreventiva}` : '—';
   const mediaSuffix =
@@ -214,7 +416,7 @@ function renderSummaryCard(list, { filtered, activeFilterCount }) {
 
   const pillLabel = filtered
     ? `${totalServicos} de ${activeFilterCount > 1 ? 'muitos' : '?'} · filtros ativos`
-    : 'Resumo do período';
+    : 'Insights do período';
 
   const custoClass = hasData
     ? 'hist-summary-card__kpi-value hist-summary-card__kpi-value--mono'
@@ -261,6 +463,8 @@ function renderSummaryCard(list, { filtered, activeFilterCount }) {
         }</div>
       </div>
     </div>
+    ${renderInsightsRow(insights, hasData)}
+    ${renderRecurringAlert(recurring, equipamentos)}
     <div class="hist-summary-card__divider" aria-hidden="true"></div>
     <div class="hist-summary-card__upsell">
       <span class="hist-summary-card__upsell-ic" aria-hidden="true">
@@ -463,7 +667,7 @@ function renderSignatureBlock(registro) {
     </button>`;
 }
 
-function renderTimelineItem(r, { isFirst, equipamentos, setoresById }) {
+function renderTimelineItem(r, { isFirst, equipamentos, setoresById, currentFilterEquipId = '' }) {
   const eq = equipamentos.find((e) => e.id === r.equipId) || findEquip(r.equipId);
   const setorNome = eq?.setorId ? setoresById.get(eq.setorId)?.nome || '' : '';
   const safeStatus = Utils.safeStatus(r.status);
@@ -489,8 +693,20 @@ function renderTimelineItem(r, { isFirst, equipamentos, setoresById }) {
 
   const equipTag = (eq?.tag || eq?.local || '').trim();
 
+  // Pill do status operacional do equipamento — só aparece em warn/danger pra
+  // manter alto sinal. Quando está ok, o ponto verde da timeline já comunica.
+  const equipStatusPill = getEquipStatusPill(eq);
+  const showEquipStatusPill = equipStatusPill && equipStatusPill.tone !== 'ok';
+  const equipStatusColor = equipStatusPill?.tone === 'danger' ? 'red' : 'amber';
+
   const headPills = [
     isToday ? `<span class="hist-pill hist-pill--success">Hoje</span>` : '',
+    showEquipStatusPill
+      ? `<span class="hist-pill hist-pill--${equipStatusColor}"
+          title="${Utils.escapeAttr('Status atual do equipamento')}">
+          ${Utils.escapeHtml(equipStatusPill.label)}
+        </span>`
+      : '',
     showPrioridadePill
       ? `<span class="hist-pill hist-pill--${prioridadeColor}">${prioridadeLabel}</span>`
       : '',
@@ -525,12 +741,24 @@ function renderTimelineItem(r, { isFirst, equipamentos, setoresById }) {
     );
   }
   if (r.proxima) {
-    metaChunks.push(`<span class="meta-chunk">
+    // 3 estados acionáveis: vencida (passado), vence logo (≤7d), em dia.
+    // Mantém a data formatada no title pra quem quiser conferir por tooltip.
+    const proxInfo = getProximaStatus(r.proxima) || {
+      tone: 'neutral',
+      label: `Próxima: ${Utils.formatDate(r.proxima)}`,
+    };
+    const toneCls =
+      proxInfo.tone === 'danger'
+        ? 'meta-danger'
+        : proxInfo.tone === 'warn'
+          ? 'meta-warn'
+          : 'meta-neutral';
+    metaChunks.push(`<span class="meta-chunk" title="${Utils.escapeAttr('Próxima: ' + Utils.formatDate(r.proxima))}">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <rect x="3" y="5" width="18" height="16" rx="2"/>
         <path d="M8 3v4M16 3v4M3 10h18M8 14h.01M12 14h.01M16 14h.01"/>
-      </svg><span class="meta-warn">Próxima: ${Utils.formatDate(r.proxima)}</span></span>`);
+      </svg><span class="${toneCls}">${Utils.escapeHtml(proxInfo.label)}</span></span>`);
   }
 
   const metaHtml = metaChunks.length
@@ -539,6 +767,19 @@ function renderTimelineItem(r, { isFirst, equipamentos, setoresById }) {
 
   const photoStrip = renderPhotoStrip(r.fotos);
   const signatureBlock = renderSignatureBlock(r);
+
+  // Atalho "Ver tudo deste equipamento" — só faz sentido se o filtro de
+  // equipamento NÃO estiver ativo (e o registro realmente tiver equipId).
+  // Evita adicionar "modo agrupar" separado: um clique leva o técnico pra
+  // timeline filtrada pelo mesmo equip e ele vê o histórico inteiro.
+  const showVerTudoLink = r.equipId && currentFilterEquipId !== r.equipId;
+  const verTudoLink = showVerTudoLink
+    ? `<button type="button" class="timeline__item__focus-equip"
+        data-action="hist-filter-equip" data-equip-id="${Utils.escapeAttr(r.equipId)}"
+        aria-label="Ver todos os serviços deste equipamento">
+        Ver tudo deste equipamento →
+      </button>`
+    : '';
 
   return `<article class="timeline__item${isFirst ? ' timeline__item--latest' : ''}${itemStatusMod}"
       role="listitem" data-reg-id="${Utils.escapeAttr(r.id)}">
@@ -566,6 +807,7 @@ function renderTimelineItem(r, { isFirst, equipamentos, setoresById }) {
       ${metaHtml}
       ${photoStrip}
       ${signatureBlock}
+      ${verTudoLink}
     </div>
     <div class="hist-item-actions">
       <button type="button" data-action="edit-reg" data-id="${Utils.escapeAttr(r.id)}"
@@ -700,10 +942,14 @@ export function renderHist() {
 
   const setoresById = new Map(setores.map((s) => [s.id, s]));
 
+  const recurring = getRecurringEquips(list);
+
   const renderTimeline = () => {
     const summaryCard = renderSummaryCard(list, {
       filtered: activeFilterCount > 0,
       activeFilterCount,
+      equipamentos,
+      recurring,
     });
 
     // Banner só aparece pro Free — Plus e Pro já têm histórico completo.
@@ -760,6 +1006,7 @@ export function renderHist() {
           isFirst: idx === 0,
           equipamentos,
           setoresById,
+          currentFilterEquipId: filtEq || '',
         }),
       )
       .join('');
@@ -840,6 +1087,19 @@ function attachFilterHandlers(container) {
   each('[data-action="hist-clear-tipo"]', (btn) =>
     btn.addEventListener('click', () => {
       setExtraFilter(HIST_TIPO_KEY, '');
+      renderHist();
+    }),
+  );
+
+  // "Ver tudo deste equipamento" (link no rodapé do item) e "Ver serviços"
+  // (CTA do alerta de recorrência no summary) caem no mesmo handler — ambos
+  // aplicam o filtro de equipamento e re-renderizam.
+  each('[data-action="hist-filter-equip"]', (btn) =>
+    btn.addEventListener('click', () => {
+      const equipId = btn.dataset.equipId || '';
+      if (!equipId) return;
+      const sel = Utils.getEl('hist-equip');
+      if (sel) sel.value = equipId;
       renderHist();
     }),
   );

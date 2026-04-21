@@ -10,7 +10,7 @@
  *  - Segmentado "Compacto / Detalhado" persistido em localStorage
  */
 
-import { Utils, STATUS_LABEL } from '../../core/utils.js';
+import { Utils } from '../../core/utils.js';
 import { getState, findEquip } from '../../core/state.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { CRITICIDADE_LABEL, PRIORIDADE_OPERACIONAL_LABEL } from '../../domain/maintenance.js';
@@ -83,6 +83,28 @@ function icon(name, size = 14) {
 // Status → variante visual (ok/warn/danger do sistema)
 // ──────────────────────────────────────────────────────────────────────
 const STATUS_TONE = { ok: 'ok', warn: 'warn', danger: 'danger' };
+
+// Labels locais pro relatório — mais fortes que "Normal" do STATUS_LABEL
+// global (que também vive em equipamentos, onde um rótulo curto tipo
+// "Normal" funciona melhor). Aqui "Concluído" comunica ação finalizada,
+// que é o que o leitor do relatório quer ver.
+const REL_STATUS_LABEL = {
+  ok: 'Concluído',
+  warn: 'Atenção',
+  danger: 'Crítico',
+};
+
+// Banner de corretivas: só aparece quando o volume é relevante. 2 registros
+// é o mínimo absoluto pra falar em "recorrência", e 30% evita que 3 corretivas
+// num relatório de 100 registros apareça como alarme — nesse caso é ruído.
+const CORRETIVAS_BANNER_MIN_COUNT = 2;
+const CORRETIVAS_BANNER_MIN_RATIO = 0.3;
+
+// Próximas ações: janela de 14 dias pra frente + qualquer coisa vencida.
+// Empírico — acima disso o leitor já não trata como "próxima" e o bloco vira
+// lista longa sem urgência.
+const PROXIMAS_ACOES_WINDOW_DAYS = 14;
+const PROXIMAS_ACOES_DEFAULT_LIMIT = 5;
 
 // ──────────────────────────────────────────────────────────────────────
 // View mode persistence
@@ -165,9 +187,133 @@ function computeKPIs(registros) {
 }
 
 // ──────────────────────────────────────────────────────────────────────
+// Insights determinísticos (sem IA — regras claras, auditáveis)
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Resumo narrativo do período: "8 atendimentos em 3 equipamentos · predomínio
+ * de Preventiva (62%) · 2 corretivas." Só inclui o predomínio quando o tipo
+ * dominante representa ≥30% E existe mais de um tipo (senão vira redundante
+ * com o KPI). Retorna null pra lista vazia pra que o chamador decida omitir.
+ */
+export function buildPeriodNarrative(list) {
+  if (!Array.isArray(list) || list.length === 0) return null;
+  const total = list.length;
+  const equipsSet = new Set();
+  const byTipo = {};
+  let corretivas = 0;
+  for (const r of list) {
+    if (r?.equipId) equipsSet.add(r.equipId);
+    const tipo = r?.tipo || 'Outro';
+    byTipo[tipo] = (byTipo[tipo] || 0) + 1;
+    if (/corretiva/i.test(r?.tipo || '')) corretivas += 1;
+  }
+  const equipsUnicos = equipsSet.size;
+  let tipoTop = null;
+  let tipoTopCount = 0;
+  for (const k in byTipo) {
+    if (byTipo[k] > tipoTopCount) {
+      tipoTopCount = byTipo[k];
+      tipoTop = k;
+    }
+  }
+  const tipoPct = total > 0 ? Math.round((tipoTopCount / total) * 100) : 0;
+
+  const atendimentosTxt = `${total} ${total === 1 ? 'atendimento' : 'atendimentos'}`;
+  const equipsTxt =
+    equipsUnicos > 0
+      ? ` em ${equipsUnicos} ${equipsUnicos === 1 ? 'equipamento' : 'equipamentos'}`
+      : '';
+  const partes = [`${atendimentosTxt}${equipsTxt}`];
+
+  const multiTipos = Object.keys(byTipo).length > 1;
+  if (tipoTop && tipoPct >= 30 && multiTipos) {
+    const nomeCurto = tipoTop.replace(/^Manutenção\s+/i, '');
+    partes.push(`predomínio de ${nomeCurto} (${tipoPct}%)`);
+  }
+  if (corretivas > 0) {
+    partes.push(`${corretivas} ${corretivas === 1 ? 'corretiva' : 'corretivas'}`);
+  }
+
+  return {
+    text: `${partes.join(' · ')}.`,
+    total,
+    equipsUnicos,
+    tipoTop,
+    tipoTopCount,
+    tipoPct,
+    corretivas,
+  };
+}
+
+/**
+ * Conta registros do tipo corretiva (case-insensitive, keyword match).
+ * Mantida como helper separado pra que o banner possa reutilizar sem recalcular
+ * o narrative todo.
+ */
+export function countCorretivas(list) {
+  if (!Array.isArray(list) || list.length === 0) return 0;
+  return list.reduce((acc, r) => (/corretiva/i.test(r?.tipo || '') ? acc + 1 : acc), 0);
+}
+
+/**
+ * Decide se mostrar o banner de corretivas: exige mínimo absoluto E razão
+ * mínima pra evitar falso alarme em relatórios grandes com poucas corretivas.
+ */
+export function shouldShowCorretivasBanner(count, total) {
+  if (count < CORRETIVAS_BANNER_MIN_COUNT) return false;
+  if (total <= 0) return false;
+  return count / total >= CORRETIVAS_BANNER_MIN_RATIO;
+}
+
+/**
+ * Próximas ações recomendadas: pega a manutenção futura mais próxima de cada
+ * equipamento dentro de `days` dias (+ qualquer vencida), dedupe por equip,
+ * ordena pela mais urgente primeiro. Retorna até `limit` itens.
+ */
+export function getProximasAcoes(
+  list,
+  equipamentos = [],
+  limit = PROXIMAS_ACOES_DEFAULT_LIMIT,
+  days = PROXIMAS_ACOES_WINDOW_DAYS,
+) {
+  if (!Array.isArray(list) || list.length === 0) return [];
+  const equipIndex = new Map((equipamentos || []).map((e) => [e.id, e]));
+
+  // Dedup por equipId mantendo o mais urgente (menor daysUntil = mais vencido)
+  const byEquip = new Map();
+  for (const r of list) {
+    if (!r?.equipId || !r?.proxima) continue;
+    const n = Utils.daysUntil(r.proxima);
+    if (n == null) continue;
+    if (n > days) continue; // Fora da janela — pula
+    const existing = byEquip.get(r.equipId);
+    if (!existing || n < existing.daysUntil) {
+      const equip = equipIndex.get(r.equipId) || null;
+      byEquip.set(r.equipId, {
+        equipId: r.equipId,
+        equipNome: equip?.nome || r.equipNome || '—',
+        equipTag: equip?.tag || '',
+        proximaIso: r.proxima,
+        daysUntil: n,
+        registro: r,
+      });
+    }
+  }
+
+  const items = Array.from(byEquip.values());
+  items.sort((a, b) => a.daysUntil - b.daysUntil);
+  return items.slice(0, limit).map((item) => ({
+    ...item,
+    tone: item.daysUntil < 0 ? 'danger' : 'warn',
+    label: Utils.fmtDueRelative(item.proximaIso),
+  }));
+}
+
+// ──────────────────────────────────────────────────────────────────────
 // Hero summary
 // ──────────────────────────────────────────────────────────────────────
-function renderHero({ kpis, periodoTxt, equipTxt, viewMode }) {
+function renderHero({ kpis, periodoTxt, equipTxt, viewMode, narrative, emittedAt }) {
   const dueState = (() => {
     if (kpis.count === 0 || !kpis.nextDue) return 'default';
     if (kpis.nextDue.n < 0) return 'red';
@@ -190,7 +336,29 @@ function renderHero({ kpis, periodoTxt, equipTxt, viewMode }) {
       ? ''
       : `title="${Utils.escapeAttr(`${kpis.mostCommonCount} × ${kpis.mostCommonType}`)}"`;
 
+  // Custo total "R$ 0,00" vira "—" pra não ser lido como "serviço gratuito".
+  // Prestadores nem sempre registram custos — o hero precisa refletir
+  // ausência de dado, não afirmação de zero.
+  const hasCusto = kpis.total > 0;
+  const custoValue = hasCusto ? Utils.fmtBRL(kpis.total) : '—';
+  const custoAriaLabel = hasCusto
+    ? `Custo total: ${Utils.fmtBRL(kpis.total)}`
+    : 'Custo total não registrado no período';
+  const custoTitleAttr = hasCusto ? '' : ` title="Nenhum custo registrado nos serviços do período"`;
+
+  const narrativeHtml = narrative?.text
+    ? `<p class="rel-hero__narrative">${Utils.escapeHtml(narrative.text)}</p>`
+    : '';
+
+  const emittedHtml = emittedAt
+    ? `<span class="rel-hero__emitted" aria-label="Emitido em ${Utils.escapeAttr(emittedAt)}">Emitido em ${Utils.escapeHtml(emittedAt)}</span>`
+    : '';
+
   return `
+    <div class="rel-hero__brand">
+      <span class="rel-hero__brand-ic" aria-hidden="true">${icon('clipboardCheck', 14)}</span>
+      <span class="rel-hero__brand-label">Relatório de Serviços</span>
+    </div>
     <div class="rel-hero__head">
       <h2 id="rel-hero-title" class="rel-hero__title">Resumo do período</h2>
       <div class="rel-segmented" role="radiogroup" aria-label="Modo de visualização">
@@ -203,8 +371,10 @@ function renderHero({ kpis, periodoTxt, equipTxt, viewMode }) {
       </div>
     </div>
     <div class="rel-hero__meta">
-      ${Utils.escapeHtml(periodoTxt)} · ${Utils.escapeHtml(equipTxt)}
+      <span class="rel-hero__meta-period">${Utils.escapeHtml(periodoTxt)} · ${Utils.escapeHtml(equipTxt)}</span>
+      ${emittedHtml}
     </div>
+    ${narrativeHtml}
     <div class="rel-hero__divider" role="presentation"></div>
     <div class="rel-hero__kpis">
       <div class="rel-kpi" aria-label="Registros: ${kpis.count}">
@@ -214,10 +384,10 @@ function renderHero({ kpis, periodoTxt, equipTxt, viewMode }) {
         </div>
         <div class="rel-kpi__label">Registros</div>
       </div>
-      <div class="rel-kpi" aria-label="Custo total: ${Utils.fmtBRL(kpis.total)}">
+      <div class="rel-kpi" aria-label="${custoAriaLabel}"${custoTitleAttr}>
         <div class="rel-kpi__row">
           <span class="rel-kpi__icon rel-kpi__icon--cyan">${icon('dollarSign')}</span>
-          <span class="rel-kpi__value">${Utils.fmtBRL(kpis.total)}</span>
+          <span class="rel-kpi__value${hasCusto ? '' : ' rel-kpi__value--muted'}">${custoValue}</span>
         </div>
         <div class="rel-kpi__label">Custo total</div>
       </div>
@@ -236,6 +406,50 @@ function renderHero({ kpis, periodoTxt, equipTxt, viewMode }) {
         <div class="rel-kpi__label">Próx. vencimento</div>
       </div>
     </div>
+  `;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Próximas ações & banner de corretivas (inseridos entre hero e records)
+// ──────────────────────────────────────────────────────────────────────
+function renderProximasAcoes(items) {
+  if (!items.length) return '';
+  const listHtml = items
+    .map((item) => {
+      const dtDisplay = Utils.formatDate(item.proximaIso);
+      return `
+        <li class="rel-proximas__item">
+          <span class="rel-proximas__equip" title="${Utils.escapeAttr(item.equipNome)}">${Utils.escapeHtml(item.equipNome)}</span>
+          <span class="rel-proximas__date">${Utils.escapeHtml(dtDisplay)}</span>
+          <span class="rel-proximas__label rel-proximas__label--${item.tone}">${Utils.escapeHtml(item.label)}</span>
+        </li>`;
+    })
+    .join('');
+
+  return `
+    <section class="rel-proximas" aria-labelledby="rel-proximas-title">
+      <header class="rel-proximas__head">
+        <span class="rel-proximas__icon" aria-hidden="true">${icon('calendarClock', 14)}</span>
+        <h3 id="rel-proximas-title" class="rel-proximas__title">Próximas ações recomendadas</h3>
+        <span class="rel-proximas__count" aria-hidden="true">${items.length}</span>
+      </header>
+      <ul class="rel-proximas__list" role="list">
+        ${listHtml}
+      </ul>
+    </section>
+  `;
+}
+
+function renderCorretivasBanner(count, total) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return `
+    <section class="rel-corretivas-banner" role="status" aria-live="polite">
+      <span class="rel-corretivas-banner__icon" aria-hidden="true">${icon('wrench', 18)}</span>
+      <div class="rel-corretivas-banner__text">
+        <strong>${count} ${count === 1 ? 'corretiva' : 'corretivas'} no período (${pct}%)</strong>
+        <span>Volume alto de corretivas pode indicar oportunidade de reforçar o plano preventivo.</span>
+      </div>
+    </section>
   `;
 }
 
@@ -399,8 +613,8 @@ function renderRecordCard({ r, eq, expanded, singleEquipFilter }) {
       <div class="rel-record__head">
         <span class="rel-tipo-icon rel-tipo-icon--${tipoMeta.tone}">${icon(tipoMeta.icon, 14)}</span>
         <div id="rec-${Utils.escapeAttr(r.id)}-title" class="rel-record__title">${Utils.escapeHtml(titleText)}</div>
-        <span class="rel-status rel-status--${statusTone}" aria-label="Status: ${Utils.escapeAttr(STATUS_LABEL[statusTone] || STATUS_LABEL.ok)}">
-          ${STATUS_LABEL[statusTone] || STATUS_LABEL.ok}
+        <span class="rel-status rel-status--${statusTone}" aria-label="Status: ${Utils.escapeAttr(REL_STATUS_LABEL[statusTone] || REL_STATUS_LABEL.ok)}">
+          ${REL_STATUS_LABEL[statusTone] || REL_STATUS_LABEL.ok}
         </span>
       </div>
       <div class="rel-record__meta">
@@ -681,6 +895,10 @@ export function renderRelatorio(options = {}) {
   const singleEquipFilter = hasEquipFilter;
 
   const kpis = computeKPIs(list);
+  const narrative = buildPeriodNarrative(list);
+  const corretivasCount = countCorretivas(list);
+  const showCorretivasBanner = shouldShowCorretivasBanner(corretivasCount, list.length);
+  const proximasAcoes = getProximasAcoes(list, equipamentos);
 
   const advancedEl = Utils.getEl('rel-filters-advanced');
   const advancedOpen = options.keepAdvancedOpen ?? !(advancedEl?.hasAttribute('hidden') ?? true);
@@ -694,6 +912,8 @@ export function renderRelatorio(options = {}) {
       periodoTxt,
       equipTxt,
       viewMode,
+      narrative,
+      emittedAt: hoje,
     });
 
     // Chips
@@ -709,7 +929,14 @@ export function renderRelatorio(options = {}) {
     if (!list.length) {
       corpoEl.innerHTML = renderEmpty({ hoje });
     } else {
-      corpoEl.innerHTML = list
+      // Banner âmbar de corretivas (quando volume relevante) e bloco de
+      // "Próximas ações" entram antes dos cards — leitura de alto nível
+      // antes do detalhe registro-por-registro.
+      const bannerHtml = showCorretivasBanner
+        ? renderCorretivasBanner(corretivasCount, list.length)
+        : '';
+      const proximasHtml = proximasAcoes.length ? renderProximasAcoes(proximasAcoes) : '';
+      const recordsHtml = list
         .map((r) => {
           const eq = findEquip(r.equipId);
           return renderRecordCard({
@@ -720,6 +947,7 @@ export function renderRelatorio(options = {}) {
           });
         })
         .join('');
+      corpoEl.innerHTML = `${bannerHtml}${proximasHtml}${recordsHtml}`;
     }
 
     wireHandlers({

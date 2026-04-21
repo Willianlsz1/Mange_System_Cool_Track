@@ -57,6 +57,7 @@ beforeEach(() => {
   document.body.innerHTML = `
     <section id="equip-hero" hidden>
       <p id="equip-hero-sub"></p>
+      <div id="equip-hero-sem-setor-cta" hidden></div>
       <div id="equip-hero-kpis"></div>
     </section>
     <nav id="equip-filters" hidden></nav>
@@ -192,6 +193,73 @@ describe('renderEquipHero', () => {
     renderEquipHero();
 
     expect(document.getElementById('equip-hero-sub').textContent).toMatch(/em ordem/i);
+  });
+
+  it('CTA Sem setor: esconde quando semSetor = 0', async () => {
+    getState.mockReturnValue({
+      equipamentos: [{ id: 'e1', setorId: 's1', status: 'ok' }],
+      registros: [],
+    });
+    const { renderEquipHero } = await import('../ui/views/equipamentos.js');
+    renderEquipHero({ isPro: true });
+
+    const cta = document.getElementById('equip-hero-sem-setor-cta');
+    expect(cta.hasAttribute('hidden')).toBe(true);
+    expect(cta.innerHTML).toBe('');
+  });
+
+  it('CTA Sem setor: Pro vê atalho "Organizar agora" com data-action equip-quickfilter', async () => {
+    getState.mockReturnValue({
+      equipamentos: [
+        { id: 'e1', setorId: null, status: 'ok' },
+        { id: 'e2', setorId: null, status: 'ok' },
+      ],
+      registros: [],
+    });
+    const { renderEquipHero } = await import('../ui/views/equipamentos.js');
+    renderEquipHero({ isPro: true });
+
+    const cta = document.getElementById('equip-hero-sem-setor-cta');
+    expect(cta.hasAttribute('hidden')).toBe(false);
+
+    const btn = cta.querySelector('button');
+    expect(btn).not.toBeNull();
+    expect(btn.dataset.action).toBe('equip-quickfilter');
+    expect(btn.dataset.id).toBe('sem-setor');
+    expect(btn.textContent).toMatch(/organizar agora/i);
+    expect(btn.classList.contains('equip-hero__cta-btn--action')).toBe(true);
+  });
+
+  it('CTA Sem setor: Free vê upsell "Ver como setores funcionam" com data-action open-upgrade', async () => {
+    getState.mockReturnValue({
+      equipamentos: [{ id: 'e1', setorId: null, status: 'ok' }],
+      registros: [],
+    });
+    const { renderEquipHero } = await import('../ui/views/equipamentos.js');
+    renderEquipHero({ isPro: false });
+
+    const cta = document.getElementById('equip-hero-sem-setor-cta');
+    expect(cta.hasAttribute('hidden')).toBe(false);
+
+    const btn = cta.querySelector('button');
+    expect(btn).not.toBeNull();
+    expect(btn.dataset.action).toBe('open-upgrade');
+    expect(btn.dataset.upgradeSource).toBe('equip_sem_setor');
+    expect(btn.dataset.highlightPlan).toBe('pro');
+    expect(btn.textContent).toMatch(/setores funcionam/i);
+    expect(btn.classList.contains('equip-hero__cta-btn--upsell')).toBe(true);
+  });
+
+  it('CTA Sem setor: sem opts assume Free (conservador) e mostra upsell', async () => {
+    getState.mockReturnValue({
+      equipamentos: [{ id: 'e1', setorId: null, status: 'ok' }],
+      registros: [],
+    });
+    const { renderEquipHero } = await import('../ui/views/equipamentos.js');
+    renderEquipHero(); // sem opts → default isPro=false
+
+    const btn = document.querySelector('#equip-hero-sem-setor-cta button');
+    expect(btn.dataset.action).toBe('open-upgrade');
   });
 });
 

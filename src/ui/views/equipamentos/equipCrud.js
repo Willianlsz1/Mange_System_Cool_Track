@@ -270,7 +270,7 @@ export async function saveEquip() {
   if (titleEl) titleEl.textContent = 'Qual equipamento você quer monitorar?';
 
   const saveBtn = document.querySelector('[data-action="save-equip"]');
-  if (saveBtn) saveBtn.textContent = 'Cadastrar equipamento →';
+  if (saveBtn) saveBtn.textContent = '✓ Confirmar e cadastrar';
 
   const detailsPanel = Utils.getEl('eq-step-2');
   if (detailsPanel && _editingEquipId) {

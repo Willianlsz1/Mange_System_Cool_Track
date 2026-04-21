@@ -50,6 +50,50 @@ describe('usageLimits', () => {
     ).toBe(true);
   });
 
+  it('aplica limites dimensionados por plano pra nameplate_analysis', async () => {
+    // Motivação: Plus e Pro não podem ser "ilimitado" porque o custo da
+    // análise é em USD (cauda longa vira sangria de margem). 30/mês no Plus
+    // cobre técnico autônomo; 200/mês no Pro cobre equipe pequena.
+    const { getMonthlyLimitForPlan, hasReachedMonthlyLimit, USAGE_RESOURCE_NAMEPLATE_ANALYSIS } =
+      await loadUsageLimits();
+
+    expect(getMonthlyLimitForPlan('free', USAGE_RESOURCE_NAMEPLATE_ANALYSIS)).toBe(1);
+    expect(getMonthlyLimitForPlan('plus', USAGE_RESOURCE_NAMEPLATE_ANALYSIS)).toBe(30);
+    expect(getMonthlyLimitForPlan('pro', USAGE_RESOURCE_NAMEPLATE_ANALYSIS)).toBe(200);
+
+    // Plus bate o teto em 30
+    expect(
+      hasReachedMonthlyLimit({
+        planCode: 'plus',
+        resource: USAGE_RESOURCE_NAMEPLATE_ANALYSIS,
+        usedCount: 30,
+      }),
+    ).toBe(true);
+    expect(
+      hasReachedMonthlyLimit({
+        planCode: 'plus',
+        resource: USAGE_RESOURCE_NAMEPLATE_ANALYSIS,
+        usedCount: 29,
+      }),
+    ).toBe(false);
+
+    // Pro bate o teto em 200
+    expect(
+      hasReachedMonthlyLimit({
+        planCode: 'pro',
+        resource: USAGE_RESOURCE_NAMEPLATE_ANALYSIS,
+        usedCount: 200,
+      }),
+    ).toBe(true);
+    expect(
+      hasReachedMonthlyLimit({
+        planCode: 'pro',
+        resource: USAGE_RESOURCE_NAMEPLATE_ANALYSIS,
+        usedCount: 199,
+      }),
+    ).toBe(false);
+  });
+
   it('loads monthly usage snapshot from Supabase', async () => {
     const { getMonthlyUsageSnapshot, mocks } = await loadUsageLimits({
       usageRows: [

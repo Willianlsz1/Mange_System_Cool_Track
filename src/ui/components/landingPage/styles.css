@@ -241,6 +241,11 @@ body {
   margin: 0 0 28px;
   text-wrap: pretty;
 }
+.lp-hero__sub-lead {
+  color: #e8f2fa;
+  font-weight: 700;
+  margin-right: 4px;
+}
 
 /* CTA — herda DNA do AccountModal upgrade btn (bolt + sombra cyan). */
 .lp-hero__ctas {
@@ -1990,6 +1995,98 @@ body {
 .lp-footer__made {
   font-weight: 500;
   color: #8aaac8;
+}
+
+/* ─────────────────────────────────────
+     TIME STAT (20 min → 30s)
+     Bloco curto entre Hero e "Como funciona" — prova de ganho de tempo
+     em minutos (evita chute em R$). Herda grad-word do H1 no "30 segundos".
+  ───────────────────────────────────── */
+.lp-timestat {
+  padding: 24px 24px 8px;
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
+}
+.lp-timestat__inner {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 14px;
+  padding: 22px 20px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(0, 200, 232, 0.04), rgba(0, 200, 232, 0)), #0b161f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.lp-timestat__item {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 4px 8px;
+}
+.lp-timestat__tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8aaac8;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.lp-timestat__tag--after {
+  color: #00c8e8;
+  background: rgba(0, 200, 232, 0.08);
+  border-color: rgba(0, 200, 232, 0.25);
+}
+.lp-timestat__num {
+  font-size: clamp(28px, 4.2vw, 42px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: #e8f2fa;
+}
+.lp-timestat__num--strong {
+  color: inherit;
+}
+.lp-timestat__item--before .lp-timestat__num {
+  color: #8aaac8;
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 85, 119, 0.55);
+  text-decoration-thickness: 2px;
+}
+.lp-timestat__lbl {
+  font-size: 12.5px;
+  color: #8aaac8;
+  line-height: 1.4;
+  max-width: 220px;
+}
+.lp-timestat__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #00c8e8;
+  opacity: 0.9;
+  flex: 0 0 auto;
+  padding: 0 6px;
+}
+
+@media (max-width: 560px) {
+  .lp-timestat__inner {
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px 16px;
+  }
+  .lp-timestat__arrow svg {
+    transform: rotate(90deg);
+  }
 }
 
 /* ─────────────────────────────────────

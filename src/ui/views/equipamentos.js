@@ -59,7 +59,7 @@ export function clearEditingState() {
   const titleEl = Utils.getEl('modal-add-eq-title');
   if (titleEl) titleEl.textContent = 'Qual equipamento você quer monitorar?';
   const saveBtn = document.querySelector('[data-action="save-equip"]');
-  if (saveBtn) saveBtn.textContent = 'Cadastrar equipamento →';
+  if (saveBtn) saveBtn.textContent = '✓ Confirmar e cadastrar';
   const detailsPanel = Utils.getEl('eq-step-2');
   if (detailsPanel) {
     detailsPanel.style.display = '';
@@ -331,8 +331,17 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
       </div>
       <div class="equip-card__onboard">
         <div class="equip-card__onboard-text">
-          <div class="equip-card__onboard-title">Novo equipamento</div>
-          <div class="equip-card__onboard-sub">Crie a linha de base com seu primeiro serviço</div>
+          <!--
+            Label small-caps espelha o "PRÓXIMA AÇÃO / AÇÃO URGENTE" do card
+            ativo. Além de unificar a gramática visual, guia o técnico no
+            idle state dizendo *o que é esse estado* (primeiro serviço do
+            equipamento) antes do CTA. O título antigo "Novo equipamento"
+            era redundante com o nome no header; promovemos a sub pra
+            título e deixamos uma sub mais curta de contexto.
+          -->
+          <div class="equip-card__onboard-label">PRIMEIRO SERVIÇO</div>
+          <div class="equip-card__onboard-title">Crie a linha de base</div>
+          <div class="equip-card__onboard-sub">O primeiro registro define o histórico</div>
         </div>
         <button class="equip-card__onboard-cta" data-action="go-register-equip" data-id="${safeId}">
           ${ctaLabel} <span aria-hidden="true">→</span>
@@ -792,8 +801,13 @@ function _equipHeroSubCopy({ semSetor, emAtencao, criticos, preventiva30d }) {
   return 'Parque em ordem. Monitore as preventivas e organize por setor.';
 }
 
-/** Renderiza hero no slot #equip-hero. Idempotente; chamar sempre em render. */
-export function renderEquipHero() {
+/** Renderiza hero no slot #equip-hero. Idempotente; chamar sempre em render.
+ *  `opts.isPro` bifurca o CTA "Sem setor": Pro vê atalho pra organizar (filtro
+ *  sem-setor), Free/Plus vê CTA educacional de upsell (setores é Pro-only).
+ *  Passar `null`/`undefined` = plano ainda desconhecido → comporta como Free
+ *  (conservador, evita prometer ação que depende de upgrade). */
+export function renderEquipHero(opts = {}) {
+  const { isPro = false } = opts || {};
   const hero = Utils.getEl('equip-hero');
   if (!hero) return;
   const { equipamentos = [] } = getState();
@@ -808,6 +822,37 @@ export function renderEquipHero() {
   const kpis = computeEquipKpis();
   const sub = Utils.getEl('equip-hero-sub');
   if (sub) sub.textContent = _equipHeroSubCopy(kpis);
+
+  // CTA "Sem setor" — só aparece quando há equipamentos órfãos. O pitch muda
+  // conforme o plano: Pro tem acesso a setores (leva ao filtro), Free/Plus
+  // recebe um upsell educacional. Slot é opcional (pode faltar em testes/legacy).
+  const ctaSlot = Utils.getEl('equip-hero-sem-setor-cta');
+  if (ctaSlot) {
+    if (kpis.semSetor <= 0) {
+      ctaSlot.setAttribute('hidden', '');
+      ctaSlot.innerHTML = '';
+    } else {
+      ctaSlot.removeAttribute('hidden');
+      if (isPro) {
+        ctaSlot.innerHTML = `
+          <button type="button" class="equip-hero__cta-btn equip-hero__cta-btn--action"
+                  data-action="equip-quickfilter" data-id="sem-setor"
+                  aria-label="Organizar equipamentos sem setor agora">
+            <span>Organizar agora</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>`;
+      } else {
+        ctaSlot.innerHTML = `
+          <button type="button" class="equip-hero__cta-btn equip-hero__cta-btn--upsell"
+                  data-action="open-upgrade" data-upgrade-source="equip_sem_setor" data-highlight-plan="pro"
+                  aria-label="Ver como setores funcionam no plano Pro">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 21 12 16.5 5.8 21l2.4-7.1L2 9.4h7.6z"/></svg>
+            <span>Ver como setores funcionam</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>`;
+      }
+    }
+  }
 
   const slot = Utils.getEl('equip-hero-kpis');
   if (!slot) return;
@@ -901,9 +946,27 @@ function _setToolbar({ title, extraBtn } = {}) {
   const actionsEl = Utils.getEl('equip-toolbar-actions');
   if (titleEl) titleEl.textContent = title || 'Parque de Equipamentos';
   if (actionsEl) {
+    // Par de CTAs: "Cadastrar com foto" é o primário — advertise a feature
+    // de IA direto da toolbar, sem exigir que o técnico descubra o botão
+    // dentro do modal. Ambos abrem o mesmo modal-add-eq; o gate de trial
+    // (active/trial/locked) continua sendo aplicado dentro do modal por
+    // applyNameplateCtaGate, então não precisamos duplicar essa lógica aqui.
+    // A versão secundária "+ Novo equipamento" fica em estilo outline pra
+    // preservar muscle memory sem competir visualmente com o primário.
     actionsEl.innerHTML = `
       ${extraBtn || ''}
-      <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">+ Novo equipamento</button>
+      <button class="btn btn--primary btn--sm equip-toolbar__photo-cta"
+        data-action="open-modal" data-id="modal-add-eq"
+        data-source="toolbar_photo"
+        aria-label="Cadastrar equipamento tirando foto da etiqueta">
+        <span class="equip-toolbar__photo-cta-icon" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><use href="#ri-camera"/></svg>
+        </span>
+        <span>Cadastrar com foto</span>
+      </button>
+      <button class="btn btn--outline btn--sm"
+        data-action="open-modal" data-id="modal-add-eq"
+        data-source="toolbar_manual">+ Novo equipamento</button>
     `;
   }
 }
@@ -1485,7 +1548,7 @@ export async function renderEquip(filtro = '', options = {}) {
 
   // Hero + filters sempre no topo da view (hidden quando não há equipamentos).
   // Precisa rodar antes de qualquer return — os slots são estáveis entre modos.
-  renderEquipHero();
+  renderEquipHero({ isPro });
   renderEquipFilters();
 
   // Quick filter ativo sobrescreve o fluxo normal: vai pra flat list com
@@ -2073,20 +2136,55 @@ export async function openEditEquip(id) {
     detailsPanel.setAttribute('aria-hidden', 'false');
   }
 
-  // Popula o select de setor (apenas Pro) e aplica gate do hero CTA de placa
-  // (Plus+/Pro). V4: bloco de fotos saiu daqui — agora é via detail view.
+  // Popula o select de setor (apenas Pro) e aplica gate do hero CTA de placa.
+  // V4: bloco de fotos saiu daqui — agora é via detail view.
+  // V4.1: gate agora tem 3 estados (active / trial / locked) — pra Free,
+  // busca a quota mensal e passa `trialRemaining` pro state 'trial' quando
+  // o user ainda tem teste grátis disponível no mês.
   try {
-    const { fetchMyProfileBilling } = await import('../../core/plans/monetization.js');
-    const { hasProAccess, hasPlusAccess } = await import('../../core/plans/subscriptionPlans.js');
-    const { applyNameplateCtaGate } = await import('../components/nameplateCapture.js');
+    const [monetization, plans, capture, usageLimits] = await Promise.all([
+      import('../../core/plans/monetization.js'),
+      import('../../core/plans/subscriptionPlans.js'),
+      import('../components/nameplateCapture.js'),
+      import('../../core/usageLimits.js'),
+    ]);
+    const { fetchMyProfileBilling } = monetization;
+    const { hasProAccess, hasPlusAccess } = plans;
+    const { applyNameplateCtaGate } = capture;
+    const { getMonthlyUsageSnapshot, USAGE_RESOURCE_NAMEPLATE_ANALYSIS, getMonthlyLimitForPlan } =
+      usageLimits;
     const { profile } = await fetchMyProfileBilling();
     populateSetorSelect(hasProAccess(profile));
-    applyNameplateCtaGate(hasPlusAccess(profile));
+
+    const isPlusOrPro = hasPlusAccess(profile);
+    if (isPlusOrPro) {
+      applyNameplateCtaGate({ isPlusOrPro: true, trialRemaining: null });
+    } else {
+      try {
+        const { supabase } = await import('../../core/supabase.js');
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        let trialRemaining = null;
+        if (user?.id) {
+          const snap = await getMonthlyUsageSnapshot(user.id);
+          const used = Number(snap?.[USAGE_RESOURCE_NAMEPLATE_ANALYSIS] ?? 0) || 0;
+          const limit = getMonthlyLimitForPlan(
+            profile?.plan_code ?? 'free',
+            USAGE_RESOURCE_NAMEPLATE_ANALYSIS,
+          );
+          trialRemaining = Number.isFinite(limit) ? Math.max(0, limit - used) : 0;
+        }
+        applyNameplateCtaGate({ isPlusOrPro: false, trialRemaining });
+      } catch (_) {
+        applyNameplateCtaGate({ isPlusOrPro: false, trialRemaining: null });
+      }
+    }
   } catch {
     populateSetorSelect(false);
     try {
       const { applyNameplateCtaGate } = await import('../components/nameplateCapture.js');
-      applyNameplateCtaGate(false);
+      applyNameplateCtaGate({ isPlusOrPro: false, trialRemaining: null });
     } catch (_) {
       /* noop */
     }

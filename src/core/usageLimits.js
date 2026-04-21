@@ -8,27 +8,41 @@ import {
 
 export const USAGE_RESOURCE_PDF_EXPORT = 'pdf_export';
 export const USAGE_RESOURCE_WHATSAPP_SHARE = 'whatsapp_share';
+export const USAGE_RESOURCE_NAMEPLATE_ANALYSIS = 'nameplate_analysis';
 
-const VALID_RESOURCES = new Set([USAGE_RESOURCE_PDF_EXPORT, USAGE_RESOURCE_WHATSAPP_SHARE]);
+const VALID_RESOURCES = new Set([
+  USAGE_RESOURCE_PDF_EXPORT,
+  USAGE_RESOURCE_WHATSAPP_SHARE,
+  USAGE_RESOURCE_NAMEPLATE_ANALYSIS,
+]);
 
 // ── Limites mensais por plano ──────────────────────────────────────────────
 // Free: 2 PDFs/mês COM marca d'água "CoolTrack Free" (conversão orgânica B2B),
 //       WhatsApp apertado pra só dar pra avaliar, não pra trabalhar.
+//       1 análise de placa/mês como "teste grátis" recorrente — suficiente
+//       pra demonstrar o valor do recurso todo mês, sem liberar workflow real.
 // Plus: cotas dimensionadas pro técnico autônomo individual (15 equipamentos).
-//       Se precisa de mais PDFs/WhatsApp, provavelmente já é perfil Pro.
-// Pro:  ilimitado em tudo (pra pequena empresa com múltiplos sites/setores).
+//       Análise de placa: 30/mês cobre com folga o uso típico (1 cadastro novo
+//       a cada 1-2 dias úteis). Limite existe pra proteger margem — o custo
+//       da análise é em USD, então "ilimitado" virava risco de cauda longa.
+// Pro:  equipe pequena ou operação com 15+ equipamentos. PDFs/WhatsApp
+//       ilimitados (são baratos — papel/mensagem). Análise de placa: 200/mês
+//       cobre rollout inicial de uma equipe média sem abrir mão da margem.
 const MONTHLY_LIMITS = {
   [PLAN_CODE_FREE]: {
     [USAGE_RESOURCE_PDF_EXPORT]: 2,
     [USAGE_RESOURCE_WHATSAPP_SHARE]: 3,
+    [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 1,
   },
   [PLAN_CODE_PLUS]: {
     [USAGE_RESOURCE_PDF_EXPORT]: 30,
     [USAGE_RESOURCE_WHATSAPP_SHARE]: 20,
+    [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 30,
   },
   [PLAN_CODE_PRO]: {
     [USAGE_RESOURCE_PDF_EXPORT]: Number.POSITIVE_INFINITY,
     [USAGE_RESOURCE_WHATSAPP_SHARE]: Number.POSITIVE_INFINITY,
+    [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 200,
   },
 };
 
@@ -75,6 +89,7 @@ export async function getMonthlyUsageSnapshot(
       monthStart: normalizeMonthStart(monthStart),
       [USAGE_RESOURCE_PDF_EXPORT]: 0,
       [USAGE_RESOURCE_WHATSAPP_SHARE]: 0,
+      [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 0,
     };
   }
 
@@ -92,6 +107,7 @@ export async function getMonthlyUsageSnapshot(
       monthStart: normalizedMonth,
       [USAGE_RESOURCE_PDF_EXPORT]: 0,
       [USAGE_RESOURCE_WHATSAPP_SHARE]: 0,
+      [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 0,
     };
   }
 
@@ -99,6 +115,7 @@ export async function getMonthlyUsageSnapshot(
     monthStart: normalizedMonth,
     [USAGE_RESOURCE_PDF_EXPORT]: 0,
     [USAGE_RESOURCE_WHATSAPP_SHARE]: 0,
+    [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 0,
   };
 
   for (const row of data || []) {

@@ -509,6 +509,85 @@ describe('LandingPage', () => {
     expect(faqCalls[0][1]).toEqual({ question: 'offline' });
   });
 
+  it('hero sub-hero leads with honest "Nunca mais digita etiqueta" promise (L-A)', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const sub = document.querySelector('.lp-hero__sub');
+    expect(sub).toBeTruthy();
+    // A lead line honesta sobre o escopo real da IA: preenche cadastro via foto.
+    const lead = sub.querySelector('.lp-hero__sub-lead');
+    expect(lead).toBeTruthy();
+    expect(lead.textContent).toContain('Nunca mais digita etiqueta');
+    // O restante do sub continua explicando o fluxo IA+assinatura+offline.
+    expect(sub.textContent.toLowerCase()).toContain('câmera');
+    expect(sub.textContent.toLowerCase()).toContain('offline');
+  });
+
+  it('renders time-stat strip "20 min → 30 segundos" between hero and how (L-B)', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const stat = document.querySelector('.lp-timestat');
+    expect(stat).toBeTruthy();
+
+    // Dois itens: tradicional (antes) e CoolTrack (depois).
+    expect(stat.querySelector('.lp-timestat__item--before')).toBeTruthy();
+    expect(stat.querySelector('.lp-timestat__item--after')).toBeTruthy();
+
+    // Números concretos — minutos, não reais.
+    const text = stat.textContent;
+    expect(text).toContain('20 min');
+    expect(text).toContain('30 segundos');
+    // Zero menção a R$ — ganho em reais é chute, evitamos.
+    expect(text).not.toContain('R$');
+
+    // Posição: depois do hero, antes do "Como funciona".
+    const hero = document.querySelector('.lp-hero');
+    const how = document.querySelector('.lp-how');
+    expect(hero.compareDocumentPosition(stat) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(stat.compareDocumentPosition(how) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('hero CTA uses verbo-ação específico só no hero (L-C)', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const heroCta = document.querySelector('.lp-hero .lp-hero__cta');
+    expect(heroCta).toBeTruthy();
+    expect(heroCta.textContent).toContain('Cadastrar meu primeiro equipamento');
+    // "Experimentar grátis" continua nos outros pontos (final/sticky) pra manter
+    // consistência do CTA universal fora do hero.
+    const finalCta = document.querySelector('.lp-final .lp-btn-primary');
+    const stickyCta = document.querySelector('.lp-sticky .lp-btn-primary');
+    expect(finalCta.textContent).toContain('Experimentar grátis');
+    expect(stickyCta.textContent).toContain('Experimentar grátis');
+  });
+
+  it('Plus badge e microcopy reposicionam o plano como técnico autônomo (L-D)', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const plus = document.querySelector('.lp-pricing-card--plus');
+    expect(plus).toBeTruthy();
+    // Badge enquadrada emocionalmente — não "Intermediário" genérico.
+    const badge = plus.querySelector('.lp-pricing-badge--plus');
+    expect(badge.textContent).toContain('Técnico autônomo');
+    // Microcopy do Plus: sozinho, tempo.
+    const micro = plus.querySelector('.lp-pricing-card__microcopy');
+    expect(micro.textContent.toLowerCase()).toContain('sozinho');
+    expect(micro.textContent.toLowerCase()).toContain('tempo');
+  });
+
+  it('Pro microcopy enquadra como equipe ou 15+ equipamentos (L-D)', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const pro = document.querySelector('.lp-pricing-card--pro');
+    expect(pro).toBeTruthy();
+    // Badge "★ Mais popular" continua (social proof).
+    expect(pro.querySelector('.lp-pricing-badge--popular')).toBeTruthy();
+    // Microcopy Pro: equipe OU 15+ equipamentos (gatilho real de upgrade do Plus).
+    const micro = pro.querySelector('.lp-pricing-card__microcopy');
+    expect(micro.textContent.toLowerCase()).toContain('equipe');
+    expect(micro.textContent).toContain('15');
+  });
+
   it('emits lp_anchor_click when footer smooth-scroll anchor is clicked', () => {
     Element.prototype.scrollIntoView = vi.fn();
     LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });

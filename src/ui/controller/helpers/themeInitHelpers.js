@@ -13,7 +13,10 @@ function resetRegistroEditingState() {
 
   const saveBtn = document.querySelector('[data-action="save-registro"]');
   if (saveBtn) {
-    saveBtn.textContent = 'Salvar registro';
+    // Preserva o SVG do ícone — só mexe no span (mesmo padrão de registro.js).
+    const saveLabel = saveBtn.querySelector('span');
+    if (saveLabel) saveLabel.textContent = 'Finalizar serviço';
+    else saveBtn.textContent = 'Finalizar serviço';
     saveBtn.classList.remove('btn--editing');
   }
 
@@ -64,9 +67,14 @@ function bindPreventiveSuggestion() {
 }
 
 function bindPhotoInput() {
-  const inputFotos = document.getElementById('input-fotos');
-  if (!inputFotos) return;
-  inputFotos.addEventListener('change', (event) => Photos.add(event.target));
+  // Dois inputs no registro: "input-fotos" (drop zone clássica, multiple) e
+  // "input-fotos-camera" (atalho mobile com capture="environment" que abre a
+  // câmera direto). Ambos caem no mesmo handler Photos.add — a UI que separa.
+  ['input-fotos', 'input-fotos-camera'].forEach((id) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener('change', (event) => Photos.add(event.target));
+  });
 }
 
 // Fotos do equipamento (feature Plus+): bindings dos file inputs.

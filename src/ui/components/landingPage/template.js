@@ -97,7 +97,8 @@ export function buildLandingHtml() {
             </h1>
 
             <p class="lp-hero__sub">
-              Aponta a câmera pra etiqueta do equipamento e a IA preenche marca, modelo, BTU e refrigerante em 5 segundos. Assina no celular, gera PDF e manda no WhatsApp — funciona offline.
+              <strong class="lp-hero__sub-lead">Nunca mais digita etiqueta.</strong>
+              Aponta a câmera e a IA preenche marca, modelo, BTU e refrigerante em 5 segundos. Assina no celular, gera PDF e manda no WhatsApp — funciona offline.
             </p>
 
             <div class="lp-hero__ctas">
@@ -108,7 +109,7 @@ export function buildLandingHtml() {
                 data-source="hero"
               >
                 ${ICON_BOLT}
-                Experimentar grátis
+                Cadastrar meu primeiro equipamento
               </button>
               <span class="lp-hero__cta-meta">
                 <span>Sem cadastro</span>
@@ -213,6 +214,27 @@ export function buildLandingHtml() {
             </div>
           </div>
 
+        </div>
+      </section>
+
+      <!-- ── TIME STAT (ganho de tempo em minutos, não em R$) ── -->
+      <section class="lp-timestat" aria-label="Ganho de tempo do relatório">
+        <div class="lp-timestat__inner">
+          <div class="lp-timestat__item lp-timestat__item--before">
+            <span class="lp-timestat__tag">Tradicional</span>
+            <span class="lp-timestat__num">20 min</span>
+            <span class="lp-timestat__lbl">Caderno, planilha, digitar tudo à mão.</span>
+          </div>
+          <span class="lp-timestat__arrow" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </span>
+          <div class="lp-timestat__item lp-timestat__item--after">
+            <span class="lp-timestat__tag lp-timestat__tag--after">CoolTrack</span>
+            <span class="lp-timestat__num lp-timestat__num--strong">
+              <span class="lp-grad">30 segundos</span>
+            </span>
+            <span class="lp-timestat__lbl">Foto, assinatura, PDF pronto pro WhatsApp.</span>
+          </div>
         </div>
       </section>
 
@@ -866,7 +888,7 @@ export function buildLandingHtml() {
             role="listitem"
             aria-label="Plano Plus"
           >
-            <span class="lp-pricing-badge lp-pricing-badge--plus">Intermediário</span>
+            <span class="lp-pricing-badge lp-pricing-badge--plus">Técnico autônomo</span>
             <h3 class="lp-pricing-card__title">Plus</h3>
             <div class="lp-pricing-card__price-block">
               <p
@@ -887,7 +909,7 @@ export function buildLandingHtml() {
               </div>
             </div>
             <ul class="lp-pricing-features">
-              <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — marca, modelo, BTU, refrigerante em 5s</li>
+              <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — até 30 análises/mês</li>
               <li>${ICON_CHECK} Até 15 equipamentos cadastrados</li>
               <li>${ICON_CHECK} <strong>Registros ilimitados</strong></li>
               <li>${ICON_CHECK} 30 PDFs/mês <strong>sem marca d'água</strong></li>
@@ -904,7 +926,7 @@ export function buildLandingHtml() {
               Começar grátis
             </button>
             <p class="lp-pricing-card__microcopy">
-              Comece no Free, faça upgrade quando precisar
+              Pra quem atende sozinho e cobra bem pelo próprio tempo.
             </p>
           </article>
 
@@ -935,7 +957,7 @@ export function buildLandingHtml() {
               </div>
             </div>
             <ul class="lp-pricing-features">
-              <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — sem limite de análises</li>
+              <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — até 200 análises/mês</li>
               <li>${ICON_CHECK} <strong>Equipamentos ilimitados</strong></li>
               <li>${ICON_CHECK} <strong>PDFs e WhatsApp ilimitados</strong></li>
               <li>${ICON_CHECK} Assinatura digital no PDF</li>
@@ -952,7 +974,7 @@ export function buildLandingHtml() {
               Começar grátis
             </button>
             <p class="lp-pricing-card__microcopy">
-              Teste grátis. Faça upgrade pra Pro quando precisar
+              Pra equipe ou quem já passa dos 15 equipamentos.
             </p>
           </article>
 
@@ -1006,7 +1028,7 @@ export function buildLandingHtml() {
           <details class="lp-faq__item" data-question="ai_how">
             <summary>Como funciona o cadastro por foto da etiqueta?</summary>
             <p>
-              Você aponta a câmera pra etiqueta do equipamento (split, VRF, chiller, fan-coil) e uma IA lê a foto e devolve marca, modelo, número de série, capacidade (BTU/TR), tensão, frequência e refrigerante já preenchidos. Leva cerca de 5 segundos. Você confere, ajusta se precisar, e salva. Disponível nos planos <strong>Plus</strong> e <strong>Pro</strong>.
+              Você aponta a câmera pra etiqueta do equipamento (split, VRF, chiller, fan-coil) e uma IA lê a foto e devolve marca, modelo, número de série, capacidade (BTU/TR), tensão, frequência e refrigerante já preenchidos. Leva cerca de 5 segundos. Você confere, ajusta se precisar, e salva. Cota mensal: <strong>Plus 30 análises/mês</strong>, <strong>Pro 200 análises/mês</strong>. Free ganha 1 análise/mês como teste.
             </p>
           </details>
 

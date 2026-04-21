@@ -20,11 +20,31 @@ export function renderShellViews() {
                 <div class="dash__hero-chips" id="dash-hero-chips"></div>
               </div>
               <div class="dash__hero-cta-wrap">
+                <!--
+                  CTA primário. No estado normal (tem equipamento, sem alerta
+                  crítico) vira "Cadastrar com foto" (IA) — feature diferenciadora.
+                  Em alerta de parque, vira a ação recomendada do alerta. Em
+                  empty state (sem equipamento), vira "Cadastrar meu primeiro".
+                -->
                 <button class="dash__hero-cta" id="dash-hero-cta" type="button" data-nav="registro">
-                  <span class="dash__hero-cta-icon" aria-hidden="true">
+                  <span class="dash__hero-cta-icon" aria-hidden="true" id="dash-hero-cta-icon">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></svg>
                   </span>
                   <span class="dash__hero-cta-label" id="dash-hero-cta-label">Registrar manutenção</span>
+                </button>
+                <!--
+                  CTA secundário. Só aparece no estado "normal" (tem equipamento,
+                  sem alerta) como atalho pra registro de serviço. Ícone raio +
+                  texto curto. Visual discreto (outline) pra não competir com o
+                  primário, mas presente pra manter muscle memory do técnico que
+                  vem pra registrar todo dia.
+                -->
+                <button class="dash__hero-cta dash__hero-cta--secondary" id="dash-hero-cta-secondary"
+                  type="button" data-nav="registro" hidden>
+                  <span class="dash__hero-cta-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></svg>
+                  </span>
+                  <span class="dash__hero-cta-label" id="dash-hero-cta-secondary-label">Registrar serviço</span>
                 </button>
               </div>
             </article>
@@ -32,10 +52,19 @@ export function renderShellViews() {
             <!-- Empty state (sem equipamento) -->
             <div id="dash-empty" class="dash__empty" hidden></div>
 
-            <!-- Onboarding + Usage meter + Upgrade card (mantidos para integração de plano) -->
+            <!--
+              Onboarding + Overflow banner.
+              O banner de overflow é um slot fino (só uma linha) que aparece
+              quando o usuário Free ultrapassa um limite. Substitui o par
+              usage-meter + upgrade-card que ficava aqui antes — esses dois
+              blocos empurravam KPIs e cards pra baixo mesmo quando o usuário
+              ainda estava dentro dos limites, e no Free over-limit ainda por
+              cima duplicavam a mensagem "você precisa do Plus". Mantemos só
+              o banner discreto + um modal one-shot acionado pelo dashboard
+              no primeiro overflow.
+            -->
             <div id="dash-onboarding"></div>
-            <div id="dash-usage-meter"></div>
-            <div id="dash-upgrade-card"></div>
+            <div id="dash-overflow-banner"></div>
 
             <!-- KPI Grid — 2×2 mobile / 1×4 desktop -->
             <section class="dash__kpi-grid" aria-label="Indicadores principais">
@@ -180,6 +209,7 @@ export function renderShellViews() {
             <div class="equip-hero__head">
               <h1 class="equip-hero__title" id="equip-hero-title">Organizar parque</h1>
               <p class="equip-hero__sub" id="equip-hero-sub"></p>
+              <div class="equip-hero__cta" id="equip-hero-sem-setor-cta" hidden></div>
             </div>
             <div class="equip-hero__kpis" id="equip-hero-kpis" role="list"></div>
           </section>
@@ -353,11 +383,11 @@ export function renderShellViews() {
               </div>
 
               <div class="registro-field">
-                <label class="registro-field__label" for="r-obs">Descreva o serviço</label>
+                <label class="registro-field__label" for="r-obs">O que foi feito?</label>
                 <textarea id="r-obs" class="registro-field__textarea registro-obs"
-                  placeholder="O que foi encontrado e o que foi feito. Ex: Filtros sujos, limpeza realizada. Pressão de sucção 68 psi, dentro do normal. Sistema operando corretamente."
+                  placeholder="Ex.: limpei filtros e verifiquei pressão de sucção — tudo ok."
                   ></textarea>
-                <p class="registro-field__help">Seja específico — esse texto vai no relatório que você envia ao cliente.</p>
+                <p class="registro-field__help">Em poucas palavras. Esse texto vai no relatório que você envia ao cliente.</p>
               </div>
 
               <div class="registro-field">
@@ -463,6 +493,21 @@ export function renderShellViews() {
                   <div class="registro-photo-drop__meta">ATÉ 5 FOTOS · JPG OU PNG</div>
                   <input type="file" accept="image/*" multiple id="input-fotos" aria-label="Adicionar fotos" />
                 </label>
+
+                <!-- Atalho "Tirar foto agora" — só aparece em mobile (CSS esconde
+                     em desktop via hover:hover). capture="environment" abre a
+                     câmera direto, sem passar pelo picker de galeria. -->
+                <label class="equip-photo-shortcut" for="input-fotos-camera">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
+                      stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+                    <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="1.6" />
+                  </svg>
+                  Tirar foto agora
+                </label>
+                <input type="file" accept="image/*" capture="environment" id="input-fotos-camera"
+                  class="visually-hidden" aria-label="Tirar foto com a câmera" />
+
                 <div class="photo-grid" id="photo-preview" role="list" aria-label="Fotos adicionadas"></div>
               </div>
             </details>
@@ -516,7 +561,7 @@ export function renderShellViews() {
               </button>
               <button class="btn btn--primary registro-actions__primary" data-action="save-registro">
                 <svg aria-hidden="true"><use href="#ri-save"/></svg>
-                <span>Salvar registro</span>
+                <span>Finalizar serviço</span>
               </button>
             </div>
             <div class="registro-sig-hint" id="registro-signature-hint" hidden>

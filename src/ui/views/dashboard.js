@@ -20,7 +20,7 @@ import { Alerts } from '../../domain/alerts.js';
 import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner, Profile } from '../components/onboarding.js';
 import { UpgradeNudge } from '../components/upgradeNudge.js';
-import { UsageMeter } from '../components/usageMeter.js';
+import { OverflowBanner } from '../components/overflowBanner.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { fetchMyProfileBilling } from '../../core/plans/monetization.js';
 import {
@@ -539,9 +539,16 @@ function _renderHero({
     }
   }
 
-  // CTA
+  // CTA primário + secundário.
+  // Regras:
+  //   tone=alert            → primário = ação do alerta (safety first), sem secundário
+  //   equipCount===0        → primário = "Cadastrar meu primeiro" (abre modal), sem secundário
+  //   "tudo operando" (ok)  → primário = "Cadastrar com foto" (IA, diferenciador),
+  //                           secundário = "Registrar serviço" (muscle memory)
   const ctaBtn = document.getElementById('dash-hero-cta');
   const ctaLabel = document.getElementById('dash-hero-cta-label');
+  const ctaIcon = document.getElementById('dash-hero-cta-icon');
+  const ctaSecondary = document.getElementById('dash-hero-cta-secondary');
   if (ctaBtn && ctaLabel) {
     if (tone === 'alert' && primaryAlert) {
       const actionMeta = _getAlertActionMeta(primaryAlert);
@@ -549,16 +556,35 @@ function _renderHero({
       ctaBtn.setAttribute('data-id', actionMeta.id);
       ctaBtn.removeAttribute('data-nav');
       ctaLabel.textContent = actionMeta.label;
+      if (ctaIcon) ctaIcon.innerHTML = DASH_SVG.alert || '';
+      if (ctaSecondary) ctaSecondary.hidden = true;
     } else if (equipCount === 0) {
       ctaBtn.setAttribute('data-action', 'open-modal');
       ctaBtn.setAttribute('data-id', 'modal-add-eq');
       ctaBtn.removeAttribute('data-nav');
       ctaLabel.textContent = 'Cadastrar equipamento';
+      if (ctaIcon) {
+        // Ícone de câmera pra indicar que o cadastro pode ser feito por foto
+        // (Free trial ou Plus+). Reforço visual do diferenciador já no primeiro
+        // contato do user com o app.
+        ctaIcon.innerHTML =
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.5" /></svg>';
+      }
+      if (ctaSecondary) ctaSecondary.hidden = true;
     } else {
-      ctaBtn.setAttribute('data-nav', 'registro');
-      ctaBtn.removeAttribute('data-action');
-      ctaBtn.removeAttribute('data-id');
-      ctaLabel.textContent = 'Registrar serviço';
+      // Estado normal (tudo operando, com equipamentos): promove IA como
+      // CTA primário — é o diferencial de mercado e a função que reduz
+      // fricção de cadastro. Secundário = "Registrar serviço" pra manter
+      // atalho direto pro fluxo mais frequente do técnico.
+      ctaBtn.setAttribute('data-action', 'open-modal');
+      ctaBtn.setAttribute('data-id', 'modal-add-eq');
+      ctaBtn.removeAttribute('data-nav');
+      ctaLabel.textContent = 'Cadastrar com foto';
+      if (ctaIcon) {
+        ctaIcon.innerHTML =
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.5" /></svg>';
+      }
+      if (ctaSecondary) ctaSecondary.hidden = false;
     }
   }
 }
@@ -1101,25 +1127,25 @@ export async function renderDashboard() {
     _renderCriticosSection({ equipamentos, alerts });
     _renderRecentesSection({ registros });
 
-    // Plan extras: onboarding + usage meter + upgrade card
+    // Plan extras: onboarding + overflow banner (Free only)
     OnboardingBanner.render();
 
-    const usageMeterHost = document.getElementById('dash-usage-meter');
-    if (usageMeterHost) {
-      // Em contas Pro o badge "Plano Pro ativo" já aparece no hero superior,
-      // então escondemos o medidor de uso para manter a tela mais clean.
-      usageMeterHost.innerHTML = planContext.hasPro
-        ? ''
-        : UsageMeter.render({ planCode: planContext.planCode });
-    }
-
-    const upgradeCardHost = document.getElementById('dash-upgrade-card');
-    if (upgradeCardHost) {
-      // Mesma ideia: suprime o card "Plano Pro ativo" redundante e mantém
-      // apenas o nudge de upgrade para quem ainda não tem Pro.
-      upgradeCardHost.innerHTML = planContext.hasPro
-        ? ''
-        : UpgradeNudge.renderDashboardCard({ planCode: planContext.planCode });
+    // Banner + modal de overflow (só para Free acima dos limites).
+    // Substitui o par usage-meter + upgrade-card anteriores — aparece
+    // apenas quando há razão, em vez de ocupar espaço permanentemente.
+    const overflowHost = document.getElementById('dash-overflow-banner');
+    if (overflowHost) {
+      if (planContext.hasPro || planContext.planCode === PLAN_CODE_PLUS) {
+        overflowHost.innerHTML = '';
+      } else {
+        const overflow = OverflowBanner.computeState({ equipamentos, registros });
+        overflowHost.innerHTML = overflow.overLimit
+          ? OverflowBanner.render({ state: overflow })
+          : '';
+        if (overflow.overLimit) {
+          OverflowBanner.maybeShowFirstTimeModal({ state: overflow });
+        }
+      }
     }
 
     // Header global (status, sync, badges)

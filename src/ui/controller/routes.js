@@ -37,8 +37,15 @@ export function registerAppRoutes() {
     updateHeader();
   });
 
-  registerRoute('relatorio', () => {
+  registerRoute('relatorio', (params = {}) => {
     populateRelatorioSelects();
+    // Pré-filtro por equipamento (usado pelo PostSaveRegistroToast: usuário
+    // acabou de salvar um serviço e clicou em "Gerar PDF do relatório" →
+    // cai aqui com o select já apontando pro equipamento certo).
+    if (params.equipId) {
+      const select = document.getElementById('rel-equip');
+      if (select) select.value = String(params.equipId);
+    }
     renderRelatorio();
     updateHeader();
   });

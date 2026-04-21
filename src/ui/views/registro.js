@@ -19,6 +19,7 @@ import { trackEvent } from '../../core/telemetry.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { validateRegistroPayload } from '../../core/inputValidation.js';
 import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
+import { PostSaveRegistroToast } from '../components/postSaveRegistroToast.js';
 
 // O meter de progresso vive estático dentro do hero do template.
 // Apontamos pro hero + o contador numérico ao invés de injetar markup na hora.
@@ -677,17 +678,21 @@ export async function saveRegistro() {
   SavedHighlight.markForHighlight(novoId);
   _saveLastClient({ clienteNome, clienteDocumento, localAtendimento, clienteContato });
   clearRegistro();
-  Toast.success('Serviço registrado com sucesso.');
 
-  const { registros } = getState();
-  if (registros.length > 0 && registros.length % 3 === 0) {
-    setTimeout(
-      () =>
-        Toast.info(
-          `💡 Você tem ${registros.length} registros. Gere um relatório PDF para enviar ao cliente.`,
-        ),
-      1800,
-    );
+  // Feedback pós-save: toast rico com CTAs pra fechar o ciclo "salvou →
+  // manda pro cliente". Substitui o Toast.success genérico + o hint viral
+  // que dispara a cada 3 registros (agora redundante — todo save já oferece
+  // o caminho). Ambos os CTAs só NAVEGAM pra view de relatório pré-filtrada;
+  // o consumo de quota continua acontecendo no clique do export real.
+  const eqForToast = equipamentos.find((e) => e.id === equipId) || null;
+  const toastShown = PostSaveRegistroToast.show({
+    equipId,
+    equipName: eqForToast?.nome || null,
+  });
+  // Fallback: se não tinha equipId (edge case) ou o toast recusou renderizar,
+  // volta pro feedback simples — user ainda precisa saber que salvou.
+  if (!toastShown) {
+    Toast.success('Serviço registrado com sucesso.');
   }
 
   goTo('historico');
@@ -761,8 +766,8 @@ export function clearRegistro(preserveEquip = false) {
     // Preserva o SVG do ícone (o redesign v6 colocou svg + span no botão).
     // Alterar textContent aqui mataria o ícone — por isso só mexemos no span.
     const saveLabel = saveBtn.querySelector('span');
-    if (saveLabel) saveLabel.textContent = 'Salvar registro';
-    else saveBtn.textContent = 'Salvar registro';
+    if (saveLabel) saveLabel.textContent = 'Finalizar serviço';
+    else saveBtn.textContent = 'Finalizar serviço';
     saveBtn.classList.remove('btn--editing');
   }
 

@@ -4,9 +4,12 @@
  * Gerencia o hero CTA no modal-add-eq + o overlay de scan que aparece enquanto
  * a IA processa a foto. Três responsabilidades:
  *
- *   1. `applyNameplateCtaGate(isPlusOrPro)` — toggle entre o estado "active"
- *      (Plus+ pode usar) e "locked" (Free vê upsell). Chamado no open-modal
- *      + quando o plano muda.
+ *   1. `applyNameplateCtaGate({isPlusOrPro, trialRemaining})` — toggle entre
+ *      três estados:
+ *        - "active" (Plus+ ou Pro): botão direto, ilimitado
+ *        - "trial"  (Free com quota): botão direto + badge "teste grátis"
+ *        - "locked" (Free esgotou OU plano desconhecido): botão pro upsell
+ *      Chamado no open-modal + quando o plano/quota muda.
  *
  *   2. Listener `change` no input file escondido. Quando o user seleciona
  *      uma foto:
@@ -80,7 +83,24 @@ const ID_SCAN_RESULT_PERCENT = 'nameplate-scan-result-percent';
 const ID_SCAN_RESULT_SUB = 'nameplate-scan-result-sub';
 
 const DEFAULT_SUB = 'A IA preenche tipo, fluido, marca/modelo e mais 13 campos pra você.';
-const NOT_DETECTED_PLACEHOLDER = 'não detectado — toque pra preencher';
+// Placeholder mais curto e acionável — o contexto ("não encontrei na etiqueta")
+// foi pro badge no label, pra liberar o espaço do placeholder pra CTA pura.
+const NOT_DETECTED_PLACEHOLDER = 'Toque para completar';
+
+// Classes/ids usados pra marcar campos preenchidos pela IA no form. O badge
+// "IA" vive no <label>; o halo azul na borda vive no input. Dois sinais no
+// máximo por decisão de design — não polui e o olho capta no primeiro scan.
+const AI_FILLED_CLASS = 'is-ai-filled';
+const AI_BADGE_CLASS = 'form-label__ai-badge';
+// Espelho do AI_BADGE pro caso oposto: campo que a IA tentou mas não achou.
+// Carrega o contexto ("não encontrei") que saiu do placeholder pra deixar a
+// CTA do placeholder mais limpa.
+const MISSING_BADGE_CLASS = 'form-label__missing-badge';
+const ID_ETIQUETA_STATUS = 'eq-etiqueta-status';
+const DEFAULT_ETIQUETA_STATUS = '— opcional, a IA preenche por foto';
+const ID_AI_BANNER = 'eq-ai-banner';
+const ID_AI_BANNER_TITLE = 'eq-ai-banner-title';
+const ID_AI_BANNER_SUB = 'eq-ai-banner-sub';
 
 // Total de campos preenchíveis pela IA (usado pro "X/16").
 const AI_FIELD_IDS = [
@@ -103,17 +123,44 @@ const AI_FIELD_IDS = [
 const AI_FIELD_TOTAL = AI_FIELD_IDS.length + 1; // +1 porque "marca" e "modelo" viram um string só, mas conceitualmente são 2 campos da etiqueta
 
 /**
- * Aplica o gate de plano no CTA. Chamado quando o modal abre.
+ * Aplica o gate de plano no CTA. Três estados possíveis:
  *
- * @param {boolean} isPlusOrPro — `true` se o plano do user libera a feature.
+ *  - `active` (Plus+): botão primário que abre o file picker. Ilimitado.
+ *  - `trial` (Free com quota restante): mesmo botão, mas com badge "teste
+ *    grátis" e subtitle contando uso do mês. Gera demanda orgânica de Plus
+ *    quando o user curte e volta e percebe que já usou o do mês.
+ *  - `locked` (Free sem quota OU plano desconhecido): botão pro upsell.
+ *
+ * Aceita tanto boolean (legado, == isPlusOrPro) quanto objeto
+ * `{ isPlusOrPro, trialRemaining }` pra o novo fluxo de teste grátis.
+ *
+ * @param {boolean | {isPlusOrPro?: boolean, trialRemaining?: number | null}} [config]
  */
-export function applyNameplateCtaGate(isPlusOrPro = false) {
+export function applyNameplateCtaGate(config = false) {
+  const opts =
+    typeof config === 'boolean'
+      ? { isPlusOrPro: config, trialRemaining: null }
+      : {
+          isPlusOrPro: Boolean(config?.isPlusOrPro),
+          trialRemaining:
+            config?.trialRemaining === null || config?.trialRemaining === undefined
+              ? null
+              : Number(config.trialRemaining),
+        };
+
   const cta = document.getElementById(ID_CTA);
   if (!cta) return;
 
+  const resolved = resolveCtaPresentation(opts);
+
   cta.hidden = false;
-  cta.dataset.state = isPlusOrPro ? 'active' : 'locked';
-  setSubtitle(DEFAULT_SUB);
+  cta.dataset.state = resolved.state;
+  if (resolved.trialRemaining !== null) {
+    cta.dataset.trialRemaining = String(resolved.trialRemaining);
+  } else {
+    delete cta.dataset.trialRemaining;
+  }
+  setSubtitle(resolved.subtitle);
 
   bindOnce();
 
@@ -123,9 +170,43 @@ export function applyNameplateCtaGate(isPlusOrPro = false) {
     cta.dataset.ctaShown = '1';
     trackEvent('nameplate_cta_shown', {
       source: 'equip_modal',
-      gate: isPlusOrPro ? 'active' : 'locked',
+      gate: resolved.state,
+      trial_remaining: resolved.trialRemaining,
     });
   }
+}
+
+/**
+ * Decide estado + microcopy do CTA a partir do plano e quota mensal.
+ * Isolado pra facilitar testes e pra deixar a lógica de "qual mensagem em
+ * qual estado" numa única função auditável.
+ */
+function resolveCtaPresentation({ isPlusOrPro, trialRemaining }) {
+  if (isPlusOrPro) {
+    return { state: 'active', subtitle: DEFAULT_SUB, trialRemaining: null };
+  }
+  if (trialRemaining === null) {
+    // Plano desconhecido (cache stale, fetch falhou). Default conservador:
+    // trata como locked — mostra upsell. Se o re-check async chegar e
+    // descobrir que é Plus ou tem quota, reaplica o gate.
+    return { state: 'locked', subtitle: DEFAULT_SUB, trialRemaining: null };
+  }
+  const remaining = Number.isFinite(trialRemaining) ? Math.max(0, Math.round(trialRemaining)) : 0;
+  if (remaining > 0) {
+    return {
+      state: 'trial',
+      subtitle: `🎁 Teste grátis — ${remaining === 1 ? '1 análise este mês' : `${remaining} análises este mês`}. A IA preenche os 16 campos da etiqueta por você.`,
+      trialRemaining: remaining,
+    };
+  }
+  // remaining === 0 → Free que já gastou o uso do mês. Subtitle focada em
+  // conversão ("assine o Plus pra ilimitado") em vez de "feature exclusiva"
+  // genérico — carrega sinal de que o user JÁ EXPERIMENTOU o valor.
+  return {
+    state: 'locked',
+    subtitle: 'Você já usou seu teste grátis este mês. Assine o Plus pra escanear ilimitado.',
+    trialRemaining: 0,
+  };
 }
 
 /**
@@ -231,6 +312,20 @@ async function handleFile(file) {
     showScanResult(filledCount, detectedPercent);
 
     applyFieldsToForm(fields);
+    flashEtiquetaStatus(filledCount);
+    showAiBanner(filledCount);
+
+    // Trial consumption telemetry: se a resposta traz `_trial`, o user era
+    // Free e acabou de gastar 1 uso. Emite evento dedicado pra separar o
+    // funil "usou o teste grátis" do funil "usou análise normal (Plus+)".
+    const trialMeta = fields?._trial ?? null;
+    if (trialMeta?.consumed) {
+      trackEvent('nameplate_free_trial_used', {
+        trial_limit: trialMeta.limit ?? null,
+        trial_remaining: trialMeta.remaining ?? null,
+        fields_filled_count: filledCount,
+      });
+    }
 
     trackEvent('nameplate_analyzed', {
       success: true,
@@ -239,6 +334,8 @@ async function handleFile(file) {
       fields_total: AI_FIELD_TOTAL,
       detected_percent: detectedPercent,
       duration_ms: duration,
+      trial_consumed: Boolean(trialMeta?.consumed),
+      trial_remaining: trialMeta?.remaining ?? null,
     });
 
     setSubtitle(
@@ -246,7 +343,14 @@ async function handleFile(file) {
         ? `Pronto — ${filledCount}/${AI_FIELD_TOTAL} campos preenchidos. Revise antes de salvar.`
         : 'Etiqueta lida, mas nenhum campo bateu. Confira a foto.',
     );
-    cta.dataset.state = prevState === 'locked' ? 'locked' : 'active';
+    // Reconcilia estado do CTA pós-análise. Se o user era Free e acabou de
+    // gastar o último uso, vira 'locked' — pra próxima tentativa não passar.
+    // Se era trial com quota remanescente, fica 'trial'. Plus+ fica 'active'.
+    if (trialMeta?.consumed) {
+      applyNameplateCtaGate({ isPlusOrPro: false, trialRemaining: trialMeta.remaining ?? 0 });
+    } else {
+      cta.dataset.state = prevState === 'locked' ? 'locked' : 'active';
+    }
 
     if (filledCount > 0) {
       Toast.success(
@@ -271,9 +375,37 @@ async function handleFile(file) {
 
     let stageMsg = message;
     if (code === ERR_PLAN_GATE) {
-      cta.dataset.state = 'locked';
-      stageMsg = 'Feature exclusiva Plus+';
-      setSubtitle('Feature exclusiva Plus+. Faça upgrade pra destravar.');
+      // 3 caminhos possíveis agora que Plus e Pro também têm cap mensal:
+      //   - Free teste esgotado (conversão → Plus)
+      //   - Free nunca usou (CTA locked, mostra "Feature exclusiva Plus+")
+      //   - Plus esgotou (sugere Pro ou espera próximo ciclo)
+      //   - Pro esgotou (mensagem "fale com a gente" ou espera)
+      const details = err instanceof NameplateAnalysisError ? (err.details ?? {}) : {};
+      const currentPlan = details.currentPlan || 'free';
+      const quotaExhausted = Boolean(details.quotaExhausted ?? details.trialExhausted);
+
+      if (currentPlan === 'pro' && quotaExhausted) {
+        stageMsg = 'Cota mensal do Pro atingida';
+        setSubtitle('Você atingiu 200 análises/mês no Pro. Reseta no dia 1º.');
+        cta.dataset.state = prevState === 'locked' ? 'locked' : 'active';
+        trackEvent('nameplate_quota_hit', { source: 'equip_modal', plan: 'pro' });
+      } else if (currentPlan === 'plus' && quotaExhausted) {
+        stageMsg = 'Cota mensal do Plus atingida';
+        setSubtitle(
+          'Você atingiu 30 análises/mês no Plus. Faça upgrade pra Pro ou aguarde o próximo ciclo.',
+        );
+        cta.dataset.state = prevState === 'locked' ? 'locked' : 'active';
+        trackEvent('nameplate_quota_hit', { source: 'equip_modal', plan: 'plus' });
+      } else if (quotaExhausted) {
+        // Free esgotado — usa alias trialExhausted legado
+        applyNameplateCtaGate({ isPlusOrPro: false, trialRemaining: 0 });
+        stageMsg = 'Teste grátis do mês esgotado';
+        trackEvent('nameplate_trial_exhausted_hit', { source: 'equip_modal' });
+      } else {
+        cta.dataset.state = 'locked';
+        stageMsg = 'Feature exclusiva Plus+';
+        setSubtitle('Feature exclusiva Plus+. Faça upgrade pra destravar.');
+      }
     } else if (code === ERR_NO_SESSION) {
       stageMsg = 'Sessão expirada';
       setSubtitle('Sessão expirada. Faça login e tente de novo.');
@@ -353,7 +485,7 @@ function setSelectIfHas(id, value) {
   if (!el) return;
   if (value != null && value !== '' && selectHasValue(el, value)) {
     el.value = value;
-    el.classList.remove('is-not-detected');
+    markAiFilled(el);
     el.dispatchEvent(new Event('change', { bubbles: true }));
   } else {
     markNotDetected(el);
@@ -366,10 +498,58 @@ function setInput(id, value) {
   if (!el) return;
   if (value != null && value !== '') {
     el.value = value;
-    el.classList.remove('is-not-detected');
+    markAiFilled(el);
     el.dispatchEvent(new Event('input', { bubbles: true }));
   } else {
     markNotDetected(el);
+  }
+}
+
+/** Pega o <label> associado a um input via `for=id`. */
+function getLabelFor(el) {
+  if (!el || !el.id) return null;
+  return document.querySelector(`label[for="${el.id}"]`);
+}
+
+/**
+ * Aplica visual "preenchido pela IA" no campo: halo azul na borda + badge
+ * "IA" no label. Some automaticamente quando o user edita o campo — indica
+ * que ele assumiu controle daquele valor.
+ *
+ * Usa `isTrusted` no listener pra ignorar o `input`/`change` sintético que
+ * o setInput dispara logo depois de marcar (senão o badge sumia na hora).
+ */
+function markAiFilled(el) {
+  if (!el) return;
+  el.classList.add(AI_FILLED_CLASS);
+  el.classList.remove('is-not-detected');
+
+  const label = getLabelFor(el);
+  if (label) {
+    // Se tinha badge "falta preencher" de uma análise anterior, remove.
+    label.querySelector(`.${MISSING_BADGE_CLASS}`)?.remove();
+    if (!label.querySelector(`.${AI_BADGE_CLASS}`)) {
+      const badge = document.createElement('span');
+      badge.className = AI_BADGE_CLASS;
+      badge.setAttribute('aria-label', 'Preenchido automaticamente pela IA');
+      badge.textContent = 'IA';
+      label.appendChild(badge);
+    }
+  }
+
+  if (!el.dataset.aiFilledBound) {
+    const release = (ev) => {
+      // Só reage a edições reais do user — o setInput dispara input sintético.
+      if (ev && ev.isTrusted === false) return;
+      el.classList.remove(AI_FILLED_CLASS);
+      getLabelFor(el)?.querySelector(`.${AI_BADGE_CLASS}`)?.remove();
+      el.removeEventListener('input', release);
+      el.removeEventListener('change', release);
+      delete el.dataset.aiFilledBound;
+    };
+    el.addEventListener('input', release);
+    el.addEventListener('change', release);
+    el.dataset.aiFilledBound = '1';
   }
 }
 
@@ -385,16 +565,36 @@ function markNotDetected(el) {
   }
   el.value = '';
   el.classList.add('is-not-detected');
+  el.classList.remove(AI_FILLED_CLASS);
+
+  // Troca badges no label: remove "IA" (se existia de reanálise) e injeta
+  // "não encontrei na etiqueta". O badge some quando o user foca o campo —
+  // mesmo gatilho do placeholder original.
+  const label = getLabelFor(el);
+  if (label) {
+    label.querySelector(`.${AI_BADGE_CLASS}`)?.remove();
+    if (!label.querySelector(`.${MISSING_BADGE_CLASS}`)) {
+      const badge = document.createElement('span');
+      badge.className = MISSING_BADGE_CLASS;
+      badge.setAttribute('aria-label', 'Não encontrei na etiqueta');
+      badge.innerHTML =
+        '<span class="form-label__missing-badge__dot" aria-hidden="true">⚠</span> não encontrei';
+      label.appendChild(badge);
+    }
+  }
+
   if (el.tagName === 'INPUT') {
     el.setAttribute('placeholder', NOT_DETECTED_PLACEHOLDER);
     // Quando o user foca pra digitar, restaura o placeholder original
-    // (ex: "Ex: 9000, 12000, 24000") pra ajudar no preenchimento manual.
+    // (ex: "Ex: 9000, 12000, 24000") e some com o badge "missing" —
+    // sinaliza que ele assumiu controle.
     if (!el.dataset.notDetectedBound) {
       el.addEventListener(
         'focus',
         () => {
           el.classList.remove('is-not-detected');
           el.setAttribute('placeholder', el.dataset.originalPlaceholder ?? '');
+          getLabelFor(el)?.querySelector(`.${MISSING_BADGE_CLASS}`)?.remove();
         },
         { once: true },
       );
@@ -403,16 +603,81 @@ function markNotDetected(el) {
   }
 }
 
-/** Remove marcas "não detectado" de todos os campos — usado no reset. */
+/**
+ * Remove marcas "não detectado" E "preenchido pela IA" de todos os campos.
+ * Usado no reset entre aberturas do modal — garante que resíduo visual de
+ * uma análise anterior não vaze pro próximo cadastro.
+ */
 function clearNotDetectedMarks() {
   AI_FIELD_IDS.forEach((id) => {
     const el = Utils.getEl(id);
     if (!el) return;
     el.classList.remove('is-not-detected');
+    el.classList.remove(AI_FILLED_CLASS);
+    delete el.dataset.aiFilledBound;
     if (el.dataset.originalPlaceholder !== undefined && el.tagName === 'INPUT') {
       el.setAttribute('placeholder', el.dataset.originalPlaceholder);
     }
+    const label = getLabelFor(el);
+    if (label) {
+      label.querySelector(`.${AI_BADGE_CLASS}`)?.remove();
+      label.querySelector(`.${MISSING_BADGE_CLASS}`)?.remove();
+    }
   });
+
+  // Restaura o status default da subseção "Dados da etiqueta".
+  const statusEl = document.getElementById(ID_ETIQUETA_STATUS);
+  if (statusEl) {
+    statusEl.textContent = DEFAULT_ETIQUETA_STATUS;
+    statusEl.classList.remove('is-flash');
+  }
+
+  hideAiBanner();
+}
+
+/**
+ * Mostra o banner de "Dados preenchidos automaticamente" no topo do form.
+ * Dois propósitos:
+ *   - reforço emocional ("funcionou!")
+ *   - reforço de valor ("você economizou tempo")
+ *
+ * O texto secundário é adaptativo ao número de campos detectados:
+ *   - 0 campos  → banner não aparece
+ *   - 1-4       → "Complete os que faltam e finalize o cadastro."
+ *   - 5+        → "Você economizou tempo — revise e finalize."
+ */
+function showAiBanner(filledCount) {
+  if (filledCount <= 0) {
+    hideAiBanner();
+    return;
+  }
+  const banner = document.getElementById(ID_AI_BANNER);
+  const title = document.getElementById(ID_AI_BANNER_TITLE);
+  const sub = document.getElementById(ID_AI_BANNER_SUB);
+  if (!banner) return;
+
+  if (title) {
+    title.textContent = `✨ ${filledCount} ${filledCount === 1 ? 'campo preenchido' : 'campos preenchidos'} automaticamente`;
+  }
+  if (sub) {
+    sub.textContent =
+      filledCount >= 5
+        ? '⏱️ Você economizou tempo — revise rapidamente e finalize o cadastro.'
+        : 'Complete os campos que faltam e finalize o cadastro.';
+  }
+  banner.hidden = false;
+  // Toggle da classe pra replay da animação em reanálises na mesma abertura.
+  banner.classList.remove('is-enter');
+  void banner.offsetWidth;
+  banner.classList.add('is-enter');
+}
+
+function hideAiBanner() {
+  const banner = document.getElementById(ID_AI_BANNER);
+  if (banner) {
+    banner.hidden = true;
+    banner.classList.remove('is-enter');
+  }
 }
 
 function selectHasValue(selectEl, value) {
@@ -449,6 +714,29 @@ function scrollToDetails() {
 function setSubtitle(text) {
   const sub = document.getElementById(ID_SUB);
   if (sub) sub.textContent = text;
+}
+
+/**
+ * Atualiza o meta da subseção "Dados da etiqueta" com confirmação do que a
+ * IA preencheu e aciona o pulse. Serve como micro-feedback contextual logo
+ * acima dos campos, complementando o Toast.success global.
+ *
+ * A animação é disparada via toggle de classe: remove → force reflow → add,
+ * pra garantir que replays (reanálise na mesma abertura do modal) também
+ * pulsam e não ficam "presos" no estado final do primeiro ciclo.
+ */
+function flashEtiquetaStatus(filledCount) {
+  const el = document.getElementById(ID_ETIQUETA_STATUS);
+  if (!el) return;
+  const msg =
+    filledCount > 0
+      ? `✓ ${filledCount} ${filledCount === 1 ? 'campo preenchido' : 'campos preenchidos'} automaticamente — revise abaixo`
+      : '— toque nos campos pra preencher manualmente';
+  el.textContent = msg;
+  el.classList.remove('is-flash');
+  // Force reflow pra reiniciar a animação CSS.
+  void el.offsetWidth;
+  el.classList.add('is-flash');
 }
 
 /** Conta quantos campos do retorno da API vieram preenchidos. */
