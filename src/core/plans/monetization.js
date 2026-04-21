@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { supabase } from '../supabase.js';
 import {
   PLAN_CODE_FREE,
   PLAN_CODE_PLUS,

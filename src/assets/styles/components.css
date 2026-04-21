@@ -1232,8 +1232,202 @@ textarea.form-control {
   gap: var(--space-2);
 }
 
+/* ── Locked state (Free plan) ────────────────────────────────────────────
+   Quando o bloco recebe a classe .equip-photo-block--locked, a dropzone,
+   o atalho de câmera, o contador e o preview somem — só sobra o card de
+   upsell (.equip-photo-locked). Toggle feito via applyEquipPhotosGate.
+   Mantemos os inputs file no DOM pra não matar listeners, mas eles já
+   são visually-hidden e não são alcançados por tab porque o label que
+   os ativa também fica oculto. */
+.equip-photo-block--locked .equip-photo-dropzone,
+.equip-photo-block--locked .equip-photo-shortcut,
+.equip-photo-block--locked .equip-photo-preview,
+.equip-photo-block--locked .equip-photo-counter {
+  display: none !important;
+}
+
+.equip-photo-locked[hidden] {
+  display: none;
+}
+
+.equip-photo-locked {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+  border: 1px dashed color-mix(in srgb, var(--primary) 30%, var(--border-2));
+}
+
+.equip-photo-locked__icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.equip-photo-locked__text {
+  min-width: 0;
+}
+
+.equip-photo-locked__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.equip-photo-locked__sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+.equip-photo-locked__cta {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Mobile: empilha o CTA embaixo pra não espremer o título. */
+@media (max-width: 420px) {
+  .equip-photo-locked {
+    grid-template-columns: auto 1fr;
+  }
+  .equip-photo-locked__cta {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+}
+
 .equip-photo-preview:empty {
   display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Hero CTA: "Aponta a câmera pra placa" (IA preenche o form).
+   ─────────────────────────────────────────────────────────────────────
+   Dois estados mutuamente exclusivos, toggled via data-state:
+   - data-state="active": Plus+ com tudo funcionando
+   - data-state="locked": Free vê CTA de upgrade no mesmo layout
+   - data-state="busy":   Analisando... (spinner + subtitle dinâmico)
+   - data-state="hidden": [hidden] attribute ligado (estado inicial)
+
+   Por que reaproveitar o layout: quando o user faz upgrade, o CTA muda
+   de comportamento sem mudar visualmente — evita "salto" que confunde
+   quem não entendeu por que o botão sumiu/apareceu.
+   ═══════════════════════════════════════════════════════════════════════ */
+.nameplate-cta {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 7%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border-2));
+  transition: border-color 150ms ease;
+}
+
+.nameplate-cta[hidden] {
+  display: none;
+}
+
+.nameplate-cta__icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.nameplate-cta__text {
+  min-width: 0;
+}
+
+.nameplate-cta__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.nameplate-cta__sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+.nameplate-cta__action {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.nameplate-cta__btn {
+  white-space: nowrap;
+}
+
+/* Um botão ligado por vez — o outro fica display:none via seletores
+   de estado. Evita que os dois apareçam simultaneamente. */
+.nameplate-cta__btn--active,
+.nameplate-cta__btn--locked {
+  display: none;
+}
+.nameplate-cta[data-state='active'] .nameplate-cta__btn--active,
+.nameplate-cta[data-state='busy'] .nameplate-cta__btn--active {
+  display: inline-flex;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__btn--locked {
+  display: inline-flex;
+}
+
+/* Estado "busy" (analisando): desabilita o botão visualmente, sub vira
+   mensagem de loading (swap feito pelo JS). */
+.nameplate-cta[data-state='busy'] {
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--border-2));
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+}
+.nameplate-cta[data-state='busy'] .nameplate-cta__btn--active {
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+/* Estado "locked" (Free): visual "apagado" pra sinalizar que é paywall. */
+.nameplate-cta[data-state='locked'] {
+  background: color-mix(in srgb, var(--primary) 5%, var(--card));
+  border-style: dashed;
+}
+
+/* Mobile: empilha o CTA embaixo pra não espremer o título. */
+@media (max-width: 420px) {
+  .nameplate-cta {
+    grid-template-columns: auto 1fr;
+  }
+  .nameplate-cta__action {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+  }
+  .nameplate-cta__btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* Marca visual sutil para fotos ainda não uploadadas: um indicador superior
@@ -3226,14 +3420,6 @@ mark,
   gap: 2px;
 }
 
-/* Legacy — PR3: tone-pill + summary único foram substituídos pela tripla
-   caption/headline/summary. Labels antigas seguem em display:none pra
-   qualquer consumer que ainda renderize o markup V2. */
-.eq-hero-score__label,
-.eq-hero-score__status {
-  display: none;
-}
-
 /* PR3 §12.1 — caption fixo (fica acima do headline). "SAÚDE OPERACIONAL
    · AGORA" em CAPS pequenos só pro técnico enquadrar o que vem a seguir. */
 .eq-hero-score__caption {
@@ -3369,13 +3555,6 @@ mark,
   color: #ffb0bf;
 }
 
-/* Legacy alias: styles antigas de eq-hero-stats mantidas em display:none
-   pra evitar flashes caso algum código legado ainda renderize. */
-.eq-hero-stats,
-.eq-hero-stat {
-  display: none;
-}
-
 /* ── Risk panel · T2 (PR3) ────────────────────────────────
    Tokens --tone/--tone-soft/--tone-edge/--tone-text espelham a
    convenção do equip-card e do hero. Border-left + ::after wash
@@ -3462,14 +3641,6 @@ mark,
 .eq-risk-panel__score b {
   color: var(--text-2);
   font-weight: 700;
-}
-
-/* Legacy — escondidos pra qualquer consumer antigo não quebrar o layout
-   enquanto migra pro novo markup. */
-.eq-risk-panel__class,
-.eq-risk-panel__badge,
-.eq-risk-panel__summary {
-  display: none;
 }
 
 .eq-risk-panel__factors {
@@ -3702,21 +3873,64 @@ mark,
   padding: 16px 0 4px;
 }
 
-/* legacy – mantido para compatibilidade */
-.eq-modal-summary {
+/* ─── OFFLINE BANNER ─── */
+/* Faixa fixa no topo que sinaliza perda de conexão. Complementa o Toast
+   transiente do onlineStatus.js, ficando visível enquanto offline.
+   Padding-top no body evita que o banner cubra o conteúdo. */
+.offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--warning) 92%, #000 8%);
+  color: #1a1205;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.offline-banner[hidden] {
   display: none;
 }
-.eq-modal-quick {
-  display: none;
+
+.offline-banner__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1a1205;
+  animation: offline-banner-pulse 1.6s ease-in-out infinite;
+  flex-shrink: 0;
 }
-.eq-detail-cta {
-  display: none;
+
+@keyframes offline-banner-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
 }
-.eq-detail-hero__badges {
-  display: none;
+
+.has-offline-banner {
+  padding-top: 36px;
 }
-.eq-score-factors {
-  display: none;
+
+@media (max-width: 480px) {
+  .offline-banner {
+    font-size: 12px;
+    padding: 7px 12px;
+  }
+  .has-offline-banner {
+    padding-top: 32px;
+  }
 }
 
 /* ─── SPINNER ─── */
@@ -11582,6 +11796,7 @@ select option {
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

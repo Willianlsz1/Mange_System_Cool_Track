@@ -26,7 +26,7 @@ import { Photos } from '../components/photos.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { updateHeader } from './dashboard.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
-import { isCachedPlanPlusOrHigher } from '../../core/planCache.js';
+import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
 
 // Free: histórico limitado aos últimos 15 dias (apertado pro usuário sentir o
 // valor do Plus/Pro sem deixar a conta inútil — cobre 2 semanas de operação).

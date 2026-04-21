@@ -4,7 +4,7 @@ import {
   PLAN_CODE_FREE,
   PLAN_CODE_PLUS,
   PLAN_CODE_PRO,
-} from './subscriptionPlans.js';
+} from './plans/subscriptionPlans.js';
 
 export const USAGE_RESOURCE_PDF_EXPORT = 'pdf_export';
 export const USAGE_RESOURCE_WHATSAPP_SHARE = 'whatsapp_share';

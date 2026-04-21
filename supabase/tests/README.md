@@ -91,6 +91,9 @@ rollback;
   em `public.registros`.
 - `06_protect_profile_fields.test.sql` — `protect_profile_fields` em
   `public.profiles`.
+- `07_stripe_webhook_idempotency.test.sql` — `public.stripe_webhook_events`
+  ledger: PK em event_id bloqueia retries, UPDATE processed_at/error_message
+  funciona.
 
 ## Adicionando testes
 

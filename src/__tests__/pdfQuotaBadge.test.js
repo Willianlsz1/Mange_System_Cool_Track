@@ -6,12 +6,12 @@ vi.mock('../core/auth.js', () => ({
 }));
 
 const fetchMyProfileBilling = vi.fn();
-vi.mock('../core/monetization.js', () => ({
+vi.mock('../core/plans/monetization.js', () => ({
   fetchMyProfileBilling,
 }));
 
 const getEffectivePlan = vi.fn();
-vi.mock('../core/subscriptionPlans.js', () => ({
+vi.mock('../core/plans/subscriptionPlans.js', () => ({
   getEffectivePlan,
   PLAN_CODE_FREE: 'free',
   PLAN_CODE_PLUS: 'plus',

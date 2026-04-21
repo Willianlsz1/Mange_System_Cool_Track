@@ -1,11 +1,11 @@
 import { Auth } from '../../core/auth.js';
-import { fetchMyProfileBilling } from '../../core/monetization.js';
+import { fetchMyProfileBilling } from '../../core/plans/monetization.js';
 import {
   PLAN_CODE_FREE,
   PLAN_CODE_PLUS,
   PLAN_CODE_PRO,
   getEffectivePlan,
-} from '../../core/subscriptionPlans.js';
+} from '../../core/plans/subscriptionPlans.js';
 import { Utils } from '../../core/utils.js';
 
 const PRICING_REASON_LIMIT_REACHED = 'limit_reached';
@@ -143,7 +143,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             ${isFree ? 'PLANO ATUAL' : 'BASE'}
           </span>
           <h2 class="pricing-card__title">Gratuito</h2>
-          <p class="pricing-card__subtitle">Pra avaliar o CoolTrack</p>
+          <p class="pricing-card__subtitle">Pra começar sem compromisso</p>
 
           <div class="pricing-card__price-group">
             <p class="pricing-card__price">R$ 0</p>
@@ -230,7 +230,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
           aria-label="Plano Pro"
         >
           <span class="pricing-badge ${isPro ? 'pricing-badge--current' : 'pricing-badge--popular'}">
-            ${isPro ? 'PLANO ATUAL' : 'MAIS POPULAR'}
+            ${isPro ? 'PLANO ATUAL' : 'RECOMENDADO PRA EMPRESA'}
           </span>
           <h2 class="pricing-card__title">Pro</h2>
           <p class="pricing-card__subtitle">Pra pequena empresa</p>

@@ -1,7 +1,7 @@
 import { on } from '../../../core/events.js';
 import { Auth } from '../../../core/auth.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
-import { fetchMyProfileBilling } from '../../../core/monetization.js';
+import { fetchMyProfileBilling } from '../../../core/plans/monetization.js';
 import { ProfileModal } from '../../components/onboarding.js';
 import { openAccountModal } from '../../components/accountModal.js';
 

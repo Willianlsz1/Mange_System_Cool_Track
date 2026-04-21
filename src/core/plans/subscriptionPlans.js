@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { supabase } from '../supabase.js';
 import { DevPlanOverride } from './devPlanOverride.js';
 
 // ── Planos canônicos ───────────────────────────────────────────────────────
@@ -28,11 +28,19 @@ export const FEATURE_SUPORTE_PRIORITARIO = 'suporte_prioritario';
 // Assinatura digital do cliente no PDF é exclusiva de Plus+ (diferencial pago).
 export const FEATURE_DIGITAL_SIGNATURE = 'digital_signature';
 
+// Análise de placa por IA (Claude vision → campos auto-preenchidos). Feature
+// Plus+ por dois motivos: (1) custo variável real (~$0.015/análise), então
+// precisa paywall pra não virar prejuízo; (2) é o diferencial que o Job Ney
+// Palmeira sinalizou como "a coisa que destrava o hábito" — merece ficar no
+// lado pago da linha pra puxar upgrade.
+export const FEATURE_NAMEPLATE_ANALYSIS = 'nameplate_analysis';
+
 const FEATURE_MIN_PLAN = {
   [FEATURE_PDF_EXPORT]: PLAN_CODE_FREE,
   [FEATURE_EQUIPAMENTOS_EXTRA]: PLAN_CODE_PLUS,
   [FEATURE_HISTORICO_COMPLETO]: PLAN_CODE_PLUS,
   [FEATURE_DIGITAL_SIGNATURE]: PLAN_CODE_PLUS,
+  [FEATURE_NAMEPLATE_ANALYSIS]: PLAN_CODE_PLUS,
   [FEATURE_SETORES]: PLAN_CODE_PRO,
   [FEATURE_SUPORTE_PRIORITARIO]: PLAN_CODE_PRO,
 };
@@ -77,6 +85,7 @@ export const PLAN_CATALOG = {
       '20 envios via WhatsApp/mês',
       'Assinatura digital do cliente no PDF',
       'Fotos dos equipamentos (até 3 por equipamento)',
+      'Cadastro por foto da placa (IA preenche os campos)',
     ],
     accountTagline: 'Até 15 equipamentos, PDFs sem marca d\u2019água e assinatura digital.',
     accountChips: ['Até 15 equipamentos', 'PDFs sem marca d\u2019água', 'Assinatura digital'],
@@ -96,6 +105,7 @@ export const PLAN_CATALOG = {
       'Agrupamento por setores',
       'Assinatura digital do cliente no PDF',
       'Fotos dos equipamentos (até 3 por equipamento)',
+      'Cadastro por foto da placa (IA preenche os campos)',
       'Suporte prioritário',
     ],
     accountTagline: 'Equipamentos ilimitados, agrupamento por setores e suporte prioritário.',

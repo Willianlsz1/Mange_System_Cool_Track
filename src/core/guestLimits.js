@@ -5,7 +5,7 @@ import {
   getEffectivePlan,
   getPlanForUser,
   getPlanProfileForUserId,
-} from './subscriptionPlans.js';
+} from './plans/subscriptionPlans.js';
 import { supabase } from './supabase.js';
 
 export function isGuestMode() {

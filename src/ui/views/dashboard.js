@@ -22,14 +22,14 @@ import { OnboardingBanner, Profile } from '../components/onboarding.js';
 import { UpgradeNudge } from '../components/upgradeNudge.js';
 import { UsageMeter } from '../components/usageMeter.js';
 import { withSkeleton } from '../components/skeleton.js';
-import { fetchMyProfileBilling } from '../../core/monetization.js';
+import { fetchMyProfileBilling } from '../../core/plans/monetization.js';
 import {
   PLAN_CODE_FREE,
   PLAN_CODE_PLUS,
   PLAN_CODE_PRO,
   getEffectivePlan,
   hasProAccess,
-} from '../../core/subscriptionPlans.js';
+} from '../../core/plans/subscriptionPlans.js';
 import {
   calculateHealthScore,
   evaluateEquipmentRisk,

@@ -1,5 +1,9 @@
 import { Utils } from '../../core/utils.js';
-import { PLAN_CODE_FREE, PLAN_CODE_PLUS, PLAN_CODE_PRO } from '../../core/subscriptionPlans.js';
+import {
+  PLAN_CODE_FREE,
+  PLAN_CODE_PLUS,
+  PLAN_CODE_PRO,
+} from '../../core/plans/subscriptionPlans.js';
 
 /**
  * Upgrade Nudge — card de upsell mostrado no dashboard.

@@ -32,13 +32,13 @@ import { validateEquipamentoPayload } from '../../core/inputValidation.js';
 import { EquipmentPhotos } from '../components/equipmentPhotos.js';
 import { Photos } from '../components/photos.js';
 import { uploadPendingPhotos, normalizePhotoList } from '../../core/photoStorage.js';
-import { isCachedPlanPlusOrHigher } from '../../core/planCache.js';
+import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
+import { goTo } from '../../core/router.js';
 // Labels de UI (rótulos de status/condição/prioridade) ficam em módulo
 // separado pra permitir reuso pelo dashboard/historico sem arrastar toda
 // a view junto. Single source of truth.
 import {
   STATUS_OPERACIONAL,
-  CONDICAO_OBSERVADA,
   PRIORIDADE_LABEL,
   RISK_CLASS_LABEL,
 } from './equipamentos/constants.js';
@@ -939,21 +939,70 @@ function syncContextGroupVisibility() {
 }
 
 /**
- * Mostra/esconde o bloco de fotos do equipamento no modal.
- * Feature Plus+/Pro. Usuários Free não veem o bloco — para manter o modal
- * enxuto. Upgrade é comunicado via pricing, não via "foto bloqueada".
+ * Wire do CTA do locked state. Idempotente — chamado toda vez que o modal
+ * abre pra Free, mas o listener é bound uma única vez via dataset flag.
+ * Click → telemetria + navega pra /pricing com highlight em Plus + reason
+ * pra que o renderPricing possa mostrar copy contextual se quiser.
+ */
+function _bindPhotosUpsellCta() {
+  const cta = document.querySelector('#equip-photo-locked [data-action="photos-upsell-cta"]');
+  if (!cta || cta.dataset.upsellBound === '1') return;
+  cta.dataset.upsellBound = '1';
+  cta.addEventListener('click', () => {
+    trackEvent('photo_upsell_clicked', { source: 'equip_modal' });
+    goTo('pricing', { highlightPlan: 'plus', reason: 'photos_upsell' });
+  });
+}
+
+/**
+ * Mostra o bloco de fotos do equipamento no modal.
+ * - Plus+/Pro → dropzone normal (user pode tirar/carregar fotos)
+ * - Free → mesmo wrapper visível, mas troca o conteúdo pro locked state
+ *   (card com lock + CTA "Desbloquear com Plus"). A visibilidade é feita
+ *   via classe `.equip-photo-block--locked` no CSS, então os listeners
+ *   dos file inputs ficam intactos e funcionam de volta assim que o user
+ *   faz upgrade e reabre o modal.
+ *
+ * Motivação da mudança (v3.5): antes escondiamos o bloco inteiro pra Free.
+ * Isso tirava a feature do radar do usuário e reduzia conversão. Mostrar
+ * um upsell contextual ("ah, fotos seriam úteis aqui") é mais efetivo que
+ * só mencionar na pricing page.
  */
 export function applyEquipPhotosGate(isPlusOrPro = false) {
   const wrapper = Utils.getEl('eq-fotos-wrapper');
   if (!wrapper) return;
-  wrapper.style.display = isPlusOrPro ? '' : 'none';
-  if (!isPlusOrPro) {
+
+  // Wrapper sempre visível agora — o que muda é o conteúdo.
+  wrapper.style.display = '';
+
+  const block = Utils.getEl('equip-photo-block');
+  const locked = Utils.getEl('equip-photo-locked');
+
+  if (isPlusOrPro) {
+    // Plano pago → dropzone normal + preview.
+    if (block) block.classList.remove('equip-photo-block--locked');
+    if (locked) locked.hidden = true;
+  } else {
+    // Free → card de upsell. Limpa o state do componente pra evitar que
+    // fotos "fantasma" persistam depois de um downgrade (defesa em
+    // profundidade — a view já é escondida via CSS).
+    if (block) block.classList.add('equip-photo-block--locked');
+    if (locked) locked.hidden = false;
     try {
       EquipmentPhotos.clear();
     } catch (_err) {
       /* ignora */
     }
+    _bindPhotosUpsellCta();
+
+    // Telemetria: primeira exibição por abertura do modal. Dataset flag
+    // no wrapper é limpo em `closeEquipModal` ou quando re-renderiza.
+    if (!wrapper.dataset.upsellShown) {
+      wrapper.dataset.upsellShown = '1';
+      trackEvent('photo_upsell_shown', { source: 'equip_modal' });
+    }
   }
+
   syncContextGroupVisibility();
 }
 
@@ -1194,8 +1243,8 @@ export async function renderEquip(filtro = '', options = {}) {
   // Detecta plano PRO
   let isPro = false;
   try {
-    const { fetchMyProfileBilling } = await import('../../core/monetization.js');
-    const { hasProAccess } = await import('../../core/subscriptionPlans.js');
+    const { fetchMyProfileBilling } = await import('../../core/plans/monetization.js');
+    const { hasProAccess } = await import('../../core/plans/subscriptionPlans.js');
     const { profile } = await fetchMyProfileBilling();
     isPro = hasProAccess(profile);
     populateSetorSelect(isPro);
@@ -1287,8 +1336,8 @@ export async function renderEquip(filtro = '', options = {}) {
 // o plano em outra aba.
 async function ensureProForSetores({ action = 'manage' } = {}) {
   try {
-    const { fetchMyProfileBilling } = await import('../../core/monetization.js');
-    const { hasProAccess } = await import('../../core/subscriptionPlans.js');
+    const { fetchMyProfileBilling } = await import('../../core/plans/monetization.js');
+    const { hasProAccess } = await import('../../core/plans/subscriptionPlans.js');
     const { profile } = await fetchMyProfileBilling();
     if (hasProAccess(profile)) return true;
   } catch {
@@ -1700,14 +1749,22 @@ export async function openEditEquip(id) {
 
   // Popula o select de setor (apenas Pro) e o bloco de fotos (Plus+/Pro)
   try {
-    const { fetchMyProfileBilling } = await import('../../core/monetization.js');
-    const { hasProAccess, hasPlusAccess } = await import('../../core/subscriptionPlans.js');
+    const { fetchMyProfileBilling } = await import('../../core/plans/monetization.js');
+    const { hasProAccess, hasPlusAccess } = await import('../../core/plans/subscriptionPlans.js');
+    const { applyNameplateCtaGate } = await import('../components/nameplateCapture.js');
     const { profile } = await fetchMyProfileBilling();
     populateSetorSelect(hasProAccess(profile));
     applyEquipPhotosGate(hasPlusAccess(profile));
+    applyNameplateCtaGate(hasPlusAccess(profile));
   } catch {
     populateSetorSelect(false);
     applyEquipPhotosGate(false);
+    try {
+      const { applyNameplateCtaGate } = await import('../components/nameplateCapture.js');
+      applyNameplateCtaGate(false);
+    } catch (_) {
+      /* noop */
+    }
   }
   if (eq.setorId) Utils.setVal('eq-setor', eq.setorId);
 
@@ -1955,45 +2012,17 @@ export async function viewEquip(id) {
   const safeId = Utils.escapeAttr(id);
   const context = health.context;
   const risk = evaluateEquipmentRisk(eq, regs);
-  const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
   const proximaPreventiva = context?.proximaPreventiva
     ? Utils.formatDate(context.proximaPreventiva)
     : 'Sem agenda';
   const healthSummary = health.reasons.length
     ? Utils.escapeHtml(health.reasons.slice(0, 2).join(' | '))
     : 'Historico dentro da rotina prevista';
-  const statusCode = Utils.safeStatus(eq.status);
-  const fatorOperacao =
-    statusCode === 'ok'
-      ? 'Sem restrições no momento'
-      : statusCode === 'warn'
-        ? 'Operação com restrições'
-        : 'Fora de operação';
-  const fatorPreventiva =
-    context?.daysToNext == null
-      ? 'Preventiva sem agenda'
-      : context.daysToNext < 0
-        ? `Preventiva vencida há ${Math.abs(context.daysToNext)} dia${Math.abs(context.daysToNext) > 1 ? 's' : ''}`
-        : context.daysToNext === 0
-          ? 'Preventiva vence hoje'
-          : `Preventiva em ${context.daysToNext} dia${context.daysToNext > 1 ? 's' : ''}`;
-  const _fatorCriticidade = `Criticidade operacional ${prioridadeLabel.toLowerCase()}`;
 
   // SVG ring progress
   const ringR = 30;
   const ringC = +(2 * Math.PI * ringR).toFixed(1);
   const ringOffset = +(ringC * (1 - score / 100)).toFixed(1);
-
-  // Cor do fator preventiva
-  const prevStatCls =
-    context?.daysToNext == null
-      ? ''
-      : context.daysToNext < 0
-        ? ' eq-hero-stat__val--danger'
-        : context.daysToNext <= 7
-          ? ' eq-hero-stat__val--warn'
-          : '';
-  const opStatCls = statusCode !== 'ok' ? ` eq-hero-stat__val--${statusCode}` : '';
 
   // Setor select (inline na ficha técnica)
   const setorSelectHtml = (() => {
@@ -2100,25 +2129,7 @@ export async function viewEquip(id) {
               <div class="eq-score-ring__num eq-score-ring__num--${cls}" aria-label="Score ${score}%">${score}%</div>
             </div>
             <div class="eq-hero-score__info">
-              <div class="eq-hero-score__label">SCORE OPERACIONAL</div>
-              <div class="eq-hero-score__status eq-hero-score__status--${cls}">
-                ${cls === 'ok' ? CONDICAO_OBSERVADA.ok : cls === 'warn' ? CONDICAO_OBSERVADA.warn : CONDICAO_OBSERVADA.danger}
-              </div>
               <div class="eq-hero-score__summary">${healthSummary}</div>
-            </div>
-          </div>
-          <div class="eq-hero-stats">
-            <div class="eq-hero-stat">
-              <span class="eq-hero-stat__lbl">Operação</span>
-              <span class="eq-hero-stat__val${opStatCls}">${Utils.escapeHtml(fatorOperacao)}</span>
-            </div>
-            <div class="eq-hero-stat">
-              <span class="eq-hero-stat__lbl">Preventiva</span>
-              <span class="eq-hero-stat__val${prevStatCls}">${Utils.escapeHtml(fatorPreventiva)}</span>
-            </div>
-            <div class="eq-hero-stat">
-              <span class="eq-hero-stat__lbl">Prioridade</span>
-              <span class="eq-hero-stat__val">${Utils.escapeHtml(prioridadeLabel)}</span>
             </div>
           </div>
         </div>
@@ -2142,9 +2153,7 @@ export async function viewEquip(id) {
                       data-id="modal-score-info" title="Como calculamos o score"
                       aria-label="Como calculamos o score de risco">?</button>
             </div>
-            <div class="eq-risk-panel__class">${Utils.escapeHtml(risk.classificationLabel)} · Score ${risk.score}</div>
           </div>
-          <span class="eq-risk-panel__badge eq-risk-panel__badge--${risk.classification}">${Utils.escapeHtml(risk.classificationLabel)}</span>
         </div>
         <div class="eq-risk-panel__factors">
           ${(risk.factors.length ? risk.factors : ['rotina estável'])

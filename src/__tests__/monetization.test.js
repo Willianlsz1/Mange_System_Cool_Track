@@ -37,7 +37,7 @@ function createSupabaseMock({
 async function loadMonetizationWithMock(mock) {
   vi.resetModules();
   vi.doMock('../core/supabase.js', () => ({ supabase: mock }));
-  return import('../core/monetization.js');
+  return import('../core/plans/monetization.js');
 }
 
 describe('monetization', () => {

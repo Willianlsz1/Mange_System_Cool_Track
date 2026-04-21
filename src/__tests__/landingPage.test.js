@@ -10,21 +10,23 @@ describe('LandingPage', () => {
     trackEvent.mockReset();
   });
 
-  it('renders hero headline and mockup card', () => {
+  it('renders hero headline and AI nameplate mockup card', () => {
     LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
 
     const heroText = document.body.textContent;
-    // Score disk + label no hero mockup (V2Refined)
-    expect(heroText).toContain('Alerta Crítico');
-    expect(heroText).toContain('87');
-    // H1 pós-iteração de conversão: "Chega de planilha. Seu relatório ... em 30 segundos."
-    // Gradient word (signature moment 2) agora é "30 segundos" — prova numérica.
+    // Pós-rebuild IA: disk mostra o tempo da análise ("5s") e o badge é o moment-IA.
+    expect(heroText).toContain('IA preencheu');
+    expect(heroText).toContain('5s');
+    // Kicker agora sinaliza IA
+    expect(heroText).toContain('agora com IA');
+    // H1 preservado (prova numérica "30 segundos" em grad word)
     expect(heroText).toContain('Chega de planilha');
     expect(heroText).toContain('30 segundos');
     // CTA padronizado pós-redesign
     expect(heroText).toContain('Experimentar grátis');
-    // Chip filled do mockup (signature moment 3)
-    expect(heroText.toLowerCase()).toContain('prioridade máxima');
+    // Chips do mockup mostram dados extraídos da placa (signature moment 3)
+    expect(heroText).toContain('USNW092WSG3');
+    expect(heroText).toContain('R-410A');
   });
 
   it('renders signature moments (grad word, filled chips, final CTA)', () => {
@@ -197,10 +199,12 @@ describe('LandingPage', () => {
     const steps = how.querySelectorAll('.lp-how__step');
     expect(steps.length).toBe(3);
 
-    // Copy-âncoras dos 3 passos (ordem importa)
+    // Copy-âncoras dos 3 passos (ordem importa) — pós-rebuild IA:
+    // step 1 = foto da placa com IA, step 2 = registro em campo, step 3 = PDF.
     const stepTexts = Array.from(steps).map((s) => s.textContent);
     expect(stepTexts[0]).toContain('1');
-    expect(stepTexts[0]).toContain('Cadastra o equipamento');
+    expect(stepTexts[0]).toContain('Foto da placa');
+    expect(stepTexts[0]).toContain('IA preenche');
     expect(stepTexts[1]).toContain('2');
     expect(stepTexts[1]).toContain('Registra o serviço');
     expect(stepTexts[2]).toContain('3');
@@ -211,6 +215,86 @@ describe('LandingPage', () => {
     const gallery = document.querySelector('.lp-gallery');
     expect(hero.compareDocumentPosition(how) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(how.compareDocumentPosition(gallery) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('renders dedicated "Cadastro por foto (IA)" section with antes/depois and demo', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const ai = document.querySelector('.lp-ai');
+    expect(ai).toBeTruthy();
+
+    // Pill "Novo · Plus+ e Pro" sinaliza o feature + gate de plano
+    const pill = ai.querySelector('.lp-ai__pill');
+    expect(pill).toBeTruthy();
+    expect(pill.textContent.toLowerCase()).toContain('plus+');
+    expect(pill.textContent.toLowerCase()).toContain('pro');
+
+    // Cards Antes/Depois (2 colunas de valor concreto)
+    const cards = ai.querySelectorAll('.lp-ai-card');
+    expect(cards.length).toBe(2);
+    const before = ai.querySelector('.lp-ai-card--before');
+    const after = ai.querySelector('.lp-ai-card--after');
+    expect(before).toBeTruthy();
+    expect(after).toBeTruthy();
+    expect(before.textContent.toLowerCase()).toContain('digitando');
+    expect(after.textContent.toLowerCase()).toContain('câmera');
+    expect(after.textContent).toContain('11 de 13');
+
+    // Demo foto → fields (3 colunas)
+    const demo = ai.querySelector('.lp-ai__demo');
+    expect(demo).toBeTruthy();
+    expect(demo.querySelector('.lp-ai-demo__photo')).toBeTruthy();
+    expect(demo.querySelector('.lp-ai-demo__fields')).toBeTruthy();
+    expect(demo.textContent).toContain('USNW092WSG3');
+    expect(demo.textContent).toContain('R-410A');
+
+    // Posição: depois do "Como funciona", antes da gallery
+    const how = document.querySelector('.lp-how');
+    const gallery = document.querySelector('.lp-gallery');
+    expect(how.compareDocumentPosition(ai) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(ai.compareDocumentPosition(gallery) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('gallery includes the IA capture screen (6 screens + 6 dots)', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const gallery = document.querySelector('.lp-gallery');
+    const screens = gallery.querySelectorAll('.lp-screen');
+    expect(screens.length).toBe(6);
+
+    // Tela de captura da placa (novo screen 1): câmera + progresso IA.
+    const cameraScreen = gallery.querySelector('.lp-sc-camera');
+    expect(cameraScreen).toBeTruthy();
+    expect(gallery.querySelector('.lp-sc-ai-progress')).toBeTruthy();
+    expect(gallery.textContent).toContain('Foto da placa');
+
+    // Dots refletem a nova contagem.
+    const dots = gallery.querySelectorAll('.lp-gallery__dot');
+    expect(dots.length).toBe(6);
+  });
+
+  it('pricing Plus and Pro advertise the IA nameplate feature', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const plus = document.querySelector('.lp-pricing-card--plus');
+    const pro = document.querySelector('.lp-pricing-card--pro');
+    expect(plus.textContent.toLowerCase()).toContain('cadastro por foto');
+    expect(pro.textContent.toLowerCase()).toContain('cadastro por foto');
+
+    // Free não deve anunciar IA (é gate Plus+)
+    const free = document.querySelector(
+      '.lp-pricing-card:not(.lp-pricing-card--plus):not(.lp-pricing-card--pro)',
+    );
+    expect(free.textContent.toLowerCase()).not.toContain('cadastro por foto');
+  });
+
+  it('FAQ includes IA-related questions (how it works, accuracy, privacy)', () => {
+    LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
+
+    const faq = document.querySelector('.lp-faq');
+    expect(faq.querySelector('[data-question="ai_how"]')).toBeTruthy();
+    expect(faq.querySelector('[data-question="ai_accuracy"]')).toBeTruthy();
+    expect(faq.querySelector('[data-question="ai_privacy"]')).toBeTruthy();
   });
 
   it('renders offline-first demo with queue items and sync copy', () => {

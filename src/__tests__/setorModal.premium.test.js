@@ -55,10 +55,10 @@ vi.mock('../ui/components/skeleton.js', () => ({
 }));
 
 // monetization + subscriptionPlans — ensureProForSetores precisa passar.
-vi.mock('../core/monetization.js', () => ({
+vi.mock('../core/plans/monetization.js', () => ({
   fetchMyProfileBilling: vi.fn(async () => ({ profile: { plan_code: 'pro' } })),
 }));
-vi.mock('../core/subscriptionPlans.js', async (importOriginal) => {
+vi.mock('../core/plans/subscriptionPlans.js', async (importOriginal) => {
   // Mantém exports reais (PLAN_CATALOG, helpers, etc.) e só força hasProAccess
   // pra passar o gate do modal nos testes. Sem isso, qualquer import novo
   // em subscriptionPlans (ex.: PLAN_CATALOG) quebra esse arquivo.

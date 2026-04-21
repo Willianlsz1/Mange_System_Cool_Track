@@ -15,3 +15,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/stripe-webhook/deno.json"
 entrypoint = "./functions/stripe-webhook/index.ts"
+
+[functions.analyze-nameplate]
+enabled = true
+verify_jwt = false
+import_map = "./functions/analyze-nameplate/deno.json"
+entrypoint = "./functions/analyze-nameplate/index.ts"

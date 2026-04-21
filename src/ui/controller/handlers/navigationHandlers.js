@@ -12,7 +12,11 @@ import {
   clearSetorEditingState,
   applyEquipPhotosGate,
 } from '../../views/equipamentos.js';
-import { isCachedPlanPlusOrHigher } from '../../../core/planCache.js';
+import {
+  applyNameplateCtaGate,
+  resetNameplateCtaState,
+} from '../../components/nameplateCapture.js';
+import { isCachedPlanPlusOrHigher } from '../../../core/plans/planCache.js';
 import { toggleTheme } from '../helpers/themeInitHelpers.js';
 
 let isHelpOpen = false;
@@ -49,8 +53,16 @@ export function bindNavigationHandlers() {
     // Ao abrir o modal de equipamento via "+ Novo", garante que não estamos em modo edição
     if (id === 'modal-add-eq') {
       clearEquipEditingState();
+      // Limpa o flag de telemetria pra que `photo_upsell_shown` dispare uma
+      // vez a cada abertura do modal (e não uma vez por sessão inteira).
+      const wrapper = document.getElementById('eq-fotos-wrapper');
+      if (wrapper) delete wrapper.dataset.upsellShown;
       // Aplica o gate Plus+/Pro do bloco de fotos (síncrono via cache do plano)
-      applyEquipPhotosGate(isCachedPlanPlusOrHigher());
+      const isPlusOrPro = isCachedPlanPlusOrHigher();
+      applyEquipPhotosGate(isPlusOrPro);
+      // Idem pro hero CTA de análise de placa: mesmo gate (Plus+).
+      resetNameplateCtaState();
+      applyNameplateCtaGate(isPlusOrPro);
     }
     if (id === 'modal-add-setor') clearSetorEditingState();
     Modal.open(id);
@@ -59,7 +71,10 @@ export function bindNavigationHandlers() {
     const id = el.dataset.id;
     Modal.close(id);
     // Ao fechar modais de criação/edição via Cancelar, reseta estado de edição
-    if (id === 'modal-add-eq') clearEquipEditingState();
+    if (id === 'modal-add-eq') {
+      clearEquipEditingState();
+      resetNameplateCtaState();
+    }
     if (id === 'modal-add-setor') clearSetorEditingState();
   });
   on('toggle-help-menu', () => {
@@ -134,7 +149,7 @@ export function bindNavigationHandlers() {
     trackEvent('checkout_start_clicked', { source, plan });
 
     try {
-      const { startCheckout } = await import('../../../core/monetization.js');
+      const { startCheckout } = await import('../../../core/plans/monetization.js');
       const url = await startCheckout({ plan });
       window.location.href = url;
     } catch (error) {
@@ -163,7 +178,7 @@ export function bindNavigationHandlers() {
     if (btn) btn.textContent = 'Abrindo...';
 
     const tryOpenPortal = async () => {
-      const { startBillingPortal } = await import('../../../core/monetization.js');
+      const { startBillingPortal } = await import('../../../core/plans/monetization.js');
       const url = await startBillingPortal();
       window.location.href = url;
     };

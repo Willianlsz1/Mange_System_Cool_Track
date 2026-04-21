@@ -10,7 +10,7 @@ async function loadPricingModule({ user = null, profile = null } = {}) {
     Auth: { getUser },
   }));
 
-  vi.doMock('../core/monetization.js', () => ({
+  vi.doMock('../core/plans/monetization.js', () => ({
     fetchMyProfileBilling,
   }));
 

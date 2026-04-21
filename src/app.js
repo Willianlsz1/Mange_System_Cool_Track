@@ -12,12 +12,15 @@ import { Storage } from './core/storage.js';
 import { Tour } from './ui/components/tour.js';
 import { ErrorCodes, handleError } from './core/errors.js';
 import { Toast } from './core/toast.js';
-import { sanitizeSessionForCurrentProject, fetchMyProfileBilling } from './core/monetization.js';
+import {
+  sanitizeSessionForCurrentProject,
+  fetchMyProfileBilling,
+} from './core/plans/monetization.js';
 // DevPlanToggle: dynamic-imported abaixo apenas em ambiente de dev.
 // Em produção, Vite faz tree-shake do módulo inteiro (≈9 KB + 492 LoC).
-import { DevPlanOverride } from './core/devPlanOverride.js';
-import { setCachedPlan } from './core/planCache.js';
-import { getEffectivePlan } from './core/subscriptionPlans.js';
+import { DevPlanOverride } from './core/plans/devPlanOverride.js';
+import { setCachedPlan } from './core/plans/planCache.js';
+import { getEffectivePlan } from './core/plans/subscriptionPlans.js';
 import { supabase } from './core/supabase.js';
 import { initTelemetrySink } from './core/telemetrySink.js';
 import { initObservability, setUser as setObservabilityUser } from './core/observability.js';

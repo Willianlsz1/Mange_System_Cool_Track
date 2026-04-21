@@ -9,7 +9,7 @@
  * - Double-click no ícone minimizado volta para a posição default
  */
 
-import { DevPlanOverride } from '../../core/devPlanOverride.js';
+import { DevPlanOverride } from '../../core/plans/devPlanOverride.js';
 import { wipeAllUserData } from '../../core/devWipeData.js';
 import { CustomConfirm } from '../../core/modal.js';
 import { Toast } from '../../core/toast.js';

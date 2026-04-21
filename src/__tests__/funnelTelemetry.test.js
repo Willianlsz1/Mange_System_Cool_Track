@@ -47,7 +47,7 @@ async function loadPlanCacheModule() {
   const telemetryMock = { trackEvent: vi.fn(), TELEMETRY_EVENT: 'cooltrack:telemetry' };
   vi.doMock('../core/telemetry.js', () => telemetryMock);
 
-  const { setCachedPlan } = await import('../core/planCache.js');
+  const { setCachedPlan } = await import('../core/plans/planCache.js');
   return { setCachedPlan, telemetryMock };
 }
 

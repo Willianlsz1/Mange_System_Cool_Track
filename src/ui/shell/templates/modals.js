@@ -26,6 +26,55 @@ export function renderShellModals() {
           </div>
         </div>
 
+        <!--
+          Hero CTA: "Aponta a câmera, a gente preenche".
+          Dois estados mutuamente exclusivos:
+          - .nameplate-cta--active (Plus+): botão primário que abre o file
+            picker. Preenche tipo/fluido/marca-modelo no step 2 via IA.
+          - .nameplate-cta--locked (Free): mesmo layout, CTA redireciona pro
+            upsell. Mantemos o layout IDÊNTICO entre os dois estados pra não
+            causar "shift" visual quando o user fizer upgrade.
+          O toggle é feito por applyNameplateCtaGate() no controller, baseado
+          no plano efetivo. Input file fica fora do bloco locked (dentro do
+          active) pra não ativar listeners quando estiver bloqueado.
+        -->
+        <div class="nameplate-cta" id="nameplate-cta" data-state="hidden" hidden>
+          <div class="nameplate-cta__icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
+                stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+              <circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.6" />
+              <path d="M15 10l2-2M9 10L7 8" stroke="currentColor" stroke-width="1.4"
+                stroke-linecap="round" />
+            </svg>
+          </div>
+          <div class="nameplate-cta__text">
+            <div class="nameplate-cta__title">
+              Aponta a câmera pra placa
+              <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
+            </div>
+            <p class="nameplate-cta__sub" id="nameplate-cta-sub">
+              A IA preenche tipo, fluido e marca/modelo pra você.
+            </p>
+          </div>
+          <div class="nameplate-cta__action">
+            <!-- Estado active (Plus+): label abre o file picker escondido. -->
+            <label class="btn btn--primary btn--sm nameplate-cta__btn nameplate-cta__btn--active"
+              for="nameplate-file-input" id="nameplate-cta-btn-active">
+              Usar foto da placa
+            </label>
+            <!-- Estado locked (Free): botão puxa pro upsell. -->
+            <button type="button"
+              class="btn btn--primary btn--sm nameplate-cta__btn nameplate-cta__btn--locked"
+              data-action="nameplate-upsell-cta" id="nameplate-cta-btn-locked">
+              Desbloquear com Plus →
+            </button>
+          </div>
+          <input type="file" id="nameplate-file-input"
+            accept="image/jpeg,image/png,image/webp"
+            class="visually-hidden" data-action="nameplate-file-selected" />
+        </div>
+
         <div id="eq-step-1">
           <div class="eq-form-section-head">
             <span class="eq-form-section-head__label">Essenciais</span>
@@ -115,6 +164,38 @@ export function renderShellModals() {
 
                   <div class="equip-photo-counter photo-counter visually-hidden" aria-live="polite">0/3 fotos</div>
                   <div class="photo-preview equip-photo-preview" id="equip-photo-preview" role="list"></div>
+
+                  <!--
+                    Locked state pra plano Free. Renderizado como irmão da
+                    dropzone pra não mexer nos listeners dos inputs file (que
+                    são direct listeners por ID, não delegados). O toggle
+                    acontece via classe .equip-photo-block--locked aplicada
+                    pelo applyEquipPhotosGate — o CSS esconde a dropzone +
+                    shortcut + preview e mostra só este card de upsell.
+                  -->
+                  <div class="equip-photo-locked" id="equip-photo-locked" hidden>
+                    <div class="equip-photo-locked__icon" aria-hidden="true">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                        <rect x="5" y="11" width="14" height="9" rx="2"
+                          stroke="currentColor" stroke-width="1.6" />
+                        <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor"
+                          stroke-width="1.6" stroke-linecap="round" />
+                      </svg>
+                    </div>
+                    <div class="equip-photo-locked__text">
+                      <div class="equip-photo-locked__title">
+                        Fotos dos equipamentos
+                        <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
+                      </div>
+                      <p class="equip-photo-locked__sub">
+                        Identifique equipamentos em campo pelas fotos — até 3 por equipamento.
+                      </p>
+                    </div>
+                    <button type="button" class="btn btn--primary btn--sm equip-photo-locked__cta"
+                      data-action="photos-upsell-cta">
+                      Desbloquear com Plus →
+                    </button>
+                  </div>
                 </div>
               </section>
             </div>

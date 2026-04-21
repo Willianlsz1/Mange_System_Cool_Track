@@ -18,7 +18,7 @@ import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { validateRegistroPayload } from '../../core/inputValidation.js';
-import { isCachedPlanPlusOrHigher } from '../../core/planCache.js';
+import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
 
 // O meter de progresso vive estático dentro do hero do template.
 // Apontamos pro hero + o contador numérico ao invés de injetar markup na hora.

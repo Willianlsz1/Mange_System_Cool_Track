@@ -10,7 +10,7 @@ import {
   PLAN_CATALOG,
   PLAN_CODE_FREE,
   PLAN_CODE_PRO,
-} from '../../core/subscriptionPlans.js';
+} from '../../core/plans/subscriptionPlans.js';
 import { goTo } from '../../core/router.js';
 import { getState } from '../../core/state.js';
 import { attachDialogA11y } from '../../core/modal.js';

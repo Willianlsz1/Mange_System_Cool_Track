@@ -6,6 +6,7 @@ import { Photos } from '../../components/photos.js';
 import { EquipmentPhotos } from '../../components/equipmentPhotos.js';
 import { getSuggestedPreventiveDays } from '../../../domain/maintenance.js';
 import { initOnlineStatus } from '../../../core/onlineStatus.js';
+import { OfflineBanner } from '../../components/offlineBanner.js';
 
 function resetRegistroEditingState() {
   sessionStorage.removeItem('cooltrack-editing-id');
@@ -168,4 +169,5 @@ export function initControllerHelpers() {
   initTheme();
   bindSyncStatusUpdates();
   initOnlineStatus();
+  OfflineBanner.mount();
 }

@@ -61,13 +61,13 @@ vi.mock('../ui/components/pdfQuotaBadge.js', () => ({
 }));
 
 const fetchMyProfileBilling = vi.fn();
-vi.mock('../core/monetization.js', () => ({
+vi.mock('../core/plans/monetization.js', () => ({
   fetchMyProfileBilling,
 }));
 
 const getPlanCodeForUserId = vi.fn();
 const getEffectivePlan = vi.fn();
-vi.mock('../core/subscriptionPlans.js', () => ({
+vi.mock('../core/plans/subscriptionPlans.js', () => ({
   getPlanCodeForUserId,
   getEffectivePlan,
   PLAN_CODE_FREE: 'free',

@@ -3,7 +3,7 @@ import {
   PLAN_CODE_FREE,
   PLAN_CODE_PLUS,
   PLAN_CODE_PRO,
-} from '../../core/subscriptionPlans.js';
+} from '../../core/plans/subscriptionPlans.js';
 import { getState } from '../../core/state.js';
 
 // Source de verdade é PLAN_CATALOG — se mudar o tier Free lá, o medidor

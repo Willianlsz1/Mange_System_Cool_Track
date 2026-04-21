@@ -135,6 +135,63 @@ O webhook determina o `plan_code` em ordem de precedência:
    `STRIPE_PRICE*\*`)
 4. fallback defensivo: `'pro'`
 
+### Event ordering
+
+Retries atrasados de `customer.subscription.updated` podem chegar **depois** de
+um evento mais recente ter sido processado. O payload do event é um snapshot
+do estado da subscription no momento em que o evento foi criado, então usar
+o snapshot de um event velho causaria downgrade silencioso (ex: retry atrasado
+de "plan_code=plus" sobrescrevendo um "plan_code=pro" já gravado).
+
+Fix: o handler re-busca a subscription via `stripe.subscriptions.retrieve()`
+antes de aplicar mudanças, usando o estado live. Se a API do Stripe falhar,
+caímos no payload do event como fallback e logamos `subscription_refetch_failed`
+para audit. Eventos `customer.subscription.deleted` não precisam do re-fetch
+porque o próprio evento é autoritativo — Stripe não "undelete" subscriptions.
+
+### Idempotência
+
+Stripe pode reenviar o mesmo `event.id` várias vezes — quando o endpoint demora
+
+> 10s, retorna 5xx, ou quando a Edge Function é redeployada durante um retry em
+> vôo. O handler guarda cada evento processado na tabela
+> `public.stripe_webhook_events` (migration `20260420160000`) e usa o `event_id`
+> como PK. Antes de qualquer UPDATE em `profiles`:
+
+1. `INSERT INTO stripe_webhook_events (event_id, event_type)` — PK
+   serializa retries concorrentes.
+2. Se o INSERT falha com `23505` (unique violation), é retry → responde
+   `200 OK` com `{ "received": true, "duplicate": true }` sem reprocessar.
+3. Se o INSERT falha com qualquer outro erro de DB, responde `500` pro Stripe
+   reagendar.
+4. Se o INSERT passa, processa o evento; ao sucesso, popula `processed_at`
+   e metadata (`user_id`, `customer_id`, `subscription_id`) na linha.
+5. Se o processamento joga exceção, `error_message` é gravado e o status
+   HTTP volta 500. A linha **não** é removida — retries futuros do mesmo
+   event.id vão bater no `23505` e responder 200, mas o campo
+   `error_message` fica lá pra audit e pode ser investigado manualmente.
+
+Para consultar eventos falhados:
+
+```sql
+select event_id, event_type, received_at, error_message
+from public.stripe_webhook_events
+where error_message is not null
+order by received_at desc
+limit 20;
+```
+
+Para confirmar que duplicates estão sendo descartados (depois de fazer algum
+retry manual):
+
+```sql
+-- Quantos eventos foram recebidos mas ainda não processaram?
+-- (Esperado: 0 em operação normal.)
+select count(*) from public.stripe_webhook_events
+where processed_at is null and error_message is null
+  and received_at < now() - interval '5 minutes';
+```
+
 ## 4. Deploy das funções
 
 ```bash
@@ -158,3 +215,13 @@ supabase functions deploy stripe-webhook
    Stripe.
 5. Abra o portal de cobrança, troque o plano para Pro Mensal, e confirme que
    `plan_code` virou `'pro'` via o evento `customer.subscription.updated`.
+6. **Teste idempotência**: no Stripe Dashboard → Webhooks → clique num evento
+   já entregue e use "Resend". Depois confira:
+   ```sql
+   select event_id, event_type, processed_at, customer_id, user_id
+   from public.stripe_webhook_events
+   where event_id = 'evt_XXX'; -- id do evento reenviado
+   ```
+   Deve existir **uma única linha** com `processed_at` preenchido. O resend não
+   cria duplicata (PK bloqueia) nem atualiza o profile de novo (o handler
+   responde 200 com `{"duplicate": true}` antes de tocar em `profiles`).

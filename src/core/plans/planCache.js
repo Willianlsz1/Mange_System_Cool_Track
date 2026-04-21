@@ -16,7 +16,7 @@ import {
   PLAN_CODE_PRO,
   normalizePlanCode,
 } from './subscriptionPlans.js';
-import { trackEvent } from './telemetry.js';
+import { trackEvent } from '../telemetry.js';
 
 const LS_KEY = 'cooltrack-cached-plan';
 

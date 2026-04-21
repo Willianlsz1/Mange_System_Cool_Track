@@ -19,11 +19,12 @@ export function buildLandingHtml() {
   const ICON_BOLT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 L4 14 L12 14 L11 22 L20 10 L12 10 Z"/></svg>`;
   const ICON_LOGIN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
   const ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="8 12.5 11 15.5 16.5 10"/></svg>`;
-  const ICON_ALERT = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
   const ICON_WIFI_OFF = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>`;
   const ICON_CHEVRON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>`;
   const ICON_CAMERA = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
   const ICON_SEND = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
+  // Sparkles (lucide) — usado como signifier visual da análise por IA.
+  const ICON_SPARKLES = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.6 4.1L18 8.8l-4.4 1.7L12 14.6l-1.6-4.1L6 8.8l4.4-1.7z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"/><path d="M5 15l.6 1.6L7 17l-1.4.4L5 19l-.6-1.6L3 17l1.4-.4z"/></svg>`;
   // Ícones de trust — stroke 1.75 currentColor, lucide-style, mesma linguagem visual.
   const ICON_SHIELD = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>`;
   const ICON_LOCK = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
@@ -72,14 +73,14 @@ export function buildLandingHtml() {
       <section class="lp-hero">
         <span class="lp-kicker">
           <span class="lp-kicker__dot" aria-hidden="true"></span>
-          Para técnicos de climatização
+          Para técnicos de climatização &middot; agora com IA
         </span>
 
         <h1 class="lp-h1">
           Chega de planilha.<br>Seu relatório de manutenção pronto em <span class="lp-grad">30 segundos</span>.
         </h1>
         <p class="lp-sub">
-          Técnico registra no celular com foto e assinatura. Funciona offline — sincroniza sozinho quando o sinal volta.
+          Aponta a câmera pra placa do equipamento e a IA preenche marca, modelo, BTU e refrigerante em 5 segundos. Assina no celular, gera PDF e manda no WhatsApp — funciona offline.
         </p>
 
         <div class="lp-ctas lp-ctas--single">
@@ -95,21 +96,21 @@ export function buildLandingHtml() {
         </div>
         <p class="lp-microcopy">Sem cadastro &bull; Sem cartão &bull; Comece em segundos</p>
 
-        <!-- Product mockup com DUAL ORB -->
+        <!-- Product mockup com DUAL ORB — momento IA (cadastro por foto da placa) -->
         <div class="lp-mockup">
           <div class="lp-mockup__bar"></div>
           <div class="lp-mockup__header">
-            <span class="lp-mockup__equip">Hospital Central</span>
-            <span class="lp-mockup__unit">Chiller 02</span>
+            <span class="lp-mockup__equip">${ICON_CAMERA} Foto da placa</span>
+            <span class="lp-mockup__unit">LG &middot; Split Hi-Wall</span>
           </div>
           <div class="lp-mockup__score">
-            <div class="lp-mockup__disk"><span>87</span></div>
-            <div class="lp-mockup__badge">${ICON_ALERT} Alerta Crítico</div>
+            <div class="lp-mockup__disk lp-mockup__disk--ai"><span>5s</span></div>
+            <div class="lp-mockup__badge lp-mockup__badge--ai">${ICON_SPARKLES} IA preencheu 11 / 13 campos</div>
           </div>
           <div class="lp-mockup__chips">
-            <span class="lp-chip">${ICON_CHECK} Prioridade máxima</span>
-            <span class="lp-chip">${ICON_CHECK} 18 dias sem serviço</span>
-            <span class="lp-chip">${ICON_CHECK} 3 ocorrências este mês</span>
+            <span class="lp-chip">${ICON_CHECK} Modelo USNW092WSG3</span>
+            <span class="lp-chip">${ICON_CHECK} 9.000 BTU &middot; 220V</span>
+            <span class="lp-chip">${ICON_CHECK} R-410A &middot; 60Hz</span>
           </div>
         </div>
       </section>
@@ -118,14 +119,14 @@ export function buildLandingHtml() {
       <section class="lp-how" aria-labelledby="lp-how-title">
         <p class="lp-section-label">Como funciona</p>
         <h2 class="lp-how__title" id="lp-how-title">
-          Do primeiro toque<br>ao PDF assinado.
+          Da foto da placa<br>ao PDF assinado.
         </h2>
         <ol class="lp-how__steps">
           <li class="lp-how__step">
             <div class="lp-how__step-num">1</div>
             <div class="lp-how__step-body">
-              <h3 class="lp-how__step-title">Cadastra o equipamento</h3>
-              <p class="lp-how__step-text">Tag, local, tipo e criticidade. 30 segundos por equipamento.</p>
+              <h3 class="lp-how__step-title">Foto da placa &rarr; IA preenche</h3>
+              <p class="lp-how__step-text">Aponta a câmera, a IA lê a placa e devolve marca, modelo, BTU, tensão e refrigerante em 5 segundos. Você só confere.</p>
             </div>
           </li>
           <li class="lp-how__step-connector" aria-hidden="true"></li>
@@ -147,6 +148,87 @@ export function buildLandingHtml() {
         </ol>
       </section>
 
+      <!-- ── CADASTRO POR FOTO (IA) — seção dedicada ── -->
+      <section class="lp-ai" aria-labelledby="lp-ai-title">
+        <div class="lp-ai__head">
+          <span class="lp-ai__pill">${ICON_SPARKLES} Novo &middot; Plus+ e Pro</span>
+          <h2 class="lp-ai__title" id="lp-ai-title">
+            Cadastro de equipamento<br>em <span class="lp-grad">5 segundos</span>, por foto.
+          </h2>
+          <p class="lp-ai__sub">
+            Antes: 2 minutos digitando 13 campos por equipamento, checando a placa pequena a cada linha.<br>
+            Depois: uma foto, 5 segundos, e a IA devolve tudo preenchido.
+          </p>
+        </div>
+
+        <div class="lp-ai__grid">
+          <!-- Antes -->
+          <article class="lp-ai-card lp-ai-card--before">
+            <header class="lp-ai-card__head">
+              <span class="lp-ai-card__tag lp-ai-card__tag--before">Antes</span>
+              <span class="lp-ai-card__time">~2 min</span>
+            </header>
+            <ul class="lp-ai-card__list">
+              <li>${ICON_X} Digitando marca, modelo, nº série</li>
+              <li>${ICON_X} BTU, tensão, frequência, refrigerante</li>
+              <li>${ICON_X} 13 campos, placa apagada, erro de digitação</li>
+            </ul>
+          </article>
+
+          <!-- Depois -->
+          <article class="lp-ai-card lp-ai-card--after">
+            <header class="lp-ai-card__head">
+              <span class="lp-ai-card__tag lp-ai-card__tag--after">${ICON_SPARKLES} Depois</span>
+              <span class="lp-ai-card__time">5 seg</span>
+            </header>
+            <ul class="lp-ai-card__list">
+              <li>${ICON_CHECK} Aponta a câmera pra placa</li>
+              <li>${ICON_CHECK} IA lê e preenche 11 de 13 campos</li>
+              <li>${ICON_CHECK} Você confere, salva e vai pro próximo</li>
+            </ul>
+          </article>
+        </div>
+
+        <!-- Mockup do fluxo IA: foto → fields -->
+        <div class="lp-ai__demo" aria-hidden="true">
+          <div class="lp-ai-demo__photo">
+            <div class="lp-ai-demo__photo-label">${ICON_CAMERA} placa-lg-split.jpg</div>
+            <div class="lp-ai-demo__photo-frame">
+              <span class="lp-ai-demo__brand">LG</span>
+              <div class="lp-ai-demo__rows">
+                <span>MODEL &nbsp; USNW092WSG3</span>
+                <span>BTU/h &nbsp;&nbsp; 9.000</span>
+                <span>V / Hz &nbsp;&nbsp; 220 / 60</span>
+                <span>REFRIG. &nbsp; R-410A</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="lp-ai-demo__arrow" aria-hidden="true">
+            <span class="lp-ai-demo__arrow-pill">${ICON_SPARKLES} 5s</span>
+          </div>
+
+          <div class="lp-ai-demo__fields">
+            <header class="lp-ai-demo__fields-head">
+              <span>Novo equipamento</span>
+              <span class="lp-ai-demo__fields-head-badge">${ICON_SPARKLES} IA</span>
+            </header>
+            <ul class="lp-ai-demo__fields-list">
+              <li><span>Marca</span><b>LG</b></li>
+              <li><span>Modelo</span><b>USNW092WSG3</b></li>
+              <li><span>Tipo</span><b>Split Hi-Wall</b></li>
+              <li><span>Capacidade</span><b>9.000 BTU/h</b></li>
+              <li><span>Tensão</span><b>220V &middot; 60Hz</b></li>
+              <li><span>Refrigerante</span><b>R-410A</b></li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="lp-ai__microcopy">
+          Funciona com Split, VRF, Chiller, Fan-coil. Disponível no Plus+ e Pro.
+        </p>
+      </section>
+
       <!-- ── SCREENSHOT GALLERY ── -->
       <section class="lp-gallery">
         <div class="lp-gallery__head">
@@ -165,7 +247,49 @@ export function buildLandingHtml() {
           tabindex="0"
         >
 
-          <!-- 1 · Painel Geral -->
+          <!-- 1 · Captura por foto (IA) -->
+          <div class="lp-screen">
+            <div class="lp-screen__status">
+              <span>9:41</span>
+              <span>▮▮▮</span>
+            </div>
+            <div class="lp-screen__header">
+              <div class="lp-screen__header-label">Novo Equipamento</div>
+              <div class="lp-screen__header-title">Foto da placa</div>
+            </div>
+            <div class="lp-screen__body">
+              <div class="lp-sc-camera">
+                <div class="lp-sc-camera__frame">
+                  <span class="lp-sc-camera__corner lp-sc-camera__corner--tl"></span>
+                  <span class="lp-sc-camera__corner lp-sc-camera__corner--tr"></span>
+                  <span class="lp-sc-camera__corner lp-sc-camera__corner--bl"></span>
+                  <span class="lp-sc-camera__corner lp-sc-camera__corner--br"></span>
+                  <div class="lp-sc-camera__plate">
+                    <span class="lp-sc-camera__brand">LG</span>
+                    <span>MODEL USNW092WSG3</span>
+                    <span>9.000 BTU/h &middot; 220V</span>
+                    <span>R-410A &middot; 60Hz</span>
+                  </div>
+                </div>
+                <div class="lp-sc-camera__cta">${ICON_CAMERA} Usar foto da placa</div>
+              </div>
+              <div class="lp-sc-ai-progress">
+                <span class="lp-sc-ai-progress__label">${ICON_SPARKLES} Analisando com IA</span>
+                <span class="lp-sc-ai-progress__time">5s</span>
+              </div>
+              <div class="lp-sc-section">Campos detectados</div>
+              <div class="lp-sc-field lp-sc-field--filled lp-sc-field--ai">
+                <div class="lp-sc-field__label">Marca · Modelo</div>
+                <div class="lp-sc-field__value">LG · USNW092WSG3</div>
+              </div>
+              <div class="lp-sc-field lp-sc-field--filled lp-sc-field--ai">
+                <div class="lp-sc-field__label">Capacidade · Refrigerante</div>
+                <div class="lp-sc-field__value">9.000 BTU · R-410A</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2 · Painel Geral -->
           <div class="lp-screen">
             <div class="lp-screen__status">
               <span>9:41</span>
@@ -416,6 +540,7 @@ export function buildLandingHtml() {
           <div class="lp-gallery__dot"></div>
           <div class="lp-gallery__dot"></div>
           <div class="lp-gallery__dot"></div>
+          <div class="lp-gallery__dot"></div>
         </div>
       </section>
 
@@ -536,6 +661,7 @@ export function buildLandingHtml() {
               Caderno, WhatsApp e planilha
             </h3>
             <ul class="lp-compare__list lp-compare__list--before">
+              <li>${ICON_X} 2 minutos digitando 13 campos por equipamento</li>
               <li>${ICON_X} Relatório em 20 minutos, copiando tudo à mão</li>
               <li>${ICON_X} Sem histórico: "quando foi a última preventiva mesmo?"</li>
               <li>${ICON_X} Cliente cobra serviço e ninguém acha a prova</li>
@@ -550,6 +676,7 @@ export function buildLandingHtml() {
               CoolTrack no celular
             </h3>
             <ul class="lp-compare__list lp-compare__list--after">
+              <li>${ICON_SPARKLES} Foto da placa &rarr; IA preenche em 5 segundos</li>
               <li>${ICON_CHECK} PDF pronto em 30 segundos, com assinatura do cliente</li>
               <li>${ICON_CHECK} Histórico completo de cada equipamento, pesquisável</li>
               <li>${ICON_CHECK} Cliente recebe o PDF no WhatsApp em 1 toque</li>
@@ -648,6 +775,7 @@ export function buildLandingHtml() {
               </div>
             </div>
             <ul class="lp-pricing-features">
+              <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — marca, modelo, BTU, refrigerante em 5s</li>
               <li>${ICON_CHECK} Até 15 equipamentos cadastrados</li>
               <li>${ICON_CHECK} <strong>Registros ilimitados</strong></li>
               <li>${ICON_CHECK} 30 PDFs/mês <strong>sem marca d'água</strong></li>
@@ -695,6 +823,7 @@ export function buildLandingHtml() {
               </div>
             </div>
             <ul class="lp-pricing-features">
+              <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — sem limite de análises</li>
               <li>${ICON_CHECK} <strong>Equipamentos ilimitados</strong></li>
               <li>${ICON_CHECK} <strong>PDFs e WhatsApp ilimitados</strong></li>
               <li>${ICON_CHECK} Assinatura digital no PDF</li>
@@ -733,6 +862,7 @@ export function buildLandingHtml() {
             </h3>
             <ul class="lp-fit__list lp-fit__list--yes">
               <li>${ICON_CHECK} Fazem manutenção em campo, longe da oficina</li>
+              <li>${ICON_CHECK} Cadastram muitos equipamentos e odeiam digitar placa a placa</li>
               <li>${ICON_CHECK} Precisam de PDF assinado pra prestar contas</li>
               <li>${ICON_CHECK} Ainda usam papel, WhatsApp ou planilha e querem organizar</li>
               <li>${ICON_CHECK} Querem ver histórico completo de cada equipamento</li>
@@ -761,10 +891,31 @@ export function buildLandingHtml() {
         <h2 class="lp-faq__title" id="lp-faq-title">Antes de começar.</h2>
 
         <div class="lp-faq__list">
+          <details class="lp-faq__item" data-question="ai_how">
+            <summary>Como funciona o cadastro por foto da placa?</summary>
+            <p>
+              Você aponta a câmera pra placa do equipamento (split, VRF, chiller, fan-coil) e uma IA lê a foto e devolve marca, modelo, número de série, capacidade (BTU/TR), tensão, frequência e refrigerante já preenchidos. Leva cerca de 5 segundos. Você confere, ajusta se precisar, e salva. Disponível nos planos <strong>Plus</strong> e <strong>Pro</strong>.
+            </p>
+          </details>
+
+          <details class="lp-faq__item" data-question="ai_accuracy">
+            <summary>E se a IA errar algum campo?</summary>
+            <p>
+              A IA preenche tudo como sugestão — você sempre confere antes de salvar e pode editar qualquer campo. Em placas bem iluminadas e ocupando o quadro, acerta acima de 90% dos campos. Quando não reconhece (placa apagada, foto tremida), avisa e deixa você preencher manualmente. Nenhum equipamento é cadastrado sem sua confirmação.
+            </p>
+          </details>
+
+          <details class="lp-faq__item" data-question="ai_privacy">
+            <summary>A foto da placa fica armazenada? É privada?</summary>
+            <p>
+              A foto é enviada criptografada pro servidor só pra análise e não fica salva. Só os campos extraídos (texto) entram no cadastro do equipamento. Nada é usado pra treinar modelo.
+            </p>
+          </details>
+
           <details class="lp-faq__item" data-question="offline">
             <summary>Funciona mesmo sem internet?</summary>
             <p>
-              Sim. O CoolTrack é offline-first: você cadastra equipamentos, registra serviços e gera PDFs em campo, mesmo sem sinal. A sincronização com a nuvem acontece automaticamente quando o celular reconecta.
+              Sim. O CoolTrack é offline-first: você cadastra equipamentos, registra serviços e gera PDFs em campo, mesmo sem sinal. A sincronização com a nuvem acontece automaticamente quando o celular reconecta. O cadastro por foto da placa precisa de sinal no momento da captura — depois disso, edição e uso do equipamento funcionam offline normalmente.
             </p>
           </details>
 

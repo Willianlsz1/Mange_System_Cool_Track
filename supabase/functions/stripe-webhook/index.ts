@@ -124,10 +124,102 @@ async function updateProfileBySubscriptionId(
   return result;
 }
 
+// ── Idempotency ledger ────────────────────────────────────────────────────
+//
+// Stripe re-entrega o mesmo event.id quando o endpoint responde lento (>10s),
+// retorna 5xx, ou quando a Edge Function é redeployada em pleno retry. Sem
+// dedup isso gera UPDATEs duplicados em profiles e, pior, permite que um
+// retry atrasado de um evento antigo sobrescreva um mais novo (ex: downgrade
+// silencioso Pro→Plus quando o checkout.session.completed atrasa e chega
+// depois do customer.subscription.updated).
+//
+// O contrato com a tabela public.stripe_webhook_events (criada na migration
+// 20260420160000) é simples: INSERT com event_id como PK; se pegar conflito
+// de chave única, é retry → short-circuit 200 sem reprocessar.
+
+type EventLedgerMeta = {
+  subscription_id?: string | null;
+  customer_id?: string | null;
+  user_id?: string | null;
+};
+
+/**
+ * Tenta "reivindicar" o evento inserindo-o no ledger. Retorna fresh=true se
+ * o INSERT passou (deve processar), fresh=false se já existia (retry).
+ * error != null sinaliza erro real de DB (diferente de duplicate) e exige
+ * 500 pro Stripe reagendar o retry.
+ */
+async function tryClaimEvent(
+  supabase: any,
+  event: Stripe.Event,
+): Promise<{ fresh: boolean; error: string | null }> {
+  const { data, error } = await supabase
+    .from('stripe_webhook_events')
+    .insert({
+      event_id: event.id,
+      event_type: event.type,
+    })
+    .select('event_id')
+    .maybeSingle();
+
+  if (error) {
+    // 23505 = unique_violation. É o único caso em que não queremos erro:
+    // significa que já processamos esse event.id.
+    if (error.code === '23505') {
+      return { fresh: false, error: null };
+    }
+    return { fresh: false, error: error.message || 'unknown_db_error' };
+  }
+
+  return { fresh: !!data, error: null };
+}
+
+async function markEventProcessed(supabase: any, eventId: string, meta: EventLedgerMeta) {
+  const { error } = await supabase
+    .from('stripe_webhook_events')
+    .update({
+      processed_at: new Date().toISOString(),
+      subscription_id: meta.subscription_id ?? null,
+      customer_id: meta.customer_id ?? null,
+      user_id: meta.user_id ?? null,
+    })
+    .eq('event_id', eventId);
+
+  if (error) {
+    // Não é fatal — o processamento já rodou. Só loga pra poder auditar
+    // depois. A próxima retry (se houver) vai bater no 23505 e curto-
+    // circuitar mesmo assim.
+    console.error('[stripe-webhook] failed to mark event processed', {
+      eventId,
+      error: error.message,
+    });
+  }
+}
+
+async function markEventFailed(supabase: any, eventId: string, message: string) {
+  try {
+    await supabase
+      .from('stripe_webhook_events')
+      .update({ error_message: message.slice(0, 500) })
+      .eq('event_id', eventId);
+  } catch (err) {
+    console.error('[stripe-webhook] failed to mark event failed', {
+      eventId,
+      err,
+    });
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
   }
+
+  // Declarados fora do try pra estarem disponíveis no catch — quando algo
+  // dá ruim no meio do processamento, a gente quer registrar o erro no
+  // ledger pra auditoria/debug.
+  let supabase: any = null;
+  let claimedEventId: string | null = null;
 
   try {
     const stripeSecretKey = getRequiredEnv('STRIPE_SECRET_KEY');
@@ -155,8 +247,43 @@ Deno.serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    supabase = createClient(supabaseUrl, serviceRoleKey);
     const priceIdMap = buildPriceIdMap();
+
+    // ── Idempotency check ──────────────────────────────────────────────
+    // Antes de qualquer processamento, reivindica o event.id. Se já existe,
+    // é retry do Stripe — responde 200 e sai. Se der erro real de DB,
+    // retorna 500 pro Stripe reagendar.
+    const claim = await tryClaimEvent(supabase, event);
+    if (claim.error) {
+      console.error('[stripe-webhook] ledger insert failed', {
+        eventId: event.id,
+        eventType: event.type,
+        error: claim.error,
+      });
+      // 500 → Stripe retry. Melhor do que 200 (que marcaria como processado
+      // mesmo sem ter feito nada) ou 400 (que não retry).
+      return new Response('Idempotency ledger unavailable', { status: 500 });
+    }
+    if (!claim.fresh) {
+      logWebhook('duplicate_event_skipped', {
+        eventId: event.id,
+        eventType: event.type,
+      });
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    claimedEventId = event.id;
+
+    // Metadata pra enriquecer o ledger no final. Cada case popula o que
+    // conseguir extrair do payload.
+    const ledgerMeta: EventLedgerMeta = {
+      subscription_id: null,
+      customer_id: null,
+      user_id: null,
+    };
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -165,6 +292,10 @@ Deno.serve(async (req) => {
         const customerId = typeof session.customer === 'string' ? session.customer : null;
         const subscriptionId =
           typeof session.subscription === 'string' ? session.subscription : null;
+
+        ledgerMeta.user_id = userId;
+        ledgerMeta.customer_id = customerId;
+        ledgerMeta.subscription_id = subscriptionId;
 
         logWebhook(event.type, {
           userId,
@@ -215,16 +346,44 @@ Deno.serve(async (req) => {
       case 'customer.subscription.updated': {
         // Disparado quando o usuário troca de tier pelo portal (upgrade Plus→Pro
         // ou downgrade Pro→Plus), reativa após cancelamento, etc.
-        const subscription = event.data.object as Stripe.Subscription;
-        const subscriptionId = subscription.id;
+        //
+        // ── Event ordering ───────────────────────────────────────────────
+        // O payload do event é um SNAPSHOT do estado da subscription no
+        // momento em que o evento foi criado. Se um retry atrasado desse
+        // tipo de evento chegar DEPOIS de um evento mais novo já ter sido
+        // processado (comum quando o endpoint deu 5xx/timeout na primeira
+        // entrega), usar o snapshot faria downgrade silencioso.
+        //
+        // Fix: re-buscamos a subscription via API do Stripe aqui dentro.
+        // A API retorna sempre o estado live, então mesmo um retry
+        // atrasado converge para o estado correto. Se a API falhar,
+        // caímos no payload do event como fallback.
+        const snapshot = event.data.object as Stripe.Subscription;
+        const subscriptionId = snapshot.id;
+
+        let subscription: Stripe.Subscription = snapshot;
+        try {
+          subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        } catch (err) {
+          logWebhook('subscription_refetch_failed', {
+            subscriptionId,
+            error: err instanceof Error ? err.message : String(err),
+            note: 'falling back to event payload — may be stale',
+          });
+        }
+
         const customerId = typeof subscription.customer === 'string' ? subscription.customer : null;
         const status = subscription.status; // active, past_due, canceled, trialing, ...
+
+        ledgerMeta.subscription_id = subscriptionId;
+        ledgerMeta.customer_id = customerId;
 
         logWebhook(event.type, {
           subscriptionId,
           customerId,
           status,
           metadata: subscription.metadata,
+          refetched: subscription !== snapshot,
         });
 
         const resolvedPlan = resolvePlanFromEvent({
@@ -269,6 +428,9 @@ Deno.serve(async (req) => {
           typeof invoice.subscription === 'string' ? invoice.subscription : null;
         const customerId = typeof invoice.customer === 'string' ? invoice.customer : null;
 
+        ledgerMeta.subscription_id = subscriptionId;
+        ledgerMeta.customer_id = customerId;
+
         logWebhook(event.type, { subscriptionId, customerId });
 
         if (!subscriptionId) break;
@@ -286,6 +448,9 @@ Deno.serve(async (req) => {
           typeof invoice.subscription === 'string' ? invoice.subscription : null;
         const customerId = typeof invoice.customer === 'string' ? invoice.customer : null;
 
+        ledgerMeta.subscription_id = subscriptionId;
+        ledgerMeta.customer_id = customerId;
+
         logWebhook(event.type, { subscriptionId, customerId });
 
         if (!subscriptionId) break;
@@ -301,6 +466,9 @@ Deno.serve(async (req) => {
         const subscription = event.data.object as Stripe.Subscription;
         const subscriptionId = subscription.id;
         const customerId = typeof subscription.customer === 'string' ? subscription.customer : null;
+
+        ledgerMeta.subscription_id = subscriptionId;
+        ledgerMeta.customer_id = customerId;
 
         logWebhook(event.type, { subscriptionId, customerId });
 
@@ -318,6 +486,10 @@ Deno.serve(async (req) => {
         break;
     }
 
+    // Finalizou sem exceção → marca como processado (best-effort, não falha
+    // o response pro Stripe se o UPDATE der ruim).
+    await markEventProcessed(supabase, event.id, ledgerMeta);
+
     return new Response(JSON.stringify({ received: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
@@ -325,6 +497,15 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('[stripe-webhook] erro interno', error);
     const message = error instanceof Error ? error.message : 'Erro interno';
+
+    // Se a gente já tinha reivindicado o evento, grava o erro no ledger pra
+    // audit. Importante: NÃO limpa a linha — queremos que uma retry do Stripe
+    // bata no 23505 e volte 200 (ou que alguém do time investigue via
+    // error_message populado). Resetar permitiria loop infinito de retry
+    // num evento que sabidamente falha.
+    if (claimedEventId && supabase) {
+      await markEventFailed(supabase, claimedEventId, message);
+    }
 
     if (message.startsWith('MISSING_ENV_')) {
       return new Response(`Falta ${message.replace('MISSING_ENV_', '')}`, { status: 500 });

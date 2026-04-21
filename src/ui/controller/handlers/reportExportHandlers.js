@@ -18,8 +18,8 @@ import {
   getPlanCodeForUserId,
   PLAN_CODE_FREE,
   PLAN_CODE_PLUS,
-} from '../../../core/subscriptionPlans.js';
-import { fetchMyProfileBilling } from '../../../core/monetization.js';
+} from '../../../core/plans/subscriptionPlans.js';
+import { fetchMyProfileBilling } from '../../../core/plans/monetization.js';
 import {
   getMonthlyLimitForPlan,
   getMonthlyUsageSnapshot,

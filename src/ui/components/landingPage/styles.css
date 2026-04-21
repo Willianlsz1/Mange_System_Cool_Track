@@ -2193,3 +2193,482 @@ body {
     width: 220px;
   }
 }
+
+/* ─────────────────────────────────────
+     AI NAMEPLATE — variants do mockup do hero
+     Troca o color-code de alerta vermelho pro gradient cyan→gold
+     (signifier visual de "IA + positivo" em vez de "risco").
+  ───────────────────────────────────── */
+.lp-mockup__disk--ai {
+  border-color: #e8b94a;
+  box-shadow:
+    0 0 40px rgba(232, 185, 74, 0.22),
+    inset 0 0 20px rgba(0, 200, 232, 0.08);
+}
+.lp-mockup__disk--ai span {
+  background: linear-gradient(90deg, #00c8e8 0%, #e8b94a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: 26px;
+}
+.lp-mockup__badge--ai {
+  color: #e8b94a;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+/* ─────────────────────────────────────
+     SEÇÃO IA (Cadastro por foto)
+     Layout: head (pill + h2 + sub) → grid Antes/Depois → demo foto→fields
+  ───────────────────────────────────── */
+.lp-ai {
+  padding: 64px 24px 72px;
+  max-width: 1040px;
+  margin: 0 auto;
+  width: 100%;
+  position: relative;
+}
+.lp-ai::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(232, 185, 74, 0.06), transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+.lp-ai > * {
+  position: relative;
+  z-index: 1;
+}
+.lp-ai__head {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 36px;
+}
+.lp-ai__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(0, 200, 232, 0.12) 0%, rgba(232, 185, 74, 0.14) 100%);
+  border: 1px solid rgba(232, 185, 74, 0.3);
+  color: #e8b94a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.lp-ai__pill svg {
+  flex-shrink: 0;
+}
+.lp-ai__title {
+  font-size: clamp(1.9rem, 4.2vw, 2.4rem);
+  font-weight: 700;
+  color: #f0f8ff;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.lp-ai__sub {
+  color: #b8cdde;
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 0;
+}
+.lp-ai__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+.lp-ai-card {
+  padding: 20px 18px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(138, 170, 200, 0.14);
+  background: rgba(15, 26, 42, 0.55);
+}
+.lp-ai-card--before {
+  background: linear-gradient(180deg, rgba(255, 85, 119, 0.04) 0%, rgba(15, 26, 42, 0.55) 100%);
+  border-color: rgba(255, 85, 119, 0.18);
+}
+.lp-ai-card--after {
+  background: linear-gradient(180deg, rgba(232, 185, 74, 0.06) 0%, rgba(0, 200, 232, 0.04) 100%);
+  border-color: rgba(232, 185, 74, 0.28);
+}
+.lp-ai-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.lp-ai-card__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.lp-ai-card__tag--before {
+  background: rgba(255, 85, 119, 0.12);
+  color: #ff5577;
+  border: 1px solid rgba(255, 85, 119, 0.25);
+}
+.lp-ai-card__tag--after {
+  background: rgba(232, 185, 74, 0.14);
+  color: #e8b94a;
+  border: 1px solid rgba(232, 185, 74, 0.32);
+}
+.lp-ai-card__tag svg {
+  flex-shrink: 0;
+}
+.lp-ai-card__time {
+  font-size: 12px;
+  font-weight: 700;
+  color: #8aaac8;
+  font-variant-numeric: tabular-nums;
+}
+.lp-ai-card--after .lp-ai-card__time {
+  color: #e8b94a;
+}
+.lp-ai-card__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lp-ai-card__list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #d5e1ed;
+}
+.lp-ai-card__list li svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.lp-ai-card--before .lp-ai-card__list li svg {
+  color: #ff5577;
+}
+.lp-ai-card--after .lp-ai-card__list li svg {
+  color: #e8b94a;
+}
+
+/* Demo foto → fields */
+.lp-ai__demo {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(0, 200, 232, 0.04) 0%, rgba(15, 26, 42, 0.7) 100%);
+  border: 1px solid rgba(0, 200, 232, 0.18);
+}
+.lp-ai-demo__photo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lp-ai-demo__photo-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: #8aaac8;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.lp-ai-demo__photo-label svg {
+  flex-shrink: 0;
+}
+.lp-ai-demo__photo-frame {
+  padding: 16px 14px;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(138, 170, 200, 0.04) 0px,
+      rgba(138, 170, 200, 0.04) 2px,
+      transparent 2px,
+      transparent 8px
+    ),
+    linear-gradient(180deg, #1a2942 0%, #0f1a2a 100%);
+  border: 1px solid rgba(138, 170, 200, 0.22);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: #b8cdde;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.lp-ai-demo__brand {
+  font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
+  font-size: 18px;
+  font-weight: 900;
+  color: #e8f2fa;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.lp-ai-demo__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.lp-ai-demo__rows span {
+  white-space: pre;
+}
+.lp-ai-demo__arrow {
+  display: grid;
+  place-items: center;
+  color: #e8b94a;
+}
+.lp-ai-demo__arrow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(0, 200, 232, 0.15) 0%, rgba(232, 185, 74, 0.2) 100%);
+  border: 1px solid rgba(232, 185, 74, 0.35);
+  color: #e8b94a;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.lp-ai-demo__arrow-pill svg {
+  flex-shrink: 0;
+}
+.lp-ai-demo__fields {
+  padding: 12px 12px 10px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #1a2942 0%, #0f1a2a 100%);
+  border: 1px solid rgba(0, 200, 232, 0.28);
+}
+.lp-ai-demo__fields-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(138, 170, 200, 0.12);
+  font-size: 11px;
+  color: #e8f2fa;
+  font-weight: 600;
+}
+.lp-ai-demo__fields-head-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(232, 185, 74, 0.14);
+  color: #e8b94a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border: 1px solid rgba(232, 185, 74, 0.28);
+}
+.lp-ai-demo__fields-head-badge svg {
+  flex-shrink: 0;
+}
+.lp-ai-demo__fields-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lp-ai-demo__fields-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.lp-ai-demo__fields-list li span {
+  color: #8aaac8;
+  font-weight: 500;
+}
+.lp-ai-demo__fields-list li b {
+  color: #e8f2fa;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+.lp-ai__microcopy {
+  text-align: center;
+  margin: 28px 0 0;
+  font-size: 13px;
+  color: #8aaac8;
+}
+
+/* Responsivo AI demo — stack em mobile */
+@media (max-width: 720px) {
+  .lp-ai__grid {
+    grid-template-columns: 1fr;
+  }
+  .lp-ai__demo {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .lp-ai-demo__arrow {
+    transform: rotate(90deg);
+    padding: 4px 0;
+  }
+}
+
+/* ─────────────────────────────────────
+     SCREEN "Foto da placa (IA)" — usado na gallery
+  ───────────────────────────────────── */
+.lp-sc-camera {
+  position: relative;
+  padding: 6px;
+  margin: 4px 0 6px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(0, 200, 232, 0.04), transparent);
+}
+.lp-sc-camera__frame {
+  position: relative;
+  height: 74px;
+  border-radius: 6px;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(138, 170, 200, 0.05) 0px,
+      rgba(138, 170, 200, 0.05) 2px,
+      transparent 2px,
+      transparent 6px
+    ),
+    linear-gradient(180deg, #1a2942 0%, #0a1524 100%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.lp-sc-camera__corner {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid #00c8e8;
+}
+.lp-sc-camera__corner--tl {
+  top: 4px;
+  left: 4px;
+  border-right: none;
+  border-bottom: none;
+}
+.lp-sc-camera__corner--tr {
+  top: 4px;
+  right: 4px;
+  border-left: none;
+  border-bottom: none;
+}
+.lp-sc-camera__corner--bl {
+  bottom: 4px;
+  left: 4px;
+  border-right: none;
+  border-top: none;
+}
+.lp-sc-camera__corner--br {
+  bottom: 4px;
+  right: 4px;
+  border-left: none;
+  border-top: none;
+}
+.lp-sc-camera__plate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 7px;
+  line-height: 1.25;
+  color: #b8cdde;
+  padding: 2px 4px;
+}
+.lp-sc-camera__brand {
+  font-family: 'Arial Black', 'Helvetica Neue', sans-serif;
+  font-size: 11px;
+  font-weight: 900;
+  color: #e8f2fa;
+  letter-spacing: 1px;
+  margin-bottom: 1px;
+}
+.lp-sc-camera__cta {
+  margin-top: 5px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #00c8e8 0%, rgba(0, 200, 232, 0.75) 100%);
+  color: #07111f;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.lp-sc-camera__cta svg {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+}
+.lp-sc-ai-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(0, 200, 232, 0.1) 0%, rgba(232, 185, 74, 0.14) 100%);
+  border: 1px solid rgba(232, 185, 74, 0.3);
+  margin: 4px 0;
+}
+.lp-sc-ai-progress__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  color: #e8b94a;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.lp-sc-ai-progress__label svg {
+  flex-shrink: 0;
+  width: 9px;
+  height: 9px;
+}
+.lp-sc-ai-progress__time {
+  font-size: 9px;
+  color: #e8b94a;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.lp-sc-field--ai {
+  border-color: rgba(232, 185, 74, 0.3) !important;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 200, 232, 0.04) 0%,
+    rgba(232, 185, 74, 0.05) 100%
+  ) !important;
+}

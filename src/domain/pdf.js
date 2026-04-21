@@ -23,7 +23,7 @@ import { drawCover } from './pdf/sections/cover.js';
 import { stampFooterTotals } from './pdf/sections/footer.js';
 import { drawServices } from './pdf/sections/services.js';
 import { drawSignaturePages } from './pdf/sections/signatures.js';
-import { PLAN_CODE_FREE } from '../core/subscriptionPlans.js';
+import { PLAN_CODE_FREE } from '../core/plans/subscriptionPlans.js';
 
 const PAGE_MARGIN = 15;
 

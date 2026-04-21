@@ -16,13 +16,13 @@
  */
 
 import { Auth } from '../../core/auth.js';
-import { fetchMyProfileBilling } from '../../core/monetization.js';
+import { fetchMyProfileBilling } from '../../core/plans/monetization.js';
 import {
   getEffectivePlan,
   PLAN_CODE_FREE,
   PLAN_CODE_PLUS,
   PLAN_CODE_PRO,
-} from '../../core/subscriptionPlans.js';
+} from '../../core/plans/subscriptionPlans.js';
 import {
   getMonthlyLimitForPlan,
   getMonthlyUsageSnapshot,

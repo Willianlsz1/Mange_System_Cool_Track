@@ -12,7 +12,7 @@ async function loadSubscriptionPlans({ profile = { plan: 'free' }, error = null 
     supabase: { from },
   }));
 
-  const module = await import('../core/subscriptionPlans.js');
+  const module = await import('../core/plans/subscriptionPlans.js');
   return { ...module, mocks: { maybeSingle, eq, select, from } };
 }
 
