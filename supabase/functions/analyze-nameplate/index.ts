@@ -275,14 +275,20 @@ async function logAiUsageCost(
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
-      console.warn('[analyze-nameplate] ai_usage_cost insert failed', {
+      // Perda de observabilidade financeira — não mata o gate, mas queremos
+      // saber pra não descobrir no fim do mês que o ai_usage_cost estava
+      // vazio. Level error pra cair nos mesmos alertas.
+      console.error('[ALERT][analyze-nameplate] ai_usage_cost insert failed', {
         user_id: row.user_id,
         status: res.status,
-        body: txt.slice(0, 200),
+        body: txt.slice(0, 400),
       });
     }
   } catch (err) {
-    console.error('[analyze-nameplate] ai_usage_cost insert threw', err);
+    console.error('[ALERT][analyze-nameplate] ai_usage_cost insert threw', {
+      user_id: row.user_id,
+      err: err instanceof Error ? { name: err.name, message: err.message } : String(err),
+    });
   }
 }
 
@@ -339,10 +345,15 @@ async function loadMonthlyUsed(
       },
     );
     if (!res.ok) {
-      console.warn('[analyze-nameplate] usage lookup failed', {
+      const txt = await res.text().catch(() => '');
+      // Mesmo risco do increment: lookup retornando 0 em erro = gate libera
+      // indevidamente. Sinaliza alto.
+      console.error('[ALERT][analyze-nameplate] quota lookup failed — gate pode estar cego', {
         userId,
         resource,
+        monthStart,
         status: res.status,
+        body: txt.slice(0, 400),
       });
       return 0;
     }
@@ -350,17 +361,37 @@ async function loadMonthlyUsed(
     const parsed = Number.parseInt(String(rows?.[0]?.used_count ?? 0), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
   } catch (err) {
-    console.error('[analyze-nameplate] usage lookup threw', err);
+    console.error('[ALERT][analyze-nameplate] quota lookup threw — gate pode estar cego', {
+      userId,
+      resource,
+      monthStart,
+      err: err instanceof Error ? { name: err.name, message: err.message } : String(err),
+    });
     return 0;
   }
 }
 
+type IncrementErrorKind =
+  | 'rpc_rejected' // 4xx — constraint check, permission, resource inválido
+  | 'rpc_server_error' // 5xx
+  | 'rpc_network_error' // fetch lançou
+  | 'rpc_parse_error'; // 2xx mas payload não é número
+
 /**
  * Incrementa (ou cria) o contador mensal do usuário pra este resource.
  * Chama a RPC via user JWT — a RPC exige auth.uid() == p_user_id, então
- * precisa ser a sessão do user, não service_role. Retorna o novo used_count
- * ou null em caso de falha (não propagamos — a resposta principal já foi
- * entregue; contagem quebrada é só telemetria perdida).
+ * precisa ser a sessão do user, não service_role.
+ *
+ * Retorna `{ used, error }`:
+ *  - `used` = novo used_count se sucesso, `null` se falhou.
+ *  - `error` = código da falha (ver IncrementErrorKind) ou `null` em sucesso.
+ *
+ * IMPORTANTE: toda falha aqui é CRÍTICA pro gate — se o counter não sobe, o
+ * `loadMonthlyUsed` da próxima chamada lê 0 e o gate libera indefinidamente
+ * (= bypass de plano). Por isso logamos com prefixo `[ALERT]` e level `error`
+ * pra ser trivial alertar via `log_analytics` no Supabase. Não propagamos
+ * exceção porque o user já recebeu o valor da IA — melhor sinalizar no payload
+ * (`quota.tracking_failed=true`) do que quebrar a resposta.
  */
 async function incrementMonthlyUsage(
   supabaseUrl: string,
@@ -369,7 +400,7 @@ async function incrementMonthlyUsage(
   userId: string,
   resource: string,
   monthStart: string,
-): Promise<number | null> {
+): Promise<{ used: number | null; error: IncrementErrorKind | null }> {
   try {
     const res = await fetch(`${supabaseUrl}/rest/v1/rpc/increment_monthly_usage`, {
       method: 'POST',
@@ -388,20 +419,37 @@ async function incrementMonthlyUsage(
     });
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
-      console.warn('[analyze-nameplate] increment RPC failed', {
+      const kind: IncrementErrorKind = res.status >= 500 ? 'rpc_server_error' : 'rpc_rejected';
+      console.error('[ALERT][analyze-nameplate] quota increment failed — gate está cego', {
+        kind,
         userId,
         resource,
+        monthStart,
         status: res.status,
-        body: txt.slice(0, 200),
+        body: txt.slice(0, 400),
       });
-      return null;
+      return { used: null, error: kind };
     }
     const payload = await res.json();
     const used = typeof payload === 'number' ? payload : Number(payload);
-    return Number.isFinite(used) ? used : null;
+    if (!Number.isFinite(used)) {
+      console.error('[ALERT][analyze-nameplate] quota increment returned non-numeric payload', {
+        userId,
+        resource,
+        monthStart,
+        payload,
+      });
+      return { used: null, error: 'rpc_parse_error' };
+    }
+    return { used, error: null };
   } catch (err) {
-    console.error('[analyze-nameplate] increment RPC threw', err);
-    return null;
+    console.error('[ALERT][analyze-nameplate] quota increment threw — gate está cego', {
+      userId,
+      resource,
+      monthStart,
+      err: err instanceof Error ? { name: err.name, message: err.message } : String(err),
+    });
+    return { used: null, error: 'rpc_network_error' };
   }
 }
 
@@ -671,10 +719,13 @@ Deno.serve(async (req: Request) => {
   });
 
   // Incrementa o contador DEPOIS do sucesso — vale pra Free/Plus/Pro. Falha
-  // aqui não deve matar a resposta; o user já recebeu o valor e no pior caso
-  // o próximo uso do mês não será bloqueado. Trade-off aceito em troca de
-  // simplicidade e robustez (quota quebrada é só telemetria perdida).
-  const newUsed = await incrementMonthlyUsage(
+  // aqui é CRÍTICA pro gate (counter travado em 0 = gate cego = bypass de
+  // plano). O incrementMonthlyUsage loga com `[ALERT]` em error level; aqui
+  // expomos `tracking_failed=true` no payload pro client surfaçar um toast
+  // discreto e pra logs do app terem o sinal também. Não fail-closed porque
+  // o token da Anthropic já foi gasto; derrubar a resposta seria pior UX
+  // sem impedir o dano (custo).
+  const { used: newUsed, error: incrementError } = await incrementMonthlyUsage(
     supabaseUrl,
     serviceRoleKey,
     token,
@@ -682,6 +733,7 @@ Deno.serve(async (req: Request) => {
     USAGE_RESOURCE,
     monthStart,
   );
+  const trackingFailed = incrementError !== null;
   const remaining = newUsed !== null ? Math.max(0, monthlyLimit - newUsed) : quotaRemainingBefore;
 
   const quotaPayload = {
@@ -690,6 +742,7 @@ Deno.serve(async (req: Request) => {
     limit: monthlyLimit,
     used: newUsed ?? usedBefore + 1,
     remaining,
+    ...(trackingFailed ? { tracking_failed: true, tracking_error: incrementError } : {}),
   };
 
   return jsonResponse(req, {

@@ -339,5 +339,23 @@ export async function analyzeNameplate(file, { supabaseClient = supabase } = {})
   } else {
     mapped._trial = null;
   }
+
+  // Gate health check: se o edge function sinalizou que o increment do counter
+  // falhou (`quota.tracking_failed`), o gate do próximo request ficou cego.
+  // Logamos no client pra ter backup do sinal mesmo se os logs do edge forem
+  // silenciados por qualquer razão. A UI pode ler `_quotaTrackingFailed` pra
+  // um toast discreto se quiser expor — por padrão não fazemos barulho.
+  const quota = payload && typeof payload.quota === 'object' ? payload.quota : null;
+  if (quota && quota.tracking_failed) {
+    console.error('[ALERT][nameplate] quota tracking falhou no servidor', {
+      error: quota.tracking_error ?? null,
+      plan: quota.plan ?? null,
+      limit: quota.limit ?? null,
+    });
+    mapped._quotaTrackingFailed = true;
+    mapped._quotaTrackingError = quota.tracking_error ?? null;
+  } else {
+    mapped._quotaTrackingFailed = false;
+  }
   return mapped;
 }
