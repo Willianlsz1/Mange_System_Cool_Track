@@ -90,6 +90,17 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
   const highlight = highlightPlan || (isPro ? null : PLAN_CODE_PRO);
 
+  // ── Tab ativa no mobile ────────────────────────────────────────────────
+  // Prioriza highlightPlan (quando vem de um CTA de upgrade). Caso contrário,
+  // abre no plano atual do usuário — assim ele vê primeiro o que já tem.
+  const mobileActiveTab = highlightPlan || planCode;
+  const isFreeActive = mobileActiveTab === PLAN_CODE_FREE;
+  const isPlusActive = mobileActiveTab === PLAN_CODE_PLUS;
+  const isProActive = mobileActiveTab === PLAN_CODE_PRO;
+  const freeMobileCls = isFreeActive ? ' pricing-card--mobile-active' : '';
+  const plusMobileCls = isPlusActive ? ' pricing-card--mobile-active' : '';
+  const proMobileCls = isProActive ? ' pricing-card--mobile-active' : '';
+
   // Regra: só mostra botão de checkout pra planos ACIMA do atual. Downgrade é feito
   // via portal (data-action="manage-subscription"), não criando nova assinatura.
   const showPlusCheckout = isFree; // Free → Plus (upgrade)
@@ -124,6 +135,32 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
         }
       </header>
 
+      <!-- ── Management section (Plus ou Pro) — topo pra ficar sempre visível,
+             inclusive no mobile onde só 1 card aparece por vez ── -->
+      ${
+        isPro || isPlus
+          ? `
+      <div class="pricing-manage-section">
+        <div class="pricing-manage-section__icon" aria-hidden="true">⚙️</div>
+        <div class="pricing-manage-section__body">
+          <p class="pricing-manage-section__title">Gerenciar assinatura</p>
+          <p class="pricing-manage-section__desc">
+            Atualize o método de pagamento, troque de plano (Plus ↔ Pro), veja histórico de cobranças ou cancele a qualquer momento.
+            Seus dados ficam salvos mesmo após o cancelamento.
+          </p>
+        </div>
+        <button
+          class="btn btn--outline pricing-manage-section__btn"
+          type="button"
+          data-action="manage-subscription"
+        >
+          Abrir portal &rarr;
+        </button>
+      </div>
+      `
+          : ''
+      }
+
       <!-- ── Toggle mensal / anual (só quando há checkout pra tomar ação) ── -->
       ${
         showPlusCheckout || showProCheckout
@@ -136,11 +173,45 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
           : ''
       }
 
+      <!-- ── Seletor de plano (mobile only) ── -->
+      <nav class="pricing-plan-tabs" role="tablist" aria-label="Escolher plano para ver detalhes">
+        <button
+          type="button"
+          class="pricing-plan-tabs__btn${isFreeActive ? ' pricing-plan-tabs__btn--active' : ''}"
+          data-plan-tab="${PLAN_CODE_FREE}"
+          role="tab"
+          aria-selected="${isFreeActive ? 'true' : 'false'}"
+          aria-controls="pricing-card-free"
+        >Gratuito</button>
+        <button
+          type="button"
+          class="pricing-plan-tabs__btn pricing-plan-tabs__btn--plus${isPlusActive ? ' pricing-plan-tabs__btn--active' : ''}"
+          data-plan-tab="${PLAN_CODE_PLUS}"
+          role="tab"
+          aria-selected="${isPlusActive ? 'true' : 'false'}"
+          aria-controls="pricing-card-plus"
+        >Plus</button>
+        <button
+          type="button"
+          class="pricing-plan-tabs__btn pricing-plan-tabs__btn--pro${isProActive ? ' pricing-plan-tabs__btn--active' : ''}"
+          data-plan-tab="${PLAN_CODE_PRO}"
+          role="tab"
+          aria-selected="${isProActive ? 'true' : 'false'}"
+          aria-controls="pricing-card-pro"
+        >Pro</button>
+      </nav>
+
       <!-- ── Cards ── -->
       <div class="pricing-grid pricing-grid--three-col" role="list" aria-label="Planos disponíveis">
 
         <!-- ═══════ FREE ═══════ -->
-        <article class="pricing-card ${isFree ? 'pricing-card--active' : ''}" role="listitem" aria-label="Plano Gratuito">
+        <article
+          id="pricing-card-free"
+          class="pricing-card ${isFree ? 'pricing-card--active' : ''}${freeMobileCls}"
+          data-plan-card="${PLAN_CODE_FREE}"
+          role="listitem"
+          aria-label="Plano Gratuito"
+        >
           <span class="pricing-badge ${isFree ? 'pricing-badge--current' : 'pricing-badge--neutral'}">
             ${isFree ? 'PLANO ATUAL' : 'BASE'}
           </span>
@@ -165,7 +236,9 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
         <!-- ═══════ PLUS ═══════ -->
         <article
-          class="pricing-card pricing-card--plus ${isPlus ? 'pricing-card--active' : ''} ${highlight === PLAN_CODE_PLUS ? 'pricing-card--highlight' : ''}"
+          id="pricing-card-plus"
+          class="pricing-card pricing-card--plus ${isPlus ? 'pricing-card--active' : ''} ${highlight === PLAN_CODE_PLUS ? 'pricing-card--highlight' : ''}${plusMobileCls}"
+          data-plan-card="${PLAN_CODE_PLUS}"
           role="listitem"
           aria-label="Plano Plus"
         >
@@ -227,7 +300,9 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
         <!-- ═══════ PRO ═══════ -->
         <article
-          class="pricing-card pricing-card--pro ${isPro ? 'pricing-card--active' : ''} ${highlight === PLAN_CODE_PRO && !isPro ? 'pricing-card--highlight' : ''}"
+          id="pricing-card-pro"
+          class="pricing-card pricing-card--pro ${isPro ? 'pricing-card--active' : ''} ${highlight === PLAN_CODE_PRO && !isPro ? 'pricing-card--highlight' : ''}${proMobileCls}"
+          data-plan-card="${PLAN_CODE_PRO}"
           role="listitem"
           aria-label="Plano Pro"
         >
@@ -386,31 +461,6 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
         </div>
       </section>
 
-      <!-- ── Management section (Plus ou Pro) ── -->
-      ${
-        isPro || isPlus
-          ? `
-      <div class="pricing-manage-section">
-        <div class="pricing-manage-section__icon">⚙️</div>
-        <div class="pricing-manage-section__body">
-          <p class="pricing-manage-section__title">Gerenciar assinatura</p>
-          <p class="pricing-manage-section__desc">
-            Atualize o método de pagamento, troque de plano (Plus ↔ Pro), veja histórico de cobranças ou cancele a qualquer momento.
-            Seus dados ficam salvos mesmo após o cancelamento.
-          </p>
-        </div>
-        <button
-          class="btn btn--outline pricing-manage-section__btn"
-          type="button"
-          data-action="manage-subscription"
-        >
-          Abrir portal &rarr;
-        </button>
-      </div>
-      `
-          : ''
-      }
-
       <!-- ── FAQ ── -->
       <section class="pricing-faq" aria-label="Perguntas frequentes">
         <h3 class="pricing-faq__title">FAQ</h3>
@@ -518,6 +568,30 @@ export async function renderPricing(params = {}) {
       if (proCheckoutBtn) {
         proCheckoutBtn.dataset.plan = showAnnual ? 'pro_annual' : 'pro';
         proCheckoutBtn.textContent = showAnnual ? 'Assinar Pro anual →' : 'Assinar Pro →';
+      }
+    });
+  });
+
+  // ── Tabs segmentadas (mobile only — controladas por CSS @media) ──────────
+  // A CSS esconde os cards sem .pricing-card--mobile-active abaixo de 720px.
+  // Em desktop, todas as cards ficam visíveis e as tabs são display:none.
+  const planTabs = view.querySelectorAll('.pricing-plan-tabs__btn');
+  const planCards = view.querySelectorAll('.pricing-card[data-plan-card]');
+  planTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const target = tab.dataset.planTab;
+      planTabs.forEach((b) => {
+        const active = b === tab;
+        b.classList.toggle('pricing-plan-tabs__btn--active', active);
+        b.setAttribute('aria-selected', active ? 'true' : 'false');
+      });
+      planCards.forEach((card) => {
+        card.classList.toggle('pricing-card--mobile-active', card.dataset.planCard === target);
+      });
+      // Scroll suave pro topo do card escolhido (mantém contexto no mobile)
+      const activeCard = view.querySelector(`.pricing-card[data-plan-card="${target}"]`);
+      if (activeCard && window.innerWidth <= 720) {
+        activeCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     });
   });

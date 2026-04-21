@@ -254,12 +254,14 @@ function bindOnce() {
     await handleFile(file);
   });
 
-  // Upsell CTA: o botão já tem data-action, então só precisamos ouvir click
-  // direto (mais simples que passar pelo delegator global).
+  // Upsell CTA: listener direto no botão. Pareava com data-action antes, mas o
+  // delegator global ficava warnando "Sem handler para action=nameplate-upsell-cta"
+  // a cada click (o handler real vivia aqui, não no mapa do events.js). Agora
+  // amarramos só por id — sem data-action, sem warning.
   // Ordem importa: fecha o modal-add-eq ANTES do goTo pro pricing — senão
   // a rota muda mas o modal fica renderizado em cima, obrigando o user a
   // clicar em algo pra fechar o overlay.
-  const lockedBtn = document.querySelector('[data-action="nameplate-upsell-cta"]');
+  const lockedBtn = document.getElementById('nameplate-cta-btn-locked');
   if (lockedBtn) {
     lockedBtn.addEventListener('click', () => {
       trackEvent('nameplate_upsell_clicked', { source: 'equip_modal' });

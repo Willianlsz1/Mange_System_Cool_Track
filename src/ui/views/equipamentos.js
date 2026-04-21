@@ -2482,7 +2482,16 @@ export async function viewEquip(id) {
   const fotosList = Array.isArray(eq.fotos) ? eq.fotos.filter((p) => p && (p.url || p.path)) : [];
   const firstPhotoUrl = fotosList[0]?.url;
   const canEditPhotos = isCachedPlanPlusOrHigher();
-  const photoCtaLabel = fotosList.length === 0 ? 'Adicionar foto' : 'Gerenciar fotos';
+  // Copy do CTA muda por plano pra deixar claro que Free é um gate (antes
+  // dizia "Adicionar foto PLUS", confundindo — parecia que o clique abriria
+  // a câmera, quando na verdade abre a tela de pricing).
+  //   Free  : "Desbloquear com Plus" + ícone de cadeado
+  //   Plus+ : "Adicionar foto" / "Gerenciar fotos" + ícone de câmera
+  const photoCtaLabel = canEditPhotos
+    ? fotosList.length === 0
+      ? 'Adicionar foto'
+      : 'Gerenciar fotos'
+    : 'Desbloquear com Plus';
   // Pra Free o CTA vira upsell (abre pricing). Pro/Plus abre o editor.
   const photoCtaAction = canEditPhotos ? 'open-eq-photos-editor' : 'open-upgrade';
   const photoCtaExtra = canEditPhotos
@@ -2491,37 +2500,63 @@ export async function viewEquip(id) {
   const photoCtaBadge = canEditPhotos
     ? ''
     : '<span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>';
+  const photoCtaVariantCls = canEditPhotos ? '' : ' eq-detail-cover__cta--locked';
   const photoCameraIcon = `
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
       <circle cx="12" cy="13" r="3.5"/>
     </svg>`;
+  const photoLockIcon = `
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="4" y="11" width="16" height="10" rx="2"/>
+      <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+    </svg>`;
+  const photoCtaIcon = canEditPhotos ? photoCameraIcon : photoLockIcon;
+  // Nota: o fallback de erro no <img> (quando firstPhotoUrl falha) é anexado
+  // via addEventListener('error') logo depois que o innerHTML é aplicado
+  // (busca por _wireEqDetailCoverFallback abaixo). Antes usávamos `onerror=`
+  // inline, mas isso viola CSP `script-src 'self'` (sem 'unsafe-inline').
+  // Decisão UX (V4.3): quando há foto, o CTA NÃO fica mais sobreposto a ela
+  // (era "Gerenciar fotos" flutuando no canto inferior direito do img e
+  // obstruía a etiqueta). Agora a foto fica limpa e o CTA vira uma linha
+  // dedicada logo abaixo — ação separada, visível, sem interferir na leitura.
+  // Quando NÃO há foto (placeholder), o CTA continua centralizado sobre o
+  // gradiente porque nesse caso ele É o próprio conteúdo convidando à ação.
   const coverInner = firstPhotoUrl
-    ? `<img class="eq-detail-cover__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt="Foto de ${Utils.escapeAttr(eq.nome)}"
-         onerror="this.closest('.eq-detail-cover').classList.add('eq-detail-cover--fallback');this.remove();" />
-       <span class="eq-detail-cover__emoji" aria-hidden="true">${tipoEmoji}</span>
-       <button type="button" class="eq-detail-cover__cta eq-detail-cover__cta--overlay"
-         data-action="${photoCtaAction}" data-id="${safeId}"${photoCtaExtra}
-         aria-label="${canEditPhotos ? 'Gerenciar fotos' : 'Desbloquear fotos com Plus'}">
-         ${photoCameraIcon}
-         <span>${photoCtaLabel}</span>
-         ${photoCtaBadge}
-       </button>`
+    ? `<img class="eq-detail-cover__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt="Foto de ${Utils.escapeAttr(eq.nome)}" />
+       <span class="eq-detail-cover__emoji" aria-hidden="true">${tipoEmoji}</span>`
     : `<span class="eq-detail-cover__emoji eq-detail-cover__emoji--placeholder" aria-hidden="true">${tipoEmoji}</span>
-       <button type="button" class="eq-detail-cover__cta eq-detail-cover__cta--center"
-         data-action="${photoCtaAction}" data-id="${safeId}"${photoCtaExtra}>
-         ${photoCameraIcon}
+       <button type="button" class="eq-detail-cover__cta eq-detail-cover__cta--center${photoCtaVariantCls}"
+         data-action="${photoCtaAction}" data-id="${safeId}"${photoCtaExtra}
+         aria-label="${canEditPhotos ? 'Adicionar foto' : 'Fotos bloqueadas — desbloqueie com o plano Plus'}">
+         ${photoCtaIcon}
          <span>${photoCtaLabel}</span>
          ${photoCtaBadge}
        </button>`;
   const coverHasPhotoClass = firstPhotoUrl
     ? ' eq-detail-cover--has-photo'
     : ' eq-detail-cover--empty';
+  const coverLockedClass = canEditPhotos ? '' : ' eq-detail-cover--locked';
+  // Linha de ação logo abaixo da foto — só renderizada quando existe foto.
+  // No caso empty, o CTA já tá dentro do placeholder (centralizado).
+  const coverActionsBlock = firstPhotoUrl
+    ? `<div class="eq-detail-cover-actions">
+        <button type="button" class="eq-detail-cover-action${photoCtaVariantCls}"
+          data-action="${photoCtaAction}" data-id="${safeId}"${photoCtaExtra}
+          aria-label="${canEditPhotos ? 'Gerenciar fotos' : 'Fotos bloqueadas — desbloqueie com o plano Plus'}">
+          ${photoCtaIcon}
+          <span>${photoCtaLabel}</span>
+          ${photoCtaBadge}
+        </button>
+      </div>`
+    : '';
   const coverBlock = `
-    <div class="eq-detail-cover${coverHasPhotoClass}">
+    <div class="eq-detail-cover${coverHasPhotoClass}${coverLockedClass}">
       ${coverInner}
-    </div>`;
+    </div>
+    ${coverActionsBlock}`;
 
   // ── Seção "Dados da etiqueta" (V5) ──
   // Renderiza os 12 campos extraídos da etiqueta (via IA no cadastro ou
@@ -2690,6 +2725,22 @@ export async function viewEquip(id) {
   // V4: listener das fotos do hero/gallery removido — o bloco foi substituído
   // pelo avatar CTA, que abre `modal-eq-photos`. Lightbox continua sendo
   // útil para abrir a foto em grande a partir do editor, se necessário.
+
+  // Fallback da foto de capa quebrada: se a URL expira ou falha (offline,
+  // 404), aplica `eq-detail-cover--fallback` pra o emoji do tipo aparecer
+  // no lugar do img quebrado. Anexado via addEventListener em vez de
+  // `onerror=` inline por causa do CSP `script-src 'self'`.
+  const coverImg = document.querySelector('.eq-detail-cover__img');
+  if (coverImg instanceof HTMLImageElement) {
+    coverImg.addEventListener(
+      'error',
+      () => {
+        coverImg.closest('.eq-detail-cover')?.classList.add('eq-detail-cover--fallback');
+        coverImg.remove();
+      },
+      { once: true },
+    );
+  }
 
   try {
     const { Modal: M } = await import('../../core/modal.js');

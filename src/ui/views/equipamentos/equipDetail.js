@@ -155,43 +155,82 @@ export async function viewEquip(id) {
   const firstPhoto = Array.isArray(eq.fotos) ? eq.fotos.find((p) => p && (p.url || p.path)) : null;
   const firstPhotoUrl = firstPhoto?.url;
   const canEditPhotos = isCachedPlanPlusOrHigher();
+  // Nota: o fallback de erro no <img> (quando firstPhotoUrl falha) é anexado
+  // via addEventListener('error') logo após o render. Usávamos `onerror=`
+  // inline, mas isso viola CSP `script-src 'self'` (sem 'unsafe-inline').
   const avatarInner = firstPhotoUrl
-    ? `<img class="eq-detail-avatar__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt=""
-         onerror="this.closest('.eq-detail-avatar').classList.add('eq-detail-avatar--fallback');this.remove();" />
+    ? `<img class="eq-detail-avatar__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt="" />
        <span class="eq-detail-avatar__emoji" aria-hidden="true">${tipoEmoji}</span>`
     : `<span class="eq-detail-avatar__emoji" aria-hidden="true">${tipoEmoji}</span>`;
   const avatarHasPhotoClass = firstPhotoUrl ? ' eq-detail-avatar--has-photo' : '';
   const photoCount = Array.isArray(eq.fotos)
     ? eq.fotos.filter((p) => p && (p.url || p.path)).length
     : 0;
-  const photoCtaLabel = photoCount === 0 ? 'Adicionar foto' : 'Gerenciar fotos';
-  // Pra Free o CTA vira upsell (abre pricing). Pro/Plus abre o editor.
+  // Copy/affordance do CTA muda por plano.
+  // Free: "Desbloquear com Plus" (ação é upsell, não adicionar) — antes era
+  // "Adicionar foto" com badge PLUS, o que sugeria que o clique iria abrir
+  // a câmera e confundia o usuário. Agora o verbo deixa claro que é um gate.
+  // Plus/Pro: "Adicionar foto" ou "Gerenciar fotos" (ação é o editor).
+  const photoCtaLabel = canEditPhotos
+    ? photoCount === 0
+      ? 'Adicionar foto'
+      : 'Gerenciar fotos'
+    : 'Desbloquear com Plus';
   const photoCtaAction = canEditPhotos ? 'open-eq-photos-editor' : 'open-upgrade';
   const photoCtaExtra = canEditPhotos
     ? ''
     : ' data-upgrade-source="equip_detail_photos" data-highlight-plan="plus"';
+  // Ícone do CTA: câmera pra Plus/Pro (ação = editar fotos),
+  // cadeado pra Free (ação = upsell).
+  const photoCtaIcon = canEditPhotos
+    ? `<svg class="eq-detail-avatar-cta__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+         <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+         <circle cx="12" cy="13" r="3"/>
+       </svg>`
+    : `<svg class="eq-detail-avatar-cta__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+         <rect x="4" y="11" width="16" height="10" rx="2"/>
+         <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+       </svg>`;
+  // Badge PLUS só pra Free, e sempre depois do label (nunca disfarçado de chip
+  // decorativo — agora é o 2º sinal reforçando o 1º, não o único).
   const photoCtaBadge = canEditPhotos
     ? ''
     : '<span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>';
+  // Classe de variante no CTA pra CSS tratar o gate (cor + cursor) sem
+  // depender de heurística no atributo data-action.
+  const photoCtaVariantCls = canEditPhotos ? '' : ' eq-detail-avatar-cta--locked';
+  // Pra Free, o avatar fica com visual "locked" (opacity + cadeado).
+  // Dispara o mesmo upsell, mas é agora claramente não-interativo-para-foto.
+  const avatarLockedCls = canEditPhotos ? '' : ' eq-detail-avatar--locked';
+  const avatarHintIcon = canEditPhotos
+    ? // Câmera = "você pode editar essa foto"
+      `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+        <circle cx="12" cy="13" r="3"/>
+      </svg>`
+    : // Cadeado = "você não pode editar essa foto ainda"
+      `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="4" y="11" width="16" height="10" rx="2"/>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+      </svg>`;
   const avatarBlock = `
     <div class="eq-detail-avatar-row">
       <button type="button"
-        class="eq-detail-avatar${avatarHasPhotoClass}"
+        class="eq-detail-avatar${avatarHasPhotoClass}${avatarLockedCls}"
         data-action="${photoCtaAction}"
         data-id="${safeId}"${photoCtaExtra}
-        aria-label="${canEditPhotos ? 'Editar fotos do equipamento' : 'Desbloquear fotos com Plus'}">
+        aria-label="${canEditPhotos ? 'Editar fotos do equipamento' : 'Fotos bloqueadas — desbloqueie com o plano Plus'}">
         ${avatarInner}
         <span class="eq-detail-avatar__edit-hint" aria-hidden="true">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
-            <circle cx="12" cy="13" r="3"/>
-          </svg>
+          ${avatarHintIcon}
         </span>
       </button>
-      <button type="button" class="eq-detail-avatar-cta"
+      <button type="button" class="eq-detail-avatar-cta${photoCtaVariantCls}"
         data-action="${photoCtaAction}"
         data-id="${safeId}"${photoCtaExtra}>
+        ${photoCtaIcon}
         ${photoCtaLabel}
         ${photoCtaBadge}
       </button>
@@ -401,6 +440,22 @@ export async function viewEquip(id) {
     setorSel.addEventListener('change', (e) => {
       _onSetorChange(id, e.target.value || null);
     });
+  }
+
+  // Fallback de foto quebrada: se a URL da primeira foto falhar (link expirado,
+  // offline, 404), aplica a classe `--fallback` no avatar pra mostrar o emoji
+  // do tipo em vez de um placeholder quebrado. Anexado via addEventListener
+  // em vez de `onerror=` inline por causa do CSP `script-src 'self'`.
+  const avatarImg = document.querySelector('.eq-detail-avatar__img');
+  if (avatarImg instanceof HTMLImageElement) {
+    avatarImg.addEventListener(
+      'error',
+      () => {
+        avatarImg.closest('.eq-detail-avatar')?.classList.add('eq-detail-avatar--fallback');
+        avatarImg.remove();
+      },
+      { once: true },
+    );
   }
 
   try {

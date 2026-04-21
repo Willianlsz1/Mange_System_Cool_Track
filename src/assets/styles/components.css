@@ -13551,6 +13551,42 @@ select option {
   background: var(--surface-alt, #f9fafb);
   border-color: var(--color-primary, #2563eb);
 }
+/* Ícone inline no CTA (câmera pra Plus/Pro, cadeado pra Free). */
+.eq-detail-avatar-cta__icon {
+  flex-shrink: 0;
+}
+
+/* ── Variante --locked ──
+   Quando o usuário é Free, o avatar + CTA deixam de parecer "adicionar foto"
+   e passam a parecer explicitamente um gate. O clique abre o upsell pricing;
+   o visual evita induzir o usuário a pensar que vai abrir a câmera. */
+.eq-detail-avatar--locked {
+  background: var(--surface-alt, #f3f4f6);
+  border-style: dashed;
+  opacity: 0.85;
+}
+.eq-detail-avatar--locked:hover,
+.eq-detail-avatar--locked:focus-visible {
+  opacity: 1;
+  transform: scale(1.02);
+}
+.eq-detail-avatar--locked .eq-detail-avatar__edit-hint {
+  background: var(--text-muted, #6b7280);
+}
+
+.eq-detail-avatar-cta--locked {
+  /* Visual de upsell (plus-branded) — usa a mesma família de cor dos badges
+     PLUS pra marcar coerência. Evita competir com CTAs primários (Registrar
+     serviço etc.) mas ainda sinaliza clicabilidade. */
+  border-color: color-mix(in oklab, var(--color-primary, #2563eb) 30%, transparent);
+  background: color-mix(in oklab, var(--color-primary, #2563eb) 8%, var(--surface, #fff));
+  color: var(--color-primary, #2563eb);
+}
+.eq-detail-avatar-cta--locked:hover,
+.eq-detail-avatar-cta--locked:focus-visible {
+  background: color-mix(in oklab, var(--color-primary, #2563eb) 14%, var(--surface, #fff));
+  border-color: var(--color-primary, #2563eb);
+}
 
 /* Modal-eq-photos: lead text. */
 .eq-photos-modal__lead {
@@ -13568,11 +13604,19 @@ select option {
 */
 .eq-detail-cover {
   position: relative;
-  /* Break out da padding interna do #modal-eq-det .modal (32px 24px) pra
-     ficar edge-to-edge. --space-6 = 32px, --space-5 = 24px. */
-  margin: calc(var(--space-6) * -1) calc(var(--space-5) * -1) var(--space-4);
+  /* V4.2 · Antes era edge-to-edge com break-out por margin negativa. Ficou
+     solto/desconectado do resto do modal. Agora respeita o padding interno
+     (alinha com os cards abaixo) e ganha moldura de "photo card": borda em
+     todos os lados, cantos arredondados e shadow sutil pra separar do fundo. */
+  margin: 0 0 var(--space-4);
   height: 180px;
   overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.18),
+    0 4px 12px rgba(0, 0, 0, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--color-primary, #2563eb) 14%, var(--surface-alt, #0f172a)),
@@ -13581,7 +13625,15 @@ select option {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  /* A borda tonal por classificação (cls) é aplicada logo abaixo via
+     .eq-detail-cover--<cls> quando a foto está presente. */
+}
+/* Quando é placeholder (sem foto), realça a borda pontilhada pra parecer
+   "slot vazio" e aumenta o convite a adicionar foto sem parecer bug visual. */
+.eq-detail-cover--empty {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--color-primary, #2563eb) 25%, var(--border, #334155));
+  box-shadow: none;
 }
 .eq-detail-cover__img {
   position: absolute;
@@ -13656,6 +13708,73 @@ select option {
   transform: translate(-50%, calc(-50% + 28px));
 }
 
+/* Linha de ação logo abaixo da foto (V4.3). Antes o botão "Gerenciar fotos"
+   flutuava sobre a imagem como overlay no canto inferior direito e atrapalhava
+   a leitura da etiqueta. Agora ele sai da foto e vira uma linha dedicada. */
+.eq-detail-cover-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: calc(var(--space-4) * -1 + 4px) 0 var(--space-4);
+  /* Puxa um pouco pra cima (sobre a borda inferior da foto) pra parecer
+     que "nasce" da foto, sem fechar a distância entre o avatar e o nome
+     do equipamento. */
+}
+.eq-detail-cover-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--surface, #0f172a);
+  color: var(--text, #e2e8f0);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease;
+}
+.eq-detail-cover-action:hover,
+.eq-detail-cover-action:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--color-primary, #2563eb);
+}
+.eq-detail-cover-action--locked {
+  border-color: color-mix(in srgb, var(--color-primary, #2563eb) 45%, var(--border, #334155));
+  color: color-mix(in srgb, var(--color-primary, #2563eb) 20%, var(--text, #e2e8f0));
+}
+.eq-detail-cover-action--locked:hover,
+.eq-detail-cover-action--locked:focus-visible {
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 10%, var(--surface, #0f172a));
+  border-color: var(--color-primary, #2563eb);
+}
+[data-theme='light'] .eq-detail-cover-action {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #111;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+[data-theme='light'] .eq-detail-cover-action--locked {
+  border-color: color-mix(in srgb, var(--color-primary, #2563eb) 35%, rgba(0, 0, 0, 0.12));
+  color: var(--color-primary, #2563eb);
+}
+
+/* Variante --locked: CTA Free (Desbloquear com Plus). Cor de acento primário
+   no texto/borda pra marcar que é upsell, mas mantém backdrop-blur pra não
+   destoar do padrão do overlay. */
+.eq-detail-cover__cta--locked {
+  border-color: color-mix(in srgb, var(--color-primary, #2563eb) 55%, rgba(255, 255, 255, 0.18));
+  color: color-mix(in srgb, var(--color-primary, #2563eb) 15%, #fff);
+}
+.eq-detail-cover__cta--locked:hover,
+.eq-detail-cover__cta--locked:focus-visible {
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 30%, rgba(15, 23, 42, 0.85));
+  border-color: var(--color-primary, #2563eb);
+}
+
 /* Tema claro: placeholder com gradiente mais suave + emoji com mais contraste. */
 [data-theme='light'] .eq-detail-cover {
   background: linear-gradient(
@@ -13663,7 +13782,13 @@ select option {
     color-mix(in srgb, var(--color-primary, #2563eb) 8%, #f3f4f6),
     #e5e7eb
   );
-  border-bottom-color: #e5e7eb;
+  border-color: rgba(15, 23, 42, 0.08);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 4px 12px rgba(15, 23, 42, 0.04);
+}
+[data-theme='light'] .eq-detail-cover--empty {
+  border-color: color-mix(in srgb, var(--color-primary, #2563eb) 20%, rgba(15, 23, 42, 0.12));
 }
 [data-theme='light'] .eq-detail-cover__emoji {
   opacity: 0.7;

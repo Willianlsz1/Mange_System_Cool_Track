@@ -77,6 +77,59 @@
   font-size: 13px;
 }
 
+/* ────────────────────────────────────────────────────────────────
+   Tabs segmentadas (MOBILE ONLY — <= 720px)
+   Mostra só um card por vez no mobile pra cortar rolagem infinita.
+   Em desktop as tabs ficam display:none e todos os cards aparecem lado a lado.
+   ──────────────────────────────────────────────────────────────── */
+.pricing-plan-tabs {
+  display: none; /* visível só no media query mobile abaixo */
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  margin: 0 0 var(--space-2);
+}
+
+.pricing-plan-tabs__btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 8px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.pricing-plan-tabs__btn--active {
+  background: var(--primary);
+  color: var(--black);
+  font-weight: 700;
+}
+
+[data-theme='light'] .pricing-plan-tabs__btn--active {
+  color: #ffffff;
+}
+
+/* Tier accents — quando ATIVA, cada plano ganha a cor do seu tier pra reforçar
+   a identidade visual (e manter consistência com o glow dos cards). */
+.pricing-plan-tabs__btn--plus.pricing-plan-tabs__btn--active {
+  background: linear-gradient(135deg, #3a8ee6, #2d6fbd);
+  color: #f0f7ff;
+}
+
+.pricing-plan-tabs__btn--pro.pricing-plan-tabs__btn--active {
+  background: linear-gradient(90deg, #e8b94a, #00c8e8);
+  color: #1a1206;
+}
+
 /* Cards grid */
 .pricing-grid {
   display: grid;
@@ -653,6 +706,26 @@
 @media (max-width: 900px) {
   .pricing-grid--three-col {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   MOBILE (<= 720px) — modo tabs
+   - Tabs segmentadas aparecem no topo (display:flex)
+   - Só o card com .pricing-card--mobile-active fica visível
+   - Tabela comparativa fica escondida (info já está na feature list do card)
+   ──────────────────────────────────────────────────────────────── */
+@media (max-width: 720px) {
+  .pricing-plan-tabs {
+    display: flex;
+  }
+
+  .pricing-grid--three-col .pricing-card:not(.pricing-card--mobile-active) {
+    display: none;
+  }
+
+  .pricing-compare {
+    display: none;
   }
 }
 

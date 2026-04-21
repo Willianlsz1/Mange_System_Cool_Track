@@ -183,12 +183,22 @@ export function bindNavigationHandlers() {
       'dashboard',
       'overflow_banner',
       'overflow_modal',
+      'equip_detail_photos',
     ].includes(el?.dataset?.upgradeSource)
       ? el.dataset.upgradeSource
       : 'dashboard';
     const rawHighlight = el?.dataset?.highlightPlan;
     const highlightPlan = rawHighlight === 'plus' || rawHighlight === 'pro' ? rawHighlight : 'pro';
     trackEvent('upgrade_cta_clicked', { source, highlight_plan: highlightPlan });
+
+    // Fecha qualquer modal aberto antes de navegar — senão o overlay fica
+    // por cima da view de pricing e o usuário fica preso (ex.: CTA upsell
+    // dentro do modal-eq-det). Quando o clique vem de fora de um modal,
+    // o querySelectorAll retorna vazio e isto é no-op.
+    document.querySelectorAll('.modal-overlay.is-open').forEach((overlay) => {
+      if (overlay.id) Modal.close(overlay.id);
+    });
+
     const { goTo: dynamicGoTo } = await import('../../../core/router.js');
     dynamicGoTo('pricing', { highlightPlan });
   });

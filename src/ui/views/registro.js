@@ -61,6 +61,58 @@ const QUICK_TEMPLATE_MAP = {
   },
 };
 
+// Descrições padrão por tipo do dropdown r-tipo. Quando o usuário seleciona uma
+// opção (via select nativo, não via chip de ação rápida), o textarea
+// "Detalhes pro cliente" é preenchido com a frase abaixo — mesma lógica dos
+// chips, pra evitar dois caminhos com comportamento diferente.
+// Reusa as descrições do QUICK_TEMPLATE_MAP onde há correspondência, e
+// adiciona frases novas pros tipos que não têm ação rápida equivalente.
+// "Outro" fica fora — nesse caso o user digita um rótulo próprio no campo
+// "Qual serviço?" e escreve os detalhes manualmente.
+const DESCRIPTION_BY_TIPO = {
+  'Manutenção Preventiva':
+    'Manutenção preventiva realizada conforme plano do equipamento. Componentes verificados, limpeza geral executada e operação validada em funcionamento normal.',
+  'Manutenção Corretiva': QUICK_TEMPLATE_MAP.manutencao_corretiva.descricao,
+  'Limpeza de Filtros': QUICK_TEMPLATE_MAP.limpeza.descricao,
+  'Carga de Gás Refrigerante': QUICK_TEMPLATE_MAP.recarga_gas.descricao,
+  'Troca de Compressor':
+    'Compressor substituído por unidade compatível. Sistema recarregado, isolamento térmico reconstituído e funcionamento validado após o procedimento.',
+  'Troca de Capacitor':
+    'Capacitor substituído por componente equivalente. Partida do motor testada e parâmetros elétricos dentro do esperado.',
+  'Limpeza de Condensador':
+    'Limpeza do condensador executada com desobstrução das aletas. Troca térmica restabelecida e operação validada.',
+  'Limpeza de Evaporador':
+    'Limpeza do evaporador realizada com higienização das aletas. Temperatura de operação verificada após o procedimento.',
+  'Verificação Elétrica':
+    'Verificação elétrica realizada: medições de corrente, tensão e isolamento dentro dos parâmetros normais. Sem anomalias registradas.',
+  'Ajuste de Dreno':
+    'Dreno desobstruído e testado. Escoamento do condensado normalizado, sem retorno de água no equipamento.',
+  'Inspeção Geral': QUICK_TEMPLATE_MAP.inspecao.descricao,
+};
+
+// Set com todas as descrições conhecidas (quick templates + por-tipo). Serve
+// pro prefill do dropdown saber se pode sobrescrever o textarea — se o texto
+// atual for uma frase auto-preenchida, é seguro trocar; se o user editou, a
+// gente respeita o que ele escreveu. Inclui as duas descrições de tipo
+// 'Limpeza de Filtros' (limpeza preventiva vs troca de filtro) porque ambas
+// vêm dos chips de ação rápida e ainda representam texto auto-gerado.
+const KNOWN_AUTO_DESCRIPTIONS = new Set([
+  ...Object.values(QUICK_TEMPLATE_MAP).map((t) => t.descricao),
+  ...Object.values(DESCRIPTION_BY_TIPO),
+]);
+
+function _prefillObsFromTipo(tipo) {
+  const desc = DESCRIPTION_BY_TIPO[tipo];
+  if (!desc) return; // tipo sem template (ex.: "Outro") — nada a fazer
+  const currentObs = Utils.getVal('r-obs').trim();
+  // Sobrescreve só quando o textarea está vazio OU quando o conteúdo atual é
+  // uma frase auto-gerada (ação rápida anterior ou outro tipo do dropdown).
+  // Assim, trocar de tipo atualiza os detalhes, mas texto digitado à mão
+  // continua intocado.
+  if (currentObs && !KNOWN_AUTO_DESCRIPTIONS.has(currentObs)) return;
+  Utils.setVal('r-obs', desc);
+}
+
 const EDITING_KEY = 'cooltrack-editing-id';
 // Persiste o último cliente preenchido para auto-prefill no próximo registro —
 // técnico que atende o mesmo cliente em sequência não precisa digitar de novo.
@@ -273,11 +325,15 @@ export function initRegistro(params = {}) {
       _bindEquipChangeWarning();
 
       // Toggle do campo custom quando tipo muda. Rebind só uma vez (bound flag),
-      // por isso fica dentro do guard.
+      // por isso fica dentro do guard. Também aproveita pra pré-preencher
+      // "Detalhes pro cliente" (r-obs) com uma frase padrão por tipo —
+      // mesmo contrato das ações rápidas, pra evitar dois caminhos com
+      // comportamento diferente.
       const tipoSel = Utils.getEl('r-tipo');
       if (tipoSel) {
         tipoSel.addEventListener('change', () => {
           _syncTipoCustomVisibility({ focusOnShow: true });
+          _prefillObsFromTipo(tipoSel.value);
           _updateProgressBar();
         });
       }

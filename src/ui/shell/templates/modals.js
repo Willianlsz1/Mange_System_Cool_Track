@@ -63,16 +63,30 @@ export function renderShellModals() {
               for="nameplate-file-input" id="nameplate-cta-btn-active">
               Usar foto da etiqueta
             </label>
-            <!-- Estado locked (Free): botão puxa pro upsell. -->
+            <!-- Estado locked (Free): botão puxa pro upsell. Sem data-action
+                 aqui (mesma razão do botão-active logo abaixo): o click é
+                 amarrado direto em nameplateCapture.bindOnce() via
+                 addEventListener, então passar pelo delegator global só
+                 geraria warning "Sem handler para action=nameplate-upsell-cta"
+                 toda vez que o user clicasse. -->
             <button type="button"
               class="btn btn--primary btn--sm nameplate-cta__btn nameplate-cta__btn--locked"
-              data-action="nameplate-upsell-cta" id="nameplate-cta-btn-locked">
+              id="nameplate-cta-btn-locked">
               Desbloquear com Plus →
             </button>
           </div>
+          <!--
+            Sem data-action aqui: o listener é attach direto via
+            nameplateCapture.bindOnce() (addEventListener('change', ...)). O
+            data-action sintético era lido pelo delegator global e gerava
+            warning "Sem handler para action=..." toda vez que o label acionava
+            o input por causa do for=. O fluxo funcional nunca dependeu dele.
+            Nota: backticks intencionalmente evitados aqui — o HTML está
+            dentro de um template literal JS e os crases fechariam a string.
+          -->
           <input type="file" id="nameplate-file-input"
             accept="image/jpeg,image/png,image/webp"
-            class="visually-hidden" data-action="nameplate-file-selected" />
+            class="visually-hidden" />
         </div>
 
         <!--

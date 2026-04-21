@@ -383,7 +383,7 @@ export function renderShellViews() {
               </div>
 
               <div class="registro-field">
-                <label class="registro-field__label" for="r-obs">O que foi feito?</label>
+                <label class="registro-field__label" for="r-obs">Detalhes pro cliente</label>
                 <textarea id="r-obs" class="registro-field__textarea registro-obs"
                   placeholder="Ex.: limpei filtros e verifiquei pressão de sucção — tudo ok."
                   ></textarea>

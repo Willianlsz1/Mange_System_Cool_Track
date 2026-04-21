@@ -381,7 +381,7 @@ function renderRecurringAlert(recurring, equipamentos) {
   const ctaBtn =
     n === 1
       ? `<button type="button" class="hist-summary-card__recurring-link"
-          data-action="hist-filter-equip" data-equip-id="${Utils.escapeAttr(recurring[0].equipId)}">
+          data-hist-action="hist-filter-equip" data-equip-id="${Utils.escapeAttr(recurring[0].equipId)}">
           Ver serviços →
         </button>`
       : '';
@@ -474,7 +474,7 @@ function renderSummaryCard(
         </svg>
       </span>
       <span>Economize 3h/semana com relatórios automáticos</span>
-      <button type="button" class="hist-summary-card__upsell-link" data-action="hist-pricing-link">
+      <button type="button" class="hist-summary-card__upsell-link" data-hist-action="hist-pricing-link">
         Ver planos →
       </button>
     </div>
@@ -494,7 +494,7 @@ function renderQuickFilters({ period, tipo }) {
     const active = period === opt.id || (!period && opt.id === 'tudo');
     return `<button type="button"
         class="hist-quickfilter${active ? ' is-active' : ''}"
-        data-action="hist-filter-period"
+        data-hist-action="hist-filter-period"
         data-period="${opt.id}"
         aria-pressed="${active ? 'true' : 'false'}">
         ${Utils.escapeHtml(opt.label)}
@@ -505,7 +505,7 @@ function renderQuickFilters({ period, tipo }) {
     const active = tipo === opt.id;
     return `<button type="button"
         class="hist-quickfilter hist-quickfilter--${opt.color}${active ? ' is-active' : ''}"
-        data-action="hist-filter-tipo"
+        data-hist-action="hist-filter-tipo"
         data-tipo-id="${opt.id}"
         aria-pressed="${active ? 'true' : 'false'}">
         <span class="hist-quickfilter__dot" aria-hidden="true"></span>
@@ -573,7 +573,7 @@ function renderActiveFilterChips(filters) {
         `<span class="hist-active-chip">
           <b>${Utils.escapeHtml(c.key)}:</b> ${Utils.escapeHtml(c.value)}
           <button type="button" class="hist-active-chip__x"
-            data-action="${c.clearAction}"
+            data-hist-action="${c.clearAction}"
             aria-label="Remover filtro ${Utils.escapeAttr(c.key)}: ${Utils.escapeAttr(c.value)}">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -588,7 +588,7 @@ function renderActiveFilterChips(filters) {
     <span class="hist-active-chips__label">Filtros ativos</span>
     ${chipHtml}
     <button type="button" class="hist-active-chips__clear"
-      data-action="hist-clear-all">Limpar tudo</button>
+      data-hist-action="hist-clear-all">Limpar tudo</button>
   </div>`;
 }
 
@@ -605,7 +605,7 @@ function renderPhotoStrip(fotos) {
     .map(
       (url, idx) =>
         `<button type="button" class="timeline__item__photos-thumb"
-          data-action="hist-open-photo" data-photo-url="${Utils.escapeAttr(url)}"
+          data-hist-action="hist-open-photo" data-photo-url="${Utils.escapeAttr(url)}"
           aria-label="Abrir foto ${idx + 1}">
           <img src="${Utils.escapeAttr(url)}" alt="Foto ${idx + 1} do serviço" loading="lazy"/>
         </button>`,
@@ -646,7 +646,7 @@ function renderSignatureBlock(registro) {
     ? `Ver assinatura de ${clienteNome} em tamanho grande`
     : 'Ver assinatura do cliente em tamanho grande';
   return `<button type="button" class="hist-signature-preview"
-      data-action="hist-view-signature" data-id="${Utils.escapeAttr(registro.id)}"
+      data-hist-action="hist-view-signature" data-id="${Utils.escapeAttr(registro.id)}"
       aria-label="${Utils.escapeAttr(ariaLabel)}">
       <span class="hist-signature-preview__canvas">
         <img src="${Utils.escapeAttr(dataUrl)}"
@@ -775,7 +775,7 @@ function renderTimelineItem(r, { isFirst, equipamentos, setoresById, currentFilt
   const showVerTudoLink = r.equipId && currentFilterEquipId !== r.equipId;
   const verTudoLink = showVerTudoLink
     ? `<button type="button" class="timeline__item__focus-equip"
-        data-action="hist-filter-equip" data-equip-id="${Utils.escapeAttr(r.equipId)}"
+        data-hist-action="hist-filter-equip" data-equip-id="${Utils.escapeAttr(r.equipId)}"
         aria-label="Ver todos os serviços deste equipamento">
         Ver tudo deste equipamento →
       </button>`
@@ -969,7 +969,7 @@ export function renderHist() {
                : `Plano Free · histórico limitado aos últimos <b>${HIST_FREE_LIMIT_DAYS} dias</b>.`
            }</span>
            <button type="button" class="hist-plan-limit-banner__link"
-             data-action="hist-pricing-link">Ver plano Plus →</button>
+             data-hist-action="hist-pricing-link">Ver plano Plus →</button>
          </div>`
       : '';
 
@@ -1056,11 +1056,11 @@ function attachFilterHandlers(container) {
 
   // CTA aponta pra Plus (menor tier que destrava histórico completo),
   // alinhando com o texto do banner.
-  each('[data-action="hist-pricing-link"]', (btn) =>
+  each('[data-hist-action="hist-pricing-link"]', (btn) =>
     btn.addEventListener('click', () => goTo('pricing', { highlightPlan: 'plus' })),
   );
 
-  each('[data-action="hist-filter-period"]', (btn) =>
+  each('[data-hist-action="hist-filter-period"]', (btn) =>
     btn.addEventListener('click', () => {
       const pid = btn.dataset.period;
       setExtraFilter(HIST_PERIOD_KEY, pid === 'tudo' ? '' : pid);
@@ -1068,7 +1068,7 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  each('[data-action="hist-filter-tipo"]', (btn) =>
+  each('[data-hist-action="hist-filter-tipo"]', (btn) =>
     btn.addEventListener('click', () => {
       const current = getExtraFilters().tipo;
       const next = current === btn.dataset.tipoId ? '' : btn.dataset.tipoId;
@@ -1077,14 +1077,14 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  each('[data-action="hist-clear-period"]', (btn) =>
+  each('[data-hist-action="hist-clear-period"]', (btn) =>
     btn.addEventListener('click', () => {
       setExtraFilter(HIST_PERIOD_KEY, '');
       renderHist();
     }),
   );
 
-  each('[data-action="hist-clear-tipo"]', (btn) =>
+  each('[data-hist-action="hist-clear-tipo"]', (btn) =>
     btn.addEventListener('click', () => {
       setExtraFilter(HIST_TIPO_KEY, '');
       renderHist();
@@ -1094,7 +1094,7 @@ function attachFilterHandlers(container) {
   // "Ver tudo deste equipamento" (link no rodapé do item) e "Ver serviços"
   // (CTA do alerta de recorrência no summary) caem no mesmo handler — ambos
   // aplicam o filtro de equipamento e re-renderizam.
-  each('[data-action="hist-filter-equip"]', (btn) =>
+  each('[data-hist-action="hist-filter-equip"]', (btn) =>
     btn.addEventListener('click', () => {
       const equipId = btn.dataset.equipId || '';
       if (!equipId) return;
@@ -1104,7 +1104,7 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  each('[data-action="hist-clear-setor"]', (btn) =>
+  each('[data-hist-action="hist-clear-setor"]', (btn) =>
     btn.addEventListener('click', () => {
       const sel = Utils.getEl('hist-setor');
       if (sel) sel.value = '';
@@ -1112,7 +1112,7 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  each('[data-action="hist-clear-equip"]', (btn) =>
+  each('[data-hist-action="hist-clear-equip"]', (btn) =>
     btn.addEventListener('click', () => {
       const sel = Utils.getEl('hist-equip');
       if (sel) sel.value = '';
@@ -1120,7 +1120,7 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  each('[data-action="hist-clear-busca"]', (btn) =>
+  each('[data-hist-action="hist-clear-busca"]', (btn) =>
     btn.addEventListener('click', () => {
       const input = Utils.getEl('hist-busca');
       if (input) input.value = '';
@@ -1128,7 +1128,7 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  each('[data-action="hist-clear-all"]', (btn) =>
+  each('[data-hist-action="hist-clear-all"]', (btn) =>
     btn.addEventListener('click', () => {
       setExtraFilter(HIST_PERIOD_KEY, '');
       setExtraFilter(HIST_TIPO_KEY, '');
@@ -1142,14 +1142,14 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  each('[data-action="hist-open-photo"]', (btn) =>
+  each('[data-hist-action="hist-open-photo"]', (btn) =>
     btn.addEventListener('click', () => {
       const url = btn.dataset.photoUrl;
       if (url) Photos.openLightbox(url);
     }),
   );
 
-  each('[data-action="hist-view-signature"]', (btn) =>
+  each('[data-hist-action="hist-view-signature"]', (btn) =>
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
       if (!id) return;

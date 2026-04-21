@@ -25,6 +25,10 @@ export default [
       'node_modules/**',
       'dist/**',
       'dist-*/**',
+      // `dist.stale.*` é criado como escape hatch quando o sandbox não consegue
+      // executar `rm` no dist/ pra refazer o build — o antigo é renomeado com
+      // timestamp. Não é código-fonte, nunca deve ser linted.
+      'dist.stale*/**',
       'coverage/**',
       // Vite gera arquivos `vite.config.js.timestamp-*.mjs` durante dev/build.
       // São cache transitório (não versionados) e quebravam `npm run lint`.

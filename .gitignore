@@ -4,6 +4,11 @@ node_modules/
 # nunca deve ser commitada.
 dist/
 dist-*/
+# `dist.stale.<timestamp>` é usado como escape hatch quando um sandbox
+# não consegue executar `rm` na pasta dist/ — o build é renomeado em
+# vez de apagado. Nunca deve ser commitado.
+dist.stale.*/
+dist.stale.*
 coverage/
 .eslintcache
 .prettiercache
