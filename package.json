@@ -14,6 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:changed": "vitest run --changed",
+    "test:related": "vitest related --run",
+    "test:fast": "vitest run --bail=1 --silent --reporter=dot",
     "lint:css:dead": "node scripts/dead-css-report.mjs",
     "prepare": "node .husky/install.mjs"
   },

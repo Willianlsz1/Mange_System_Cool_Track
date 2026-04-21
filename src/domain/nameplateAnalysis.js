@@ -116,16 +116,20 @@ export function mapApiFieldsToFormShape(apiFields) {
     tipo: mapTipoToOption(apiFields.tipo_equipamento),
     fluido: mapRefrigeranteToOption(apiFields.refrigerante),
     marcaModelo: composeMarcaModelo(apiFields.marca, apiFields.modelo),
-    // Campos que não têm input no form hoje mas ficam aqui pra futuro /
-    // pra exibir num "review" antes de confirmar.
+    // Campos da etiqueta — expostos pro form completo (16 campos).
+    // Todos opcionais: null = "não detectado" → UI mostra placeholder.
     numeroSerie: apiFields.numero_serie ?? null,
     capacidadeBtu: apiFields.capacidade_btu ?? null,
     capacidadeTr: apiFields.capacidade_tr ?? null,
     tensao: apiFields.tensao ?? null,
     potenciaW: apiFields.potencia_w ?? null,
     correnteA: apiFields.corrente_a ?? null,
+    correnteAquecA: apiFields.corrente_aquec_a ?? null,
     fases: apiFields.fases ?? null,
     frequenciaHz: apiFields.frequencia_hz ?? null,
+    pressaoSuccaoMpa: apiFields.pressao_succao_mpa ?? null,
+    pressaoDescargaMpa: apiFields.pressao_descarga_mpa ?? null,
+    grauProtecao: apiFields.grau_protecao ?? null,
     anoFabricacao: apiFields.ano_fabricacao ?? null,
     notas: apiFields.notas ?? null,
   };
@@ -213,7 +217,7 @@ export async function analyzeNameplate(file, { supabaseClient = supabase } = {})
   // ── 2. Obtém JWT ────────────────────────────────────────────────────────
   const accessToken = await getFreshAccessToken(supabaseClient);
   if (!accessToken) {
-    throw new NameplateAnalysisError(ERR_NO_SESSION, 'Faça login pra usar a análise de placa.');
+    throw new NameplateAnalysisError(ERR_NO_SESSION, 'Faça login pra usar a análise de etiqueta.');
   }
 
   // ── 3. Prepara payload ──────────────────────────────────────────────────
@@ -282,7 +286,7 @@ export async function analyzeNameplate(file, { supabaseClient = supabase } = {})
     throw new NameplateAnalysisError(
       ERR_NOT_IDENTIFIED,
       mapped.notas ||
-        'Não deu pra ler a placa. Tenta uma foto mais nítida, com a placa preenchendo o quadro.',
+        'Não deu pra ler a etiqueta. Tenta uma foto mais nítida, com a etiqueta preenchendo o quadro.',
     );
   }
   return mapped;

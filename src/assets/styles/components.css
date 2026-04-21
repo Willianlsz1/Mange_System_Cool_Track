@@ -1378,6 +1378,7 @@ textarea.form-control {
 .nameplate-cta__action {
   display: flex;
   flex-shrink: 0;
+  gap: 10px;
 }
 
 .nameplate-cta__btn {
@@ -1385,9 +1386,13 @@ textarea.form-control {
 }
 
 /* Um botão ligado por vez — o outro fica display:none via seletores
-   de estado. Evita que os dois apareçam simultaneamente. */
-.nameplate-cta__btn--active,
-.nameplate-cta__btn--locked {
+   de estado. Evita que os dois apareçam simultaneamente.
+   IMPORTANTE: prefixa com .nameplate-cta pra bater na especificidade de
+   `.btn { display: inline-flex }` (linha 1697). Sem o prefixo, a regra
+   `.btn` vencia por cascata (mesma especificidade, ordem manda) e AMBOS
+   os botões apareciam lado a lado independente do data-state. */
+.nameplate-cta .nameplate-cta__btn--active,
+.nameplate-cta .nameplate-cta__btn--locked {
   display: none;
 }
 .nameplate-cta[data-state='active'] .nameplate-cta__btn--active,
@@ -1423,10 +1428,260 @@ textarea.form-control {
   .nameplate-cta__action {
     grid-column: 1 / -1;
     justify-self: stretch;
+    flex-direction: column;
+    gap: 8px;
   }
   .nameplate-cta__btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAMEPLATE SCAN OVERLAY — "Vision trabalhando"
+   ───────────────────────────────────────────────────────
+   Full-width panel que aparece logo abaixo do CTA quando o
+   usuário seleciona uma foto. Mostra thumbnail + scanning
+   line animada + progress bar + % crescendo em tempo real.
+   Controlado via data-state: idle | scanning | done | error.
+   ═══════════════════════════════════════════════════════ */
+
+.nameplate-scan {
+  margin: 12px 0 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+  box-shadow: 0 8px 24px -18px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+
+.nameplate-scan__body {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+/* Thumbnail com scanning line passando */
+.nameplate-scan__preview {
+  position: relative;
+  width: 96px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0a1524;
+  border: 1px solid var(--border-2);
+}
+
+.nameplate-scan__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: brightness(0.9) contrast(1.05);
+}
+
+/* Linha de scan horizontal que desce/sobe sobre a imagem */
+.nameplate-scan__line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--primary) 70%, transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nameplate-scan[data-state='scanning'] .nameplate-scan__line {
+  opacity: 1;
+  animation: nameplate-scan-line 1.8s ease-in-out infinite;
+}
+
+@keyframes nameplate-scan-line {
+  0% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(58px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Info à direita: estágio, barra, % */
+.nameplate-scan__info {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.nameplate-scan__stage {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.nameplate-scan__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: nameplate-scan-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes nameplate-scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.nameplate-scan__bar {
+  position: relative;
+  height: 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--border));
+  overflow: hidden;
+}
+
+.nameplate-scan__bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 60%, #fff));
+  border-radius: inherit;
+  transition: width 0.18s ease-out;
+}
+
+.nameplate-scan__percent {
+  font-size: 11px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  align-self: flex-end;
+}
+
+/* State: done — esconde spinner, mostra result panel abaixo */
+.nameplate-scan[data-state='done'] .nameplate-scan__spinner {
+  display: none;
+}
+
+.nameplate-scan[data-state='done'] .nameplate-scan__stage {
+  color: var(--primary);
+}
+
+.nameplate-scan[data-state='done'] .nameplate-scan__bar-fill {
+  background: linear-gradient(90deg, #2bd67b, var(--primary));
+}
+
+/* Result panel: fica hidden até o done state */
+.nameplate-scan__result {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nameplate-scan__result-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nameplate-scan__result-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, #2bd67b 20%, transparent);
+  color: #2bd67b;
+  flex-shrink: 0;
+}
+
+.nameplate-scan__result-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.3;
+}
+
+.nameplate-scan__result-title b {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.nameplate-scan__result-percent {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.nameplate-scan__result-sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.nameplate-scan__result-btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* Error state: bordas/fundo avermelhados, esconde result */
+.nameplate-scan[data-state='error'] {
+  background: color-mix(in srgb, #ef4444 8%, var(--card));
+  border-color: color-mix(in srgb, #ef4444 40%, var(--border));
+}
+
+.nameplate-scan[data-state='error'] .nameplate-scan__line,
+.nameplate-scan[data-state='error'] .nameplate-scan__spinner {
+  display: none;
+}
+
+.nameplate-scan[data-state='error'] .nameplate-scan__stage {
+  color: #ef4444;
+}
+
+/* Mobile: empilha preview e info */
+@media (max-width: 520px) {
+  .nameplate-scan__body {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .nameplate-scan__preview {
+    width: 100%;
+    height: 80px;
+  }
+  @keyframes nameplate-scan-line {
+    0% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(78px);
+    }
+    100% {
+      transform: translateY(0);
+    }
   }
 }
 
@@ -1559,6 +1814,26 @@ textarea.form-control {
 .btn-group .btn {
   flex: 1;
   min-width: 120px;
+}
+
+/* Mobile: o footer de modals com 2 CTAs (Cancelar / Ação-primária) fica
+   apertado em 400px porque botões com texto longo (ex: "Cadastrar
+   equipamento →") quebram em 2 linhas. Empilhar verticalmente — primário
+   em cima, cancelar embaixo — resolve sem cortar texto. Só aplicado nos
+   btn-groups dentro do modal__footer pra não afetar outros grupos. */
+@media (max-width: 480px) {
+  .btn-group.modal__footer,
+  .modal__footer.btn-group {
+    flex-direction: column-reverse;
+    gap: var(--space-2);
+  }
+  .btn-group.modal__footer .btn,
+  .modal__footer.btn-group .btn {
+    flex: 1 0 auto;
+    width: 100%;
+    min-width: 0;
+    white-space: nowrap;
+  }
 }
 
 /* ─── SEARCH BAR ─── */
@@ -3751,10 +4026,10 @@ mark,
 }
 
 .eq-tech-sheet__title {
-  font-size: 9px;
-  letter-spacing: 0.1em;
+  font-size: 11px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--text-2);
   font-weight: 700;
   margin-bottom: 10px;
   padding-bottom: 8px;
@@ -6049,7 +6324,14 @@ mark,
 }
 
 .eq-details-panel.is-open {
-  max-height: 600px;
+  /* 2400px cobre o painel inteiro com folga:
+     desktop (~1200px) e mobile (~1900px, campos quebram em 2 linhas).
+     600px era o valor original quando só tinha 5 campos aqui. Ao expandir
+     com os 13 campos de etiqueta (nº série, capacidade, tensão, fase,
+     correntes, pressões, grau proteção, ano) o conteúdo passou do teto
+     e `overflow:hidden` cortava metade do form — sintoma: usuário só
+     conseguia scrollar focando inputs fora da viewport. */
+  max-height: 2400px;
   opacity: 1;
 }
 
@@ -6067,6 +6349,61 @@ mark,
   font-weight: 400;
   letter-spacing: 0;
   font-size: 10px;
+}
+
+/* Subseções dentro de Detalhes técnicos: "Dados da etiqueta", "Operação".
+   Visual mais leve que o divider principal pra não competir com ele. */
+.eq-details-subhead {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 16px 0 8px;
+}
+
+.eq-details-subhead__label {
+  color: var(--text-2);
+}
+
+.eq-details-subhead__meta {
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* Estado "não detectado" aplicado por applyFieldsToForm:
+   - placeholder cinza-claro com itálico indica que o campo foi consultado
+     pela IA mas não veio valor. Não é erro, só info.
+   - cor mais apagada do borda pra visual "opaco". */
+.form-control.is-not-detected {
+  border-color: var(--border-2);
+  background: color-mix(in srgb, var(--card) 98%, var(--text-3) 2%);
+}
+.form-control.is-not-detected::placeholder {
+  font-style: italic;
+  color: color-mix(in srgb, var(--text-3) 80%, transparent);
+}
+/* Badge opcional ao lado do label dos campos que IA preencheu com sucesso */
+.form-label .form-label__ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--primary);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
 }
 
 /* Nota de confiança no rodapé do modal */
@@ -12591,5 +12928,228 @@ select option {
   }
   .hist-signature-modal__meta-item--full {
     grid-column: auto;
+  }
+}
+
+/* ── eq-detail-avatar (V4) ───────────────────────────────────────────────
+   Avatar + CTA "Gerenciar fotos" no topo do detail view. Substitui o bloco
+   de fotos que morava no modal-add-eq. Free vê emoji-only sem edit-hint
+   (gate é feito via data-action=open-upgrade no HTML).
+*/
+.eq-detail-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 0.25rem 0 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.eq-detail-avatar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--surface-alt, #f3f4f6);
+  border: 1px solid var(--border, #e5e7eb);
+  overflow: hidden;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease;
+}
+.eq-detail-avatar:hover,
+.eq-detail-avatar:focus-visible {
+  transform: scale(1.02);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+.eq-detail-avatar__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.eq-detail-avatar__emoji {
+  font-size: 2rem;
+  line-height: 1;
+}
+/* Quando existe foto, some com o emoji (fica só como fallback de <img onerror>). */
+.eq-detail-avatar--has-photo:not(.eq-detail-avatar--fallback) .eq-detail-avatar__emoji {
+  display: none;
+}
+.eq-detail-avatar__edit-hint {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.eq-detail-avatar-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #e5e7eb);
+  background: var(--surface, #fff);
+  color: var(--text, #111);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    border-color 120ms ease;
+}
+.eq-detail-avatar-cta:hover,
+.eq-detail-avatar-cta:focus-visible {
+  background: var(--surface-alt, #f9fafb);
+  border-color: var(--color-primary, #2563eb);
+}
+
+/* Modal-eq-photos: lead text. */
+.eq-photos-modal__lead {
+  margin-top: 0.25rem;
+  margin-bottom: 1rem;
+  color: var(--text-muted, #6b7280);
+  font-size: 0.875rem;
+}
+
+/* ── eq-detail-cover (V4.1) ───────────────────────────────────────────────
+   Foto "de capa" edge-to-edge no topo do modal de detalhe. Substitui o
+   avatar redondo do V4 — dá mais identidade visual quando o usuário abre
+   um equipamento (responde "qual é esse?" antes do nome).
+   Na listagem, o card continua usando thumb/avatar redondo (equipCardIconBlock).
+*/
+.eq-detail-cover {
+  position: relative;
+  /* Break out da padding interna do #modal-eq-det .modal (32px 24px) pra
+     ficar edge-to-edge. --space-6 = 32px, --space-5 = 24px. */
+  margin: calc(var(--space-6) * -1) calc(var(--space-5) * -1) var(--space-4);
+  height: 180px;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary, #2563eb) 14%, var(--surface-alt, #0f172a)),
+    var(--surface-alt, #0f172a)
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+.eq-detail-cover__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.eq-detail-cover__emoji {
+  font-size: 3.5rem;
+  line-height: 1;
+  opacity: 0.55;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+/* No placeholder (sem foto) o emoji fica maior e mais presente, pq ele é
+   a única "identidade" visual até o usuário adicionar foto. */
+.eq-detail-cover__emoji--placeholder {
+  font-size: 4.5rem;
+  opacity: 0.35;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% - 18px));
+  pointer-events: none;
+}
+/* Quando existe foto real, o emoji vira fallback (só aparece se img falha) */
+.eq-detail-cover--has-photo:not(.eq-detail-cover--fallback) .eq-detail-cover__emoji {
+  display: none;
+}
+
+/* CTA — duas variantes: overlay (canto inferior direito, quando há foto)
+   e center (centralizado embaixo do emoji, quando é placeholder). */
+.eq-detail-cover__cta {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease;
+}
+.eq-detail-cover__cta:hover,
+.eq-detail-cover__cta:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(15, 23, 42, 0.88);
+  border-color: var(--color-primary, #2563eb);
+}
+.eq-detail-cover__cta--overlay {
+  right: 12px;
+  bottom: 12px;
+}
+.eq-detail-cover__cta--center {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, calc(-50% + 30px));
+}
+.eq-detail-cover__cta--center:hover,
+.eq-detail-cover__cta--center:focus-visible {
+  transform: translate(-50%, calc(-50% + 28px));
+}
+
+/* Tema claro: placeholder com gradiente mais suave + emoji com mais contraste. */
+[data-theme='light'] .eq-detail-cover {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--color-primary, #2563eb) 8%, #f3f4f6),
+    #e5e7eb
+  );
+  border-bottom-color: #e5e7eb;
+}
+[data-theme='light'] .eq-detail-cover__emoji {
+  opacity: 0.7;
+}
+[data-theme='light'] .eq-detail-cover__cta {
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme='light'] .eq-detail-cover__cta:hover,
+[data-theme='light'] .eq-detail-cover__cta:focus-visible {
+  background: #fff;
+  border-color: var(--color-primary, #2563eb);
+}
+
+/* Mobile: cover um pouco mais baixo pra não dominar a tela. */
+@media (max-width: 540px) {
+  .eq-detail-cover {
+    height: 150px;
+  }
+  .eq-detail-cover__emoji--placeholder {
+    font-size: 3.75rem;
   }
 }

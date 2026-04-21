@@ -24,7 +24,7 @@ describe('LandingPage', () => {
     expect(heroText).toContain('30 segundos');
     // CTA padronizado pós-redesign
     expect(heroText).toContain('Experimentar grátis');
-    // Chips do mockup mostram dados extraídos da placa (signature moment 3)
+    // Chips do mockup mostram dados extraídos da etiqueta (signature moment 3)
     expect(heroText).toContain('USNW092WSG3');
     expect(heroText).toContain('R-410A');
   });
@@ -32,13 +32,16 @@ describe('LandingPage', () => {
   it('renders signature moments (grad word, filled chips, final CTA)', () => {
     LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
 
-    // Grad word "achismo" no h1 e "organizar" no final CTA
+    // Grad word "30 segundos" no h1 e "organizar" no final CTA
     const gradWords = document.querySelectorAll('.lp-grad');
     expect(gradWords.length).toBeGreaterThanOrEqual(2);
 
-    // Filled chips com SVG de check inline
-    const chips = document.querySelectorAll('.lp-chip');
-    expect(chips.length).toBeGreaterThanOrEqual(3);
+    // Pós-redesign #72: os chips do hero viraram "trust chips" (LGPD/Offline/etc)
+    // e os dados extraídos da etiqueta aparecem como linhas do sheet do phone mock.
+    const trustChips = document.querySelectorAll('.lp-hero__trust-chip');
+    expect(trustChips.length).toBeGreaterThanOrEqual(3);
+    const sheetRows = document.querySelectorAll('.lp-phone__row');
+    expect(sheetRows.length).toBeGreaterThanOrEqual(3);
 
     // Final CTA card presente (dual orb via ::before/::after no CSS)
     expect(document.querySelector('.lp-final__card')).toBeTruthy();
@@ -200,10 +203,10 @@ describe('LandingPage', () => {
     expect(steps.length).toBe(3);
 
     // Copy-âncoras dos 3 passos (ordem importa) — pós-rebuild IA:
-    // step 1 = foto da placa com IA, step 2 = registro em campo, step 3 = PDF.
+    // step 1 = foto da etiqueta com IA, step 2 = registro em campo, step 3 = PDF.
     const stepTexts = Array.from(steps).map((s) => s.textContent);
     expect(stepTexts[0]).toContain('1');
-    expect(stepTexts[0]).toContain('Foto da placa');
+    expect(stepTexts[0]).toContain('Foto da etiqueta');
     expect(stepTexts[0]).toContain('IA preenche');
     expect(stepTexts[1]).toContain('2');
     expect(stepTexts[1]).toContain('Registra o serviço');
@@ -238,7 +241,7 @@ describe('LandingPage', () => {
     expect(after).toBeTruthy();
     expect(before.textContent.toLowerCase()).toContain('digitando');
     expect(after.textContent.toLowerCase()).toContain('câmera');
-    expect(after.textContent).toContain('11 de 13');
+    expect(after.textContent).toContain('14 de 16');
 
     // Demo foto → fields (3 colunas)
     const demo = ai.querySelector('.lp-ai__demo');
@@ -262,11 +265,11 @@ describe('LandingPage', () => {
     const screens = gallery.querySelectorAll('.lp-screen');
     expect(screens.length).toBe(6);
 
-    // Tela de captura da placa (novo screen 1): câmera + progresso IA.
+    // Tela de captura da etiqueta (novo screen 1): câmera + progresso IA.
     const cameraScreen = gallery.querySelector('.lp-sc-camera');
     expect(cameraScreen).toBeTruthy();
     expect(gallery.querySelector('.lp-sc-ai-progress')).toBeTruthy();
-    expect(gallery.textContent).toContain('Foto da placa');
+    expect(gallery.textContent).toContain('Foto da etiqueta');
 
     // Dots refletem a nova contagem.
     const dots = gallery.querySelectorAll('.lp-gallery__dot');
@@ -378,7 +381,8 @@ describe('LandingPage', () => {
     LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
 
     // Hero deve conter apenas o CTA primário "Experimentar grátis"
-    const heroCtas = document.querySelector('.lp-hero .lp-ctas');
+    // Pós-redesign #72: o wrapper virou .lp-hero__ctas.
+    const heroCtas = document.querySelector('.lp-hero .lp-hero__ctas');
     expect(heroCtas).toBeTruthy();
     const heroButtons = heroCtas.querySelectorAll('button');
     expect(heroButtons.length).toBe(1);

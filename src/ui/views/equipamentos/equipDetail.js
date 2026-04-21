@@ -3,12 +3,13 @@
  * Renderiza o modal de detalhe do equipamento (viewEquip).
  */
 
-import { Utils } from '../../../core/utils.js';
+import { Utils, TIPO_ICON } from '../../../core/utils.js';
 import { getState, findEquip, regsForEquip } from '../../../core/state.js';
 import { getHealthClass } from '../dashboard.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
 import { evaluateEquipmentHealth, evaluateEquipmentRisk } from '../../../domain/maintenance.js';
 import { STATUS_OPERACIONAL, CONDICAO_OBSERVADA, PRIORIDADE_LABEL } from './constants.js';
+import { isCachedPlanPlusOrHigher } from '../../../core/plans/planCache.js';
 
 // ── V3 helpers ────────────────────────────────────────────────────────────
 
@@ -143,6 +144,59 @@ export async function viewEquip(id) {
   const ringC = +(2 * Math.PI * ringR).toFixed(1);
   const ringOffset = +(ringC * (1 - score / 100)).toFixed(1);
 
+  // ── Avatar block (V4) ──
+  // Foto identificadora do equipamento, no topo do detail view. Substitui o
+  // bloco de fotos que antes morava no modal-add-eq — agora cadastro e
+  // gerenciamento de fotos ficam semanticamente separados (cadastro = dados
+  // da etiqueta; perfil visual = detalhe do equipamento).
+  // Free vê o emoji do tipo; Plus+/Pro vê foto ou emoji + botão "Gerenciar
+  // fotos" que abre modal-eq-photos.
+  const tipoEmoji = TIPO_ICON[eq.tipo] ?? '⚙️';
+  const firstPhoto = Array.isArray(eq.fotos) ? eq.fotos.find((p) => p && (p.url || p.path)) : null;
+  const firstPhotoUrl = firstPhoto?.url;
+  const canEditPhotos = isCachedPlanPlusOrHigher();
+  const avatarInner = firstPhotoUrl
+    ? `<img class="eq-detail-avatar__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt=""
+         onerror="this.closest('.eq-detail-avatar').classList.add('eq-detail-avatar--fallback');this.remove();" />
+       <span class="eq-detail-avatar__emoji" aria-hidden="true">${tipoEmoji}</span>`
+    : `<span class="eq-detail-avatar__emoji" aria-hidden="true">${tipoEmoji}</span>`;
+  const avatarHasPhotoClass = firstPhotoUrl ? ' eq-detail-avatar--has-photo' : '';
+  const photoCount = Array.isArray(eq.fotos)
+    ? eq.fotos.filter((p) => p && (p.url || p.path)).length
+    : 0;
+  const photoCtaLabel = photoCount === 0 ? 'Adicionar foto' : 'Gerenciar fotos';
+  // Pra Free o CTA vira upsell (abre pricing). Pro/Plus abre o editor.
+  const photoCtaAction = canEditPhotos ? 'open-eq-photos-editor' : 'open-upgrade';
+  const photoCtaExtra = canEditPhotos
+    ? ''
+    : ' data-upgrade-source="equip_detail_photos" data-highlight-plan="plus"';
+  const photoCtaBadge = canEditPhotos
+    ? ''
+    : '<span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>';
+  const avatarBlock = `
+    <div class="eq-detail-avatar-row">
+      <button type="button"
+        class="eq-detail-avatar${avatarHasPhotoClass}"
+        data-action="${photoCtaAction}"
+        data-id="${safeId}"${photoCtaExtra}
+        aria-label="${canEditPhotos ? 'Editar fotos do equipamento' : 'Desbloquear fotos com Plus'}">
+        ${avatarInner}
+        <span class="eq-detail-avatar__edit-hint" aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+            <circle cx="12" cy="13" r="3"/>
+          </svg>
+        </span>
+      </button>
+      <button type="button" class="eq-detail-avatar-cta"
+        data-action="${photoCtaAction}"
+        data-id="${safeId}"${photoCtaExtra}>
+        ${photoCtaLabel}
+        ${photoCtaBadge}
+      </button>
+    </div>`;
+
   // Tom do valor preventiva/operação na meta strip (V3 __meta-value--tone).
   const prevStatCls =
     context?.daysToNext == null
@@ -209,6 +263,8 @@ export async function viewEquip(id) {
 
   Utils.getEl('eq-det-corpo').innerHTML = `
     <div class="eq-detail-view">
+
+      ${avatarBlock}
 
       <div class="modal__title" id="eq-det-title">${Utils.escapeHtml(eq.nome)}</div>
 

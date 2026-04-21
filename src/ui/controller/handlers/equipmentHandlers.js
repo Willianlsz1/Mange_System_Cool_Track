@@ -7,6 +7,8 @@ import {
   viewEquip,
   deleteEquip,
   openEditEquip,
+  openEquipPhotosEditor,
+  saveEquipPhotos,
   saveSetor,
   deleteSetor,
   setActiveSector,
@@ -120,6 +122,33 @@ export function bindEquipmentHandlers() {
         code: ErrorCodes.NETWORK_ERROR,
         message: 'Não foi possível abrir a edição do equipamento.',
         context: { action: 'controller.edit-equip', id: el.dataset.id },
+      });
+    }
+  });
+
+  // Abre o editor dedicado de fotos (modal-eq-photos) a partir do detail view.
+  on('open-eq-photos-editor', async (el) => {
+    try {
+      await openEquipPhotosEditor(el.dataset.id);
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: 'Não foi possível abrir o editor de fotos.',
+        context: { action: 'controller.open-eq-photos-editor', id: el.dataset.id },
+      });
+    }
+  });
+
+  on('save-eq-photos', async (el) => {
+    try {
+      await runAsyncAction(el, { loadingLabel: 'Salvando fotos...' }, async () => {
+        await saveEquipPhotos();
+      });
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: 'Não foi possível salvar as fotos.',
+        context: { action: 'controller.save-eq-photos' },
       });
     }
   });

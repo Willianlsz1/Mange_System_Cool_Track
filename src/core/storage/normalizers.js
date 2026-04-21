@@ -43,6 +43,9 @@ export function normalizeEquip(e) {
       e.tipo,
       e.criticidade,
     ),
+    // JSONB remoto pode chegar como string se a column vier de snake_case.
+    // sanitizeDadosPlaca tolera object/null/undefined e já filtra valores vazios.
+    dadosPlaca: sanitizeDadosPlaca(e.dadosPlaca ?? e.dados_placa),
   };
 }
 
@@ -52,8 +55,29 @@ export function isLegacyEquipmentSchemaError(error) {
     message.includes('column') &&
     (message.includes('criticidade') ||
       message.includes('prioridade_operacional') ||
-      message.includes('periodicidade_preventiva_dias'))
+      message.includes('periodicidade_preventiva_dias') ||
+      message.includes('dados_placa'))
   );
+}
+
+/**
+ * Saneia o blob `dados_placa` antes de persistir no Supabase.
+ *   - Aceita apenas object (não array/scalar) — idem à constraint da migration.
+ *   - Remove chaves com valor null/undefined/'' pra manter o JSON compacto.
+ *   - Se o input for null/undefined → retorna `{}` (default da coluna).
+ *
+ * Não valida schema (capacidade_btu é int?) — isso cabe ao client-side form.
+ * O objetivo aqui é só garantir que o INSERT não quebre a constraint do DB.
+ */
+function sanitizeDadosPlaca(input) {
+  if (input == null) return {};
+  if (typeof input !== 'object' || Array.isArray(input)) return {};
+  const out = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value == null || value === '') continue;
+    out[key] = value;
+  }
+  return out;
 }
 
 export function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
@@ -78,6 +102,9 @@ export function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) 
       equipamento.tipo,
       equipamento.criticidade,
     ),
+    // dados_placa é JSONB com DEFAULT '{}'::jsonb + CHECK (jsonb_typeof = 'object').
+    // sanitizeDadosPlaca garante object válido mesmo se vier null/array/scalar.
+    dados_placa: sanitizeDadosPlaca(equipamento.dadosPlaca),
   };
 }
 

@@ -10,7 +10,7 @@ import { AuthScreen } from '../../components/authscreen.js';
 import {
   clearEditingState as clearEquipEditingState,
   clearSetorEditingState,
-  applyEquipPhotosGate,
+  clearEquipPhotosEditingState,
 } from '../../views/equipamentos.js';
 import {
   applyNameplateCtaGate,
@@ -53,16 +53,31 @@ export function bindNavigationHandlers() {
     // Ao abrir o modal de equipamento via "+ Novo", garante que não estamos em modo edição
     if (id === 'modal-add-eq') {
       clearEquipEditingState();
-      // Limpa o flag de telemetria pra que `photo_upsell_shown` dispare uma
-      // vez a cada abertura do modal (e não uma vez por sessão inteira).
-      const wrapper = document.getElementById('eq-fotos-wrapper');
-      if (wrapper) delete wrapper.dataset.upsellShown;
-      // Aplica o gate Plus+/Pro do bloco de fotos (síncrono via cache do plano)
+      // V4: o bloco de fotos saiu desse modal. O único gate síncrono que
+      // resta aqui é o do hero CTA de análise de placa (Plus+).
       const isPlusOrPro = isCachedPlanPlusOrHigher();
-      applyEquipPhotosGate(isPlusOrPro);
-      // Idem pro hero CTA de análise de placa: mesmo gate (Plus+).
       resetNameplateCtaState();
       applyNameplateCtaGate(isPlusOrPro);
+
+      // Re-check async com o profile real do banco. Necessário porque o
+      // cache local pode estar stale (cold start, nova aba, login recente,
+      // TTL expirado) — nesses casos o cache volta como "free" e o user
+      // paga vê o botão "Desbloquear com Plus" indevidamente. O recheck
+      // corrige o gate assim que o profile chega. Silencia erros: se o
+      // fetch falhar (offline), o estado do cache prevalece.
+      (async () => {
+        try {
+          const { fetchMyProfileBilling } = await import('../../../core/plans/monetization.js');
+          const { hasPlusAccess } = await import('../../../core/plans/subscriptionPlans.js');
+          const { profile } = await fetchMyProfileBilling();
+          const realIsPlusOrPro = hasPlusAccess(profile);
+          if (realIsPlusOrPro !== isPlusOrPro) {
+            applyNameplateCtaGate(realIsPlusOrPro);
+          }
+        } catch (_) {
+          /* offline / sessão expirada — mantém o estado do cache */
+        }
+      })();
     }
     if (id === 'modal-add-setor') clearSetorEditingState();
     Modal.open(id);
@@ -76,6 +91,9 @@ export function bindNavigationHandlers() {
       resetNameplateCtaState();
     }
     if (id === 'modal-add-setor') clearSetorEditingState();
+    // Fechar o editor de fotos sem salvar → limpa state interno (evita
+    // vazar pending photos pra próxima abertura).
+    if (id === 'modal-eq-photos') clearEquipPhotosEditingState();
   });
   on('toggle-help-menu', () => {
     setHelpMenuState(!isHelpOpen);

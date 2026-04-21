@@ -27,10 +27,15 @@ import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
 import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/suggestedAction.js';
 import { getActionPriorityScore } from '../../domain/actionPriority.js';
 import { getPreventivaDueEquipmentIds } from '../../domain/alerts.js';
+import { formatDadosPlacaRows, hasAnyDadosPlaca } from '../../domain/dadosPlacaDisplay.js';
+import {
+  DadosPlacaValidationError,
+  formatDecimalHint,
+  parseDadosPlacaFloat,
+} from '../../domain/dadosPlacaValidation.js';
 import { emptyStateHtml } from '../components/emptyState.js';
 import { validateEquipamentoPayload } from '../../core/inputValidation.js';
 import { EquipmentPhotos } from '../components/equipmentPhotos.js';
-import { Photos } from '../components/photos.js';
 import { uploadPendingPhotos, normalizePhotoList } from '../../core/photoStorage.js';
 import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
 import { goTo } from '../../core/router.js';
@@ -927,15 +932,14 @@ function _lockedSetorBtnHtml() {
 
 /**
  * Mostra/esconde o container CONTEXTO do modal de cadastro — só aparece
- * quando ao menos um filho (setor ou fotos) está visível. Mantém o modal
- * enxuto pra usuários Free (sem setor Pro, sem fotos Plus).
+ * quando o filho (setor) está visível. Mantém o modal enxuto pra usuários
+ * Free. V4: o bloco de fotos saiu daqui, então só setor influencia.
  */
 function syncContextGroupVisibility() {
   const group = Utils.getEl('eq-context-group');
   if (!group) return;
   const setorVisible = Utils.getEl('eq-setor-wrapper')?.style.display !== 'none';
-  const fotosVisible = Utils.getEl('eq-fotos-wrapper')?.style.display !== 'none';
-  group.style.display = setorVisible || fotosVisible ? '' : 'none';
+  group.style.display = setorVisible ? '' : 'none';
 }
 
 /**
@@ -1004,6 +1008,233 @@ export function applyEquipPhotosGate(isPlusOrPro = false) {
   }
 
   syncContextGroupVisibility();
+}
+
+// ── Photos editor (V4): modal dedicado aberto do detail view ──────────────
+
+/**
+ * Wire do CTA upsell do modal-eq-photos (Free vê card de locked + CTA).
+ * Idempotente via dataset flag — bound uma vez por lifecycle do elemento.
+ */
+function _bindEqPhotosUpsellCta() {
+  const cta = document.querySelector('#eq-photos-locked [data-action="eq-photos-upsell-cta"]');
+  if (!cta || cta.dataset.upsellBound === '1') return;
+  cta.dataset.upsellBound = '1';
+  cta.addEventListener('click', async () => {
+    trackEvent('photo_upsell_clicked', { source: 'equip_detail' });
+    try {
+      const { Modal: M } = await import('../../core/modal.js');
+      M.close('modal-eq-photos');
+    } catch (_err) {
+      /* segue pra pricing mesmo se Modal.close falhar */
+    }
+    goTo('pricing', { highlightPlan: 'plus', reason: 'photos_upsell' });
+  });
+}
+
+/**
+ * Gate Plus+/Pro do editor de fotos (modal-eq-photos).
+ * Plus+/Pro: dropzone + preview normais. Free: card de upsell.
+ * Na prática esse modal nem é aberto pra Free (o CTA no detail view vai
+ * direto pra pricing), mas deixamos o gate como defense-in-depth pra caso
+ * alguém force a abertura do modal via devtools.
+ */
+export function applyEquipPhotosEditorGate(isPlusOrPro = false) {
+  const block = Utils.getEl('eq-photos-block');
+  const locked = Utils.getEl('eq-photos-locked');
+  if (!block) return;
+  if (isPlusOrPro) {
+    block.classList.remove('equip-photo-block--locked');
+    if (locked) locked.hidden = true;
+  } else {
+    block.classList.add('equip-photo-block--locked');
+    if (locked) locked.hidden = false;
+    try {
+      EquipmentPhotos.clear();
+    } catch (_err) {
+      /* ignora */
+    }
+    _bindEqPhotosUpsellCta();
+  }
+}
+
+/**
+ * Abre o editor de fotos pro equipamento dado. Entry point chamado pelo
+ * handler `open-eq-photos-editor`. Configura o EquipmentPhotos component
+ * com os IDs prefixados `eq-photos-*`, carrega as fotos existentes, aplica
+ * o gate (sync via cache + async recheck igual ao modal-add-eq) e abre.
+ */
+let _editingPhotosEquipId = null;
+export function getEditingPhotosEquipId() {
+  return _editingPhotosEquipId;
+}
+
+export async function openEquipPhotosEditor(equipId) {
+  const eq = findEquip(equipId);
+  if (!eq) {
+    Toast.error('Equipamento não encontrado.');
+    return;
+  }
+
+  _editingPhotosEquipId = equipId;
+
+  // Target IDs do novo modal.
+  EquipmentPhotos.configure({
+    previewId: 'eq-photos-preview',
+    dropTextId: 'eq-photos-drop-text',
+    dropZoneId: 'eq-photos-drop-zone',
+    subId: null, // modal-eq-photos não tem sub-label; usa lead texto
+    counterSelector: '.equip-photo-counter',
+  });
+  EquipmentPhotos.setExisting(normalizePhotoList(eq.fotos));
+
+  // Gate sync inicial (via cache). Modal-eq-photos aceita só Plus+/Pro.
+  const cachedIsPlusOrPro = isCachedPlanPlusOrHigher();
+  applyEquipPhotosEditorGate(cachedIsPlusOrPro);
+
+  try {
+    const { Modal: M } = await import('../../core/modal.js');
+    M.open('modal-eq-photos');
+  } catch (error) {
+    handleError(error, {
+      code: ErrorCodes.NETWORK_ERROR,
+      message: 'Não foi possível abrir o editor de fotos.',
+      context: { action: 'equipamentos.openEquipPhotosEditor', equipId },
+    });
+    return;
+  }
+
+  // Re-check async do plano real (mesmo padrão do modal-add-eq). O cache
+  // local pode estar stale; se o profile real discordar, aplica o gate
+  // correto. Silencioso em caso de falha (mantém estado do cache).
+  (async () => {
+    try {
+      const { fetchMyProfileBilling } = await import('../../core/plans/monetization.js');
+      const { hasPlusAccess } = await import('../../core/plans/subscriptionPlans.js');
+      const { profile } = await fetchMyProfileBilling();
+      const realIsPlusOrPro = hasPlusAccess(profile);
+      if (realIsPlusOrPro !== cachedIsPlusOrPro) {
+        applyEquipPhotosEditorGate(realIsPlusOrPro);
+      }
+    } catch (_) {
+      /* offline / sessão expirada — mantém estado do cache */
+    }
+  })();
+}
+
+/**
+ * Salva só o campo `fotos` do equipamento em edição. Upload das pending,
+ * update narrow via setState (o subscriber sincroniza com Supabase).
+ * Fecha o modal e re-renderiza o detail view pra atualizar o avatar.
+ */
+export async function saveEquipPhotos() {
+  const equipId = _editingPhotosEquipId;
+  if (!equipId) {
+    Toast.error('Nenhum equipamento selecionado.');
+    return false;
+  }
+
+  const eq = findEquip(equipId);
+  if (!eq) {
+    Toast.error('Equipamento não encontrado.');
+    return false;
+  }
+
+  // Runtime gate: mesmo padrão do saveEquip. Se o user degradou o plano
+  // pra Free, as pending são descartadas e só as existing são persistidas.
+  const canUploadPhotos = isCachedPlanPlusOrHigher();
+  let fotosPayload = [];
+
+  if (!canUploadPhotos) {
+    const pendingCount = EquipmentPhotos.pending?.length || 0;
+    if (pendingCount > 0) {
+      trackEvent('photo_upload_blocked_non_plus', {
+        equipId,
+        pendingCount,
+        source: 'equip_detail',
+      });
+      Toast.warning('Fotos no equipamento são um recurso do plano Plus. Upgrade pra liberar.');
+    }
+    fotosPayload = normalizePhotoList(EquipmentPhotos.existing);
+  } else {
+    try {
+      const uploaded = await uploadPendingPhotos(EquipmentPhotos.getAll(), {
+        recordId: equipId,
+        scope: 'equipamentos',
+      });
+      fotosPayload = uploaded.photos;
+      if (uploaded.failedCount > 0) {
+        Toast.warning(
+          'Algumas fotos não foram enviadas para a nuvem e permaneceram salvas localmente.',
+        );
+      }
+    } catch (err) {
+      fotosPayload = normalizePhotoList(EquipmentPhotos.existing);
+      handleError(err, {
+        code: ErrorCodes.SYNC_FAILED,
+        severity: 'warning',
+        message: 'Foto não enviada. Tente novamente quando estiver online.',
+        context: { action: 'equipamentos.saveEquipPhotos.uploadPhotos', equipId },
+        showToast: false,
+      });
+    }
+  }
+
+  // Update narrow: só o campo fotos. O subscriber do setState persiste no
+  // Supabase via mapEquipamentoRow (que inclui fotos).
+  setState((prev) => ({
+    ...prev,
+    equipamentos: prev.equipamentos.map((e) =>
+      e.id === equipId ? { ...e, fotos: fotosPayload } : e,
+    ),
+  }));
+
+  trackEvent('equip_photos_saved', {
+    equipId,
+    count: fotosPayload.length,
+    source: 'equip_detail',
+  });
+
+  try {
+    const { Modal: M } = await import('../../core/modal.js');
+    M.close('modal-eq-photos');
+  } catch (_err) {
+    /* noop */
+  }
+
+  // Limpa estado de edição + componente. Targets voltam pro default pra
+  // não vazar config entre aberturas.
+  _editingPhotosEquipId = null;
+  try {
+    EquipmentPhotos.clear();
+    EquipmentPhotos.resetTargets();
+  } catch (_err) {
+    /* noop */
+  }
+
+  // Re-render do detail view pra atualizar o avatar/contadores.
+  // Usa a própria viewEquip deste módulo (hoisted) — a mesma que o handler
+  // view-equip dispara. Não confundir com equipDetail.js (módulo legado,
+  // não conectado ao handler atual).
+  try {
+    await viewEquip(equipId);
+  } catch (_err) {
+    /* se o detail estiver fechado, noop */
+  }
+
+  Toast.success('Fotos salvas.');
+  return true;
+}
+
+/** Reset do estado do editor de fotos (chamado no close sem salvar). */
+export function clearEquipPhotosEditingState() {
+  _editingPhotosEquipId = null;
+  try {
+    EquipmentPhotos.clear();
+    EquipmentPhotos.resetTargets();
+  } catch (_err) {
+    /* noop */
+  }
 }
 
 /** Popula o select de setores no modal de cadastro de equipamento. */
@@ -1719,6 +1950,100 @@ export async function assignEquipToSetor(equipId, setorId) {
   renderEquip(); // atualiza os cards de setor em background
 }
 
+/**
+ * IDs e paths dos 13 campos da etiqueta persistidos em `dados_placa` (JSONB).
+ * Mapping UI input → key no JSON. Source of truth usado por:
+ *   - collectDadosPlaca() — form → JSON (save)
+ *   - restoreDadosPlaca() — JSON → form (edit)
+ *   - clearDadosPlacaInputs() — reset no cleanup
+ * Escondido em const pra evitar typos propagando entre os 3 lugares.
+ */
+const DADOS_PLACA_FIELDS = [
+  { inputId: 'eq-numero-serie', key: 'numero_serie', type: 'string' },
+  { inputId: 'eq-capacidade-btu', key: 'capacidade_btu', type: 'int' },
+  { inputId: 'eq-tensao', key: 'tensao', type: 'string' },
+  { inputId: 'eq-frequencia', key: 'frequencia_hz', type: 'int' },
+  { inputId: 'eq-fase', key: 'fases', type: 'int' },
+  { inputId: 'eq-potencia', key: 'potencia_w', type: 'int' },
+  {
+    inputId: 'eq-corrente-refrig',
+    key: 'corrente_refrig_a',
+    type: 'float',
+    label: 'Corrente refrig.',
+    unit: 'A',
+    max: 100,
+  },
+  {
+    inputId: 'eq-corrente-aquec',
+    key: 'corrente_aquec_a',
+    type: 'float',
+    label: 'Corrente aquec.',
+    unit: 'A',
+    max: 100,
+  },
+  {
+    inputId: 'eq-pressao-suc',
+    key: 'pressao_succao_mpa',
+    type: 'float',
+    label: 'Pressão sucção',
+    unit: 'MPa',
+    max: 10,
+  },
+  {
+    inputId: 'eq-pressao-desc',
+    key: 'pressao_descarga_mpa',
+    type: 'float',
+    label: 'Pressão descarga',
+    unit: 'MPa',
+    max: 10,
+  },
+  { inputId: 'eq-grau-protecao', key: 'grau_protecao', type: 'string' },
+  { inputId: 'eq-ano-fabricacao', key: 'ano_fabricacao', type: 'int' },
+];
+
+const DADOS_PLACA_INPUT_IDS = DADOS_PLACA_FIELDS.map((f) => f.inputId);
+
+/**
+ * Lê os 12 inputs da etiqueta e monta o objeto `dados_placa` pro DB.
+ * Omite campos vazios (ao invés de `null`) pra manter o JSON compacto.
+ *
+ * Delega parsing decimal + range check pra parseDadosPlacaFloat (módulo puro,
+ * testável). Quando um valor decimal ultrapassa o range plausível (sinal de
+ * separador decimal esquecido, ex: "42" em vez de "4,2"), propaga
+ * DadosPlacaValidationError pro saveEquip tratar com Toast + foco no input.
+ */
+function collectDadosPlaca() {
+  const result = {};
+  for (const field of DADOS_PLACA_FIELDS) {
+    const { inputId, key, type } = field;
+    const raw = Utils.getVal(inputId);
+    if (raw == null || raw === '') continue;
+    if (type === 'int') {
+      const n = parseInt(raw, 10);
+      if (!Number.isNaN(n)) result[key] = n;
+    } else if (type === 'float') {
+      const n = parseDadosPlacaFloat(raw, field);
+      if (n !== null) result[key] = n;
+    } else {
+      result[key] = String(raw).trim();
+    }
+  }
+  return result;
+}
+
+/**
+ * Popula os inputs da etiqueta a partir de um objeto `dados_placa` salvo.
+ * Ignora chaves desconhecidas — se um dia deprecarmos um campo, não quebra.
+ */
+function restoreDadosPlaca(dadosPlaca) {
+  if (!dadosPlaca || typeof dadosPlaca !== 'object') return;
+  for (const { inputId, key } of DADOS_PLACA_FIELDS) {
+    const value = dadosPlaca[key];
+    if (value == null) continue;
+    Utils.setVal(inputId, String(value));
+  }
+}
+
 export async function openEditEquip(id) {
   const eq = findEquip(id);
   if (!eq) return;
@@ -1735,6 +2060,7 @@ export async function openEditEquip(id) {
   Utils.setVal('eq-criticidade', eq.criticidade || 'media');
   Utils.setVal('eq-prioridade', eq.prioridadeOperacional || 'normal');
   Utils.setVal('eq-periodicidade', String(eq.periodicidadePreventivaDias || 90));
+  restoreDadosPlaca(eq.dadosPlaca);
 
   // Marca periodicidade como manual para não ser sobrescrita pelo auto-sugestão
   const periodicidadeInput = Utils.getEl('eq-periodicidade');
@@ -1747,18 +2073,17 @@ export async function openEditEquip(id) {
     detailsPanel.setAttribute('aria-hidden', 'false');
   }
 
-  // Popula o select de setor (apenas Pro) e o bloco de fotos (Plus+/Pro)
+  // Popula o select de setor (apenas Pro) e aplica gate do hero CTA de placa
+  // (Plus+/Pro). V4: bloco de fotos saiu daqui — agora é via detail view.
   try {
     const { fetchMyProfileBilling } = await import('../../core/plans/monetization.js');
     const { hasProAccess, hasPlusAccess } = await import('../../core/plans/subscriptionPlans.js');
     const { applyNameplateCtaGate } = await import('../components/nameplateCapture.js');
     const { profile } = await fetchMyProfileBilling();
     populateSetorSelect(hasProAccess(profile));
-    applyEquipPhotosGate(hasPlusAccess(profile));
     applyNameplateCtaGate(hasPlusAccess(profile));
   } catch {
     populateSetorSelect(false);
-    applyEquipPhotosGate(false);
     try {
       const { applyNameplateCtaGate } = await import('../components/nameplateCapture.js');
       applyNameplateCtaGate(false);
@@ -1767,13 +2092,6 @@ export async function openEditEquip(id) {
     }
   }
   if (eq.setorId) Utils.setVal('eq-setor', eq.setorId);
-
-  // Carrega fotos já persistidas para preview (sem re-upload)
-  try {
-    EquipmentPhotos.setExisting(normalizePhotoList(eq.fotos));
-  } catch (_err) {
-    /* componente pode não ter sido inicializado ainda — ignora */
-  }
 
   // Atualiza textos do modal
   const titleEl = Utils.getEl('modal-add-eq-title');
@@ -1851,58 +2169,42 @@ export async function saveEquip() {
 
   const setorId = Utils.getVal('eq-setor') || null;
 
-  // ── Fotos do equipamento (feature Plus+/Pro) ─────────────────────────────
-  // 1. O componente tem duas listas: `existing` (já no Storage) e `pending`
-  //    (novas capturas em dataURL).
-  // 2. `uploadPendingPhotos` sobe só as pending e normaliza as existing;
-  //    mantém a ordem. Se falhar o upload, a foto pending é preservada como
-  //    dataURL (fallback) — o próximo save tenta de novo.
-  // 3. Runtime gate: o `applyEquipPhotosGate` esconde o wrapper no Free, mas
-  //    um usuário com dev tools pode desesconder e adicionar fotos. Aqui a
-  //    gente força a mão: se não for Plus+, o pending é descartado antes do
-  //    upload. `existing` é preservado (usuário pode ter degradado de Plus e
-  //    as fotos antigas devem persistir até ele limpar/editar explicitamente).
-  const equipId = _editingEquipId || Utils.uid();
-  const canUploadPhotos = isCachedPlanPlusOrHigher();
-  let fotosPayload = [];
-
-  if (!canUploadPhotos) {
-    const pendingCount = EquipmentPhotos.pending?.length || 0;
-    if (pendingCount > 0) {
-      // Telemetria pra rastrear tentativas de bypass do UI gate.
-      trackEvent('photo_upload_blocked_non_plus', {
-        equipId,
-        pendingCount,
-        isEdit: Boolean(_editingEquipId),
-      });
-      Toast.warning('Fotos no equipamento são um recurso do plano Plus. Upgrade pra liberar.');
-    }
-    fotosPayload = normalizePhotoList(EquipmentPhotos.existing);
-  } else {
-    try {
-      const uploaded = await uploadPendingPhotos(EquipmentPhotos.getAll(), {
-        recordId: equipId,
-        scope: 'equipamentos',
-      });
-      fotosPayload = uploaded.photos;
-      if (uploaded.failedCount > 0) {
-        Toast.warning(
-          'Algumas fotos não foram enviadas para a nuvem e permaneceram salvas localmente.',
-        );
+  // Dados da etiqueta (13 campos opcionais). Coletados em JSONB pra persistência
+  // em equipamentos.dados_placa. Se nenhum foi preenchido, mantém object vazio
+  // (migration constraint: jsonb_typeof = 'object').
+  //
+  // collectDadosPlaca() pode lançar DadosPlacaValidationError quando um valor
+  // decimal ultrapassa o range plausível (provável separador decimal esquecido).
+  // Traduzimos pra Toast amigável e focamos o input em vez de propagar o erro.
+  let dadosPlaca;
+  try {
+    dadosPlaca = collectDadosPlaca();
+  } catch (err) {
+    if (err instanceof DadosPlacaValidationError) {
+      const hint = formatDecimalHint(err.value);
+      Toast.warning(
+        `${err.label} (${err.unit}): ${err.value} parece alto demais. ` +
+          `Use vírgula como separador decimal — ex: ${hint} em vez de ${err.value}.`,
+      );
+      const input = document.getElementById(err.inputId);
+      if (input) {
+        input.focus();
+        if (typeof input.select === 'function') input.select();
       }
-    } catch (err) {
-      // Se não está autenticado ou outro erro de upload, segue sem fotos novas.
-      // Em edit mode, preserva as existing que já estão persistidas.
-      fotosPayload = normalizePhotoList(EquipmentPhotos.existing);
-      handleError(err, {
-        code: ErrorCodes.SYNC_FAILED,
-        severity: 'warning',
-        message: 'Foto não enviada. Suas alterações foram salvas.',
-        context: { action: 'equipamentos.saveEquip.uploadPhotos', equipId },
-        showToast: false,
-      });
+      return false;
     }
+    throw err;
   }
+
+  // ── Fotos do equipamento ─────────────────────────────────────────────────
+  // V4: upload de fotos saiu desse fluxo. Criação/edição de dados só lida
+  // com os campos textuais; fotos são gerenciadas via detail view →
+  // modal-eq-photos. Em edit mode, preservamos as fotos já persistidas
+  // (eq.fotos) pra não perdê-las ao salvar alterações de texto.
+  const equipId = _editingEquipId || Utils.uid();
+  const fotosPayload = _editingEquipId
+    ? normalizePhotoList(findEquip(_editingEquipId)?.fotos || [])
+    : [];
 
   if (_editingEquipId) {
     // ── UPDATE: atualiza equipamento existente ──────────────────────────────
@@ -1924,6 +2226,7 @@ export async function saveEquip() {
               periodicidadePreventivaDias,
               setorId,
               fotos: fotosPayload,
+              dadosPlaca,
             }
           : e,
       ),
@@ -1948,6 +2251,7 @@ export async function saveEquip() {
           periodicidadePreventivaDias,
           setorId,
           fotos: fotosPayload,
+          dadosPlaca,
         },
       ],
     }));
@@ -1968,10 +2272,13 @@ export async function saveEquip() {
   }
 
   Utils.clearVals('eq-nome', 'eq-tag', 'eq-local', 'eq-modelo', 'eq-periodicidade');
+  // Limpa os 12 inputs da etiqueta pra não "vazar" valor entre cadastros.
+  Utils.clearVals(...DADOS_PLACA_INPUT_IDS);
   Utils.setVal('eq-tipo', 'Split Hi-Wall');
   Utils.setVal('eq-fluido', 'R-410A');
   Utils.setVal('eq-criticidade', 'media');
   Utils.setVal('eq-prioridade', 'normal');
+  Utils.setVal('eq-frequencia', '60');
   Utils.setVal('eq-periodicidade', String(getSuggestedPreventiveDays('Split Hi-Wall', 'media')));
   const periodicidadeInput = Utils.getEl('eq-periodicidade');
   if (periodicidadeInput) periodicidadeInput.dataset.manual = '0';
@@ -2066,58 +2373,101 @@ export async function viewEquip(id) {
         ${regs.length > 5 ? `<div class="eq-svc-more">+${regs.length - 5} serviços anteriores</div>` : ''}
       </div>`;
 
-  // Fotos do equipamento (feature Plus+). Só renderiza se houver fotos com URL
-  // assinada válida. Hero "adota" a primeira foto como destaque (coluna lateral
-  // no desktop, banner no mobile). As fotos adicionais (índice 1+) viram uma
-  // faixa de miniaturas abaixo do hero, para não poluir quando há 1 só foto.
-  // Clicar em qualquer foto (hero ou strip) abre o lightbox existente.
-  const fotosList = Array.isArray(eq.fotos) ? eq.fotos.filter((p) => p && p.url) : [];
-  const heroPhoto = fotosList[0] || null;
-  const extraPhotos = fotosList.slice(1);
+  // ── Cover block (V4.1) ──
+  // Foto "de capa" edge-to-edge no topo do modal de detalhes. Dá identidade
+  // visual imediata (o técnico reconhece o equipamento antes de ler o nome).
+  // Se não houver foto: placeholder com gradiente + emoji do tipo +
+  // CTA centralizado "Adicionar foto". Se houver foto: img cobre o espaço
+  // todo e o CTA "Gerenciar fotos" fica overlay no canto inferior direito.
+  // Na listagem, o card continua com avatar/thumb redondo (equipCardIconBlock).
+  const tipoEmoji = TIPO_ICON[eq.tipo] ?? '⚙️';
+  const fotosList = Array.isArray(eq.fotos) ? eq.fotos.filter((p) => p && (p.url || p.path)) : [];
+  const firstPhotoUrl = fotosList[0]?.url;
+  const canEditPhotos = isCachedPlanPlusOrHigher();
+  const photoCtaLabel = fotosList.length === 0 ? 'Adicionar foto' : 'Gerenciar fotos';
+  // Pra Free o CTA vira upsell (abre pricing). Pro/Plus abre o editor.
+  const photoCtaAction = canEditPhotos ? 'open-eq-photos-editor' : 'open-upgrade';
+  const photoCtaExtra = canEditPhotos
+    ? ''
+    : ' data-upgrade-source="equip_detail_photos" data-highlight-plan="plus"';
+  const photoCtaBadge = canEditPhotos
+    ? ''
+    : '<span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>';
+  const photoCameraIcon = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+      <circle cx="12" cy="13" r="3.5"/>
+    </svg>`;
+  const coverInner = firstPhotoUrl
+    ? `<img class="eq-detail-cover__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt="Foto de ${Utils.escapeAttr(eq.nome)}"
+         onerror="this.closest('.eq-detail-cover').classList.add('eq-detail-cover--fallback');this.remove();" />
+       <span class="eq-detail-cover__emoji" aria-hidden="true">${tipoEmoji}</span>
+       <button type="button" class="eq-detail-cover__cta eq-detail-cover__cta--overlay"
+         data-action="${photoCtaAction}" data-id="${safeId}"${photoCtaExtra}
+         aria-label="${canEditPhotos ? 'Gerenciar fotos' : 'Desbloquear fotos com Plus'}">
+         ${photoCameraIcon}
+         <span>${photoCtaLabel}</span>
+         ${photoCtaBadge}
+       </button>`
+    : `<span class="eq-detail-cover__emoji eq-detail-cover__emoji--placeholder" aria-hidden="true">${tipoEmoji}</span>
+       <button type="button" class="eq-detail-cover__cta eq-detail-cover__cta--center"
+         data-action="${photoCtaAction}" data-id="${safeId}"${photoCtaExtra}>
+         ${photoCameraIcon}
+         <span>${photoCtaLabel}</span>
+         ${photoCtaBadge}
+       </button>`;
+  const coverHasPhotoClass = firstPhotoUrl
+    ? ' eq-detail-cover--has-photo'
+    : ' eq-detail-cover--empty';
+  const coverBlock = `
+    <div class="eq-detail-cover${coverHasPhotoClass}">
+      ${coverInner}
+    </div>`;
 
-  const heroPhotoHtml = heroPhoto
-    ? `<button type="button" class="eq-detail-hero__photo" data-eq-photo-idx="0"
-        aria-label="Abrir foto principal de ${Utils.escapeAttr(eq.nome)}">
-        <img src="${Utils.escapeAttr(heroPhoto.url)}" alt="Foto principal de ${Utils.escapeAttr(eq.nome)}" loading="lazy"
-          onerror="this.closest('.eq-detail-hero')?.classList.remove('eq-detail-hero--with-photo'); this.closest('.eq-detail-hero__photo')?.remove();" />
-        ${extraPhotos.length ? `<span class="eq-detail-hero__photo-count" aria-hidden="true">+${extraPhotos.length}</span>` : ''}
-      </button>`
-    : '';
-
-  // Faixa de fotos adicionais só aparece quando há 2+ fotos. Os índices batem
-  // com `fotosList` para que o listener use a mesma lista na hora de abrir o
-  // lightbox.
-  const galleryHtml = extraPhotos.length
-    ? `<div class="eq-detail-gallery" role="list" aria-label="Fotos adicionais do equipamento">
-        ${extraPhotos
-          .map(
-            (p, i) => `<button type="button" class="eq-detail-gallery__thumb" role="listitem"
-              data-eq-photo-idx="${i + 1}" aria-label="Abrir foto ${i + 2} de ${Utils.escapeAttr(eq.nome)}">
-              <img src="${Utils.escapeAttr(p.url)}" alt="Foto ${i + 2} de ${Utils.escapeAttr(eq.nome)}" loading="lazy" />
-            </button>`,
-          )
-          .join('')}
+  // ── Seção "Dados da etiqueta" (V5) ──
+  // Renderiza os 12 campos extraídos da etiqueta (via IA no cadastro ou
+  // digitados manualmente). Se o equip foi cadastrado antes da feature OU
+  // o usuário não preencheu, a seção é omitida inteira — evita ruído visual
+  // com uma lista de "—".
+  //
+  // Decisão UX: não exibimos CTA "Adicionar dados da etiqueta" aqui porque o
+  // botão "Editar" do footer já abre o modal de edição completo com a seção
+  // da etiqueta visível. Adicionar outro CTA duplicaria caminhos e confundiria.
+  //
+  // Nomenclatura: user-facing usa "etiqueta" (menos ambíguo que "placa", que
+  // remete a PCB/componente eletrônico). Internamente a column e os identifiers
+  // continuam como `dados_placa`/`dadosPlaca` pra não quebrar schema + tests.
+  const dadosPlacaRows = formatDadosPlacaRows(eq.dadosPlaca);
+  const dadosPlacaSectionHtml = hasAnyDadosPlaca(eq.dadosPlaca)
+    ? `
+      <div class="eq-tech-sheet__section">
+        <div class="eq-tech-sheet__title">Dados da etiqueta</div>
+        <div class="info-list info-list--spaced info-list--soft">
+          ${dadosPlacaRows
+            .map(
+              (row) => `
+            <div class="info-row">
+              <span class="info-row__label">${Utils.escapeHtml(row.label)}</span>
+              <span class="info-row__value${row.mono ? ' info-row__value--mono' : ''}">${Utils.escapeHtml(row.value)}</span>
+            </div>`,
+            )
+            .join('')}
+        </div>
       </div>`
     : '';
 
   Utils.getEl('eq-det-corpo').innerHTML = `
     <div class="eq-detail-view">
 
+      ${coverBlock}
+
       <div class="modal__title" id="eq-det-title">${Utils.escapeHtml(eq.nome)}</div>
 
-      <!-- ── Hero: foto (opcional) + score + status + mini-stats ──
-           V3: quando há foto, a coluna esquerda agrupa foto + faixa de
-           thumbs (antes era sibling depois do hero). Isso mantém o 2-col
-           compacto e alinha o grid visual (foto + info ao lado). -->
-      <div class="eq-detail-hero eq-detail-hero--${cls}${heroPhoto ? ' eq-detail-hero--with-photo' : ''}">
-        ${
-          heroPhoto
-            ? `<div class="eq-detail-hero__photo-col">
-          ${heroPhotoHtml}
-          ${galleryHtml}
-        </div>`
-            : ''
-        }
+      <!-- ── Hero: score + status (V4: sem foto lateral). As fotos saíram
+           daqui e viraram o avatar no topo, abrindo o editor dedicado
+           (modal-eq-photos) via "Gerenciar fotos". -->
+      <div class="eq-detail-hero eq-detail-hero--${cls}">
         <div class="eq-detail-hero__body">
           <div class="eq-hero-score">
             <div class="eq-score-ring-wrap">
@@ -2135,8 +2485,8 @@ export async function viewEquip(id) {
         </div>
       </div>
 
-      <!-- V3: a faixa de thumbs foi movida pra dentro da coluna da foto
-           (eq-detail-hero__photo-col), não é mais irmã do hero. -->
+      <!-- V4: galeria/lightbox saíram daqui. Fotos agora são editadas via
+           modal-eq-photos aberto pelo avatar CTA. -->
 
       <!-- ── Painel de risco (V3: sem fórmula exposta) ──
            A fórmula do score saiu deste painel; agora existe apenas um
@@ -2182,6 +2532,7 @@ export async function viewEquip(id) {
             <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
           </div>
         </div>
+        ${dadosPlacaSectionHtml}
       </div>
 
       <!-- ── Histórico de serviços ── -->
@@ -2238,19 +2589,9 @@ export async function viewEquip(id) {
     });
   }
 
-  // Listeners das fotos: hero (foto principal) + thumbs extras usam o mesmo
-  // seletor `[data-eq-photo-idx]`. O índice referencia a `fotosList` original,
-  // então o lightbox recebe a URL correta mesmo com o split hero/galeria.
-  if (fotosList.length) {
-    const photoTargets = document.querySelectorAll('#eq-det-corpo [data-eq-photo-idx]');
-    photoTargets.forEach((el) => {
-      el.addEventListener('click', () => {
-        const idx = Number(el.dataset.eqPhotoIdx);
-        const photo = fotosList[idx];
-        if (photo?.url) Photos.openLightbox(photo.url);
-      });
-    });
-  }
+  // V4: listener das fotos do hero/gallery removido — o bloco foi substituído
+  // pelo avatar CTA, que abre `modal-eq-photos`. Lightbox continua sendo
+  // útil para abrir a foto em grande a partir do editor, se necessário.
 
   try {
     const { Modal: M } = await import('../../core/modal.js');

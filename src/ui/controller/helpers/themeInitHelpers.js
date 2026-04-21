@@ -69,14 +69,19 @@ function bindPhotoInput() {
   inputFotos.addEventListener('change', (event) => Photos.add(event.target));
 }
 
-// Fotos do equipamento (feature Plus+): dois inputs — câmera e galeria.
-// Ambos delegam para EquipmentPhotos.add, que lida com limite e preview.
+// Fotos do equipamento (feature Plus+): bindings dos file inputs.
+// V4: fotos são gerenciadas a partir do detail view via modal-eq-photos.
+// Os IDs antigos (equip-photo-camera/-gallery, usados no modal-add-eq) podem
+// não existir mais depois da remoção do bloco — mantemos fallback pra evitar
+// erros silenciosos durante a transição. Novos IDs: eq-photos-camera/-gallery.
 function bindEquipmentPhotoInputs() {
-  ['equip-photo-camera', 'equip-photo-gallery'].forEach((id) => {
-    const input = document.getElementById(id);
-    if (!input) return;
-    input.addEventListener('change', (event) => EquipmentPhotos.add(event.target));
-  });
+  ['equip-photo-camera', 'equip-photo-gallery', 'eq-photos-camera', 'eq-photos-gallery'].forEach(
+    (id) => {
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.addEventListener('change', (event) => EquipmentPhotos.add(event.target));
+    },
+  );
 }
 
 function bindHistFilters() {

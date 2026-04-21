@@ -14,6 +14,7 @@ import { Utils, STATUS_LABEL } from '../../core/utils.js';
 import { getState, findEquip } from '../../core/state.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { CRITICIDADE_LABEL, PRIORIDADE_OPERACIONAL_LABEL } from '../../domain/maintenance.js';
+import { formatDadosPlacaRows } from '../../domain/dadosPlacaDisplay.js';
 import { PdfQuotaBadge } from '../components/pdfQuotaBadge.js';
 import { getSignatureForRecord, SignatureViewerModal } from '../components/signature.js';
 
@@ -365,6 +366,21 @@ function renderRecordCard({ r, eq, expanded, singleEquipFilter }) {
     ? `${eq.periodicidadePreventivaDias} dias`
     : '—';
 
+  // Dados da placa (12 campos opcionais, populados via IA ou manualmente).
+  // Cada um vira uma .rel-spec na mesma grid das specs fixas — omite campos
+  // sem valor pra não poluir com linhas "—". Se o equip foi cadastrado antes
+  // da feature, dadosPlacaRows === [] e o HTML fica vazio.
+  const dadosPlacaRows = formatDadosPlacaRows(eq?.dadosPlaca);
+  const dadosPlacaSpecsHtml = dadosPlacaRows
+    .map(
+      (row) => `
+            <div class="rel-spec">
+              <div class="rel-spec__label">${Utils.escapeHtml(row.label)}</div>
+              <div class="rel-spec__value${row.mono ? ' rel-spec__value--mono' : ''}">${Utils.escapeHtml(row.value)}</div>
+            </div>`,
+    )
+    .join('');
+
   const tipoLabel = r.tipo || 'Outro';
   const titleText = tipoLabel;
 
@@ -457,6 +473,7 @@ function renderRecordCard({ r, eq, expanded, singleEquipFilter }) {
               <div class="rel-spec__label">Rotina</div>
               <div class="rel-spec__value">${Utils.escapeHtml(equipRotina)}</div>
             </div>
+            ${dadosPlacaSpecsHtml}
           </div>
         </section>
 

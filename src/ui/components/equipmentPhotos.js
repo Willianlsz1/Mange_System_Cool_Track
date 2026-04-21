@@ -20,10 +20,18 @@ import { Photos } from './photos.js';
 import { resolvePhotoDisplayUrl } from '../../core/photoStorage.js';
 
 export const MAX_EQUIP_PHOTOS = 3;
-const PREVIEW_EL_ID = 'equip-photo-preview';
-const COUNTER_SELECTOR = '.equip-photo-counter';
-const DROP_TEXT_ID = 'equip-photo-drop-text';
-const DROP_ZONE_ID = 'equip-photo-drop-zone';
+// Targets DOM default — legado do modal-add-eq. Podem ser sobrescritos via
+// EquipmentPhotos.configure({ ... }) antes de render(), usado pelo novo
+// modal-eq-photos (IDs prefixados com `eq-photos-*`).
+const DEFAULT_TARGETS = {
+  previewId: 'equip-photo-preview',
+  counterSelector: '.equip-photo-counter',
+  dropTextId: 'equip-photo-drop-text',
+  dropZoneId: 'equip-photo-drop-zone',
+  subId: 'equip-photo-sub',
+  subTotalLabel: MAX_EQUIP_PHOTOS,
+};
+let _targets = { ...DEFAULT_TARGETS };
 
 function compressImage(file) {
   return new Promise((resolve, reject) => {
@@ -127,8 +135,8 @@ export const EquipmentPhotos = {
       );
     }
 
-    const dropText = document.getElementById(DROP_TEXT_ID);
-    const dropZone = document.getElementById(DROP_ZONE_ID);
+    const dropText = document.getElementById(_targets.dropTextId);
+    const dropZone = document.getElementById(_targets.dropZoneId);
     if (dropZone) dropZone.style.pointerEvents = 'none';
     const originalText = dropText?.textContent || '';
     if (dropText) dropText.textContent = `Processando ${toProcess.length} foto(s)...`;
@@ -175,8 +183,23 @@ export const EquipmentPhotos = {
     if (src) Photos.openLightbox(src);
   },
 
+  /**
+   * Reconfigura os IDs de DOM que o componente consulta. Útil pra reusar em
+   * múltiplos modais sem duplicar toda a lógica. Chamar com `null`/`{}` pra
+   * voltar aos defaults do modal-add-eq legacy. Tolerante: chaves omitidas
+   * preservam o valor atual.
+   */
+  configure(overrides = {}) {
+    _targets = { ..._targets, ...overrides };
+  },
+
+  /** Volta os targets pro default global. Usado em teardown entre modais. */
+  resetTargets() {
+    _targets = { ...DEFAULT_TARGETS };
+  },
+
   render() {
-    const container = Utils.getEl(PREVIEW_EL_ID);
+    const container = Utils.getEl(_targets.previewId);
     if (!container) return;
     container.innerHTML = '';
 
@@ -223,19 +246,19 @@ export const EquipmentPhotos = {
     container.appendChild(fragment);
 
     // Contador (hidden legacy element, mantido para compat)
-    const counter = container.parentElement?.querySelector(COUNTER_SELECTOR);
+    const counter = container.parentElement?.querySelector(_targets.counterSelector);
     if (counter) {
       counter.textContent = `${totalCount(this)}/${MAX_EQUIP_PHOTOS} fotos`;
     }
 
-    // Subline V2: "N de 3 · ajuda a identificar em campo"
-    const sub = document.getElementById('equip-photo-sub');
+    // Subline V2: "N de 3 · ajuda a identificar em campo" (só se o modal tiver)
+    const sub = _targets.subId ? document.getElementById(_targets.subId) : null;
     if (sub) {
       sub.textContent = `${totalCount(this)} de ${MAX_EQUIP_PHOTOS} · ajuda a identificar em campo`;
     }
 
     // Esconde drop-zone quando cheio
-    const dropZone = document.getElementById(DROP_ZONE_ID);
+    const dropZone = document.getElementById(_targets.dropZoneId);
     if (dropZone) {
       dropZone.hidden = totalCount(this) >= MAX_EQUIP_PHOTOS;
     }

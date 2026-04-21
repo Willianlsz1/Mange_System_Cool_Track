@@ -249,10 +249,35 @@ describe('mapApiFieldsToFormShape', () => {
     expect(result.tensao).toBeNull();
     expect(result.potenciaW).toBeNull();
     expect(result.correnteA).toBeNull();
+    expect(result.correnteAquecA).toBeNull();
     expect(result.fases).toBeNull();
     expect(result.frequenciaHz).toBeNull();
+    expect(result.pressaoSuccaoMpa).toBeNull();
+    expect(result.pressaoDescargaMpa).toBeNull();
+    expect(result.grauProtecao).toBeNull();
     expect(result.anoFabricacao).toBeNull();
     expect(result.notas).toBeNull();
+  });
+
+  it('mapeia os novos 4 campos da etiqueta (corrente aquec, pressões, grau proteção)', () => {
+    // Caso completo: a API devolve todos os campos da etiqueta física (16 no
+    // total). Garantimos que os 4 adicionados recentemente chegam no shape do
+    // form sem alteração — são passados direto pro input (sem select/map).
+    const result = mapApiFieldsToFormShape({
+      identified: true,
+      tipo_equipamento: 'split',
+      refrigerante: 'R-410A',
+      marca: 'LG',
+      modelo: 'USNW092WSG3',
+      corrente_aquec_a: 4.15,
+      pressao_succao_mpa: 2.4,
+      pressao_descarga_mpa: 4.2,
+      grau_protecao: 'IPX0',
+    });
+    expect(result.correnteAquecA).toBe(4.15);
+    expect(result.pressaoSuccaoMpa).toBe(2.4);
+    expect(result.pressaoDescargaMpa).toBe(4.2);
+    expect(result.grauProtecao).toBe('IPX0');
   });
 
   it('campos primários ausentes → mapped fica null (sinal pro caller não sobrescrever)', () => {

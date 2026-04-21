@@ -50,7 +50,7 @@ export function renderShellModals() {
           </div>
           <div class="nameplate-cta__text">
             <div class="nameplate-cta__title">
-              Aponta a câmera pra placa
+              Aponta a câmera pra etiqueta
               <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
             </div>
             <p class="nameplate-cta__sub" id="nameplate-cta-sub">
@@ -61,7 +61,7 @@ export function renderShellModals() {
             <!-- Estado active (Plus+): label abre o file picker escondido. -->
             <label class="btn btn--primary btn--sm nameplate-cta__btn nameplate-cta__btn--active"
               for="nameplate-file-input" id="nameplate-cta-btn-active">
-              Usar foto da placa
+              Usar foto da etiqueta
             </label>
             <!-- Estado locked (Free): botão puxa pro upsell. -->
             <button type="button"
@@ -73,6 +73,59 @@ export function renderShellModals() {
           <input type="file" id="nameplate-file-input"
             accept="image/jpeg,image/png,image/webp"
             class="visually-hidden" data-action="nameplate-file-selected" />
+        </div>
+
+        <!--
+          Overlay de análise: full-width sobre o form enquanto o Vision processa.
+          Renderizado aqui (irmão do nameplate-cta) pra não afetar o layout e
+          ficar acima do form na z-order natural.
+          Controlado pelo nameplateCapture.js via classes .is-active / .is-done.
+          Mostra: thumbnail da foto, scanning line animada, label do estágio,
+          progress bar 0→100%, e ao final um "result panel" com % detectado.
+        -->
+        <div class="nameplate-scan" id="nameplate-scan" data-state="idle" hidden>
+          <div class="nameplate-scan__body">
+            <div class="nameplate-scan__preview" aria-hidden="true">
+              <img class="nameplate-scan__img" id="nameplate-scan-img" alt="" />
+              <div class="nameplate-scan__line"></div>
+            </div>
+            <div class="nameplate-scan__info">
+              <div class="nameplate-scan__stage" id="nameplate-scan-stage">
+                <span class="nameplate-scan__spinner" aria-hidden="true"></span>
+                <span id="nameplate-scan-stage-text">Carregando foto…</span>
+              </div>
+              <div class="nameplate-scan__bar" role="progressbar"
+                aria-label="Progresso da análise da etiqueta"
+                aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+                id="nameplate-scan-bar">
+                <div class="nameplate-scan__bar-fill" id="nameplate-scan-bar-fill"></div>
+              </div>
+              <div class="nameplate-scan__percent" id="nameplate-scan-percent">0%</div>
+            </div>
+          </div>
+          <!-- Result panel: aparece depois do progresso chegar em 100%.
+               Mostra X/Y detectados + botão "Revisar campos". -->
+          <div class="nameplate-scan__result" id="nameplate-scan-result" hidden>
+            <div class="nameplate-scan__result-head">
+              <div class="nameplate-scan__result-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <div class="nameplate-scan__result-title" id="nameplate-scan-result-title">
+                Detectei <b id="nameplate-scan-detected">0</b>/<b id="nameplate-scan-total">16</b> campos
+                <span class="nameplate-scan__result-percent" id="nameplate-scan-result-percent"></span>
+              </div>
+            </div>
+            <p class="nameplate-scan__result-sub" id="nameplate-scan-result-sub">
+              Revise os campos preenchidos e complete os que faltaram.
+            </p>
+            <button type="button" class="btn btn--primary btn--sm nameplate-scan__result-btn"
+              data-action="nameplate-scan-review" id="nameplate-scan-review">
+              Ver campos preenchidos →
+            </button>
+          </div>
         </div>
 
         <div id="eq-step-1">
@@ -117,87 +170,15 @@ export function renderShellModals() {
                 </svg>
               </label>
 
-              <section class="eq-context-row eq-context-row--fotos" id="eq-fotos-wrapper" style="display:none"
-                aria-label="Fotos do equipamento">
-                <div class="eq-context-row__head">
-                  <span class="eq-context-row__icon eq-context-row__icon--cam" aria-hidden="true">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
-                        stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
-                      <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="1.6" />
-                    </svg>
-                  </span>
-                  <div class="eq-context-row__body">
-                    <div class="eq-context-row__title">
-                      Fotos <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
-                    </div>
-                    <div class="eq-context-row__sub" id="equip-photo-sub">0 de 3 · ajuda a identificar em campo</div>
-                  </div>
-                </div>
-
-                <div class="equip-photo-block" id="equip-photo-block">
-                  <label class="equip-photo-dropzone" for="equip-photo-gallery" id="equip-photo-drop-zone">
-                    <svg class="equip-photo-dropzone__icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
-                      aria-hidden="true">
-                      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
-                        stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
-                      <circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.6" />
-                    </svg>
-                    <span class="equip-photo-dropzone__text">
-                      <span class="equip-photo-dropzone__title" id="equip-photo-drop-text">Tirar foto ou escolher da galeria</span>
-                      <span class="equip-photo-dropzone__sub">câmera ou arquivos · até 3</span>
-                    </span>
-                  </label>
-                  <input type="file" id="equip-photo-gallery" accept="image/*" multiple
-                    class="visually-hidden" data-action="equip-photo-add" />
-
-                  <label class="equip-photo-shortcut" for="equip-photo-camera">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
-                        stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
-                      <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="1.6" />
-                    </svg>
-                    Atalho: abrir câmera direto
-                  </label>
-                  <input type="file" id="equip-photo-camera" accept="image/*" capture="environment"
-                    class="visually-hidden" data-action="equip-photo-add" />
-
-                  <div class="equip-photo-counter photo-counter visually-hidden" aria-live="polite">0/3 fotos</div>
-                  <div class="photo-preview equip-photo-preview" id="equip-photo-preview" role="list"></div>
-
-                  <!--
-                    Locked state pra plano Free. Renderizado como irmão da
-                    dropzone pra não mexer nos listeners dos inputs file (que
-                    são direct listeners por ID, não delegados). O toggle
-                    acontece via classe .equip-photo-block--locked aplicada
-                    pelo applyEquipPhotosGate — o CSS esconde a dropzone +
-                    shortcut + preview e mostra só este card de upsell.
-                  -->
-                  <div class="equip-photo-locked" id="equip-photo-locked" hidden>
-                    <div class="equip-photo-locked__icon" aria-hidden="true">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                        <rect x="5" y="11" width="14" height="9" rx="2"
-                          stroke="currentColor" stroke-width="1.6" />
-                        <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor"
-                          stroke-width="1.6" stroke-linecap="round" />
-                      </svg>
-                    </div>
-                    <div class="equip-photo-locked__text">
-                      <div class="equip-photo-locked__title">
-                        Fotos dos equipamentos
-                        <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
-                      </div>
-                      <p class="equip-photo-locked__sub">
-                        Identifique equipamentos em campo pelas fotos — até 3 por equipamento.
-                      </p>
-                    </div>
-                    <button type="button" class="btn btn--primary btn--sm equip-photo-locked__cta"
-                      data-action="photos-upsell-cta">
-                      Desbloquear com Plus →
-                    </button>
-                  </div>
-                </div>
-              </section>
+              <!--
+                V4: O bloco de fotos foi MOVIDO pra fora do modal de cadastro.
+                Agora as fotos são gerenciadas via avatar + CTA "Gerenciar
+                fotos" no detail view do equipamento (modal-eq-photos). A
+                mudança elimina a confusão de UX onde o usuário via dois
+                locais de foto (cadastro + card) sem saber qual era a
+                identificação principal. O fluxo novo: cria o equipamento
+                → abre o detail → usa o avatar pra adicionar fotos.
+              -->
             </div>
           </div>
 
@@ -269,6 +250,113 @@ export function renderShellModals() {
             <input id="eq-modelo" class="form-control" type="text"
               placeholder="Ex: Carrier 18.000 BTU, York 30 TR..." />
           </div>
+
+          <!--
+            Campos da etiqueta (preenchidos pela IA quando o user usa "Usar foto da etiqueta").
+            Todos opcionais. Quando a IA não detecta um campo, o placeholder vira
+            "não detectado — toque pra preencher" via applyFieldsToForm().
+            Persistidos em equipamentos.dados_placa (JSONB) pela migration 20260421.
+          -->
+          <div class="eq-details-subhead">
+            <span class="eq-details-subhead__label">Dados da etiqueta</span>
+            <span class="eq-details-subhead__meta" id="eq-etiqueta-status">— opcional, a IA preenche por foto</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="eq-numero-serie">Nº de série</label>
+              <input id="eq-numero-serie" class="form-control form-control--mono" type="text"
+                placeholder="Ex: 312KAKY3F817" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-capacidade-btu">Capacidade (BTU/h)</label>
+              <input id="eq-capacidade-btu" class="form-control" type="number" min="0" step="500"
+                placeholder="Ex: 9000, 12000, 24000" inputmode="numeric" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="eq-tensao">Tensão (V)</label>
+              <select id="eq-tensao" class="form-control">
+                <option value="">—</option>
+                <option value="127">127 V</option>
+                <option value="220">220 V</option>
+                <option value="380">380 V</option>
+                <option value="440">440 V</option>
+                <option value="bivolt">Bivolt (127/220)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-frequencia">Frequência (Hz)</label>
+              <select id="eq-frequencia" class="form-control">
+                <option value="">—</option>
+                <option value="50">50 Hz</option>
+                <option value="60" selected>60 Hz</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="eq-fase">Fase</label>
+              <select id="eq-fase" class="form-control">
+                <option value="">—</option>
+                <option value="1">Monofásica (1φ)</option>
+                <option value="2">Bifásica (2φ)</option>
+                <option value="3">Trifásica (3φ)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-potencia">Potência (W)</label>
+              <input id="eq-potencia" class="form-control" type="number" min="0" step="10"
+                placeholder="Ex: 820, 2400" inputmode="numeric" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="eq-corrente-refrig">Corrente refrig. (A)</label>
+              <input id="eq-corrente-refrig" class="form-control" type="number" min="0" max="100" step="0.01"
+                placeholder="Ex: 4,63" inputmode="decimal" data-decimal-hint="corrente" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-corrente-aquec">Corrente aquec. (A)</label>
+              <input id="eq-corrente-aquec" class="form-control" type="number" min="0" max="100" step="0.01"
+                placeholder="Ex: 4,15" inputmode="decimal" data-decimal-hint="corrente" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="eq-pressao-suc">Pressão sucção (MPa)</label>
+              <input id="eq-pressao-suc" class="form-control" type="number" min="0" max="10" step="0.1"
+                placeholder="Ex: 2,4" inputmode="decimal" data-decimal-hint="pressao" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-pressao-desc">Pressão descarga (MPa)</label>
+              <input id="eq-pressao-desc" class="form-control" type="number" min="0" max="10" step="0.1"
+                placeholder="Ex: 4,2" inputmode="decimal" data-decimal-hint="pressao" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="eq-grau-protecao">Grau de proteção</label>
+              <input id="eq-grau-protecao" class="form-control form-control--mono" type="text"
+                placeholder="Ex: IPX0, IP24" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="eq-ano-fabricacao">Ano de fabricação</label>
+              <input id="eq-ano-fabricacao" class="form-control" type="number" min="1990" max="2040" step="1"
+                placeholder="Ex: 2024" inputmode="numeric" />
+            </div>
+          </div>
+
+          <div class="eq-details-subhead">
+            <span class="eq-details-subhead__label">Operação</span>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label class="form-label" for="eq-criticidade">Criticidade do ativo</label>
@@ -311,6 +399,93 @@ export function renderShellModals() {
     <div class="modal">
       <div class="modal__handle"></div>
       <div id="eq-det-corpo"></div>
+    </div>
+  </div>
+
+  <!--
+    MODAL: Fotos do Equipamento
+    Editor dedicado de fotos, aberto a partir do detail view (avatar + CTA
+    "Gerenciar fotos"). Foi extraído do modal-add-eq pra resolver a confusão
+    de UX em que o usuário via dois locais de foto (cadastro + perfil). Agora
+    fotos só se gerenciam aqui, pós-cadastro, no contexto do equipamento.
+    O componente EquipmentPhotos é reutilizado — só trocaram-se os IDs dos
+    targets DOM pra não colidir com o resto do app.
+  -->
+  <div class="modal-overlay" id="modal-eq-photos" role="dialog" aria-modal="true"
+    aria-labelledby="eq-photos-title">
+    <div class="modal">
+      <div class="modal__handle"></div>
+      <div class="modal__body modal__body--scroll">
+        <div class="modal__title" id="eq-photos-title">Fotos do equipamento</div>
+        <p class="modal__text eq-photos-modal__lead" id="eq-photos-subtitle">
+          Até 3 fotos pra identificar o equipamento em campo. A primeira vira a capa do card.
+        </p>
+
+        <div class="equip-photo-block" id="eq-photos-block">
+          <label class="equip-photo-dropzone" for="eq-photos-gallery" id="eq-photos-drop-zone">
+            <svg class="equip-photo-dropzone__icon" width="22" height="22" viewBox="0 0 24 24" fill="none"
+              aria-hidden="true">
+              <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
+                stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+              <circle cx="12" cy="13" r="3.5" stroke="currentColor" stroke-width="1.6" />
+            </svg>
+            <span class="equip-photo-dropzone__text">
+              <span class="equip-photo-dropzone__title" id="eq-photos-drop-text">Tirar foto ou escolher da galeria</span>
+              <span class="equip-photo-dropzone__sub">câmera ou arquivos · até 3</span>
+            </span>
+          </label>
+          <input type="file" id="eq-photos-gallery" accept="image/*" multiple
+            class="visually-hidden" data-action="eq-photos-add" />
+
+          <label class="equip-photo-shortcut" for="eq-photos-camera">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"
+                stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+              <circle cx="12" cy="13" r="3" stroke="currentColor" stroke-width="1.6" />
+            </svg>
+            Atalho: abrir câmera direto
+          </label>
+          <input type="file" id="eq-photos-camera" accept="image/*" capture="environment"
+            class="visually-hidden" data-action="eq-photos-add" />
+
+          <div class="equip-photo-counter photo-counter visually-hidden" aria-live="polite">0/3 fotos</div>
+          <div class="photo-preview equip-photo-preview" id="eq-photos-preview" role="list"></div>
+
+          <!--
+            Locked state (Free). Mesmo padrão do gate antigo em modal-add-eq:
+            .equip-photo-block--locked no wrapper esconde dropzone+preview via
+            CSS e mostra o card de upsell. Aplicado por applyEquipPhotosEditorGate.
+          -->
+          <div class="equip-photo-locked" id="eq-photos-locked" hidden>
+            <div class="equip-photo-locked__icon" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                <rect x="5" y="11" width="14" height="9" rx="2"
+                  stroke="currentColor" stroke-width="1.6" />
+                <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor"
+                  stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="equip-photo-locked__text">
+              <div class="equip-photo-locked__title">
+                Fotos do equipamento
+                <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
+              </div>
+              <p class="equip-photo-locked__sub">
+                Identifique equipamentos em campo pelas fotos — até 3 por equipamento.
+              </p>
+            </div>
+            <button type="button" class="btn btn--primary btn--sm equip-photo-locked__cta"
+              data-action="eq-photos-upsell-cta">
+              Desbloquear com Plus →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-group modal__footer">
+        <button class="btn btn--outline" data-action="close-modal" data-id="modal-eq-photos">Cancelar</button>
+        <button class="btn btn--primary" data-action="save-eq-photos">Salvar fotos</button>
+      </div>
     </div>
   </div>
 
