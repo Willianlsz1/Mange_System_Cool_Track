@@ -72,9 +72,38 @@ export function registerRoute(name, onEnter, onLeave = null) {
  */
 export function goTo(name, params = {}, options = {}) {
   const { fromHistory = false, replaceHistory = false } = options;
-  if (_transitioning || _current === name) return;
+  if (_transitioning) return;
   if (!_routes.has(name)) {
     console.warn(`[Router] Rota desconhecida: "${name}"`);
+    return;
+  }
+
+  const hasParams = params && Object.keys(params).length > 0;
+  if (_current === name) {
+    // Mesmo na mesma rota, permitimos reentrada quando há params
+    // (ex.: trocar filtro/intent/equipId sem mudar de tela).
+    if (!hasParams) return;
+
+    const currentEl = document.getElementById(`view-${name}`);
+    if (!currentEl) return;
+
+    try {
+      const result = _routes.get(name)?.onEnter(params);
+      if (result && typeof result.then === 'function') {
+        result.catch((asyncError) => _handleViewError(name, currentEl, asyncError));
+      }
+    } catch (syncError) {
+      _handleViewError(name, currentEl, syncError);
+    }
+
+    emitRouteChanged(name, name);
+
+    if (!fromHistory && typeof window !== 'undefined' && window.history) {
+      // Mesma rota + params: evita poluir stack com entradas idênticas.
+      const state = { route: name };
+      window.history.replaceState(state, '', window.location.pathname + window.location.search);
+    }
+
     return;
   }
 

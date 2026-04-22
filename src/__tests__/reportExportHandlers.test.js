@@ -152,6 +152,22 @@ describe('reportExportHandlers', () => {
     expect(trackEvent).toHaveBeenCalledWith('pdf_export_blocked', { reason: 'guest' });
   });
 
+  it('buildReportFilters preserva registroId para fluxo pós-save', async () => {
+    const { buildReportFilters } =
+      await import('../ui/controller/handlers/reportExportHandlers.js');
+    expect(
+      buildReportFilters({
+        registroId: 'reg-1',
+        equipId: 'eq-2',
+      }),
+    ).toEqual({
+      registroId: 'reg-1',
+      filtEq: 'eq-2',
+      de: '',
+      ate: '',
+    });
+  });
+
   it('allows Free users under the monthly PDF quota and passes planCode to generator', async () => {
     getUser.mockResolvedValueOnce({ id: 'u1' });
     generateMaintenanceReport.mockResolvedValueOnce('relatorio.pdf');

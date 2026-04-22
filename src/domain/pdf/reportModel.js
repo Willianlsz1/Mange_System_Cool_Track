@@ -1,7 +1,11 @@
 import { sanitizePublicText } from './sanitizers.js';
 
-export function filterRegistrosForReport(registros, { filtEq = '', de = '', ate = '' } = {}) {
+export function filterRegistrosForReport(
+  registros,
+  { registroId = '', filtEq = '', de = '', ate = '' } = {},
+) {
   let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));
+  if (registroId) return filtered.filter((registro) => registro.id === registroId);
   if (filtEq) filtered = filtered.filter((registro) => registro.equipId === filtEq);
   if (de) filtered = filtered.filter((registro) => registro.data >= de);
   if (ate) filtered = filtered.filter((registro) => registro.data <= `${ate}T23:59`);

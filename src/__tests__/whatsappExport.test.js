@@ -87,4 +87,37 @@ describe('WhatsAppExport', () => {
     expect(__testables.classifyService('Carga de gás refrigerante')).toBe('carga_gas');
     expect(__testables.classifyService('Serviço customizado')).toBe('outros');
   });
+
+  it('prioriza registroId no pós-save e ignora filtros antigos', () => {
+    getStateMock.mockReturnValueOnce({
+      registros: [
+        {
+          id: 'r-old',
+          equipId: 'eq-1',
+          status: 'ok',
+          tipo: 'Preventiva',
+          tecnico: 'Ana',
+          data: '2026-04-01T10:00',
+        },
+        {
+          id: 'r-new',
+          equipId: 'eq-2',
+          status: 'ok',
+          tipo: 'Corretiva',
+          tecnico: 'Ana',
+          data: '2026-04-02T10:00',
+        },
+      ],
+    });
+    findEquipMock.mockImplementation((id) => ({ nome: id === 'eq-2' ? 'Split B' : 'Split A' }));
+
+    const text = WhatsAppExport.generateText({
+      registroId: 'r-new',
+      // filtro legado divergente da aba relatório
+      filtEq: 'eq-1',
+    });
+
+    expect(text).toContain('equipamento Split B');
+    expect(text).toContain('Serviço: Corretiva.');
+  });
 });
