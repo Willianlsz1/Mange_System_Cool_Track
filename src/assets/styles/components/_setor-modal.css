@@ -246,6 +246,43 @@
   position: relative;
 }
 
+.setor-modal__optional {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  padding: 8px 10px 10px;
+  background: color-mix(in srgb, var(--bg2) 70%, transparent);
+}
+
+.setor-modal__optional-summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.setor-modal__optional-summary::-webkit-details-marker {
+  display: none;
+}
+
+.setor-modal__optional-summary::before {
+  content: '＋';
+  color: var(--primary);
+  font-weight: 700;
+  transition: transform 0.2s ease;
+}
+
+.setor-modal__optional[open] .setor-modal__optional-summary::before {
+  transform: rotate(45deg);
+}
+
+.setor-modal__optional[open] .setor-modal__input-wrap {
+  margin-top: 8px;
+}
+
 .setor-modal__input-icon {
   position: absolute;
   left: 12px;
