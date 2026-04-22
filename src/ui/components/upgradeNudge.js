@@ -24,7 +24,7 @@ const NUDGE_CONFIGS = {
       'Até 15 equipamentos cadastrados',
       'Registros e histórico ilimitados',
       'PDFs sem marca d\u2019água + assinatura do cliente',
-      '20 envios de WhatsApp/mês',
+      '60 envios de WhatsApp/mês',
     ],
     footer:
       'Tem frota maior? Conheça também o <strong>Pro</strong> — equipamentos ilimitados, tudo sem limite e setores.',

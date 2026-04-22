@@ -48,10 +48,11 @@ const ICON_X = `<svg class="pricing-features__icon pricing-features__icon--no" w
 // ──────────────────────────────────────────────────────────────────────────
 const FREE_FEATURES = [
   'Até 3 equipamentos cadastrados',
-  '5 registros de serviço/mês',
+  'Registros de serviço ilimitados',
   'Histórico dos últimos 15 dias',
-  '2 PDFs/mês <span class="pricing-features__note">(com marca d\'água)</span>',
-  '3 envios via WhatsApp/mês',
+  "Relatórios com marca d'água",
+  '5 envios via WhatsApp/mês',
+  'Cadastro por foto (IA): 1 análise/mês',
   'Fotos nos registros de serviço',
   'Alertas de manutenção preventiva',
   'Funciona offline',
@@ -59,10 +60,10 @@ const FREE_FEATURES = [
 
 const PLUS_DELTA_FEATURES = [
   'Até <strong>15 equipamentos</strong> cadastrados',
-  '<strong>Registros de serviço ilimitados</strong>',
+  '<strong>Registros de serviço ilimitados</strong> para rotina em campo',
   '<strong>Todo o histórico</strong> de manutenções',
-  "<strong>30 PDFs/mês</strong> sem marca d'água",
-  '20 envios via WhatsApp/mês',
+  "<strong>Relatórios profissionais</strong> sem marca d'água",
+  '60 envios via WhatsApp/mês',
   '<strong>Cadastro por foto (IA)</strong> — até 30 análises/mês',
   '<strong>Assinatura digital</strong> do cliente no PDF',
   '<strong>Fotos dos equipamentos</strong> (até 3 por equip.)',
@@ -392,7 +393,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
               </tr>
               <tr>
                 <th scope="row">Registros de serviço</th>
-                <td>5 / mês</td>
+                <td>Ilimitado</td>
                 <td>Ilimitado</td>
                 <td>Ilimitado</td>
               </tr>
@@ -404,14 +405,14 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
               </tr>
               <tr>
                 <th scope="row">Relatórios PDF</th>
-                <td>2 / mês <small>(com marca d'água)</small></td>
-                <td>30 / mês</td>
+                <td>Com marca d'água</td>
+                <td>Sem marca d'água <small>(120 / mês)</small></td>
                 <td>Ilimitado</td>
               </tr>
               <tr>
                 <th scope="row">Envios por WhatsApp</th>
-                <td>3 / mês</td>
-                <td>20 / mês</td>
+                <td>5 / mês</td>
+                <td>60 / mês</td>
                 <td>Ilimitado</td>
               </tr>
               <tr>
@@ -468,7 +469,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
         <details class="pricing-faq__item">
           <summary>Qual a diferença entre Plus e Pro?</summary>
           <p>
-            <strong>Plus</strong> é pensado pra <strong>técnico autônomo</strong>: até 15 equipamentos, 30 PDFs/mês sem marca d'água, assinatura digital do cliente, 20 envios de WhatsApp/mês e <strong>30 cadastros por foto (IA) por mês</strong>.
+            <strong>Plus</strong> é pensado pra <strong>técnico autônomo</strong>: até 15 equipamentos, relatórios sem marca d'água (120/mês), assinatura digital do cliente, 60 envios de WhatsApp/mês e <strong>30 cadastros por foto (IA) por mês</strong>.
             <strong>Pro</strong> é pra <strong>equipe ou operação maior</strong>: equipamentos, PDFs e WhatsApp ilimitados, <strong>200 cadastros por foto (IA) por mês</strong>, agrupamento por setores e suporte prioritário.
           </p>
         </details>
@@ -492,7 +493,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
         <details class="pricing-faq__item">
           <summary>O que acontece com meus dados se cancelar?</summary>
-          <p>Seus dados ficam salvos. Você volta ao plano Gratuito com acesso a tudo que já foi registrado — apenas novos cadastros ficam limitados (máx. 3 equipamentos e 5 registros/mês).</p>
+          <p>Seus dados ficam salvos. Você volta ao plano Gratuito com acesso a tudo que já foi registrado — apenas novos cadastros de equipamentos ficam limitados (máx. 3).</p>
         </details>
 
         <details class="pricing-faq__item">

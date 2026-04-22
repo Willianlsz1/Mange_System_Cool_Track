@@ -31,11 +31,11 @@ function buildReasonMessage(reason) {
     return 'Você atingiu o limite do plano Free para equipamentos.';
   if (reason === 'limit_registros') return 'Você atingiu o limite do plano Free para registros.';
   if (reason === 'limit_free_equipamentos')
-    return 'Você já cadastrou 3 equipamentos — o limite do plano Free. Faça upgrade para o Pro e cadastre até 30.';
+    return 'Você já cadastrou 3 equipamentos — o limite do plano Free. Faça upgrade para o Plus e cadastre até 15.';
   if (reason === 'limit_free_registros')
-    return 'Você atingiu 5 registros este mês no plano Free. Faça upgrade para o Plus e tenha registros ilimitados.';
+    return 'Seu plano atual já permite registros ilimitados. Faça upgrade quando precisar de mais escala.';
   if (reason === 'limit_pdf')
-    return 'Você gerou 3 relatórios este mês. O plano Pro tem relatórios ilimitados.';
+    return 'No plano Gratuito os relatórios saem com marca d’água. No Plus/Pro você gera PDFs profissionais sem marca d’água.';
   if (reason === 'limit_whatsapp')
     return 'Você atingiu o limite mensal de compartilhamentos no plano Free.';
   if (reason === 'limit_pro_equipamentos')
@@ -118,14 +118,14 @@ export const GuestConversionModal = {
              <span class="guest-conv-plan__label">Plano Free</span>
              <ul class="guest-conv-plan__list">
                <li>Até 3 equipamentos</li>
-               <li>5 registros de serviço/mês</li>
+               <li>Registros de serviço ilimitados</li>
                <li>Histórico dos últimos 15 dias</li>
              </ul>
            </div>
            <div class="guest-conv-plan__card guest-conv-plan__card--pro">
              <span class="guest-conv-plan__label guest-conv-plan__label--pro">Plano Pro</span>
              <ul class="guest-conv-plan__list">
-               <li>Até 30 equipamentos</li>
+               <li>Equipamentos ilimitados</li>
                <li>Registros de serviço ilimitados</li>
                <li>Todo o histórico de manutenções</li>
                <li>PDF, WhatsApp e setores</li>

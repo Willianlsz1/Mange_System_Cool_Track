@@ -16,13 +16,13 @@ describe('UsageMeter', () => {
     getStateMock.mockReturnValue({ equipamentos: [], registros: [] });
   });
 
-  it('renders free near-limit state with 3-equipment plan cap', () => {
+  it('renders free near-limit state with equipment cap and reports unlocked', () => {
     const now = new Date();
     const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), 10).toISOString();
 
     getStateMock.mockReturnValue({
       equipamentos: Array.from({ length: 3 }, (_, index) => ({ id: `eq-${index + 1}` })),
-      // Free cap é 5 registros/mês — 4 = 80% → near-limit.
+      // Relatórios no Free são ilimitados; near-limit deve vir dos equipamentos.
       registros: Array.from({ length: 4 }, () => makeReg(currentMonthDate)),
     });
 
@@ -32,7 +32,7 @@ describe('UsageMeter', () => {
       'Equipamentos: <span class="usage-meter__value">3 / 3</span> no plano grátis',
     );
     expect(html).toContain(
-      'Relatórios este mês: <span class="usage-meter__value">4 / 5</span> no plano grátis',
+      'Relatórios este mês: <span class="usage-meter__value">4</span> (com marca d\'água no plano grátis)',
     );
     expect(html).toContain('Desbloquear ilimitado &rarr;');
     expect(html).toContain('QUASE NO LIMITE');
@@ -45,7 +45,7 @@ describe('UsageMeter', () => {
 
     getStateMock.mockReturnValue({
       equipamentos: Array.from({ length: 4 }, (_, index) => ({ id: `eq-${index + 1}` })),
-      // 7 > 5 = acima do cap Free.
+      // Relatórios altos não bloqueiam no plano Free.
       registros: Array.from({ length: 7 }, () => makeReg(currentMonthDate)),
     });
 
@@ -90,8 +90,9 @@ describe('UsageMeter', () => {
     expect(UMI.clampPercent(8, 3)).toBe(100);
     // 4 equipamentos > 3 = hasOverLimit (independente dos registros).
     expect(UMI.getUsageState(4, 4).hasOverLimit).toBe(true);
-    // 4 registros / 5 cap = 80% → near-limit; 2 equipamentos não dispara.
-    expect(UMI.getUsageState(2, 4).hasNearLimit).toBe(true);
+    // Sem cota de registros no Free, near-limit depende de equipamentos.
+    expect(UMI.getUsageState(2, 4).hasNearLimit).toBe(false);
+    expect(UMI.getUsageState(3, 0).hasNearLimit).toBe(true);
     expect(UMI.normalizePlanCode('pro')).toBe('pro');
     expect(UMI.normalizePlanCode('enterprise')).toBe('free');
   });

@@ -101,12 +101,12 @@ describe('guestLimits', () => {
     expect(result.limit).toBe(3);
   });
 
-  it('blocks guest when registros reaches free limit (monthly window)', async () => {
+  it('does not block guest on registros because free plan is unlimited', async () => {
     localStorage.setItem('cooltrack-guest-mode', '1');
     const now = new Date();
     const iso = (day) =>
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T10:00`;
-    // 5 registros no mês corrente — bate o teto mensal do Free.
+    // Mesmo com volume alto no mês, Free não bloqueia registros.
     mockState.registros = Array.from({ length: 5 }, (_, i) => ({
       id: `r-${i}`,
       data: iso((i % 28) + 1),
@@ -116,14 +116,14 @@ describe('guestLimits', () => {
     const guestResult = checkGuestLimit('registros');
     const planResult = await checkPlanLimit('registros');
 
-    expect(guestResult.blocked).toBe(true);
-    expect(guestResult.limit).toBe(5);
-    expect(planResult.blocked).toBe(true);
+    expect(guestResult.blocked).toBe(false);
+    expect(guestResult.limit).toBe(Number.POSITIVE_INFINITY);
+    expect(planResult.blocked).toBe(false);
     expect(planResult.isGuest).toBe(true);
     expect(planResult.planCode).toBe('free');
   });
 
-  it('blocks authenticated free users when monthly registros reaches free limit (5)', async () => {
+  it('does not block authenticated free users on registros', async () => {
     const now = new Date();
     const iso = (day) =>
       `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}T10:00`;
@@ -135,8 +135,8 @@ describe('guestLimits', () => {
     const { checkPlanLimit } = await import('../core/guestLimits.js');
     const result = await checkPlanLimit('registros');
 
-    expect(result.blocked).toBe(true);
-    expect(result.limit).toBe(5);
+    expect(result.blocked).toBe(false);
+    expect(result.limit).toBe(Number.POSITIVE_INFINITY);
     expect(result.current).toBe(5);
     expect(result.isGuest).toBe(false);
     expect(result.planCode).toBe('free');
