@@ -65,19 +65,23 @@ function formatServiceDate(isoDateTime) {
 }
 
 export const WhatsAppExport = {
-  generateText({ filtEq = '', de = '', ate = '' } = {}) {
+  generateText({ registroId = '', filtEq = '', de = '', ate = '' } = {}) {
     const { registros } = getState();
     const profile = Profile.get();
 
     let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));
-    if (filtEq) filtered = filtered.filter((r) => r.equipId === filtEq);
-    if (de) filtered = filtered.filter((r) => r.data >= de);
-    if (ate) filtered = filtered.filter((r) => r.data <= `${ate}T23:59`);
+    if (registroId) filtered = filtered.filter((r) => r.id === registroId);
+    else {
+      if (filtEq) filtered = filtered.filter((r) => r.equipId === filtEq);
+      if (de) filtered = filtered.filter((r) => r.data >= de);
+      if (ate) filtered = filtered.filter((r) => r.data <= `${ate}T23:59`);
+    }
 
     if (!filtered.length) return null;
 
     const latest = filtered[0];
-    const equip = findEquip(filtEq || latest?.equipId);
+    const equipRefId = registroId ? latest?.equipId : filtEq || latest?.equipId;
+    const equip = findEquip(equipRefId);
     const equipName = equip?.nome || 'equipamento informado';
     const serviceDate = formatServiceDate(latest?.data);
     const serviceLine = buildServiceLine(filtered);

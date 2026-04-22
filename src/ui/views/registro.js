@@ -740,14 +740,19 @@ export async function saveRegistro() {
   const eqForToast = equipamentos.find((e) => e.id === equipId) || null;
   const toastShown = PostSaveRegistroToast.show({
     equipId,
+    registroId: novoId,
     equipName: eqForToast?.nome || null,
-    onAction: async ({ destination, equipId: targetEquipId }) => {
-      const filters = { equipId: targetEquipId };
+    onAction: async ({ destination, equipId: targetEquipId, registroId }) => {
+      const filters = { equipId: targetEquipId, registroId };
       if (destination === 'pdf') return exportPdfFlow({ filters });
       return shareWhatsAppFlow({ filters });
     },
-    onFallback: ({ destination, equipId: targetEquipId }) => {
-      goTo('relatorio', { equipId: targetEquipId, intent: destination });
+    onFallback: ({ destination, equipId: targetEquipId, registroId }) => {
+      goTo('relatorio', {
+        equipId: targetEquipId,
+        intent: destination,
+        ...(registroId ? { registroId } : {}),
+      });
     },
   });
   // Fallback: se não tinha equipId (edge case) ou o toast recusou renderizar,
