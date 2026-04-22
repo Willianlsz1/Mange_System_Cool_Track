@@ -56,20 +56,34 @@ describe('PostSaveRegistroToast', () => {
   it('CTA PDF: executa callback onAction com equipId', async () => {
     const { PostSaveRegistroToast } = await import('../ui/components/postSaveRegistroToast.js');
     const onAction = vi.fn().mockResolvedValue(true);
-    PostSaveRegistroToast.show({ equipId: 'eq-42', equipName: 'Split 3', onAction });
+    PostSaveRegistroToast.show({
+      equipId: 'eq-42',
+      registroId: 'reg-123',
+      equipName: 'Split 3',
+      onAction,
+    });
 
     const pdfBtn = document.querySelector('.share-success-toast__action--pdf');
     await pdfBtn.click();
 
     expect(trackEvent).toHaveBeenCalledWith('post_save_export_cta_clicked', { destination: 'pdf' });
-    expect(onAction).toHaveBeenCalledWith({ destination: 'pdf', equipId: 'eq-42' });
+    expect(onAction).toHaveBeenCalledWith({
+      destination: 'pdf',
+      equipId: 'eq-42',
+      registroId: 'reg-123',
+    });
     expect(goTo).not.toHaveBeenCalled();
   });
 
   it('CTA WhatsApp: executa callback onAction com equipId', async () => {
     const { PostSaveRegistroToast } = await import('../ui/components/postSaveRegistroToast.js');
     const onAction = vi.fn().mockResolvedValue(true);
-    PostSaveRegistroToast.show({ equipId: 'eq-99', equipName: 'Câmara fria', onAction });
+    PostSaveRegistroToast.show({
+      equipId: 'eq-99',
+      registroId: 'reg-321',
+      equipName: 'Câmara fria',
+      onAction,
+    });
 
     const whatsBtn = document.querySelector('.share-success-toast__action--whatsapp');
     await whatsBtn.click();
@@ -77,7 +91,11 @@ describe('PostSaveRegistroToast', () => {
     expect(trackEvent).toHaveBeenCalledWith('post_save_export_cta_clicked', {
       destination: 'whatsapp',
     });
-    expect(onAction).toHaveBeenCalledWith({ destination: 'whatsapp', equipId: 'eq-99' });
+    expect(onAction).toHaveBeenCalledWith({
+      destination: 'whatsapp',
+      equipId: 'eq-99',
+      registroId: 'reg-321',
+    });
     expect(goTo).not.toHaveBeenCalled();
   });
 
@@ -97,12 +115,22 @@ describe('PostSaveRegistroToast', () => {
     const { PostSaveRegistroToast } = await import('../ui/components/postSaveRegistroToast.js');
     const onAction = vi.fn().mockRejectedValue(new Error('boom'));
     const onFallback = vi.fn();
-    PostSaveRegistroToast.show({ equipId: 'eq-42', equipName: 'Split 3', onAction, onFallback });
+    PostSaveRegistroToast.show({
+      equipId: 'eq-42',
+      registroId: 'reg-err',
+      equipName: 'Split 3',
+      onAction,
+      onFallback,
+    });
 
     const pdfBtn = document.querySelector('.share-success-toast__action--pdf');
     await pdfBtn.click();
 
-    expect(onFallback).toHaveBeenCalledWith({ destination: 'pdf', equipId: 'eq-42' });
+    expect(onFallback).toHaveBeenCalledWith({
+      destination: 'pdf',
+      equipId: 'eq-42',
+      registroId: 'reg-err',
+    });
   });
 
   it('fallback padrão: em erro, navega para relatório manual', async () => {

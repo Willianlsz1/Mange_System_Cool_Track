@@ -28,8 +28,15 @@ import {
   USAGE_RESOURCE_WHATSAPP_SHARE,
 } from '../../../core/usageLimits.js';
 
-export function buildReportFilters({ equipId = '', de = '', ate = '', filtEq = '' } = {}) {
+export function buildReportFilters({
+  equipId = '',
+  registroId = '',
+  de = '',
+  ate = '',
+  filtEq = '',
+} = {}) {
   return {
+    registroId: String(registroId || ''),
     filtEq: String(filtEq || equipId || ''),
     de: String(de || ''),
     ate: String(ate || ''),

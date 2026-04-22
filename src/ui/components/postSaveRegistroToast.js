@@ -39,7 +39,15 @@ function removeToast(toast) {
   toast.addEventListener('transitionend', onTransitionEnd);
 }
 
-function createActionButton({ label, destination, equipId, toast, onAction, onFallback }) {
+function createActionButton({
+  label,
+  destination,
+  equipId,
+  registroId,
+  toast,
+  onAction,
+  onFallback,
+}) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = `share-success-toast__action share-success-toast__action--${destination}`;
@@ -51,14 +59,14 @@ function createActionButton({ label, destination, equipId, toast, onAction, onFa
     btn.disabled = true;
     trackEvent('post_save_export_cta_clicked', { destination });
     try {
-      const done = await onAction({ destination, equipId });
+      const done = await onAction({ destination, equipId, registroId });
       if (done) {
         removeToast(toast);
         return;
       }
       btn.disabled = false;
     } catch (_error) {
-      onFallback({ destination, equipId });
+      onFallback({ destination, equipId, registroId });
       removeToast(toast);
     }
   });
@@ -66,7 +74,7 @@ function createActionButton({ label, destination, equipId, toast, onAction, onFa
   return btn;
 }
 
-function createToast({ equipName, equipId, onAction, onFallback }) {
+function createToast({ equipName, equipId, registroId, onAction, onFallback }) {
   const toast = document.createElement('div');
   toast.className = 'share-success-toast share-success-toast--with-actions';
   toast.setAttribute('role', 'status');
@@ -101,6 +109,7 @@ function createToast({ equipName, equipId, onAction, onFallback }) {
     label: 'Gerar PDF',
     destination: 'pdf',
     equipId,
+    registroId,
     toast,
     onAction,
     onFallback,
@@ -109,6 +118,7 @@ function createToast({ equipName, equipId, onAction, onFallback }) {
     label: 'WhatsApp',
     destination: 'whatsapp',
     equipId,
+    registroId,
     toast,
     onAction,
     onFallback,
@@ -125,13 +135,21 @@ export const PostSaveRegistroToast = {
   /**
    * @param {{
    * equipId?: string|null,
+   * registroId?: string|null,
    * equipName?: string|null,
    * dismissMs?: number,
-   * onAction?: (ctx: { destination: 'pdf'|'whatsapp', equipId: string }) => Promise<boolean>|boolean,
-   * onFallback?: (ctx: { destination: 'pdf'|'whatsapp', equipId: string }) => void
+   * onAction?: (ctx: { destination: 'pdf'|'whatsapp', equipId: string, registroId: string|null }) => Promise<boolean>|boolean,
+   * onFallback?: (ctx: { destination: 'pdf'|'whatsapp', equipId: string, registroId: string|null }) => void
    * }} opts
    */
-  show({ equipId = null, equipName = null, dismissMs = 8000, onAction, onFallback } = {}) {
+  show({
+    equipId = null,
+    registroId = null,
+    equipName = null,
+    dismissMs = 8000,
+    onAction,
+    onFallback,
+  } = {}) {
     // Sem equipId não dá pra pré-filtrar o relatório — cai num toast sem
     // CTAs pra não prometer algo que não vai funcionar direito.
     if (!equipId) {
@@ -143,16 +161,22 @@ export const PostSaveRegistroToast = {
     const safeOnAction =
       typeof onAction === 'function'
         ? onAction
-        : async ({ destination: _destination, equipId: _equipId }) => false;
+        : async ({ destination: _destination, equipId: _equipId, registroId: _registroId }) =>
+            false;
     const safeOnFallback =
       typeof onFallback === 'function'
         ? onFallback
-        : ({ destination, equipId: targetEquipId }) =>
-            goTo('relatorio', { equipId: targetEquipId, intent: destination });
+        : ({ destination, equipId: targetEquipId, registroId: targetRegistroId }) =>
+            goTo('relatorio', {
+              equipId: targetEquipId,
+              intent: destination,
+              ...(targetRegistroId ? { registroId: targetRegistroId } : {}),
+            });
 
     const toast = createToast({
       equipName,
       equipId,
+      registroId,
       onAction: safeOnAction,
       onFallback: safeOnFallback,
     });
