@@ -11,7 +11,7 @@ describe('UpgradeNudge', () => {
       expect(html).toContain('Registros e histórico ilimitados');
       expect(html).toContain('PDFs sem marca');
       expect(html).toContain('assinatura do cliente');
-      expect(html).toContain('20 envios de WhatsApp/mês');
+      expect(html).toContain('60 envios de WhatsApp/mês');
       expect(html).toContain('Fazer upgrade &rarr;');
       expect(html).toContain('data-highlight-plan="plus"');
       // Menciona Pro como caminho futuro
