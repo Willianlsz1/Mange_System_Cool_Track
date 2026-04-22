@@ -690,6 +690,12 @@ export async function saveRegistro() {
     }
   }
 
+  const operationalStatus = getOperationalStatus({
+    status,
+    lastStatus: status,
+    ultimoRegistro: { status },
+  });
+
   setState((prev) => {
     const currentTecs = prev.tecnicos || [];
     const updatedTecs =
@@ -722,11 +728,13 @@ export async function saveRegistro() {
       ],
       equipamentos: prev.equipamentos.map((e) => {
         if (e.id !== equipId) return e;
-        const op = getOperationalStatus({ status, lastStatus: status, ultimoRegistro: { status } });
         return {
           ...e,
-          status: op.uiStatus === 'unknown' ? e.status || 'ok' : op.uiStatus,
-          statusDescricao: op.label,
+          status:
+            operationalStatus.uiStatus === 'unknown'
+              ? e.status || 'ok'
+              : operationalStatus.uiStatus,
+          statusDescricao: operationalStatus.label,
         };
       }),
     };
