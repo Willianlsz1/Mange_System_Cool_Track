@@ -186,13 +186,13 @@ function computeCardLayout(doc, pageWidth, margin, registro, equipamento) {
   // Meta (tipo · técnico · custo)
   h += LINE_META;
 
-  // Obs (multiline)
+  // Descrição (label + multiline; sempre renderiza ao menos 1 linha)
   const obs = sanitizeObservation(registro.obs || '');
   const obsLines = obs ? splitObsLines(doc, obs, innerW) : [];
-  if (obsLines.length) {
-    h += GAP_SM;
-    h += obsLines.length * LINE_OBS;
-  }
+  const obsLineCount = Math.max(obsLines.length, 1);
+  h += GAP_SM;
+  h += 4; // avanço do rótulo "Descrição:"
+  h += obsLineCount * LINE_OBS;
 
   // Materiais
   if (registro.pecas?.trim()) {
