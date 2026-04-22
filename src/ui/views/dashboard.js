@@ -9,7 +9,7 @@
  * Exports públicos: calcHealthScore, getHealthClass, updateHeader, renderDashboard.
  */
 
-import { Utils, TIPO_ICON } from '../../core/utils.js';
+import { Utils } from '../../core/utils.js';
 import { getState, findEquip, regsForEquip } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Auth } from '../../core/auth.js';
@@ -41,6 +41,7 @@ import { evaluateEquipmentPriority } from '../../domain/priorityEngine.js';
 import { ACTION_CODE, evaluateEquipmentSuggestedAction } from '../../domain/suggestedAction.js';
 import { getActionPriorityScore } from '../../domain/actionPriority.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
+import { getEquipmentVisualMeta } from '../components/equipmentVisual.js';
 
 // ═══════════════════════════════════════════════════════
 // Labels internos
@@ -370,7 +371,7 @@ function _renderTrendBadge(trend) {
 
 // Cards "com ocorrência" (preservados) —————————————————
 function _equipCardMini(eq) {
-  const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
+  const visual = getEquipmentVisualMeta(eq);
   const context = getEquipmentMaintenanceContext(eq, regsForEquip(eq.id));
   const last = context.ultimoRegistro;
   const score = calcHealthScore(eq.id);
@@ -420,10 +421,23 @@ function _equipCardMini(eq) {
   if (!last && suggestedAction.actionCode === ACTION_CODE.NONE)
     ctaLabel = 'Primeiro registro &rarr;';
 
+  const cardIcon = visual.photoUrl
+    ? `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--photo equip-card__type-icon--fallback-t${visual.tone}" aria-hidden="true">
+        <img src="${Utils.escapeAttr(visual.photoUrl)}" alt="" loading="lazy"
+          onload="this.parentElement.classList.add('equip-card__type-icon--loaded');"
+          onerror="this.parentElement.classList.add('equip-card__type-icon--fallback');this.remove();" />
+        <span class="equip-card__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
+        <span class="equip-card__fallback-glyph" aria-hidden="true">${visual.icon}</span>
+      </div>`
+    : `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--fallback equip-card__type-icon--fallback-t${visual.tone}" aria-hidden="true">
+        <span class="equip-card__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
+        <span class="equip-card__fallback-glyph" aria-hidden="true">${visual.icon}</span>
+      </div>`;
+
   return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_OPERACIONAL[scls]}">
     <div class="equip-card__status-band equip-card__status-band--${scls}"></div>
     <div class="equip-card__header">
-      <div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>
+      ${cardIcon}
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq?.nome ?? '—')}</div>
         <div class="equip-card__tag">${Utils.escapeHtml(eq.fluido || eq.tipo)} &middot; Prioridade ${PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media}</div>
