@@ -2,11 +2,10 @@
  * Post-Save Registro Toast — feedback rico que substitui o `Toast.success`
  * genérico pós-`saveRegistro()` e a dica viral "a cada 3 registros".
  *
- * Intenção (Opção A do roteiro #8): não gera PDF nem dispara WhatsApp aqui.
- * Os dois CTAs apenas NAVEGAM pra view de relatório pré-filtrada pelo
- * equipamento em que o serviço foi feito. O consumo de quota (Free: 2 PDFs,
- * 3 WhatsApps/mês) continua acontecendo no momento do export real, onde o
- * gate atual já vive — isso evita consumir cota silenciosamente no save.
+ * Intenção: manter o fechamento pós-save no mesmo contexto da manutenção.
+ * Os CTAs executam as ações reais (PDF/WhatsApp) com filtros do equipamento
+ * recém-salvo, reutilizando as mesmas regras de quota/validação já usadas
+ * na tela de relatório.
  *
  * Telemetria: `post_save_export_cta_clicked` com `destination=pdf|whatsapp`
  * pra medir se esse toast realmente move uso (hipótese: sim, especialmente
@@ -40,25 +39,34 @@ function removeToast(toast) {
   toast.addEventListener('transitionend', onTransitionEnd);
 }
 
-function createActionButton({ label, destination, equipId, toast }) {
+function createActionButton({ label, destination, equipId, toast, onAction, onFallback }) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = `share-success-toast__action share-success-toast__action--${destination}`;
   btn.textContent = label;
   btn.setAttribute('data-destination', destination);
 
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
+    if (btn.disabled) return;
+    btn.disabled = true;
     trackEvent('post_save_export_cta_clicked', { destination });
-    // Navega pra relatório pré-filtrado. A gate de plano vive dentro dos
-    // handlers export-pdf / whatsapp-export — aqui só leva o usuário até lá.
-    goTo('relatorio', { equipId, intent: destination });
-    removeToast(toast);
+    try {
+      const done = await onAction({ destination, equipId });
+      if (done) {
+        removeToast(toast);
+        return;
+      }
+      btn.disabled = false;
+    } catch (_error) {
+      onFallback({ destination, equipId });
+      removeToast(toast);
+    }
   });
 
   return btn;
 }
 
-function createToast({ equipName, equipId }) {
+function createToast({ equipName, equipId, onAction, onFallback }) {
   const toast = document.createElement('div');
   toast.className = 'share-success-toast share-success-toast--with-actions';
   toast.setAttribute('role', 'status');
@@ -94,12 +102,16 @@ function createToast({ equipName, equipId }) {
     destination: 'pdf',
     equipId,
     toast,
+    onAction,
+    onFallback,
   });
   const whatsBtn = createActionButton({
     label: 'WhatsApp',
     destination: 'whatsapp',
     equipId,
     toast,
+    onAction,
+    onFallback,
   });
   actions.append(pdfBtn, whatsBtn);
 
@@ -111,9 +123,15 @@ function createToast({ equipName, equipId }) {
 
 export const PostSaveRegistroToast = {
   /**
-   * @param {{ equipId?: string|null, equipName?: string|null, dismissMs?: number }} opts
+   * @param {{
+   * equipId?: string|null,
+   * equipName?: string|null,
+   * dismissMs?: number,
+   * onAction?: (ctx: { destination: 'pdf'|'whatsapp', equipId: string }) => Promise<boolean>|boolean,
+   * onFallback?: (ctx: { destination: 'pdf'|'whatsapp', equipId: string }) => void
+   * }} opts
    */
-  show({ equipId = null, equipName = null, dismissMs = 8000 } = {}) {
+  show({ equipId = null, equipName = null, dismissMs = 8000, onAction, onFallback } = {}) {
     // Sem equipId não dá pra pré-filtrar o relatório — cai num toast sem
     // CTAs pra não prometer algo que não vai funcionar direito.
     if (!equipId) {
@@ -122,7 +140,22 @@ export const PostSaveRegistroToast = {
 
     if (activeToast) removeToast(activeToast);
 
-    const toast = createToast({ equipName, equipId });
+    const safeOnAction =
+      typeof onAction === 'function'
+        ? onAction
+        : async ({ destination: _destination, equipId: _equipId }) => false;
+    const safeOnFallback =
+      typeof onFallback === 'function'
+        ? onFallback
+        : ({ destination, equipId: targetEquipId }) =>
+            goTo('relatorio', { equipId: targetEquipId, intent: destination });
+
+    const toast = createToast({
+      equipName,
+      equipId,
+      onAction: safeOnAction,
+      onFallback: safeOnFallback,
+    });
     document.body.appendChild(toast);
     activeToast = toast;
 

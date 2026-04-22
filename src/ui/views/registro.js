@@ -20,6 +20,7 @@ import { withSkeleton } from '../components/skeleton.js';
 import { validateRegistroPayload } from '../../core/inputValidation.js';
 import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
 import { PostSaveRegistroToast } from '../components/postSaveRegistroToast.js';
+import { exportPdfFlow, shareWhatsAppFlow } from '../controller/handlers/reportExportHandlers.js';
 
 // O meter de progresso vive estático dentro do hero do template.
 // Apontamos pro hero + o contador numérico ao invés de injetar markup na hora.
@@ -738,20 +739,26 @@ export async function saveRegistro() {
   // Feedback pós-save: toast rico com CTAs pra fechar o ciclo "salvou →
   // manda pro cliente". Substitui o Toast.success genérico + o hint viral
   // que dispara a cada 3 registros (agora redundante — todo save já oferece
-  // o caminho). Ambos os CTAs só NAVEGAM pra view de relatório pré-filtrada;
-  // o consumo de quota continua acontecendo no clique do export real.
+  // o caminho). Os CTAs executam ações diretas (PDF/WhatsApp) mantendo as
+  // mesmas regras de quota/validação do fluxo de relatório.
   const eqForToast = equipamentos.find((e) => e.id === equipId) || null;
   const toastShown = PostSaveRegistroToast.show({
     equipId,
     equipName: eqForToast?.nome || null,
+    onAction: async ({ destination, equipId: targetEquipId }) => {
+      const filters = { equipId: targetEquipId };
+      if (destination === 'pdf') return exportPdfFlow({ filters });
+      return shareWhatsAppFlow({ filters });
+    },
+    onFallback: ({ destination, equipId: targetEquipId }) => {
+      goTo('relatorio', { equipId: targetEquipId, intent: destination });
+    },
   });
   // Fallback: se não tinha equipId (edge case) ou o toast recusou renderizar,
   // volta pro feedback simples — user ainda precisa saber que salvou.
   if (!toastShown) {
     Toast.success('Serviço registrado com sucesso.');
   }
-
-  goTo('historico');
 
   if (isGuest) {
     GuestConversionModal.open({ reason: 'save_attempt', source: 'save-registro' });
