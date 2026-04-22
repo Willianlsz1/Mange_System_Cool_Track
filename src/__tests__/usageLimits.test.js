@@ -31,21 +31,23 @@ describe('usageLimits', () => {
     const { getMonthlyLimitForPlan, hasReachedMonthlyLimit, USAGE_RESOURCE_PDF_EXPORT } =
       await loadUsageLimits();
 
-    expect(getMonthlyLimitForPlan('free', USAGE_RESOURCE_PDF_EXPORT)).toBe(2);
-    expect(getMonthlyLimitForPlan('plus', USAGE_RESOURCE_PDF_EXPORT)).toBe(30);
+    expect(getMonthlyLimitForPlan('free', USAGE_RESOURCE_PDF_EXPORT)).toBe(
+      Number.POSITIVE_INFINITY,
+    );
+    expect(getMonthlyLimitForPlan('plus', USAGE_RESOURCE_PDF_EXPORT)).toBe(120);
     expect(getMonthlyLimitForPlan('pro', USAGE_RESOURCE_PDF_EXPORT)).toBe(Number.POSITIVE_INFINITY);
     expect(
       hasReachedMonthlyLimit({
         planCode: 'free',
         resource: 'pdf_export',
-        usedCount: 2,
+        usedCount: 200,
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       hasReachedMonthlyLimit({
         planCode: 'free',
         resource: 'whatsapp_share',
-        usedCount: 3,
+        usedCount: 5,
       }),
     ).toBe(true);
   });

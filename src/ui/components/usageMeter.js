@@ -49,18 +49,25 @@ function getReportBarTone(percent) {
 }
 
 function getUsageState(equipmentCount, reportsThisMonth) {
+  const hasFiniteReportLimit =
+    Number.isFinite(FREE_PLAN_REPORT_LIMIT) && FREE_PLAN_REPORT_LIMIT > 0;
   const equipmentOverLimit = equipmentCount > FREE_PLAN_EQUIP_LIMIT;
-  const reportOverLimit = reportsThisMonth > FREE_PLAN_REPORT_LIMIT;
+  const reportOverLimit = hasFiniteReportLimit && reportsThisMonth > FREE_PLAN_REPORT_LIMIT;
   const hasOverLimit = equipmentOverLimit || reportOverLimit;
 
   const equipmentPercent = clampPercent(equipmentCount, FREE_PLAN_EQUIP_LIMIT);
-  const reportPercent = clampPercent(reportsThisMonth, FREE_PLAN_REPORT_LIMIT);
-  const hasNearLimit = !hasOverLimit && (equipmentPercent >= 80 || reportPercent >= 80);
+  const reportPercent = hasFiniteReportLimit
+    ? clampPercent(reportsThisMonth, FREE_PLAN_REPORT_LIMIT)
+    : 0;
+  const hasNearLimit =
+    !hasOverLimit && (equipmentPercent >= 80 || (hasFiniteReportLimit && reportPercent >= 80));
 
   return {
     equipmentPercent,
     reportPercent,
     equipmentOverLimit,
+    reportOverLimit,
+    hasFiniteReportLimit,
     hasOverLimit,
     hasNearLimit,
   };
@@ -349,12 +356,18 @@ function renderFreeMeter(equipmentCount, reportsThisMonth) {
         </div>
       </div>
 
-      <div class="usage-meter__row">
+      ${
+        usageState.hasFiniteReportLimit
+          ? `<div class="usage-meter__row">
         <div class="usage-meter__label">Relatórios este mês: <span class="usage-meter__value">${reportsThisMonth} / ${FREE_PLAN_REPORT_LIMIT}</span> no plano grátis</div>
         <div class="usage-meter__track">
           <div class="usage-meter__fill usage-meter__fill--${reportTone}" style="width:${usageState.reportPercent}%"></div>
         </div>
-      </div>
+      </div>`
+          : `<div class="usage-meter__row">
+        <div class="usage-meter__label">Relatórios este mês: <span class="usage-meter__value">${reportsThisMonth}</span> (com marca d'água no plano grátis)</div>
+      </div>`
+      }
 
       <div class="usage-meter__actions">
         <a class="usage-meter__upgrade" href="#" data-action="open-upgrade" data-upgrade-source="usage_meter">${upgradeText}</a>

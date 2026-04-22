@@ -866,8 +866,8 @@ export function buildLandingHtml() {
             </div>
             <ul class="lp-pricing-features">
               <li>${ICON_CHECK} Até 3 equipamentos cadastrados</li>
-              <li>${ICON_CHECK} 5 registros de serviço/mês</li>
-              <li>${ICON_CHECK} 2 PDFs/mês <span class="lp-pricing-features__note">(com marca d'água)</span></li>
+              <li>${ICON_CHECK} Registros de serviço ilimitados</li>
+              <li>${ICON_CHECK} Relatórios com marca d'água</li>
               <li>${ICON_CHECK} Histórico dos últimos 15 dias</li>
               <li>${ICON_CHECK} Funciona offline</li>
             </ul>
@@ -912,7 +912,7 @@ export function buildLandingHtml() {
               <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — até 30 análises/mês</li>
               <li>${ICON_CHECK} Até 15 equipamentos cadastrados</li>
               <li>${ICON_CHECK} <strong>Registros ilimitados</strong></li>
-              <li>${ICON_CHECK} 30 PDFs/mês <strong>sem marca d'água</strong></li>
+              <li>${ICON_CHECK} 120 PDFs/mês <strong>sem marca d'água</strong></li>
               <li>${ICON_CHECK} <strong>Assinatura digital</strong> do cliente no PDF</li>
               <li>${ICON_CHECK} Fotos dos equipamentos (até 3 por eq.)</li>
               <li>${ICON_CHECK} Histórico completo</li>
@@ -1063,7 +1063,7 @@ export function buildLandingHtml() {
           <details class="lp-faq__item" data-question="free_trial">
             <summary>Posso testar de graça antes de pagar?</summary>
             <p>
-              Pode. O plano <strong>Free</strong> é gratuito pra sempre, sem pedir cartão. Você usa todo o app com 3 equipamentos e 5 registros/mês. Quando precisar de mais, faz upgrade pra Plus ou Pro a qualquer momento.
+              Pode. O plano <strong>Free</strong> é gratuito pra sempre, sem pedir cartão. Você usa o fluxo principal com 3 equipamentos, registros ilimitados e relatórios com marca d’água. Quando precisar de escala e versão profissional dos relatórios, faz upgrade pra Plus ou Pro.
             </p>
           </details>
 
