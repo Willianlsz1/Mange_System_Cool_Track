@@ -13,7 +13,7 @@ import { Profile } from '../../features/profile.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
 import { uploadPendingPhotos } from '../../core/photoStorage.js';
 import { getOperationalStatus, validateOperationalPayload } from '../../core/equipmentRules.js';
-import { checkPlanLimit, isGuestMode } from '../../core/guestLimits.js';
+import { isGuestMode } from '../../core/guestLimits.js';
 import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
 import { withSkeleton } from '../components/skeleton.js';
@@ -487,24 +487,6 @@ export function applyQuickTemplate(templateId, triggerEl = null) {
 
 export async function saveRegistro() {
   const isGuest = isGuestMode();
-  // Edição não consome cota — só novo registro conta pro limite mensal.
-  // Evita que "corrigir um registro antigo" bloqueie o usuário que já bateu o teto.
-  const isEditing = Boolean(sessionStorage.getItem(EDITING_KEY));
-  if (!isEditing) {
-    const planLimit = await checkPlanLimit('registros');
-    if (planLimit.blocked) {
-      trackEvent('limit_reached', {
-        resource: 'registros',
-        current: planLimit.current,
-        limit: planLimit.limit,
-        planCode: planLimit.planCode,
-      });
-      // Guest: pede cadastro. Free autenticado: pede upgrade pro Plus/Pro.
-      const reason = planLimit.isGuest ? 'limit_registros' : 'limit_free_registros';
-      GuestConversionModal.open({ reason, source: 'save-registro' });
-      return false;
-    }
-  }
   const prioridade = Utils.getVal('r-prioridade') || 'media';
   const { equipamentos } = getState();
 

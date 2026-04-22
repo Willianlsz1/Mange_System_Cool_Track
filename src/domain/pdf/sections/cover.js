@@ -1,6 +1,7 @@
 import autoTable from 'jspdf-autotable';
 import { Utils } from '../../../core/utils.js';
 import { PDF_COLORS as C, PDF_TYPO as T, STATUS_CLIENTE } from '../constants.js';
+import { formatStatusConclusion, sanitizePublicText } from '../sanitizers.js';
 import { accentLine, fillPage, fillRect, roundRect, txt } from '../primitives.js';
 
 // -------------------------------- helpers --------------------------------
@@ -134,17 +135,32 @@ function drawInfoBlocks(doc, pageWidth, margin, startY, profile, cliente) {
   // Caixa cliente (direita) — só aparece quando extractClientBlock retorna algo
   if (cliente) {
     const clienteLines = [];
-    if (cliente.nome) clienteLines.push({ value: cliente.nome, bold: true, size: 11 });
-    if (cliente.documento) clienteLines.push({ value: cliente.documento, size: 8, color: C.text3 });
-    if (cliente.local) clienteLines.push({ value: cliente.local, size: 8.5, color: C.text2 });
-    if (cliente.contato) clienteLines.push({ value: cliente.contato, size: 8, color: C.text3 });
+    clienteLines.push({
+      value: sanitizePublicText(cliente.nome, 'Não informado'),
+      bold: true,
+      size: 11,
+    });
+    clienteLines.push({
+      value: sanitizePublicText(cliente.documento, 'Não informado'),
+      size: 8,
+      color: C.text3,
+    });
+    clienteLines.push({
+      value: sanitizePublicText(cliente.local, 'Não informado'),
+      size: 8.5,
+      color: C.text2,
+    });
+    clienteLines.push({
+      value: sanitizePublicText(cliente.contato, 'Não informado'),
+      size: 8,
+      color: C.text3,
+    });
 
     drawLabeledBlock(doc, rightX, startY, blockW, blockH, 'CLIENTE / LOCAL', clienteLines);
   } else {
-    // Bloco placeholder discreto — cliente não identificado no registro
+    // Bloco placeholder profissional para ausência de dados
     drawLabeledBlock(doc, rightX, startY, blockW, blockH, 'CLIENTE / LOCAL', [
-      { value: 'Cliente não identificado', size: 9, color: C.text3, italic: true },
-      { value: 'Preencha no modal de registro', size: 7.5, color: C.text3 },
+      { value: 'Não informado', size: 9, color: C.text3, italic: true },
     ]);
   }
 
@@ -206,9 +222,18 @@ function drawResumoExecutivo(doc, pageWidth, margin, startY, filtered, equipamen
       `${totalServicos} ${totalServicos === 1 ? 'serviço executado' : 'serviços executados'} em ${equipCount} ${equipCount === 1 ? 'equipamento' : 'equipamentos'}.`,
     );
     const statusParts = [];
-    if (ok) statusParts.push(`${ok} operando normalmente`);
-    if (warn) statusParts.push(`${warn} em atenção`);
-    if (danger) statusParts.push(`${danger} fora de operação`);
+    if (ok)
+      statusParts.push(
+        `${ok} ${ok === 1 ? 'equipamento operando normalmente' : 'equipamentos operando normalmente'}`,
+      );
+    if (warn)
+      statusParts.push(
+        `${warn} ${warn === 1 ? 'equipamento em atenção' : 'equipamentos em atenção'}`,
+      );
+    if (danger)
+      statusParts.push(
+        `${danger} ${danger === 1 ? 'equipamento fora de operação' : 'equipamentos fora de operação'}`,
+      );
     if (statusParts.length) items.push(`Status atual: ${statusParts.join(', ')}.`);
     if (totalCusto > 0) items.push(`Custo total dos serviços: ${formatMoney(totalCusto)}.`);
   }
@@ -224,6 +249,37 @@ function drawResumoExecutivo(doc, pageWidth, margin, startY, filtered, equipamen
   });
 
   return y + 4;
+}
+
+function drawConclusao(doc, pageWidth, margin, startY, filtered) {
+  const ok = countByStatus(filtered, 'ok');
+  const warn = countByStatus(filtered, 'warn');
+  const danger = countByStatus(filtered, 'danger');
+  const conclusion = formatStatusConclusion({ ok, warn, danger });
+
+  let y = startY;
+  txt(doc, 'CONCLUSÃO', margin, y, {
+    size: T.h2.size,
+    style: T.h2.style,
+    color: C.text3,
+  });
+  y += 2;
+  accentLine(doc, margin, y + 1, pageWidth - margin, C.border);
+  y += 6;
+
+  roundRect(doc, margin, y - 2, pageWidth - margin * 2, 14, 1.2, C.surface);
+  fillRect(doc, margin, y - 2, 2.5, 14, C.primary);
+  txt(doc, 'Situação final do equipamento', margin + 6, y + 3.5, {
+    size: 8,
+    style: 'bold',
+    color: C.text3,
+  });
+  txt(doc, conclusion, margin + 6, y + 9, {
+    size: 9,
+    color: C.text,
+  });
+
+  return y + 16;
 }
 
 // ---------------------- tabela de equipamentos ----------------------
@@ -372,5 +428,6 @@ export function drawCover(
   y = drawInfoBlocks(doc, pageWidth, margin, y, profile, context.cliente);
   y = drawResumoExecutivo(doc, pageWidth, margin, y, filtered, equipamentos);
   y = drawEquipamentosTable(doc, pageWidth, margin, y, filtered, equipamentos);
+  y = drawConclusao(doc, pageWidth, margin, y, filtered);
   drawPendencias(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
 }

@@ -1,5 +1,6 @@
 import { Utils } from '../../../core/utils.js';
 import { PDF_COLORS as C, PDF_TYPO as T, STATUS_CLIENTE } from '../constants.js';
+import { sanitizeObservation, sanitizePublicText } from '../sanitizers.js';
 import { accentLine, fillPage, fillRect, getSignatureImagePayload, txt } from '../primitives.js';
 
 function getSignedRecords(filtered, getSignatureForRecord) {
@@ -28,11 +29,11 @@ function drawSignaturePageHeader(doc, pageWidth, margin, context = {}) {
 
 function drawServiceFields(doc, margin, y, registro, equipamento, statusInfo, profile) {
   const campos = [
-    ['Equipamento', equipamento?.nome || '—'],
-    ['Localização', equipamento?.local || '—'],
-    ['Tipo de serviço', registro.tipo || '—'],
+    ['Equipamento', sanitizePublicText(equipamento?.nome)],
+    ['Localização', sanitizePublicText(equipamento?.local)],
+    ['Tipo de serviço', sanitizePublicText(registro.tipo)],
     ['Data / Hora', Utils.formatDatetime(registro.data)],
-    ['Técnico responsável', registro.tecnico || profile?.nome || '—'],
+    ['Técnico responsável', sanitizePublicText(registro.tecnico || profile?.nome)],
     ['Situação após o serviço', statusInfo.label],
   ];
 
@@ -121,7 +122,10 @@ export function drawSignaturePages(
     const signatureDate = registro.data
       ? Utils.formatDatetime(registro.data)
       : Utils.formatDatetime(new Date().toISOString());
-    const clienteNome = registro.clienteNome?.trim() || registro.cliente?.trim() || 'Cliente';
+    const clienteNome = sanitizePublicText(
+      registro.clienteNome?.trim() || registro.cliente?.trim() || '',
+      'Não informado',
+    );
     const clienteDoc =
       registro.clienteDocumento?.trim() ||
       registro.clienteCnpj?.trim() ||
@@ -156,7 +160,7 @@ export function drawSignaturePages(
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...C.text2);
-    const obsLines = doc.splitTextToSize(registro.obs || '—', pageWidth - margin * 2);
+    const obsLines = doc.splitTextToSize(sanitizeObservation(registro.obs), pageWidth - margin * 2);
     doc.text(obsLines, margin, y);
     y += obsLines.length * 4.5 + 10;
 

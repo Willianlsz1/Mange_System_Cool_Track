@@ -24,6 +24,7 @@
 import { Utils } from '../../../core/utils.js';
 import { resolvePhotoDataUrlForPdf } from '../../../core/photoStorage.js';
 import { PDF_COLORS as C, PDF_TYPO as T, STATUS_CLIENTE } from '../constants.js';
+import { sanitizeObservation, sanitizePublicText } from '../sanitizers.js';
 import { accentLine, fillPage, fillRect, txt } from '../primitives.js';
 
 // ---------- layout constants (mm) ----------
@@ -186,7 +187,7 @@ function computeCardLayout(doc, pageWidth, margin, registro, equipamento) {
   h += LINE_META;
 
   // Obs (multiline)
-  const obs = (registro.obs || '').trim();
+  const obs = sanitizeObservation(registro.obs || '');
   const obsLines = obs ? splitObsLines(doc, obs, innerW) : [];
   if (obsLines.length) {
     h += GAP_SM;
@@ -275,42 +276,42 @@ function drawCardTextBlock(doc, pageWidth, margin, startY, registro, profile, la
 
   // Equipamento (10pt bold)
   const equipText = equipamento
-    ? `${equipamento.nome}${equipamento.local ? ' · ' + equipamento.local : ''}`
-    : '—';
-  txt(doc, equipText, innerX, y + 3.8, {
+    ? `${sanitizePublicText(equipamento.nome)}${equipamento.local ? ` · ${sanitizePublicText(equipamento.local)}` : ''}`
+    : 'Não informado';
+  txt(doc, `Equipamento: ${equipText}`, innerX, y + 3.8, {
     size: 10,
     style: 'bold',
     color: C.text,
   });
   y += LINE_EQUIP;
 
-  // Meta: tipo · técnico · custo (8pt)
-  const tipo = registro.tipo || '—';
-  const tecnico = registro.tecnico || profile?.nome || '—';
-  const parts = [tipo, tecnico];
-  if (custo > 0) parts.push(`R$ ${custo.toFixed(2).replace('.', ',')}`);
-  txt(doc, parts.join(' · '), innerX, y + 3, {
+  // Meta: tipo + técnico (8pt)
+  const tipo = sanitizePublicText(registro.tipo);
+  const tecnico = sanitizePublicText(registro.tecnico || profile?.nome);
+  txt(doc, `Tipo de serviço: ${tipo} · Técnico: ${tecnico}`, innerX, y + 3, {
     size: 8,
     color: C.text3,
   });
   y += LINE_META;
 
   // Obs (multiline 8.5pt)
-  if (obsLines.length) {
-    y += GAP_SM;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.setTextColor(...C.text2);
-    // Baseline da primeira linha a ~3mm do topo do bloco; jsPDF
-    // automaticamente avança as linhas subsequentes por line-height.
-    doc.text(obsLines, innerX, y + 3);
-    y += obsLines.length * LINE_OBS;
-  }
+  y += GAP_SM;
+  txt(doc, 'Descrição:', innerX, y + 3, {
+    size: 8,
+    style: 'bold',
+    color: C.text3,
+  });
+  y += 4;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8.5);
+  doc.setTextColor(...C.text2);
+  doc.text(obsLines.length ? obsLines : [sanitizeObservation(registro.obs)], innerX, y + 3);
+  y += (obsLines.length || 1) * LINE_OBS;
 
   // Materiais
   if (registro.pecas?.trim()) {
     y += GAP_SM;
-    txt(doc, `Materiais: ${registro.pecas.trim()}`, innerX, y + 3, {
+    txt(doc, `Materiais: ${sanitizePublicText(registro.pecas.trim())}`, innerX, y + 3, {
       size: 8,
       color: C.text3,
     });

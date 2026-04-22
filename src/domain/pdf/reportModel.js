@@ -1,3 +1,5 @@
+import { sanitizePublicText } from './sanitizers.js';
+
 export function filterRegistrosForReport(registros, { filtEq = '', de = '', ate = '' } = {}) {
   let filtered = [...registros].sort((a, b) => b.data.localeCompare(a.data));
   if (filtEq) filtered = filtered.filter((registro) => registro.equipId === filtEq);
@@ -47,15 +49,25 @@ export function extractClientBlock(filtered = []) {
   if (!filtered.length) return null;
   const recent = filtered[0] || {};
 
-  const nome =
-    recent.clienteNome?.trim() || recent.cliente?.trim() || recent.clienteRazao?.trim() || '';
-  const documento =
+  const nome = sanitizePublicText(
+    recent.clienteNome?.trim() || recent.cliente?.trim() || recent.clienteRazao?.trim() || '',
+    '',
+  );
+  const documento = sanitizePublicText(
     recent.clienteDocumento?.trim() ||
-    recent.clienteCnpj?.trim() ||
-    recent.clienteCpf?.trim() ||
-    '';
-  const local = recent.localAtendimento?.trim() || recent.enderecoCliente?.trim() || '';
-  const contato = recent.clienteContato?.trim() || recent.clienteTelefone?.trim() || '';
+      recent.clienteCnpj?.trim() ||
+      recent.clienteCpf?.trim() ||
+      '',
+    '',
+  );
+  const local = sanitizePublicText(
+    recent.localAtendimento?.trim() || recent.enderecoCliente?.trim() || '',
+    '',
+  );
+  const contato = sanitizePublicText(
+    recent.clienteContato?.trim() || recent.clienteTelefone?.trim() || '',
+    '',
+  );
 
   if (!nome && !documento && !local && !contato) return null;
   return { nome, documento, local, contato };

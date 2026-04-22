@@ -2245,10 +2245,10 @@ export async function saveEquip() {
         // Visitante (sem conta): flow "salve seus dados" (criar conta).
         GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
       } else if (planLimit.planCode === 'pro') {
-        // Pro no teto (30 equipamentos): mensagem específica do Pro.
+        // Fallback defensivo para eventuais limites customizados de conta Pro.
         GuestConversionModal.open({ reason: 'limit_pro_equipamentos', source: 'save-equip-pro' });
       } else {
-        // Free autenticado: flow de UPGRADE para Pro (não "criar conta", já tem).
+        // Free autenticado: flow de UPGRADE para Plus (não "criar conta", já tem).
         GuestConversionModal.open({
           reason: 'limit_free_equipamentos',
           source: 'save-equip-free',

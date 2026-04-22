@@ -17,8 +17,8 @@ const VALID_RESOURCES = new Set([
 ]);
 
 // ── Limites mensais por plano ──────────────────────────────────────────────
-// Free: 2 PDFs/mês COM marca d'água "CoolTrack Free" (conversão orgânica B2B),
-//       WhatsApp apertado pra só dar pra avaliar, não pra trabalhar.
+// Free: PDF liberado com marca d'água (sem bloqueio rígido no loop principal),
+//       WhatsApp ainda com teto mensal pra preservar incentivo de upgrade.
 //       1 análise de placa/mês como "teste grátis" recorrente — suficiente
 //       pra demonstrar o valor do recurso todo mês, sem liberar workflow real.
 // Plus: cotas dimensionadas pro técnico autônomo individual (15 equipamentos).
@@ -30,13 +30,13 @@ const VALID_RESOURCES = new Set([
 //       cobre rollout inicial de uma equipe média sem abrir mão da margem.
 const MONTHLY_LIMITS = {
   [PLAN_CODE_FREE]: {
-    [USAGE_RESOURCE_PDF_EXPORT]: 2,
-    [USAGE_RESOURCE_WHATSAPP_SHARE]: 3,
+    [USAGE_RESOURCE_PDF_EXPORT]: Number.POSITIVE_INFINITY,
+    [USAGE_RESOURCE_WHATSAPP_SHARE]: 5,
     [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 1,
   },
   [PLAN_CODE_PLUS]: {
-    [USAGE_RESOURCE_PDF_EXPORT]: 30,
-    [USAGE_RESOURCE_WHATSAPP_SHARE]: 20,
+    [USAGE_RESOURCE_PDF_EXPORT]: 120,
+    [USAGE_RESOURCE_WHATSAPP_SHARE]: 60,
     [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 30,
   },
   [PLAN_CODE_PRO]: {
