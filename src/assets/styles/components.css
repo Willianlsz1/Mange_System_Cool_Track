@@ -1393,6 +1393,13 @@ textarea.form-control {
   color: var(--text-2);
 }
 
+.nameplate-cta__hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--text-3);
+}
+
 .nameplate-cta__action {
   display: flex;
   flex-shrink: 0;
@@ -1678,6 +1685,55 @@ textarea.form-control {
 .nameplate-scan__result-btn {
   align-self: flex-start;
   margin-top: 4px;
+}
+
+.nameplate-scan__result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.nameplate-scan__review-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nameplate-scan__review-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--card) 88%, var(--primary) 12%);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.nameplate-scan__review-label {
+  color: var(--text-1);
+}
+
+.nameplate-scan__review-value {
+  color: var(--text-2);
+  text-align: right;
+}
+
+.nameplate-scan__review-value--ok {
+  color: var(--success);
+}
+
+.nameplate-scan__review-value--warn {
+  color: #f59e0b;
+}
+
+.nameplate-scan__review-value--missing {
+  color: var(--text-3);
 }
 
 /* Error state: bordas/fundo avermelhados, esconde result */

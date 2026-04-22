@@ -54,7 +54,10 @@ export function renderShellModals() {
               <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
             </div>
             <p class="nameplate-cta__sub" id="nameplate-cta-sub">
-              A IA preenche tipo, fluido e marca/modelo pra você.
+              A IA tenta preencher os principais dados da etiqueta. Você revisa antes de aplicar.
+            </p>
+            <p class="nameplate-cta__hint" id="nameplate-cta-hint">
+              Dica: etiqueta nítida, sem reflexo, inteira no quadro e câmera mais próxima.
             </p>
           </div>
           <div class="nameplate-cta__action">
@@ -133,12 +136,23 @@ export function renderShellModals() {
               </div>
             </div>
             <p class="nameplate-scan__result-sub" id="nameplate-scan-result-sub">
-              Revise os campos preenchidos e complete os que faltaram.
+              Revise os dados encontrados antes de aplicar no cadastro.
             </p>
-            <button type="button" class="btn btn--primary btn--sm nameplate-scan__result-btn"
-              data-action="nameplate-scan-review" id="nameplate-scan-review">
-              Ver campos preenchidos →
-            </button>
+            <ul class="nameplate-scan__review-list" id="nameplate-scan-review-list"></ul>
+            <div class="nameplate-scan__result-actions">
+              <button type="button" class="btn btn--primary btn--sm nameplate-scan__result-btn"
+                id="nameplate-scan-apply">
+                Aplicar dados encontrados
+              </button>
+              <button type="button" class="btn btn--ghost btn--sm nameplate-scan__result-btn"
+                id="nameplate-scan-retry">
+                Tentar outra foto
+              </button>
+              <button type="button" class="btn btn--ghost btn--sm nameplate-scan__result-btn"
+                id="nameplate-scan-manual">
+                Continuar sem foto
+              </button>
+            </div>
           </div>
         </div>
 

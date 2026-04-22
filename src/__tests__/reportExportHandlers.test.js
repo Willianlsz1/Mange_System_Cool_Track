@@ -89,12 +89,7 @@ vi.mock('../core/usageLimits.js', () => ({
   incrementMonthlyUsage,
 }));
 
-// CustomConfirm é usado por print (pós-afterprint) e whatsapp (pré wa.me).
-// Default: resolve true (usuário confirma) — cada teste que queira testar
-// cancelamento usa mockResolvedValueOnce(false).
-const customConfirmShow = vi.fn();
 vi.mock('../core/modal.js', () => ({
-  CustomConfirm: { show: customConfirmShow },
   Modal: { open: vi.fn(), close: vi.fn() },
 }));
 
@@ -118,20 +113,19 @@ describe('reportExportHandlers', () => {
     });
     getMonthlyLimitForPlan.mockImplementation((planCode, resource) => {
       if (resource === 'pdf_export') {
-        if (planCode === 'free') return 5;
-        if (planCode === 'plus') return 100;
+        if (planCode === 'free') return Number.POSITIVE_INFINITY;
+        if (planCode === 'plus') return 120;
         return Number.POSITIVE_INFINITY;
       }
       if (resource === 'whatsapp_share') {
-        if (planCode === 'free') return 10;
-        if (planCode === 'plus') return 50;
+        if (planCode === 'free') return 5;
+        if (planCode === 'plus') return 60;
         return Number.POSITIVE_INFINITY;
       }
       return Number.POSITIVE_INFINITY;
     });
     hasReachedMonthlyLimit.mockReturnValue(false);
     incrementMonthlyUsage.mockResolvedValue(1);
-    customConfirmShow.mockResolvedValue(true);
 
     document.body.innerHTML = `
       <select id="rel-equip"><option value="eq-1" selected>eq-1</option></select>
@@ -170,10 +164,11 @@ describe('reportExportHandlers', () => {
       expect.any(Object),
       expect.objectContaining({ planCode: 'free' }),
     );
-    expect(incrementMonthlyUsage).toHaveBeenCalledWith('u1', 'pdf_export');
+    expect(incrementMonthlyUsage).not.toHaveBeenCalledWith('u1', 'pdf_export');
     expect(pdfToastShow).toHaveBeenCalledWith(
-      expect.objectContaining({ fileName: 'relatorio.pdf', limit: 5, used: 1 }),
+      expect.objectContaining({ fileName: 'relatorio.pdf' }),
     );
+    expect(pdfToastShow.mock.calls[0][0]).not.toHaveProperty('used');
     expect(pdfBadgeRefresh).toHaveBeenCalled();
   });
 
@@ -225,37 +220,15 @@ describe('reportExportHandlers', () => {
     expect(handlers.has('print')).toBe(false);
   });
 
-  it('whatsapp: opens CustomConfirm before wa.me and sends + commits on confirm', async () => {
+  it('whatsapp: abre wa.me diretamente com texto pronto e consome quota', async () => {
     getUser.mockResolvedValue({ id: 'u1' });
     send.mockReturnValue(true);
-    customConfirmShow.mockResolvedValueOnce(true);
 
     await handlers.get('whatsapp-export')({});
 
-    expect(customConfirmShow).toHaveBeenCalledTimes(1);
-    // Confirmação DEVE vir antes de qualquer chamada a send()
-    const confirmOrder = customConfirmShow.mock.invocationCallOrder[0];
-    const sendOrder = send.mock.invocationCallOrder[0];
-    expect(confirmOrder).toBeLessThan(sendOrder);
     expect(send).toHaveBeenCalledTimes(1);
     expect(incrementMonthlyUsage).toHaveBeenCalledWith('u1', 'whatsapp_share');
     expect(show).toHaveBeenCalled();
-  });
-
-  it('whatsapp: does NOT open wa.me nor consume quota when user cancels', async () => {
-    getUser.mockResolvedValue({ id: 'u1' });
-    customConfirmShow.mockResolvedValueOnce(false);
-
-    await handlers.get('whatsapp-export')({});
-
-    expect(customConfirmShow).toHaveBeenCalledTimes(1);
-    expect(send).not.toHaveBeenCalled();
-    expect(incrementMonthlyUsage).not.toHaveBeenCalled();
-    expect(show).not.toHaveBeenCalled();
-    expect(trackEvent).toHaveBeenCalledWith(
-      'whatsapp_share_canceled',
-      expect.objectContaining({ plan: 'free' }),
-    );
   });
 
   it('blocks whatsapp share for free users above monthly limit', async () => {
