@@ -561,9 +561,10 @@ export function renderShellViews() {
               </button>
               <button class="btn btn--primary registro-actions__primary" data-action="save-registro">
                 <svg aria-hidden="true"><use href="#ri-save"/></svg>
-                <span>Finalizar serviço</span>
+                <span>Salvar e gerar PDF</span>
               </button>
             </div>
+            <p class="registro-field__help" style="margin:8px 0 0">Ao salvar, o PDF ficará pronto para envio.</p>
             <div class="registro-sig-hint" id="registro-signature-hint" hidden>
               <span class="registro-sig-hint__ic" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
