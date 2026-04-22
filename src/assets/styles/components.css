@@ -364,6 +364,14 @@
   margin-top: 1px;
   letter-spacing: 0.03em;
 }
+.equip-card__subtitle {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Status badge no header */
 .equip-card__status {
@@ -5222,6 +5230,7 @@ mark,
   background: var(--surface-3);
   padding: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .equip-card__type-icon--photo img {
@@ -5229,6 +5238,40 @@ mark,
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.equip-card__type-icon--photo .equip-card__fallback-initials,
+.equip-card__type-icon--photo .equip-card__fallback-glyph {
+  opacity: 0;
+}
+.equip-card__type-icon--fallback .equip-card__fallback-initials,
+.equip-card__type-icon--fallback .equip-card__fallback-glyph {
+  opacity: 1;
+}
+.equip-card__fallback-initials {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+}
+.equip-card__fallback-glyph {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.65;
+}
+.equip-card__type-icon--fallback-t1 {
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 14%, var(--surface-3));
+}
+.equip-card__type-icon--fallback-t2 {
+  background: color-mix(in srgb, var(--success, #00c853) 14%, var(--surface-3));
+}
+.equip-card__type-icon--fallback-t3 {
+  background: color-mix(in srgb, var(--warning, #ffab40) 16%, var(--surface-3));
+}
+.equip-card__type-icon--fallback-t4 {
+  background: color-mix(in srgb, var(--danger, #ef4444) 12%, var(--surface-3));
 }
 
 /* ── Health score bar ── */
@@ -13642,6 +13685,49 @@ select option {
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+.eq-detail-cover__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.eq-detail-cover--has-photo:not(.eq-detail-cover--fallback) .eq-detail-cover__fallback {
+  display: none;
+}
+.eq-detail-cover__fallback-initials {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  color: color-mix(in srgb, var(--text, #fff) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text, #fff) 16%, transparent);
+  background: color-mix(in srgb, var(--surface, #0f172a) 40%, transparent);
+  border-radius: 999px;
+  padding: 0.22rem 0.45rem;
+}
+.eq-detail-cover__fallback--tone-1 {
+  background: color-mix(in srgb, var(--color-primary, #2563eb) 12%, transparent);
+}
+.eq-detail-cover__fallback--tone-2 {
+  background: color-mix(in srgb, var(--success, #00c853) 10%, transparent);
+}
+.eq-detail-cover__fallback--tone-3 {
+  background: color-mix(in srgb, var(--warning, #ffab40) 12%, transparent);
+}
+.eq-detail-cover__fallback--tone-4 {
+  background: color-mix(in srgb, var(--danger, #ef4444) 12%, transparent);
+}
+.eq-detail-cover__preview-hit {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
 }
 .eq-detail-cover__emoji {
   font-size: 3.5rem;

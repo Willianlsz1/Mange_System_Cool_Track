@@ -3,7 +3,7 @@
  * Funções: renderEquip, saveEquip, viewEquip, deleteEquip, populateEquipSelects
  */
 
-import { Utils, TIPO_ICON } from '../../core/utils.js';
+import { Utils } from '../../core/utils.js';
 import { getState, findEquip, setState, regsForEquip, findSetor } from '../../core/state.js';
 import { Storage } from '../../core/storage.js';
 import { Toast } from '../../core/toast.js';
@@ -36,6 +36,8 @@ import {
 import { emptyStateHtml } from '../components/emptyState.js';
 import { validateEquipamentoPayload } from '../../core/inputValidation.js';
 import { EquipmentPhotos } from '../components/equipmentPhotos.js';
+import { Photos } from '../components/photos.js';
+import { getEquipmentVisualMeta } from '../components/equipmentVisual.js';
 import { uploadPendingPhotos, normalizePhotoList } from '../../core/photoStorage.js';
 import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
 import { goTo } from '../../core/router.js';
@@ -205,19 +207,21 @@ function _idleClusterHtml(idleCards, count) {
 }
 
 function equipCardIconBlock(eq) {
-  const icon = TIPO_ICON[eq.tipo] ?? '⚙️';
-  const firstPhoto = Array.isArray(eq.fotos) ? eq.fotos.find((p) => p && (p.url || p.path)) : null;
-  const photoUrl = firstPhoto?.url;
+  const visual = getEquipmentVisualMeta(eq);
+  const photoUrl = visual.photoUrl;
+  const toneClass = `equip-card__type-icon--fallback-t${visual.tone}`;
+  const fallbackHtml = `<span class="equip-card__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
+    <span class="equip-card__fallback-glyph" aria-hidden="true">${visual.icon}</span>`;
   if (photoUrl) {
     const safeUrl = Utils.escapeAttr(photoUrl);
-    const safeIcon = icon; // emoji, sem escape
-    // onerror: se a signed URL expirou ou falhou, troca por um div com o ícone
-    return `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--photo" aria-hidden="true">
+    return `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--photo ${toneClass}" aria-hidden="true">
       <img src="${safeUrl}" alt="" loading="lazy"
-        onerror="this.parentElement.classList.remove('equip-card__type-icon--photo');this.replaceWith(document.createTextNode('${safeIcon}'));" />
+        onload="this.parentElement.classList.add('equip-card__type-icon--loaded');"
+        onerror="this.parentElement.classList.add('equip-card__type-icon--fallback');this.remove();" />
+      ${fallbackHtml}
     </div>`;
   }
-  return `<div class="equip-card__type-icon equip-card__type-icon--lg">${icon}</div>`;
+  return `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--fallback ${toneClass}" aria-hidden="true">${fallbackHtml}</div>`;
 }
 
 export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
@@ -327,6 +331,7 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
         <div class="equip-card__meta">
           <div class="equip-card__name">${Utils.escapeHtml(eq.nome)}</div>
           <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · ${Utils.escapeHtml(prioridadeLabel)}</div>
+          <div class="equip-card__subtitle">${Utils.escapeHtml(eq.local || 'Local não informado')}</div>
         </div>
         ${headerRightHtml}
         ${deleteBtnHtml}
@@ -411,6 +416,7 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq.nome)}</div>
         <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · ${Utils.escapeHtml(prioridadeLabel)}</div>
+        <div class="equip-card__subtitle">${Utils.escapeHtml(eq.local || 'Local não informado')}</div>
       </div>
       ${headerRightHtml}
       ${deleteBtnHtml}
@@ -2488,9 +2494,12 @@ export async function viewEquip(id) {
   // CTA centralizado "Adicionar foto". Se houver foto: img cobre o espaço
   // todo e o CTA "Gerenciar fotos" fica overlay no canto inferior direito.
   // Na listagem, o card continua com avatar/thumb redondo (equipCardIconBlock).
-  const tipoEmoji = TIPO_ICON[eq.tipo] ?? '⚙️';
-  const fotosList = Array.isArray(eq.fotos) ? eq.fotos.filter((p) => p && (p.url || p.path)) : [];
-  const firstPhotoUrl = fotosList[0]?.url;
+  const visual = getEquipmentVisualMeta(eq);
+  const tipoEmoji = visual.icon;
+  const firstPhotoUrl = visual.photoUrl;
+  const photosCount = Array.isArray(eq.fotos)
+    ? eq.fotos.filter((p) => p && (typeof p === 'string' ? p : p.url || p.path)).length
+    : 0;
   const canEditPhotos = isCachedPlanPlusOrHigher();
   // Copy do CTA muda por plano pra deixar claro que Free é um gate (antes
   // dizia "Adicionar foto PLUS", confundindo — parecia que o clique abriria
@@ -2498,7 +2507,7 @@ export async function viewEquip(id) {
   //   Free  : "Desbloquear com Plus" + ícone de cadeado
   //   Plus+ : "Adicionar foto" / "Gerenciar fotos" + ícone de câmera
   const photoCtaLabel = canEditPhotos
-    ? fotosList.length === 0
+    ? photosCount === 0
       ? 'Adicionar foto'
       : 'Gerenciar fotos'
     : 'Desbloquear com Plus';
@@ -2534,10 +2543,15 @@ export async function viewEquip(id) {
   // dedicada logo abaixo — ação separada, visível, sem interferir na leitura.
   // Quando NÃO há foto (placeholder), o CTA continua centralizado sobre o
   // gradiente porque nesse caso ele É o próprio conteúdo convidando à ação.
+  const coverFallback = `<div class="eq-detail-cover__fallback eq-detail-cover__fallback--tone-${visual.tone}">
+      <span class="eq-detail-cover__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
+      <span class="eq-detail-cover__emoji eq-detail-cover__emoji--placeholder" aria-hidden="true">${tipoEmoji}</span>
+    </div>`;
   const coverInner = firstPhotoUrl
-    ? `<img class="eq-detail-cover__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt="Foto de ${Utils.escapeAttr(eq.nome)}" />
-       <span class="eq-detail-cover__emoji" aria-hidden="true">${tipoEmoji}</span>`
-    : `<span class="eq-detail-cover__emoji eq-detail-cover__emoji--placeholder" aria-hidden="true">${tipoEmoji}</span>
+    ? `<img class="eq-detail-cover__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt="Foto de ${Utils.escapeAttr(eq.nome)}" loading="lazy" />
+       ${coverFallback}
+       <button type="button" class="eq-detail-cover__preview-hit" aria-label="Ampliar foto de ${Utils.escapeAttr(eq.nome)}"></button>`
+    : `${coverFallback}
        <button type="button" class="eq-detail-cover__cta eq-detail-cover__cta--center${photoCtaVariantCls}"
          data-action="${photoCtaAction}" data-id="${safeId}"${photoCtaExtra}
          aria-label="${canEditPhotos ? 'Adicionar foto' : 'Fotos bloqueadas — desbloqueie com o plano Plus'}">
@@ -2743,6 +2757,13 @@ export async function viewEquip(id) {
   const coverImg = document.querySelector('.eq-detail-cover__img');
   if (coverImg instanceof HTMLImageElement) {
     coverImg.addEventListener(
+      'load',
+      () => {
+        coverImg.closest('.eq-detail-cover')?.classList.add('eq-detail-cover--loaded');
+      },
+      { once: true },
+    );
+    coverImg.addEventListener(
       'error',
       () => {
         coverImg.closest('.eq-detail-cover')?.classList.add('eq-detail-cover--fallback');
@@ -2750,6 +2771,12 @@ export async function viewEquip(id) {
       },
       { once: true },
     );
+  }
+  const coverPreviewHit = document.querySelector('.eq-detail-cover__preview-hit');
+  if (coverPreviewHit && firstPhotoUrl) {
+    coverPreviewHit.addEventListener('click', () => {
+      Photos.openLightbox(firstPhotoUrl);
+    });
   }
 
   try {

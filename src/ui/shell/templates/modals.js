@@ -182,7 +182,10 @@ export function renderShellModals() {
             <label class="form-label" for="eq-local">Onde ele fica? <span class="form-label__req" aria-hidden="true">*</span></label>
             <input id="eq-local" class="form-control" type="text"
               placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..."
-              required aria-required="true" autocomplete="off" />
+              required aria-required="true" autocomplete="off" aria-describedby="eq-local-hint" />
+            <div class="form-hint" id="eq-local-hint">
+              Após salvar, adicione uma foto no detalhe para reconhecer este equipamento mais rápido no campo.
+            </div>
           </div>
 
           <div class="eq-context-group" id="eq-context-group" style="display:none">
