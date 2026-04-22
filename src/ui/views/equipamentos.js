@@ -239,6 +239,7 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
     if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE) return 'Registrar serviço corretivo';
     if (actionCode === ACTION_CODE.REGISTER_PREVENTIVE) return 'Registrar serviço preventivo';
     if (actionCode === ACTION_CODE.SCHEDULE_PREVENTIVE) return 'Programar serviço preventivo';
+    if (actionCode === ACTION_CODE.COLLECT_DATA) return 'Registrar última manutenção';
     return 'Registrar serviço';
   }
 
@@ -292,6 +293,7 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
   const isFullyIdle = scls === 'ok' && risk.classification === 'baixo' && !hasAction && !hasMetrics;
   const cardModifiers = `equip-card--${scls}${isFullyIdle ? ' equip-card--idle' : ''}`;
 
+  const isActivationPending = !last && suggestedAction.actionCode === ACTION_CODE.COLLECT_DATA;
   const ctaLabel = !last && !hasAction ? 'Começar' : getCtaByAction(suggestedAction.actionCode);
 
   // ─── Header right-side: idle = tone-pill V3 / ativo = score + EFICIÊNCIA ───
@@ -388,8 +390,16 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
   const isUrgent =
     scls === 'danger' ||
     risk.factors.some((f) => /parado desde|preventiva vencida/i.test(String(f)));
-  const primaryLabelText = isUrgent ? 'AÇÃO URGENTE' : 'PRÓXIMA AÇÃO';
-  const primaryTitle = hasAction ? suggestedAction.actionLabel : ctaLabel;
+  const primaryLabelText = isActivationPending
+    ? 'STATUS INICIAL'
+    : isUrgent
+      ? 'AÇÃO URGENTE'
+      : 'PRÓXIMA AÇÃO';
+  const primaryTitle = isActivationPending
+    ? 'Sem manutenção recente ⚠️'
+    : hasAction
+      ? suggestedAction.actionLabel
+      : ctaLabel;
   const primaryMetaHtml =
     hasAction && last?.tecnico
       ? `<div class="equip-card__primary-meta">Por ${Utils.escapeHtml(last.tecnico)} · ${Utils.escapeHtml(recencia(last.data))}</div>`

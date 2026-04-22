@@ -29,8 +29,8 @@ export const OnboardingBanner = {
       el.innerHTML = `
         <div class="onboarding-banner__icon">⏱️</div>
         <div>
-          <div class="onboarding-banner__title">Complete seu cadastro em 2 min</div>
-          <div class="onboarding-banner__desc">Termine a configuracao e gere seu primeiro relatorio.</div>
+          <div class="onboarding-banner__title">Ative seu primeiro equipamento em 2 min</div>
+          <div class="onboarding-banner__desc">Cadastre o equipamento e registre a última manutenção.</div>
         </div>
         <button class="btn btn--primary btn--sm" id="onboarding-banner-resume" type="button">Continuar &rarr;</button>
       `;
@@ -47,8 +47,8 @@ export const OnboardingBanner = {
     el.innerHTML = `
       <div class="onboarding-banner__icon">🚀</div>
       <div>
-        <div class="onboarding-banner__title">Cadastre seu primeiro equipamento</div>
-        <div class="onboarding-banner__desc">Em 2 minutos voce tera seu primeiro relatorio profissional pronto.</div>
+        <div class="onboarding-banner__title">Comece por 1 equipamento real</div>
+        <div class="onboarding-banner__desc">Crie o equipamento e registre a última manutenção para ativar o status.</div>
       </div>
       <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">Adicionar meu primeiro equipamento</button>
     `;

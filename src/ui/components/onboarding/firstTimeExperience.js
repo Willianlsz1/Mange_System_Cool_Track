@@ -1,25 +1,15 @@
-import { Utils, TIPO_ICON } from '../../../core/utils.js';
+import { Utils } from '../../../core/utils.js';
 import { setState } from '../../../core/state.js';
 import { goTo } from '../../../core/router.js';
 import { Profile } from '../../../features/profile.js';
 import { trackEvent } from '../../../core/telemetry.js';
-// Styles foram extraídos pra arquivo cacheável — Vite bundla junto com o
-// chunk dinâmico desse módulo (só carrega quando o overlay precisa abrir).
+import { getOperationalStatus } from '../../../core/equipmentRules.js';
 import './firstTimeExperience.css';
 
 const FTX_KEY = 'cooltrack-ftx-done';
-// Flag intermediária: usuário pulou o onboarding antes de terminar. Diferente
-// de FTX_KEY porque o dashboard mostra um banner de "continuar cadastro"
-// enquanto só essa flag estiver setada (e o usuário ainda não tiver nenhum
-// equipamento). Uma vez que `FTX_KEY` é setada (completou) ou o usuário
-// cadastra equipamento por outro caminho, esse estado é resolvido.
 const FTX_SKIP_KEY = 'cooltrack-ftx-skipped';
 
 function dismiss(overlay, { reason = 'completed', step = null } = {}) {
-  // Eventos do funil são emitidos apenas na primeira dismiss (FTX ainda
-  // não marcado como done). `onboarding_completed` → fluxo completo;
-  // `onboarding_skipped` → usuário optou por sair voluntariamente num passo
-  // específico; `onboarding_abandoned` → qualquer outro caminho.
   if (!localStorage.getItem(FTX_KEY)) {
     if (reason === 'completed') {
       trackEvent('onboarding_completed', {});
@@ -29,43 +19,70 @@ function dismiss(overlay, { reason = 'completed', step = null } = {}) {
       trackEvent('onboarding_abandoned', { reason });
     }
   }
+
   if (reason === 'completed') {
-    // Só marca como "done" quando o fluxo foi realmente concluído. Em caso
-    // de skip, mantemos FTX_KEY vazio e gravamos FTX_SKIP_KEY para o banner
-    // poder oferecer retomada.
     localStorage.setItem(FTX_KEY, '1');
     localStorage.removeItem(FTX_SKIP_KEY);
   } else if (reason === 'skipped') {
     localStorage.setItem(FTX_SKIP_KEY, '1');
   }
-  overlay.style.animation = 'ftx-fade-in .2s ease reverse';
-  setTimeout(() => overlay.remove(), 200);
+
+  overlay.remove();
+}
+
+function getTodayIsoDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function buildInitialEquipment(nome) {
+  return {
+    id: Utils.uid(),
+    nome,
+    local: 'Local a definir',
+    status: 'warn',
+    statusDescricao: 'Sem manutenção recente ⚠️',
+    tag: '',
+    tipo: 'Split Hi-Wall',
+    fluido: 'R-410A',
+    modelo: '',
+    controleBaseCriadoEm: Utils.nowDatetime(),
+  };
+}
+
+function buildFirstMaintenanceRegistro({ equipId, data, tipo, tecnico }) {
+  const status = tipo === 'Manutenção Corretiva' ? 'warn' : 'ok';
+  return {
+    id: Utils.uid(),
+    equipId,
+    data: `${data}T09:00`,
+    tipo,
+    pecas: '',
+    obs: `Última manutenção registrada durante o onboarding (${tipo.toLowerCase()}).`,
+    proxima: '',
+    status,
+    fotos: [],
+    tecnico,
+  };
 }
 
 export const FirstTimeExperience = {
   show(equipamentos) {
     if (equipamentos.length) return;
     if (localStorage.getItem(FTX_KEY)) return;
-    // Se o usuário pulou, não reabrimos automaticamente em reload —
-    // só pelo banner de retomada (FirstTimeExperience.reopen).
     if (localStorage.getItem(FTX_SKIP_KEY)) return;
 
-    // Primeira vez que o overlay vai aparecer — marca início da ativação.
     trackEvent('onboarding_started', {});
 
     document.getElementById('ftx-overlay')?.remove();
 
     const overlay = document.createElement('div');
     overlay.id = 'ftx-overlay';
-    // Estilo completo definido em firstTimeExperience.css (via #ftx-overlay)
 
     overlay.innerHTML = `
       <div id="ftx-card">
         <div class="ftx-steps">
           <div class="ftx-step-dot active" id="ftx-dot-0"></div>
           <div class="ftx-step-dot" id="ftx-dot-1"></div>
-          <div class="ftx-step-dot" id="ftx-dot-2"></div>
-          <div class="ftx-step-dot" id="ftx-dot-3"></div>
         </div>
         <div id="ftx-content"></div>
       </div>
@@ -73,20 +90,19 @@ export const FirstTimeExperience = {
 
     document.body.appendChild(overlay);
 
-    let techName = Profile.get()?.nome || '';
-    let equipData = {};
-    const todayLabel = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' }).format(new Date());
-
+    let techName = Profile.get()?.nome || 'Técnico responsável';
+    let equipData = null;
     const contentEl = overlay.querySelector('#ftx-content');
 
     const setDots = (current) => {
-      [0, 1, 2, 3].forEach((i) => {
+      [0, 1].forEach((i) => {
         const dot = overlay.querySelector(`#ftx-dot-${i}`);
+        if (!dot) return;
         dot.className = 'ftx-step-dot' + (i === current ? ' active' : i < current ? ' done' : '');
       });
     };
 
-    const renderStep0 = () => {
+    const renderStepCreateEquipment = () => {
       setDots(0);
       contentEl.innerHTML = `
         <div class="ftx-step">
@@ -117,64 +133,63 @@ export const FirstTimeExperience = {
             <span class="ftx-logo-sub">PRO</span>
           </div>
 
-          <div class="ftx-eyebrow">Bem-vindo</div>
-          <div class="ftx-title">Chega de planilha. Seus relatorios prontos em 30 segundos.</div>
+          <div class="ftx-eyebrow">Primeiro uso</div>
+          <div class="ftx-title">Qual equipamento você quer começar a controlar?</div>
+          <div class="ftx-desc">Digite um nome simples. Ex.: Split recepção, Câmara fria estoque.</div>
 
-          <div class="ftx-value-props">
-            <div class="ftx-prop">
-              <div class="ftx-prop-icon">📄</div>
-              Gere relatórios PDF com assinatura do cliente em segundos
-            </div>
-            <div class="ftx-prop">
-              <div class="ftx-prop-icon">🔔</div>
-              Nunca mais perca uma preventiva — alertas automáticos
-            </div>
-            <div class="ftx-prop">
-              <div class="ftx-prop-icon">📱</div>
-              Registre serviços em campo, funciona sem internet
-            </div>
-          </div>
+          <label class="ftx-form-label">Nome do equipamento</label>
+          <input class="ftx-input" id="ftx-eq-name" type="text"
+            placeholder="Ex: Split recepção"
+            autocomplete="off" />
 
-          <label class="ftx-form-label">Como você se chama?</label>
-          <input class="ftx-input" id="ftx-nome" type="text"
-            placeholder="Seu nome completo..."
-            value="${Utils.escapeAttr(techName)}"
-            autocomplete="name" />
-
-          <button class="ftx-btn-primary" id="ftx-next-0">
-            Vamos la &rarr;
+          <button class="ftx-btn-primary" id="ftx-create-equip">
+            Criar e começar &rarr;
           </button>
           <button class="ftx-btn-skip" id="ftx-skip-0" type="button">
-            Explorar o app primeiro
+            Agora não
           </button>
-          <div class="ftx-hint">2 minutos para configurar &middot; Sem cartão de crédito</div>
+          <div class="ftx-hint">Leva menos de 2 minutos</div>
         </div>`;
 
-      const input = overlay.querySelector('#ftx-nome');
-      const btn = overlay.querySelector('#ftx-next-0');
-
-      setTimeout(() => input?.focus(), 100);
+      const input = overlay.querySelector('#ftx-eq-name');
+      const btn = overlay.querySelector('#ftx-create-equip');
+      input?.focus();
 
       input?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') btn.click();
       });
       input?.addEventListener('input', () => {
         input.classList.remove('ftx-input--error');
-        input.placeholder = 'Seu nome completo...';
+        input.placeholder = 'Ex: Split recepção';
       });
 
       btn.addEventListener('click', () => {
-        const nome = input.value.trim();
-        if (!nome) {
+        const nomeEquipamento = input.value.trim();
+        if (!nomeEquipamento) {
           input.classList.add('ftx-input--error');
-          input.placeholder = 'Digite seu nome para continuar';
+          input.placeholder = 'Digite um equipamento para continuar';
           input.focus();
           return;
         }
-        techName = nome;
-        Profile.save({ ...Profile.get(), nome });
-        Profile.saveLastTecnico(nome);
-        renderStep1();
+
+        techName = Profile.get()?.nome || 'Técnico responsável';
+        Profile.saveLastTecnico(techName);
+
+        const createdEquipment = buildInitialEquipment(nomeEquipamento);
+        setState((prev) => ({
+          ...prev,
+          equipamentos: [...prev.equipamentos, createdEquipment],
+          tecnicos: prev.tecnicos.includes(techName) ? prev.tecnicos : [...prev.tecnicos, techName],
+        }));
+
+        trackEvent('first_equipment_added', {
+          source: 'onboarding',
+          tipo: createdEquipment.tipo,
+          fluido: createdEquipment.fluido,
+        });
+
+        equipData = createdEquipment;
+        renderStepRegisterMaintenance();
       });
 
       overlay.querySelector('#ftx-skip-0')?.addEventListener('click', () => {
@@ -182,263 +197,92 @@ export const FirstTimeExperience = {
       });
     };
 
-    const renderStep1 = () => {
+    const renderStepRegisterMaintenance = () => {
       setDots(1);
-      const firstName = techName.split(' ')[0];
+      const todayDate = getTodayIsoDate();
 
       contentEl.innerHTML = `
         <div class="ftx-step">
-          <div class="ftx-eyebrow">Passo 1 de 3</div>
-          <div class="ftx-title">Qual equipamento você quer monitorar, ${Utils.escapeHtml(firstName)}?</div>
-          <div class="ftx-desc">Comece com o mais importante — você pode adicionar mais depois.</div>
+          <div class="ftx-eyebrow">Equipamento ativo</div>
+          <div class="ftx-title">${Utils.escapeHtml(equipData?.nome || 'Equipamento')} criado com status inicial</div>
+          <div class="ftx-desc">Sem manutenção recente ⚠️<br>Registre só a última manutenção para atualizar o status agora.</div>
 
-          <label class="ftx-form-label">Nome do equipamento *</label>
-          <input class="ftx-input" id="ftx-eq-nome" type="text"
-            placeholder="Ex: Split da recepção, Câmara do estoque..."
-            autocomplete="off" />
+          <label class="ftx-form-label">Data da última manutenção *</label>
+          <input class="ftx-input" id="ftx-maint-date" type="date" value="${Utils.escapeAttr(todayDate)}" />
 
-          <label class="ftx-form-label">Onde ele fica? *</label>
-          <input class="ftx-input" id="ftx-eq-local" type="text"
-            placeholder="Ex: Sala dos fundos, Galpão A, 2º andar..."
-            autocomplete="off" />
+          <label class="ftx-form-label">Tipo de manutenção *</label>
+          <select class="ftx-select" id="ftx-maint-type">
+            <option>Manutenção Preventiva</option>
+            <option>Manutenção Corretiva</option>
+          </select>
 
-          <div class="ftx-row">
-            <div>
-              <label class="ftx-form-label">Tipo</label>
-              <select class="ftx-select" id="ftx-eq-tipo">
-                <option>Split Hi-Wall</option>
-                <option>Split Cassette</option>
-                <option>Split Piso Teto</option>
-                <option>VRF / VRV</option>
-                <option>Chiller</option>
-                <option>Fan Coil</option>
-                <option>Self Contained</option>
-                <option>Roof Top</option>
-                <option>Câmara Fria</option>
-                <option>Outro</option>
-              </select>
-            </div>
-            <div>
-              <label class="ftx-form-label">Fluido</label>
-              <select class="ftx-select" id="ftx-eq-fluido">
-                <option>R-410A</option>
-                <option>R-22</option>
-                <option>R-32</option>
-                <option>R-407C</option>
-                <option>R-134A</option>
-                <option>R-404A</option>
-                <option>Outro</option>
-              </select>
-            </div>
-          </div>
-
-          <button class="ftx-btn-primary" id="ftx-next-1">
-            Salvar e continuar &rarr;
+          <button class="ftx-btn-primary" id="ftx-save-maint">
+            Registrar última manutenção
           </button>
           <button class="ftx-btn-skip" id="ftx-skip-1" type="button">
-            Explorar o app primeiro
+            Continuar depois
           </button>
-          <div class="ftx-hint">Você edita ou exclui a qualquer momento</div>
+          <div class="ftx-hint">Após salvar, o card é atualizado em tempo real</div>
         </div>`;
 
-      const nomeInput = overlay.querySelector('#ftx-eq-nome');
-      const localInput = overlay.querySelector('#ftx-eq-local');
-      const btn = overlay.querySelector('#ftx-next-1');
+      const dateInput = overlay.querySelector('#ftx-maint-date');
+      const typeInput = overlay.querySelector('#ftx-maint-type');
+      const btn = overlay.querySelector('#ftx-save-maint');
+      dateInput?.focus();
+
+      dateInput?.addEventListener('input', () => dateInput.classList.remove('ftx-input--error'));
 
       overlay.querySelector('#ftx-skip-1')?.addEventListener('click', () => {
         dismiss(overlay, { reason: 'skipped', step: 1 });
       });
 
-      setTimeout(() => nomeInput?.focus(), 100);
-      nomeInput?.addEventListener('input', () => {
-        nomeInput.classList.remove('ftx-input--error');
-      });
-      localInput?.addEventListener('input', () => {
-        localInput.classList.remove('ftx-input--error');
-      });
-
       btn.addEventListener('click', () => {
-        const nome = nomeInput.value.trim();
-        const local = localInput.value.trim();
-
-        if (!nome) {
-          nomeInput.classList.add('ftx-input--error');
-          nomeInput.focus();
-          return;
-        }
-        if (!local) {
-          localInput.classList.add('ftx-input--error');
-          localInput.focus();
+        const maintDate = dateInput.value.trim();
+        if (!maintDate) {
+          dateInput.classList.add('ftx-input--error');
+          dateInput.focus();
           return;
         }
 
-        equipData = {
-          id: Utils.uid(),
-          nome,
-          local,
-          status: 'ok',
-          tag: '',
-          tipo: overlay.querySelector('#ftx-eq-tipo').value,
-          fluido: overlay.querySelector('#ftx-eq-fluido').value,
-          modelo: '',
-        };
+        const maintenanceType = typeInput.value;
+        const registro = buildFirstMaintenanceRegistro({
+          equipId: equipData.id,
+          data: maintDate,
+          tipo: maintenanceType,
+          tecnico: techName,
+        });
 
         setState((prev) => ({
           ...prev,
-          equipamentos: [...prev.equipamentos, equipData],
-          tecnicos: prev.tecnicos.includes(techName) ? prev.tecnicos : [...prev.tecnicos, techName],
+          registros: [...prev.registros, registro],
+          equipamentos: prev.equipamentos.map((item) => {
+            if (item.id !== equipData.id) return item;
+            const op = getOperationalStatus({
+              status: registro.status,
+              lastStatus: registro.status,
+              ultimoRegistro: { status: registro.status },
+            });
+            return {
+              ...item,
+              status: op.uiStatus === 'unknown' ? item.status : op.uiStatus,
+              statusDescricao: op.label,
+            };
+          }),
         }));
 
-        // Este é SEMPRE o primeiro equipamento — FTX só roda quando a lista está vazia.
-        // Fonte primária pra medir ativação (visita → primeiro equipamento).
-        trackEvent('first_equipment_added', {
-          source: 'onboarding',
-          tipo: equipData.tipo,
-          fluido: equipData.fluido,
+        trackEvent('onboarding_activation_completed', {
+          source: 'first-time-experience',
+          maintenanceType,
         });
 
-        renderStep2Preview();
+        dismiss(overlay, { reason: 'completed' });
+        goTo('equipamentos');
       });
     };
 
-    const renderStep2Preview = () => {
-      setDots(2);
-
-      contentEl.innerHTML = `
-        <div class="ftx-step">
-          <div class="ftx-eyebrow">Passo 2 de 3</div>
-          <div class="ftx-report-copy-top">Esse e o tipo de relatorio que seus clientes vao receber.</div>
-
-          <div class="ftx-report-preview-wrap" role="presentation">
-            <div class="ftx-report-preview">
-              <div class="ftx-report-header">
-                <div class="ftx-report-brand">
-                  <span class="ftx-report-logo">❄️</span>
-                  <span>CoolTrack Pro — Relatorio de Servico</span>
-                </div>
-              </div>
-
-              <div class="ftx-report-meta">
-                <div><span>Tecnico</span><strong>${Utils.escapeHtml(techName)}</strong></div>
-                <div><span>Data</span><strong>${Utils.escapeHtml(todayLabel)}</strong></div>
-                <div><span>Equipamento</span><strong>${Utils.escapeHtml(equipData.nome)}</strong></div>
-                <div><span>Tipo de servico</span><strong>Manutencao Preventiva</strong></div>
-              </div>
-
-              <table class="ftx-report-table" aria-label="Preview de relatorio">
-                <thead>
-                  <tr>
-                    <th>Servico</th>
-                    <th>Status</th>
-                    <th>Obs</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Limpeza de filtros</td>
-                    <td>Concluido</td>
-                    <td>Fluxo de ar estabilizado</td>
-                  </tr>
-                  <tr>
-                    <td>Inspecao eletrica</td>
-                    <td>Concluido</td>
-                    <td>Sem aquecimento anormal</td>
-                  </tr>
-                  <tr>
-                    <td>Verificacao de dreno</td>
-                    <td>Concluido</td>
-                    <td>Sem obstrucao detectada</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div class="ftx-signature-mock">
-                <span>Assinatura do cliente</span>
-                <div class="ftx-signature-line">Nome e assinatura</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="ftx-report-copy-bottom">Profissional. Automatico. Com a sua marca.</div>
-
-          <button class="ftx-btn-primary" id="ftx-next-2">
-            Quero gerar relatorios assim &rarr;
-          </button>
-          <button class="ftx-btn-skip" id="ftx-skip-2" type="button">
-            Pular e ir pro app
-          </button>
-        </div>`;
-
-      overlay.querySelector('#ftx-next-2').addEventListener('click', () => {
-        renderStep3Success();
-      });
-
-      overlay.querySelector('#ftx-skip-2')?.addEventListener('click', () => {
-        dismiss(overlay, { reason: 'skipped', step: 2 });
-      });
-    };
-
-    const renderStep3Success = () => {
-      setDots(3);
-      const icon = TIPO_ICON[equipData.tipo] ?? '⚙️';
-      const firstName = techName.split(' ')[0];
-
-      contentEl.innerHTML = `
-        <div class="ftx-step">
-          <div class="ftx-success-icon">✅</div>
-          <div class="ftx-eyebrow" style="text-align:center;color:var(--success)">Tudo pronto</div>
-          <div class="ftx-title" style="text-align:center">
-            ${icon} ${Utils.escapeHtml(equipData.nome)} cadastrado!
-          </div>
-          <div class="ftx-desc" style="text-align:center">
-            Agora registre o primeiro serviço, ${Utils.escapeHtml(firstName)}.<br>
-            O histórico começa aqui.
-          </div>
-
-          <div class="ftx-actions">
-            <button class="ftx-btn-primary" id="ftx-go-registro">
-              Registrar meu primeiro servico &rarr;
-            </button>
-            <button class="ftx-btn-sec" id="ftx-go-dashboard">
-              Explorar o painel
-            </button>
-          </div>
-
-          <div class="ftx-hint" style="margin-top:16px">
-            Dica: quanto mais você registra, mais preciso fica o score de eficiência
-          </div>
-        </div>`;
-
-      overlay.querySelector('#ftx-go-registro').addEventListener('click', () => {
-        dismiss(overlay);
-        requestAnimationFrame(() => {
-          goTo('registro');
-          setTimeout(() => {
-            const sel = document.getElementById('r-equip');
-            if (sel) sel.value = equipData.id;
-            const tecInput = document.getElementById('r-tecnico');
-            if (tecInput && !tecInput.value) tecInput.value = techName;
-          }, 150);
-        });
-      });
-
-      overlay.querySelector('#ftx-go-dashboard').addEventListener('click', () => {
-        dismiss(overlay);
-        goTo('inicio');
-        setTimeout(() => {
-          import('../../views/dashboard.js').then(({ renderDashboard, updateHeader }) => {
-            updateHeader();
-            renderDashboard();
-          });
-        }, 250);
-      });
-    };
-
-    renderStep0();
+    renderStepCreateEquipment();
   },
 
-  // Chamado quando o usuário pulou e clica no banner "Complete seu cadastro".
-  // Limpa a flag de skip pra que `show()` abra o overlay normalmente de novo.
   reopen(equipamentos) {
     localStorage.removeItem(FTX_SKIP_KEY);
     this.show(equipamentos);
