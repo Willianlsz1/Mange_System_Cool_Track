@@ -348,6 +348,24 @@ describe('saveSetor validation (nome vazio)', () => {
     // setState NÃO foi chamado (não persiste)
     expect(setStateMock).not.toHaveBeenCalled();
   });
+
+  it('não mostra erro imediatamente ao abrir; mostra no blur após interação vazia', async () => {
+    const { initSetorColorPicker } = await import('../ui/views/equipamentos.js');
+    const input = document.getElementById('setor-nome');
+    const err = document.getElementById('setor-nome-err');
+
+    initSetorColorPicker();
+    expect(err.hidden).toBe(true);
+
+    input.value = 'A';
+    input.dispatchEvent(new Event('input'));
+    input.value = '';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('blur'));
+
+    expect(err.hidden).toBe(false);
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

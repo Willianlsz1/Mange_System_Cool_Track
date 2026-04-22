@@ -54,7 +54,10 @@ export function renderShellModals() {
               <span class="plus-badge plus-badge--inline" aria-hidden="true">PLUS</span>
             </div>
             <p class="nameplate-cta__sub" id="nameplate-cta-sub">
-              A IA preenche tipo, fluido e marca/modelo pra você.
+              A IA tenta preencher os principais dados da etiqueta. Você revisa antes de aplicar.
+            </p>
+            <p class="nameplate-cta__hint" id="nameplate-cta-hint">
+              Dica: etiqueta nítida, sem reflexo, inteira no quadro e câmera mais próxima.
             </p>
           </div>
           <div class="nameplate-cta__action">
@@ -133,12 +136,23 @@ export function renderShellModals() {
               </div>
             </div>
             <p class="nameplate-scan__result-sub" id="nameplate-scan-result-sub">
-              Revise os campos preenchidos e complete os que faltaram.
+              Revise os dados encontrados antes de aplicar no cadastro.
             </p>
-            <button type="button" class="btn btn--primary btn--sm nameplate-scan__result-btn"
-              data-action="nameplate-scan-review" id="nameplate-scan-review">
-              Ver campos preenchidos →
-            </button>
+            <ul class="nameplate-scan__review-list" id="nameplate-scan-review-list"></ul>
+            <div class="nameplate-scan__result-actions">
+              <button type="button" class="btn btn--primary btn--sm nameplate-scan__result-btn"
+                id="nameplate-scan-apply">
+                Aplicar dados encontrados
+              </button>
+              <button type="button" class="btn btn--ghost btn--sm nameplate-scan__result-btn"
+                id="nameplate-scan-retry">
+                Tentar outra foto
+              </button>
+              <button type="button" class="btn btn--ghost btn--sm nameplate-scan__result-btn"
+                id="nameplate-scan-manual">
+                Continuar sem foto
+              </button>
+            </div>
           </div>
         </div>
 
@@ -559,7 +573,7 @@ export function renderShellModals() {
               Pro · Setores
             </span>
             <h2 class="setor-modal__title" id="modal-add-setor-title">Novo setor</h2>
-            <p class="setor-modal__subtitle">Agrupe equipamentos por local ou área de trabalho.</p>
+            <p class="setor-modal__subtitle">Organize seus equipamentos por local ou área. Leva poucos segundos.</p>
           </div>
           <button type="button" class="setor-modal__close" data-action="close-modal" data-id="modal-add-setor" aria-label="Fechar">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -594,13 +608,32 @@ export function renderShellModals() {
           </div>
         </div>
 
+        <!-- DESCRIÇÃO -->
+        <div class="setor-modal__field">
+          <div class="setor-modal__field-head">
+            <label for="setor-descricao" class="setor-modal__label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              Descrição
+              <span class="setor-modal__label-opt">(opcional)</span>
+            </label>
+            <span class="setor-modal__counter" id="setor-descricao-counter" aria-live="polite">0/120</span>
+          </div>
+          <textarea
+            id="setor-descricao"
+            class="setor-modal__input setor-modal__input--textarea"
+            rows="2"
+            maxlength="140"
+            placeholder="Ex: Bloco A, térreo · 12 equipamentos."
+          ></textarea>
+        </div>
+
         <!-- COR -->
         <div class="setor-modal__field">
           <div class="setor-modal__field-head">
             <span class="setor-modal__label">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 15.8l-1.8-4.6L6 9.4l4.2-1.8L12 3z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg>
-              Cor do setor
-              <span class="setor-modal__label-req" aria-hidden="true">*</span>
+              Cor de identificação
+              <span class="setor-modal__label-opt">(opcional)</span>
             </span>
             <span class="setor-modal__color-readout">
               <span class="setor-modal__color-name" id="setor-color-name">Ciano</span>
@@ -673,46 +706,23 @@ export function renderShellModals() {
           <input type="hidden" id="setor-cor" value="#00c8e8" />
         </div>
 
-        <!-- DESCRIÇÃO -->
-        <div class="setor-modal__field">
-          <div class="setor-modal__field-head">
-            <label for="setor-descricao" class="setor-modal__label">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-              Descrição
-              <span class="setor-modal__label-opt">(opcional)</span>
-            </label>
-            <span class="setor-modal__counter" id="setor-descricao-counter" aria-live="polite">0/120</span>
-          </div>
-          <textarea
-            id="setor-descricao"
-            class="setor-modal__input setor-modal__input--textarea"
-            rows="2"
-            maxlength="140"
-            placeholder="Ex: Ala cirúrgica com 12 splits e 2 fan coils."
-          ></textarea>
-        </div>
-
         <!-- RESPONSÁVEL -->
         <div class="setor-modal__field">
-          <div class="setor-modal__field-head">
-            <label for="setor-responsavel" class="setor-modal__label">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
-              Responsável
-              <span class="setor-modal__label-opt">(opcional)</span>
-            </label>
-          </div>
-          <div class="setor-modal__input-wrap">
-            <span class="setor-modal__input-icon" aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
-            </span>
-            <input
-              id="setor-responsavel"
-              class="setor-modal__input setor-modal__input--with-icon"
-              type="text"
-              maxlength="120"
-              placeholder="Ex: Dr. Carlos Silva · Enfª Ana Souza"
-            />
-          </div>
+          <details class="setor-modal__optional" id="setor-optional-responsavel">
+            <summary class="setor-modal__optional-summary">Adicionar responsável (opcional)</summary>
+            <div class="setor-modal__input-wrap">
+              <span class="setor-modal__input-icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
+              </span>
+              <input
+                id="setor-responsavel"
+                class="setor-modal__input setor-modal__input--with-icon"
+                type="text"
+                maxlength="120"
+                placeholder="Ex: Carlos (manutenção)"
+              />
+            </div>
+          </details>
         </div>
 
         <!-- PREVIEW -->
@@ -745,9 +755,9 @@ export function renderShellModals() {
                 <div class="setor-modal__preview-status-row">
                   <span class="setor-modal__preview-status-pill">
                     <span class="setor-modal__preview-status-dot" aria-hidden="true"></span>
-                    <span id="setor-modal-preview-status-label">Aguardando dados</span>
+                    <span id="setor-modal-preview-status-label">Este setor começará vazio</span>
                   </span>
-                  <span class="setor-modal__preview-status-meta" id="setor-modal-preview-status-meta">—</span>
+                  <span class="setor-modal__preview-status-meta" id="setor-modal-preview-status-meta">Você poderá adicionar equipamentos depois</span>
                 </div>
                 <div class="setor-modal__preview-bar"><span class="setor-modal__preview-bar-fill" id="setor-modal-preview-bar"></span></div>
               </div>

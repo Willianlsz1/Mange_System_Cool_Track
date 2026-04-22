@@ -1,6 +1,5 @@
 import { on } from '../../../core/events.js';
 import { Toast } from '../../../core/toast.js';
-import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
 // PDFGenerator é dynamic-imported dentro do handler pra evitar bundlar
 // jspdf + jspdf-autotable + pako (~150 KB gz) no chunk principal. Só baixa
@@ -69,7 +68,7 @@ async function resolvePlanAndUsage(userId) {
 
 function buildPdfLimitMessage(planCode, pdfLimit) {
   if (planCode === PLAN_CODE_FREE) {
-    return `Você atingiu ${pdfLimit} PDFs este mês no plano Free. Faça upgrade para Plus (100/mês, sem marca d'água) ou Pro (ilimitado).`;
+    return "No plano Free os relatórios saem com marca d'água. Faça upgrade para Plus (120/mês, sem marca d'água) ou Pro (ilimitado).";
   }
   if (planCode === PLAN_CODE_PLUS) {
     return `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`;
@@ -114,7 +113,7 @@ async function ensureReportBudget({
   const planCode = getEffectivePlan(profile);
   trackEvent(attemptedEvent, { isGuest: false, plan: planCode });
 
-  // ── Quota mensal: Free=5 (com marca d'água), Plus=100, Pro=ilimitado ─
+  // ── Quota mensal: Free=ilimitado (com marca d'água), Plus=120, Pro=ilimitado ─
   const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
   const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
   const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
@@ -267,26 +266,6 @@ async function executeWhatsAppShare(filters) {
       title: 'Limite mensal atingido',
       message: upgradeMessage,
     });
-    return false;
-  }
-
-  // Confirmação explícita ANTES de abrir wa.me.
-  const limitHint = Number.isFinite(whatsappLimit)
-    ? ` Isso consumirá 1 de ${whatsappLimit} envios do seu plano este mês.`
-    : '';
-  const confirmed = await CustomConfirm.show(
-    'Abrir WhatsApp?',
-    `O WhatsApp será aberto em uma nova aba com o resumo pronto pra enviar.${limitHint}`,
-    {
-      confirmLabel: 'Abrir WhatsApp',
-      cancelLabel: 'Cancelar',
-      tone: 'primary',
-      focus: 'confirm',
-    },
-  );
-
-  if (!confirmed) {
-    trackEvent('whatsapp_share_canceled', { plan: planCode });
     return false;
   }
 

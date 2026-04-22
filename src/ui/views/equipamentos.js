@@ -1715,6 +1715,17 @@ function _setSaveBtnLabel(text) {
   if (label) label.textContent = text;
 }
 
+function _setSetorNomeValidationState({ showError, focus = false, markTouched = false } = {}) {
+  const err = Utils.getEl('setor-nome-err');
+  const nomeInput = Utils.getEl('setor-nome');
+  if (err) err.hidden = !showError;
+  if (nomeInput) {
+    if (markTouched) nomeInput.dataset.touched = '1';
+    nomeInput.setAttribute('aria-invalid', showError ? 'true' : 'false');
+    if (focus) nomeInput.focus();
+  }
+}
+
 // Estado do fluxo de edição do setor. Quando preenchido, saveSetor()
 // atualiza em vez de criar.
 let _editingSetorId = null;
@@ -1749,12 +1760,11 @@ export function clearSetorEditingState() {
   }
 
   // Esconde erro inline
-  const err = Utils.getEl('setor-nome-err');
-  if (err) err.hidden = true;
+  _setSetorNomeValidationState({ showError: false });
   const nomeInput = Utils.getEl('setor-nome');
   if (nomeInput) {
-    nomeInput.setAttribute('aria-invalid', 'false');
     delete nomeInput.dataset.touched;
+    delete nomeInput.dataset.interacted;
   }
 
   _syncSetorModalPreview();
@@ -1794,12 +1804,11 @@ export function openEditSetor(id) {
   _setSaveBtnLabel('Salvar alterações');
 
   // Esconde erro inline
-  const err = Utils.getEl('setor-nome-err');
-  if (err) err.hidden = true;
+  _setSetorNomeValidationState({ showError: false });
   const nomeInput = Utils.getEl('setor-nome');
   if (nomeInput) {
-    nomeInput.setAttribute('aria-invalid', 'false');
     delete nomeInput.dataset.touched;
+    delete nomeInput.dataset.interacted;
   }
 
   _syncSetorModalPreview();
@@ -1839,6 +1848,19 @@ function _syncSetorModalPreview() {
     const pass = ratio >= 4.5;
     contrastEl.dataset.aa = pass ? 'pass' : 'warn';
     contrastEl.textContent = `${pass ? 'AA ✓' : 'AA ⚠'} · ${ratio.toFixed(1)}:1`;
+  }
+
+  const statusLabelEl = Utils.getEl('setor-modal-preview-status-label');
+  const statusMetaEl = Utils.getEl('setor-modal-preview-status-meta');
+  if (statusLabelEl) {
+    statusLabelEl.textContent = nome
+      ? 'Pronto para receber equipamentos'
+      : 'Este setor começará vazio';
+  }
+  if (statusMetaEl) {
+    statusMetaEl.textContent = nome
+      ? 'Você poderá mover equipamentos para cá a qualquer momento'
+      : 'Você poderá adicionar equipamentos depois';
   }
 
   // Pulso visual quando muda
@@ -1901,20 +1923,22 @@ export function initSetorColorPicker() {
     const nomeInput = Utils.getEl('setor-nome');
     if (nomeInput) {
       nomeInput.addEventListener('input', () => {
-        const err = Utils.getEl('setor-nome-err');
+        nomeInput.dataset.interacted = '1';
         const isEmpty = !nomeInput.value.trim();
         const wasTouched = nomeInput.dataset.touched === '1';
-        if (err) {
-          if (isEmpty && wasTouched) {
-            err.hidden = false;
-            nomeInput.setAttribute('aria-invalid', 'true');
-          } else {
-            err.hidden = true;
-            nomeInput.setAttribute('aria-invalid', 'false');
-          }
-        }
+        _setSetorNomeValidationState({ showError: isEmpty && wasTouched });
         _syncSetorModalPreview();
         _syncSetorModalCounters();
+      });
+      nomeInput.addEventListener('blur', () => {
+        const isEmpty = !nomeInput.value.trim();
+        const wasTouched = nomeInput.dataset.touched === '1';
+        const interacted = nomeInput.dataset.interacted === '1';
+        if (!isEmpty || (!wasTouched && !interacted)) return;
+        _setSetorNomeValidationState({
+          showError: true,
+          markTouched: true,
+        });
       });
     }
     const descInput = Utils.getEl('setor-descricao');
@@ -1935,14 +1959,7 @@ export async function saveSetor() {
     // Validação inline: mostra erro abaixo do input + foco + toast leve.
     // Marca o campo como "touched" pra que o erro passe a reaparecer
     // automaticamente se o usuário esvaziar o input depois de digitar.
-    const err = Utils.getEl('setor-nome-err');
-    if (err) err.hidden = false;
-    const nomeInput = Utils.getEl('setor-nome');
-    if (nomeInput) {
-      nomeInput.dataset.touched = '1';
-      nomeInput.setAttribute('aria-invalid', 'true');
-      nomeInput.focus();
-    }
+    _setSetorNomeValidationState({ showError: true, focus: true, markTouched: true });
     Toast.warning('Digite um nome para o setor.');
     return false;
   }
@@ -2245,10 +2262,10 @@ export async function saveEquip() {
         // Visitante (sem conta): flow "salve seus dados" (criar conta).
         GuestConversionModal.open({ reason: 'limit_equipamentos', source: 'save-equip' });
       } else if (planLimit.planCode === 'pro') {
-        // Pro no teto (30 equipamentos): mensagem específica do Pro.
+        // Fallback defensivo para eventuais limites customizados de conta Pro.
         GuestConversionModal.open({ reason: 'limit_pro_equipamentos', source: 'save-equip-pro' });
       } else {
-        // Free autenticado: flow de UPGRADE para Pro (não "criar conta", já tem).
+        // Free autenticado: flow de UPGRADE para Plus (não "criar conta", já tem).
         GuestConversionModal.open({
           reason: 'limit_free_equipamentos',
           source: 'save-equip-free',

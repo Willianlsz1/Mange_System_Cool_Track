@@ -33,6 +33,7 @@ import { PLAN_CATALOG, PLAN_CODE_FREE } from '../../core/plans/subscriptionPlans
 
 const FREE_EQUIP_LIMIT = PLAN_CATALOG[PLAN_CODE_FREE].limits.equipamentos;
 const FREE_REPORT_LIMIT = PLAN_CATALOG[PLAN_CODE_FREE].limits.registros;
+const HAS_FREE_REPORT_LIMIT = Number.isFinite(FREE_REPORT_LIMIT) && FREE_REPORT_LIMIT > 0;
 
 // Chave do localStorage que marca que o modal one-shot já foi exibido.
 // Mantemos granularidade por tipo de limite para que o usuário que bate no
@@ -100,7 +101,7 @@ export const OverflowBanner = {
     const reportCount = countRegistrosThisMonth(Array.isArray(registros) ? registros : []);
 
     const equipOver = equipCount > FREE_EQUIP_LIMIT;
-    const reportOver = reportCount > FREE_REPORT_LIMIT;
+    const reportOver = HAS_FREE_REPORT_LIMIT && reportCount > FREE_REPORT_LIMIT;
 
     // Tipo dominante pra copy do banner. Se os dois estiverem acima, damos
     // preferência a equipamentos (limite estrutural, não mensal) porque
@@ -264,16 +265,16 @@ function buildModalCopy(state) {
     return {
       title: 'Seu parque passou dos 3 equipamentos',
       description:
-        'O plano grátis permite 3 equipamentos cadastrados. Você continua vendo os atuais, mas para cadastrar novos ou registrar serviços livremente, o Plus destrava até 15 equipamentos e registros ilimitados.',
+        'O plano grátis permite 3 equipamentos cadastrados. Você continua vendo os atuais, mas para cadastrar novos o Plus destrava até 15 equipamentos.',
       ctaLabel: 'Ver o plano Plus',
       highlightPlan: 'plus',
     };
   }
   if (state.limitType === 'registros') {
     return {
-      title: 'Você chegou a 5 registros este mês',
+      title: 'Você chegou ao limite de registros do plano grátis',
       description:
-        'O plano grátis cobre 5 registros de serviço por mês. No primeiro dia do próximo mês o contador zera; se quiser continuar registrando agora sem se preocupar com o limite, o Plus tem registros ilimitados.',
+        'Seu plano grátis atual já permite registros ilimitados. Se esta mensagem aparecer, atualize o app para sincronizar as novas regras de plano.',
       ctaLabel: 'Ver o plano Plus',
       highlightPlan: 'plus',
     };
@@ -281,7 +282,7 @@ function buildModalCopy(state) {
   return {
     title: 'Você ultrapassou os limites do plano grátis',
     description:
-      'Tanto equipamentos quanto registros deste mês passaram do limite do plano grátis. O Plus cobre até 15 equipamentos e registros ilimitados — o Pro cobre frota grande com equipamentos ilimitados.',
+      'Você ultrapassou os limites do plano grátis. O Plus cobre até 15 equipamentos e o Pro cobre frota grande com equipamentos ilimitados.',
     ctaLabel: 'Ver planos',
     highlightPlan: 'plus',
   };

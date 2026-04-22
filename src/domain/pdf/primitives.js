@@ -36,15 +36,15 @@ export function roundRect(doc, x, y, w, h, r, color) {
 // jurídicos e contábeis — diluído o bastante pra não obscurecer dado algum.
 export function drawWatermarkAllPages(doc, pageWidth, pageHeight, options = {}) {
   const text = options.text || 'COOLTRACK FREE';
-  const opacity = typeof options.opacity === 'number' ? options.opacity : 0.08;
+  const opacity = typeof options.opacity === 'number' ? options.opacity : 0.045;
   const angle = typeof options.angle === 'number' ? options.angle : -30;
-  const fontSize = typeof options.fontSize === 'number' ? options.fontSize : 22;
+  const fontSize = typeof options.fontSize === 'number' ? options.fontSize : 18;
   const color = options.color || PDF_COLORS.primary;
 
   // Espaçamento da malha (mm). Menor = mais denso; ajuste equilibra saturação
   // com densidade visual pra não parecer texto no meio da página.
-  const stepX = typeof options.stepX === 'number' ? options.stepX : 70;
-  const stepY = typeof options.stepY === 'number' ? options.stepY : 40;
+  const stepX = typeof options.stepX === 'number' ? options.stepX : 120;
+  const stepY = typeof options.stepY === 'number' ? options.stepY : 75;
 
   const totalPages = doc.internal.getNumberOfPages();
   const supportsGState = typeof doc.GState === 'function' && typeof doc.setGState === 'function';

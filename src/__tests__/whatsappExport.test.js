@@ -13,7 +13,7 @@ vi.mock('../features/profile.js', () => ({
   },
 }));
 
-import { WhatsAppExport } from '../domain/whatsapp.js';
+import { __testables, WhatsAppExport } from '../domain/whatsapp.js';
 
 describe('WhatsAppExport', () => {
   beforeEach(() => {
@@ -34,13 +34,43 @@ describe('WhatsAppExport', () => {
     profileGetMock.mockReturnValue({ nome: 'Carlos', empresa: 'Frio Sul' });
   });
 
-  it('inclui footer viral ao gerar texto', () => {
+  it('gera mensagem curta e profissional para cliente', () => {
     const text = WhatsAppExport.generateText();
 
-    expect(text).toContain('---');
-    expect(text).toContain('Relatório gerado por CoolTrack Pro');
-    expect(text).toContain('Gestão de manutenção para técnicos HVAC');
-    expect(text).toContain('cooltrackpro.com.br');
+    expect(text).toContain('Olá! Segue o resumo da manutenção');
+    expect(text).toContain('equipamento Split Sala 1');
+    expect(text).toContain('Serviço: Preventiva.');
+    expect(text).toContain('Qualquer dúvida, estou à disposição.');
+    expect(text).toContain('Atenciosamente,');
+  });
+
+  it('resume múltiplos registros sem listar item a item', () => {
+    getStateMock.mockReturnValueOnce({
+      registros: [
+        {
+          id: 'r1',
+          equipId: 'eq-1',
+          status: 'ok',
+          tipo: 'Limpeza de filtros',
+          tecnico: 'Ana',
+          data: '2026-04-01T10:00',
+        },
+        {
+          id: 'r2',
+          equipId: 'eq-1',
+          status: 'ok',
+          tipo: 'Inspeção geral',
+          tecnico: 'Ana',
+          data: '2026-04-01T09:00',
+        },
+      ],
+    });
+
+    const text = WhatsAppExport.generateText({ filtEq: 'eq-1' });
+
+    expect(text).toContain('Foram registrados 2 atendimentos no período.');
+    expect(text).toContain('Principais serviços: Limpeza de filtros e Inspeção geral.');
+    expect(text).not.toContain('\n1. ');
   });
 
   it('mantem envio por wa.me com texto codificado', () => {
@@ -51,5 +81,10 @@ describe('WhatsAppExport', () => {
     expect(ok).toBe(true);
     expect(openSpy).toHaveBeenCalledTimes(1);
     expect(openSpy.mock.calls[0][0]).toContain('https://wa.me/?text=');
+  });
+
+  it('classifica tipos conhecidos com fallback', () => {
+    expect(__testables.classifyService('Carga de gás refrigerante')).toBe('carga_gas');
+    expect(__testables.classifyService('Serviço customizado')).toBe('outros');
   });
 });
