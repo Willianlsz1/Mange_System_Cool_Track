@@ -39,8 +39,13 @@ function buildReasonMessage(reason) {
   if (reason === 'limit_whatsapp')
     return 'Você atingiu o limite mensal de compartilhamentos no plano Free.';
   if (reason === 'limit_pro_equipamentos')
-    return 'Você já cadastrou 30 equipamentos — o limite do plano Pro individual. Para gerenciar frotas maiores, estamos preparando o plano Empresa.';
+    return 'Você atingiu o limite de equipamentos disponível para sua conta atual. Para ampliar sua operação, fale com nosso suporte.';
   return 'Crie sua conta para não perder seus registros e continuar gerenciando seus equipamentos';
+}
+
+function resolveUpgradePlan(reason) {
+  if (reason === 'limit_free_equipamentos') return 'plus';
+  return 'pro';
 }
 
 function buildPreviewHtml(preview) {
@@ -81,12 +86,14 @@ export const GuestConversionModal = {
         reason === 'limit_free_equipamentos' ||
         reason === 'limit_free_registros');
 
+    const upgradePlan = resolveUpgradePlan(reason);
+    const upgradePlanLabel = upgradePlan === 'plus' ? 'Plus' : 'Pro';
     const resolvedTitle =
       title ||
       (isProLimit
         ? 'Limite do plano Pro atingido'
         : isUpgrade
-          ? 'Faça upgrade para o plano Pro'
+          ? `Faça upgrade para o plano ${upgradePlanLabel}`
           : 'Salve seus dados e continue usando');
     const resolvedMessage = message || buildReasonMessage(reason);
 
@@ -106,7 +113,7 @@ export const GuestConversionModal = {
            </div>
            <div class="guest-conv-pro-limit-info__row">
              <span class="guest-conv-pro-limit-info__label">Equipamentos cadastrados</span>
-             <span class="guest-conv-pro-limit-info__value">30 / 30</span>
+             <span class="guest-conv-pro-limit-info__value">Limite operacional atingido</span>
            </div>
            <div class="guest-conv-pro-limit-info__row">
              <span class="guest-conv-pro-limit-info__label">Próximo passo</span>
@@ -123,12 +130,19 @@ export const GuestConversionModal = {
              </ul>
            </div>
            <div class="guest-conv-plan__card guest-conv-plan__card--pro">
-             <span class="guest-conv-plan__label guest-conv-plan__label--pro">Plano Pro</span>
+             <span class="guest-conv-plan__label guest-conv-plan__label--pro">Plano ${upgradePlanLabel}</span>
              <ul class="guest-conv-plan__list">
-               <li>Equipamentos ilimitados</li>
+               ${
+                 upgradePlan === 'plus'
+                   ? `<li>Até 15 equipamentos</li>
                <li>Registros de serviço ilimitados</li>
                <li>Todo o histórico de manutenções</li>
-               <li>PDF, WhatsApp e setores</li>
+               <li>PDF profissional sem marca d'água</li>`
+                   : `<li>Equipamentos ilimitados</li>
+               <li>Registros de serviço ilimitados</li>
+               <li>Todo o histórico de manutenções</li>
+               <li>PDF, WhatsApp e setores</li>`
+               }
              </ul>
            </div>
          </div>`;
@@ -144,7 +158,7 @@ export const GuestConversionModal = {
             isProLimit
               ? `<button type="button" class="landing-btn landing-btn--ghost" data-action="dismiss">Entendido</button>`
               : isUpgrade
-                ? `<button type="button" class="landing-btn landing-btn--primary" data-action="pricing">Fazer upgrade para o Pro</button>
+                ? `<button type="button" class="landing-btn landing-btn--primary" data-action="pricing">Fazer upgrade para o ${upgradePlanLabel}</button>
                    <button type="button" class="landing-btn landing-btn--ghost" data-action="dismiss">Agora não</button>`
                 : `<button type="button" class="landing-btn landing-btn--primary" data-action="google">Salvar com Google</button>
                    <button type="button" class="landing-btn landing-btn--ghost" data-action="email">Criar conta com e-mail</button>`
@@ -167,7 +181,7 @@ export const GuestConversionModal = {
       overlay.querySelector('[data-action="pricing"]')?.addEventListener('click', async () => {
         closeModal({ converted: true, trigger });
         const { goTo } = await import('../../core/router.js');
-        goTo('pricing', { highlightPlan: 'pro' });
+        goTo('pricing', { highlightPlan: upgradePlan });
       });
       overlay.querySelector('[data-action="dismiss"]')?.addEventListener('click', () => {
         closeModal({ converted: false, dismissEvent: 'guest_modal_dismissed', trigger });

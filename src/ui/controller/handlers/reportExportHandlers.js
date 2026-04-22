@@ -69,7 +69,7 @@ async function resolvePlanAndUsage(userId) {
 
 function buildPdfLimitMessage(planCode, pdfLimit) {
   if (planCode === PLAN_CODE_FREE) {
-    return `Você atingiu ${pdfLimit} PDFs este mês no plano Free. Faça upgrade para Plus (100/mês, sem marca d'água) ou Pro (ilimitado).`;
+    return "No plano Free os relatórios saem com marca d'água. Faça upgrade para Plus (120/mês, sem marca d'água) ou Pro (ilimitado).";
   }
   if (planCode === PLAN_CODE_PLUS) {
     return `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`;
@@ -114,7 +114,7 @@ async function ensureReportBudget({
   const planCode = getEffectivePlan(profile);
   trackEvent(attemptedEvent, { isGuest: false, plan: planCode });
 
-  // ── Quota mensal: Free=5 (com marca d'água), Plus=100, Pro=ilimitado ─
+  // ── Quota mensal: Free=ilimitado (com marca d'água), Plus=120, Pro=ilimitado ─
   const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
   const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
   const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
