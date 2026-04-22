@@ -19,7 +19,7 @@ import { trackEvent } from '../../core/telemetry.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { validateRegistroPayload } from '../../core/inputValidation.js';
 import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
-import { PostSaveRegistroToast } from '../components/postSaveRegistroToast.js';
+import { PostSaveRegistroCompletion } from '../components/postSaveRegistroCompletion.js';
 
 // O meter de progresso vive estático dentro do hero do template.
 // Apontamos pro hero + o contador numérico ao invés de injetar markup na hora.
@@ -689,6 +689,12 @@ export async function saveRegistro() {
     }
   }
 
+  const operationalStatus = getOperationalStatus({
+    status,
+    lastStatus: status,
+    ultimoRegistro: { status },
+  });
+
   setState((prev) => {
     const currentTecs = prev.tecnicos || [];
     const updatedTecs =
@@ -721,11 +727,13 @@ export async function saveRegistro() {
       ],
       equipamentos: prev.equipamentos.map((e) => {
         if (e.id !== equipId) return e;
-        const op = getOperationalStatus({ status, lastStatus: status, ultimoRegistro: { status } });
         return {
           ...e,
-          status: op.uiStatus === 'unknown' ? e.status || 'ok' : op.uiStatus,
-          statusDescricao: op.label,
+          status:
+            operationalStatus.uiStatus === 'unknown'
+              ? e.status || 'ok'
+              : operationalStatus.uiStatus,
+          statusDescricao: operationalStatus.label,
         };
       }),
     };
@@ -735,27 +743,23 @@ export async function saveRegistro() {
   _saveLastClient({ clienteNome, clienteDocumento, localAtendimento, clienteContato });
   clearRegistro();
 
-  // Feedback pós-save: toast rico com CTAs pra fechar o ciclo "salvou →
-  // manda pro cliente". Substitui o Toast.success genérico + o hint viral
-  // que dispara a cada 3 registros (agora redundante — todo save já oferece
-  // o caminho). Ambos os CTAs só NAVEGAM pra view de relatório pré-filtrada;
-  // o consumo de quota continua acontecendo no clique do export real.
-  const eqForToast = equipamentos.find((e) => e.id === equipId) || null;
-  const toastShown = PostSaveRegistroToast.show({
-    equipId,
-    equipName: eqForToast?.nome || null,
+  const eqForSummary = equipamentos.find((e) => e.id === equipId) || findEquip(equipId) || null;
+  const afterAction = (route, params = {}) => {
+    goTo(route, params);
+    if (isGuest) {
+      GuestConversionModal.open({ reason: 'save_attempt', source: 'save-registro' });
+    }
+  };
+
+  PostSaveRegistroCompletion.show({
+    equipName: eqForSummary?.nome || 'Equipamento',
+    statusLabel: operationalStatus.label || 'Atualizado',
+    nextMaintenance: proxima || '',
+    onWhatsapp: () => afterAction('relatorio', { equipId, intent: 'whatsapp' }),
+    onDownloadPdf: () => afterAction('relatorio', { equipId, intent: 'pdf' }),
+    onViewReport: () => afterAction('relatorio', { equipId }),
+    onClose: () => afterAction('historico'),
   });
-  // Fallback: se não tinha equipId (edge case) ou o toast recusou renderizar,
-  // volta pro feedback simples — user ainda precisa saber que salvou.
-  if (!toastShown) {
-    Toast.success('Serviço registrado com sucesso.');
-  }
-
-  goTo('historico');
-
-  if (isGuest) {
-    GuestConversionModal.open({ reason: 'save_attempt', source: 'save-registro' });
-  }
 
   return true;
 }

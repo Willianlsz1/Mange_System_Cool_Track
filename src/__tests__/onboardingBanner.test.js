@@ -38,7 +38,7 @@ describe('OnboardingBanner', () => {
     const banner = document.getElementById('onboarding-banner');
     expect(banner).toBeTruthy();
     // Copy específico do estado skipped
-    expect(banner.textContent).toContain('Complete seu cadastro');
+    expect(banner.textContent).toContain('Ative seu primeiro equipamento');
     // Botão é o "Continuar" com id próprio (não o data-action do modal)
     expect(document.getElementById('onboarding-banner-resume')).toBeTruthy();
     expect(banner.querySelector('[data-action="open-modal"]')).toBeFalsy();
@@ -50,7 +50,7 @@ describe('OnboardingBanner', () => {
     const banner = document.getElementById('onboarding-banner');
     expect(banner).toBeTruthy();
     // Copy padrão (sem skip)
-    expect(banner.textContent).toContain('Cadastre seu primeiro equipamento');
+    expect(banner.textContent).toContain('Comece por 1 equipamento real');
     // Botão padrão com data-action de abrir modal de equipamento
     expect(banner.querySelector('[data-action="open-modal"]')).toBeTruthy();
     expect(document.getElementById('onboarding-banner-resume')).toBeFalsy();
