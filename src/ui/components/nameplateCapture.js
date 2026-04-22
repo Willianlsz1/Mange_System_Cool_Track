@@ -81,8 +81,13 @@ const ID_SCAN_DETECTED = 'nameplate-scan-detected';
 const ID_SCAN_TOTAL = 'nameplate-scan-total';
 const ID_SCAN_RESULT_PERCENT = 'nameplate-scan-result-percent';
 const ID_SCAN_RESULT_SUB = 'nameplate-scan-result-sub';
+const ID_SCAN_REVIEW_LIST = 'nameplate-scan-review-list';
+const ID_SCAN_APPLY = 'nameplate-scan-apply';
+const ID_SCAN_RETRY = 'nameplate-scan-retry';
+const ID_SCAN_MANUAL = 'nameplate-scan-manual';
 
-const DEFAULT_SUB = 'A IA preenche tipo, fluido, marca/modelo e mais 13 campos pra você.';
+const DEFAULT_SUB =
+  'A IA tenta preencher os principais dados da etiqueta. Você revisa antes de aplicar.';
 // Placeholder mais curto e acionável — o contexto ("não encontrei na etiqueta")
 // foi pro badge no label, pra liberar o espaço do placeholder pra CTA pura.
 const NOT_DETECTED_PLACEHOLDER = 'Toque para completar';
@@ -121,6 +126,23 @@ const AI_FIELD_IDS = [
   ID_ANO_FABRICACAO,
 ];
 const AI_FIELD_TOTAL = AI_FIELD_IDS.length + 1; // +1 porque "marca" e "modelo" viram um string só, mas conceitualmente são 2 campos da etiqueta
+const REVIEW_FIELDS = [
+  { key: 'marcaModelo', label: 'Marca / modelo' },
+  { key: 'tipo', label: 'Tipo' },
+  { key: 'fluido', label: 'Fluido' },
+  { key: 'tensao', label: 'Tensão' },
+  { key: 'frequenciaHz', label: 'Frequência' },
+  { key: 'fases', label: 'Fases' },
+  { key: 'capacidadeBtu', label: 'Capacidade BTU' },
+  { key: 'potenciaW', label: 'Potência' },
+  { key: 'correnteA', label: 'Corrente refrig.' },
+  { key: 'correnteAquecA', label: 'Corrente aquec.' },
+  { key: 'numeroSerie', label: 'Nº série' },
+  { key: 'pressaoSuccaoMpa', label: 'Pressão sucção' },
+  { key: 'pressaoDescargaMpa', label: 'Pressão descarga' },
+  { key: 'grauProtecao', label: 'Grau proteção' },
+  { key: 'anoFabricacao', label: 'Ano fabricação' },
+];
 
 /**
  * Aplica o gate de plano no CTA. Três estados possíveis:
@@ -195,7 +217,7 @@ function resolveCtaPresentation({ isPlusOrPro, trialRemaining }) {
   if (remaining > 0) {
     return {
       state: 'trial',
-      subtitle: `🎁 Teste grátis — ${remaining === 1 ? '1 análise este mês' : `${remaining} análises este mês`}. A IA preenche os 16 campos da etiqueta por você.`,
+      subtitle: `🎁 Teste grátis — ${remaining === 1 ? '1 análise este mês' : `${remaining} análises este mês`}. A IA tenta identificar os principais dados da etiqueta.`,
       trialRemaining: remaining,
     };
   }
@@ -229,6 +251,7 @@ export function resetNameplateCtaState() {
     }
   }
   hideScanOverlay();
+  pendingAnalysisFields = null;
   // Limpa placeholders "não detectado" que possam ter ficado de uma abertura anterior.
   clearNotDetectedMarks();
 }
@@ -237,6 +260,7 @@ export function resetNameplateCtaState() {
 
 let boundOnce = false;
 let progressInterval = null;
+let pendingAnalysisFields = null;
 
 function bindOnce() {
   if (boundOnce) return;
@@ -274,13 +298,45 @@ function bindOnce() {
     });
   }
 
-  // Botão "Ver campos preenchidos" do result panel: fecha o overlay e
-  // rola a página até os campos preenchidos.
-  const reviewBtn = document.getElementById('nameplate-scan-review');
-  if (reviewBtn) {
-    reviewBtn.addEventListener('click', () => {
+  const applyBtn = document.getElementById(ID_SCAN_APPLY);
+  if (applyBtn) {
+    applyBtn.addEventListener('click', () => {
+      if (!pendingAnalysisFields) return;
+      const fields = pendingAnalysisFields;
+      const filledCount = countFilled(fields);
+      const detectedPercent = Math.round((filledCount / AI_FIELD_TOTAL) * 100);
+
+      applyFieldsToForm(fields);
+      flashEtiquetaStatus(filledCount);
+      showAiBanner(filledCount);
       hideScanOverlay();
+      pendingAnalysisFields = null;
       scrollToDetails();
+      Toast.success(
+        filledCount > 0
+          ? `Dados aplicados: ${filledCount}/${AI_FIELD_TOTAL} campos (${detectedPercent}%).`
+          : 'Nenhum campo foi aplicado. Você pode preencher manualmente.',
+      );
+    });
+  }
+
+  const retryBtn = document.getElementById(ID_SCAN_RETRY);
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      pendingAnalysisFields = null;
+      hideScanOverlay();
+      document.getElementById(ID_FILE_INPUT)?.click();
+    });
+  }
+
+  const manualBtn = document.getElementById(ID_SCAN_MANUAL);
+  if (manualBtn) {
+    manualBtn.addEventListener('click', () => {
+      pendingAnalysisFields = null;
+      hideScanOverlay();
+      expandStep2();
+      scrollToDetails();
+      Toast.info('Siga preenchendo manualmente. A foto é opcional.');
     });
   }
 
@@ -293,7 +349,8 @@ async function handleFile(file) {
 
   const prevState = cta.dataset.state;
   cta.dataset.state = 'busy';
-  setSubtitle('Analisando a etiqueta…');
+  setSubtitle('Analisando a etiqueta e preparando a revisão…');
+  pendingAnalysisFields = null;
 
   // Mostra overlay com thumbnail + progresso fake subindo
   await showScanOverlay(file);
@@ -310,12 +367,9 @@ async function handleFile(file) {
 
     // Transição visual: scanning → done
     setScanState('done');
-    setScanStage('Análise completa');
-    showScanResult(filledCount, detectedPercent);
-
-    applyFieldsToForm(fields);
-    flashEtiquetaStatus(filledCount);
-    showAiBanner(filledCount);
+    setScanStage('Análise concluída — revise antes de aplicar');
+    pendingAnalysisFields = fields;
+    showScanResult(fields, filledCount, detectedPercent);
 
     // Trial consumption telemetry: se a resposta traz `_trial`, o user era
     // Free e acabou de gastar 1 uso. Emite evento dedicado pra separar o
@@ -342,8 +396,8 @@ async function handleFile(file) {
 
     setSubtitle(
       filledCount > 0
-        ? `Pronto — ${filledCount}/${AI_FIELD_TOTAL} campos preenchidos. Revise antes de salvar.`
-        : 'Etiqueta lida, mas nenhum campo bateu. Confira a foto.',
+        ? `Encontramos ${filledCount}/${AI_FIELD_TOTAL} campos. Revise e aplique o que fizer sentido.`
+        : 'Encontramos poucos dados. Tente outra foto ou continue manualmente.',
     );
     // Reconcilia estado do CTA pós-análise. Se o user era Free e acabou de
     // gastar o último uso, vira 'locked' — pra próxima tentativa não passar.
@@ -355,15 +409,14 @@ async function handleFile(file) {
     }
 
     if (filledCount > 0) {
-      Toast.success(
-        `IA detectou ${filledCount}/${AI_FIELD_TOTAL} campos (${detectedPercent}%). Revise antes de salvar.`,
-      );
+      Toast.success(`Leitura concluída. Revise os dados antes de aplicar no cadastro.`);
     } else {
-      Toast.info('Etiqueta lida, mas campos não bateram com o form.');
+      Toast.info('Leitura parcial. Você pode tentar outra foto ou preencher manualmente.');
     }
   } catch (err) {
     stopFakeProgress();
     setScanState('error');
+    pendingAnalysisFields = null;
 
     const isAppErr = err instanceof NameplateAnalysisError;
     const code = isAppErr ? err.code : 'UNKNOWN';
@@ -376,6 +429,7 @@ async function handleFile(file) {
     });
 
     let stageMsg = message;
+    let fallbackMsg = 'Você pode tentar outra foto ou continuar sem foto.';
     if (code === ERR_PLAN_GATE) {
       // 3 caminhos possíveis agora que Plus e Pro também têm cap mensal:
       //   - Free teste esgotado (conversão → Plus)
@@ -413,16 +467,20 @@ async function handleFile(file) {
       setSubtitle('Sessão expirada. Faça login e tente de novo.');
       cta.dataset.state = prevState === 'locked' ? 'locked' : 'active';
     } else if (code === ERR_NOT_IDENTIFIED) {
-      stageMsg = 'Não consegui ler a etiqueta';
-      setSubtitle('Tire outra foto com mais luz e enquadramento reto.');
+      const fail = classifyNotIdentified(message);
+      stageMsg = fail.stage;
+      setSubtitle(fail.subtitle);
+      fallbackMsg = fail.fallback;
       cta.dataset.state = prevState === 'locked' ? 'locked' : 'active';
     } else if (code === ERR_UPSTREAM_BUSY) {
-      stageMsg = 'IA sobrecarregada';
-      setSubtitle('Aguarde alguns segundos e tente de novo.');
+      stageMsg = 'Leitura automática indisponível';
+      setSubtitle('A leitura automática ficou indisponível no momento.');
+      fallbackMsg = 'Tente novamente em instantes ou continue sem foto.';
       cta.dataset.state = prevState === 'locked' ? 'locked' : 'active';
     } else if (code === ERR_NETWORK) {
-      stageMsg = 'Erro de rede';
-      setSubtitle('Verifique a conexão.');
+      stageMsg = 'Sem conexão para leitura';
+      setSubtitle('Não conseguimos enviar a foto agora.');
+      fallbackMsg = 'Verifique a conexão, tente de novo ou continue manualmente.';
       cta.dataset.state = prevState === 'locked' ? 'locked' : 'active';
     } else if (code === ERR_FILE_TOO_LARGE || code === ERR_FILE_INVALID) {
       stageMsg = message;
@@ -434,10 +492,8 @@ async function handleFile(file) {
     }
 
     setScanStage(stageMsg);
+    showScanErrorResult(fallbackMsg);
     Toast.show(message, 'error');
-
-    // Auto-close do overlay em erro (3s) pra não poluir a tela.
-    setTimeout(() => hideScanOverlay(), 3000);
   }
 }
 
@@ -853,7 +909,7 @@ function startFakeProgress() {
   stopFakeProgress();
   const TARGET = 85;
   let current = 0;
-  setScanStage('Analisando etiqueta…');
+  setScanStage('Analisando imagem…');
 
   progressInterval = setInterval(() => {
     current += (TARGET - current) * 0.06;
@@ -861,9 +917,9 @@ function startFakeProgress() {
     setScanProgress(current);
 
     // Estágio vai mudando pra dar sensação de progresso real
-    if (current > 15 && current < 40) setScanStage('Lendo texto da etiqueta…');
-    else if (current >= 40 && current < 70) setScanStage('Identificando campos…');
-    else if (current >= 70) setScanStage('Cruzando com base de modelos…');
+    if (current > 15 && current < 40) setScanStage('Identificando dados da etiqueta…');
+    else if (current >= 40 && current < 70) setScanStage('Separando campos encontrados…');
+    else if (current >= 70) setScanStage('Preparando revisão antes de aplicar…');
   }, 120);
 }
 
@@ -877,7 +933,7 @@ function stopFakeProgress(finalPct) {
   }
 }
 
-function showScanResult(detected, percent) {
+function showScanResult(fields, detected, percent) {
   const panel = document.getElementById(ID_SCAN_RESULT);
   const detectedEl = document.getElementById(ID_SCAN_DETECTED);
   const totalEl = document.getElementById(ID_SCAN_TOTAL);
@@ -891,15 +947,108 @@ function showScanResult(detected, percent) {
   // Mensagem adaptativa ao % detectado
   if (subEl) {
     if (percent >= 80) {
-      subEl.textContent = 'Excelente — etiqueta bem legível. Revise e salve.';
+      subEl.textContent = 'Leitura forte. Revise rapidamente e aplique os dados.';
     } else if (percent >= 50) {
-      subEl.textContent = 'Bom — preenchi a maioria. Complete os campos faltantes.';
+      subEl.textContent = 'Leitura parcial útil. Confirme os dados e complete o restante.';
     } else if (percent >= 20) {
-      subEl.textContent = 'Etiqueta parcialmente legível. Complete os campos que faltaram.';
+      subEl.textContent = 'Encontramos parte dos dados. Complete os campos não identificados.';
     } else {
-      subEl.textContent = 'Etiqueta difícil. Tente outra foto ou preencha manual.';
+      subEl.textContent = 'Poucos dados identificados. Tente outra foto ou siga manualmente.';
     }
   }
 
+  renderReviewList(fields);
   if (panel) panel.hidden = false;
 }
+
+function showScanErrorResult(message) {
+  const panel = document.getElementById(ID_SCAN_RESULT);
+  const subEl = document.getElementById(ID_SCAN_RESULT_SUB);
+  const list = document.getElementById(ID_SCAN_REVIEW_LIST);
+  const detectedEl = document.getElementById(ID_SCAN_DETECTED);
+  const totalEl = document.getElementById(ID_SCAN_TOTAL);
+  const percentEl = document.getElementById(ID_SCAN_RESULT_PERCENT);
+
+  if (detectedEl) detectedEl.textContent = '0';
+  if (totalEl) totalEl.textContent = String(AI_FIELD_TOTAL);
+  if (percentEl) percentEl.textContent = '0%';
+  if (subEl) subEl.textContent = message;
+  if (list) list.replaceChildren();
+  if (panel) panel.hidden = false;
+}
+
+function classifyNotIdentified(message) {
+  const raw = String(message || '').toLowerCase();
+  const poorImage =
+    raw.includes('escur') ||
+    raw.includes('desfoc') ||
+    raw.includes('nítid') ||
+    raw.includes('nitid') ||
+    raw.includes('reflex') ||
+    raw.includes('ileg') ||
+    raw.includes('ler a etiqueta');
+  const insufficient =
+    raw.includes('insuf') || raw.includes('fora do padrão') || raw.includes('poucos');
+
+  if (poorImage) {
+    return {
+      stage: 'Etiqueta difícil de ler',
+      subtitle: 'A etiqueta está difícil de ler nesta foto. Tente sem reflexo e mais próxima.',
+      fallback: 'Tente novamente com a etiqueta inteira no quadro ou continue sem foto.',
+    };
+  }
+  if (insufficient) {
+    return {
+      stage: 'Dados insuficientes na etiqueta',
+      subtitle: 'Não encontramos dados suficientes para preencher automaticamente.',
+      fallback: 'Você pode tentar outra foto ou continuar sem foto.',
+    };
+  }
+  return {
+    stage: 'Não foi possível ler a etiqueta',
+    subtitle: 'Não deu para concluir a leitura automática desta foto.',
+    fallback: 'Tente outra foto ou continue manualmente sem prejuízo.',
+  };
+}
+
+function renderReviewList(fields) {
+  const list = document.getElementById(ID_SCAN_REVIEW_LIST);
+  if (!list) return;
+  list.replaceChildren();
+
+  for (const entry of REVIEW_FIELDS) {
+    const status = resolveReviewStatus(entry.key, fields?.[entry.key]);
+    const item = document.createElement('li');
+    item.className = 'nameplate-scan__review-item';
+
+    const label = document.createElement('span');
+    label.className = 'nameplate-scan__review-label';
+    label.textContent = entry.label;
+
+    const value = document.createElement('span');
+    value.className = `nameplate-scan__review-value ${status.className}`;
+    value.textContent = status.text;
+
+    item.appendChild(label);
+    item.appendChild(value);
+    list.appendChild(item);
+  }
+}
+
+function resolveReviewStatus(key, value) {
+  if (value === null || value === undefined || value === '') {
+    return { text: 'Não identificado', className: 'nameplate-scan__review-value--missing' };
+  }
+  if (key === 'marcaModelo') {
+    const chunks = String(value).trim().split(/\s+/).filter(Boolean);
+    if (chunks.length < 2) {
+      return { text: `${value} (revisar)`, className: 'nameplate-scan__review-value--warn' };
+    }
+  }
+  return { text: 'Encontrado', className: 'nameplate-scan__review-value--ok' };
+}
+
+export const __testables = {
+  classifyNotIdentified,
+  resolveReviewStatus,
+};
