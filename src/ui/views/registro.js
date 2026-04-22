@@ -13,6 +13,7 @@ import { Profile } from '../../features/profile.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
 import { uploadPendingPhotos } from '../../core/photoStorage.js';
 import { getOperationalStatus, validateOperationalPayload } from '../../core/equipmentRules.js';
+import { reconcileEquipmentStatusesAfterRegistroEdit } from '../../domain/registroStatus.js';
 import { isGuestMode } from '../../core/guestLimits.js';
 import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
@@ -565,9 +566,9 @@ export async function saveRegistro() {
   // Modo edição — atualiza registro existente
   const editingId = sessionStorage.getItem(EDITING_KEY);
   if (editingId) {
-    setState((prev) => ({
-      ...prev,
-      registros: prev.registros.map((r) =>
+    setState((prev) => {
+      const previousRegistro = prev.registros.find((r) => r.id === editingId) || null;
+      const updatedRegistros = prev.registros.map((r) =>
         r.id === editingId
           ? {
               ...r,
@@ -588,17 +589,22 @@ export async function saveRegistro() {
               clienteContato,
             }
           : r,
-      ),
-      equipamentos: prev.equipamentos.map((e) => {
-        if (e.id !== equipId) return e;
-        const op = getOperationalStatus({ status, lastStatus: status, ultimoRegistro: { status } });
-        return {
-          ...e,
-          status: op.uiStatus === 'unknown' ? 'ok' : op.uiStatus,
-          statusDescricao: op.label,
-        };
-      }),
-    }));
+      );
+
+      const updatedRegistro = updatedRegistros.find((r) => r.id === editingId) || null;
+      const updatedEquipamentos = reconcileEquipmentStatusesAfterRegistroEdit({
+        equipamentos: prev.equipamentos,
+        registros: updatedRegistros,
+        previousRegistro,
+        updatedRegistro,
+      });
+
+      return {
+        ...prev,
+        registros: updatedRegistros,
+        equipamentos: updatedEquipamentos,
+      };
+    });
     _saveLastClient({ clienteNome, clienteDocumento, localAtendimento, clienteContato });
     resetEditingState();
     clearRegistro();

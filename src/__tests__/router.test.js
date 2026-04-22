@@ -83,6 +83,23 @@ describe('router', () => {
     expect(pushSpy).toHaveBeenCalledTimes(0);
   });
 
+  it('permite reentrar na mesma rota quando há params e usa replaceState', async () => {
+    const { registerRoute, goTo } = await loadRouterModule();
+    const enterInicio = vi.fn();
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+    const replaceSpy = vi.spyOn(window.history, 'replaceState');
+
+    registerRoute('inicio', enterInicio);
+
+    goTo('inicio');
+    goTo('inicio', { equipId: 'eq-2' });
+
+    expect(enterInicio).toHaveBeenCalledTimes(2);
+    expect(enterInicio).toHaveBeenNthCalledWith(2, { equipId: 'eq-2' });
+    expect(pushSpy).toHaveBeenCalledTimes(1);
+    expect(replaceSpy).toHaveBeenCalledTimes(1);
+  });
+
   it('warns when route is unknown and keeps current route untouched', async () => {
     const { registerRoute, goTo, currentRoute } = await loadRouterModule();
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
