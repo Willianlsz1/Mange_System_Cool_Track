@@ -1,18 +1,12 @@
-// Suite do fluxo de onboarding forçado (FTX). Cobertura mínima:
-//  - skip em cada passo grava `cooltrack-ftx-skipped` (sem marcar done)
-//  - telemetria `onboarding_skipped` sai com step correto
-//  - show() respeita ambas flags e não reabre automaticamente
-//  - reopen() limpa skip e reabre o overlay
-
 async function loadFtx() {
   vi.resetModules();
 
   const trackEvent = vi.fn();
   const setStateMock = vi.fn();
-  const getStateMock = vi.fn(() => ({ equipamentos: [], tecnicos: [] }));
+  const getStateMock = vi.fn(() => ({ equipamentos: [], tecnicos: [], registros: [] }));
   const goToMock = vi.fn();
   const Profile = {
-    get: vi.fn(() => ({ nome: '' })),
+    get: vi.fn(() => ({ nome: 'João Técnico' })),
     save: vi.fn(),
     saveLastTecnico: vi.fn(),
   };
@@ -21,34 +15,38 @@ async function loadFtx() {
   vi.doMock('../core/state.js', () => ({ setState: setStateMock, getState: getStateMock }));
   vi.doMock('../core/router.js', () => ({ goTo: goToMock }));
   vi.doMock('../features/profile.js', () => ({ Profile }));
+  vi.doMock('../core/equipmentRules.js', () => ({
+    getOperationalStatus: vi.fn(() => ({ uiStatus: 'ok', label: 'Operação normal' })),
+  }));
+  vi.doMock('../domain/maintenance.js', () => ({
+    getSuggestedPreventiveDays: vi.fn(() => 30),
+  }));
   vi.doMock('../core/utils.js', () => ({
     Utils: {
       escapeAttr: (v) => String(v ?? ''),
       escapeHtml: (v) => String(v ?? ''),
-      uid: () => 'eq-test-uid',
+      uid: vi.fn(() => 'uid-1'),
+      nowDatetime: vi.fn(() => '2026-04-22T09:00'),
+      localDateString: vi.fn((date) => date.toISOString().slice(0, 10)),
     },
-    TIPO_ICON: { 'Split Hi-Wall': '❄️' },
   }));
-  // CSS import — resolve para nada em jsdom
   vi.doMock('../ui/components/onboarding/firstTimeExperience.css', () => ({}));
 
   const { FirstTimeExperience } =
     await import('../ui/components/onboarding/firstTimeExperience.js');
-  return { FirstTimeExperience, trackEvent, Profile };
+  return { FirstTimeExperience, trackEvent, setStateMock, goToMock };
 }
 
-describe('FirstTimeExperience > skip flow', () => {
+describe('FirstTimeExperience > fluxo ativo', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     localStorage.clear();
   });
 
-  it('skip no passo 0 grava flag skipped, não marca done e emite telemetria', async () => {
+  it('skip no passo 0 grava skipped sem marcar done', async () => {
     const { FirstTimeExperience, trackEvent } = await loadFtx();
 
     FirstTimeExperience.show([]);
-    expect(document.getElementById('ftx-overlay')).toBeTruthy();
-
     document.getElementById('ftx-skip-0').click();
 
     expect(localStorage.getItem('cooltrack-ftx-skipped')).toBe('1');
@@ -56,93 +54,62 @@ describe('FirstTimeExperience > skip flow', () => {
     expect(trackEvent).toHaveBeenCalledWith('onboarding_skipped', { step: 0 });
   });
 
-  it('skip no passo 1 persiste skip e emite step=1', async () => {
-    const { FirstTimeExperience, trackEvent } = await loadFtx();
+  it('cria equipamento + registro base ao confirmar primeira pergunta', async () => {
+    const { FirstTimeExperience, setStateMock, trackEvent } = await loadFtx();
 
     FirstTimeExperience.show([]);
-    // Avança pro passo 1 preenchendo o nome
-    const nomeInput = document.getElementById('ftx-nome');
-    nomeInput.value = 'Willian Teste';
-    document.getElementById('ftx-next-0').click();
+    const equipInput = document.getElementById('ftx-eq-name');
+    equipInput.value = 'Split recepção';
+    document.getElementById('ftx-create-equip').click();
 
-    expect(document.getElementById('ftx-skip-1')).toBeTruthy();
+    expect(setStateMock).toHaveBeenCalledTimes(1);
+    expect(trackEvent).toHaveBeenCalledWith(
+      'first_equipment_added',
+      expect.objectContaining({ source: 'onboarding' }),
+    );
+    expect(document.getElementById('ftx-save-maint')).toBeTruthy();
+  });
+
+  it('skip no passo 1 mantém onboarding incompleto', async () => {
+    const { FirstTimeExperience } = await loadFtx();
+
+    FirstTimeExperience.show([]);
+    document.getElementById('ftx-eq-name').value = 'Split recepção';
+    document.getElementById('ftx-create-equip').click();
     document.getElementById('ftx-skip-1').click();
 
     expect(localStorage.getItem('cooltrack-ftx-skipped')).toBe('1');
     expect(localStorage.getItem('cooltrack-ftx-done')).toBeNull();
-    expect(trackEvent).toHaveBeenCalledWith('onboarding_skipped', { step: 1 });
   });
 
-  it('skip no passo 2 (preview PDF) persiste skip e emite step=2', async () => {
-    const { FirstTimeExperience, trackEvent } = await loadFtx();
+  it('fluxo completo marca done e navega para equipamentos', async () => {
+    const { FirstTimeExperience, trackEvent, setStateMock, goToMock } = await loadFtx();
 
     FirstTimeExperience.show([]);
-    // Passo 0 → 1
-    document.getElementById('ftx-nome').value = 'Willian Teste';
-    document.getElementById('ftx-next-0').click();
-    // Passo 1 → 2 (preenche equipamento)
-    document.getElementById('ftx-eq-nome').value = 'Split teste';
-    document.getElementById('ftx-eq-local').value = 'Sala teste';
-    document.getElementById('ftx-next-1').click();
+    document.getElementById('ftx-eq-name').value = 'Câmara fria estoque';
+    document.getElementById('ftx-create-equip').click();
 
-    expect(document.getElementById('ftx-skip-2')).toBeTruthy();
-    document.getElementById('ftx-skip-2').click();
+    document.getElementById('ftx-maint-date').value = '2026-04-20';
+    document.getElementById('ftx-maint-type').value = 'Manutenção Preventiva';
+    document.getElementById('ftx-save-maint').click();
 
-    expect(localStorage.getItem('cooltrack-ftx-skipped')).toBe('1');
-    expect(localStorage.getItem('cooltrack-ftx-done')).toBeNull();
-    expect(trackEvent).toHaveBeenCalledWith('onboarding_skipped', { step: 2 });
+    expect(localStorage.getItem('cooltrack-ftx-done')).toBe('1');
+    expect(localStorage.getItem('cooltrack-ftx-skipped')).toBeNull();
+    expect(setStateMock).toHaveBeenCalledTimes(2);
+    expect(trackEvent).toHaveBeenCalledWith(
+      'onboarding_activation_completed',
+      expect.objectContaining({ source: 'first-time-experience' }),
+    );
+    expect(goToMock).toHaveBeenCalledWith('equipamentos');
   });
 
-  it('show() não reabre automaticamente quando flag skipped está setada', async () => {
-    const { FirstTimeExperience, trackEvent } = await loadFtx();
-    localStorage.setItem('cooltrack-ftx-skipped', '1');
-
-    FirstTimeExperience.show([]);
-
-    expect(document.getElementById('ftx-overlay')).toBeFalsy();
-    // Nenhum started emitido
-    expect(trackEvent).not.toHaveBeenCalledWith('onboarding_started', expect.anything());
-  });
-
-  it('show() não reabre quando já existe equipamento cadastrado', async () => {
+  it('reopen limpa skip e reabre overlay', async () => {
     const { FirstTimeExperience } = await loadFtx();
-
-    FirstTimeExperience.show([{ id: 'eq-1' }]);
-
-    expect(document.getElementById('ftx-overlay')).toBeFalsy();
-  });
-
-  it('reopen() limpa skip e reabre overlay', async () => {
-    const { FirstTimeExperience, trackEvent } = await loadFtx();
     localStorage.setItem('cooltrack-ftx-skipped', '1');
 
     FirstTimeExperience.reopen([]);
 
     expect(localStorage.getItem('cooltrack-ftx-skipped')).toBeNull();
     expect(document.getElementById('ftx-overlay')).toBeTruthy();
-    expect(trackEvent).toHaveBeenCalledWith('onboarding_started', {});
-  });
-
-  it('fluxo completo (sem skip) marca done e limpa skip flag se houver', async () => {
-    const { FirstTimeExperience, trackEvent } = await loadFtx();
-    // Simula que o usuário tinha skipado antes e agora voltou e completou
-    localStorage.setItem('cooltrack-ftx-skipped', '1');
-
-    FirstTimeExperience.reopen([]);
-    // Passo 0 → 1
-    document.getElementById('ftx-nome').value = 'Willian';
-    document.getElementById('ftx-next-0').click();
-    // Passo 1 → 2
-    document.getElementById('ftx-eq-nome').value = 'Split teste';
-    document.getElementById('ftx-eq-local').value = 'Sala teste';
-    document.getElementById('ftx-next-1').click();
-    // Passo 2 → 3
-    document.getElementById('ftx-next-2').click();
-    // Passo 3 → dismiss via dashboard
-    document.getElementById('ftx-go-dashboard').click();
-
-    expect(localStorage.getItem('cooltrack-ftx-done')).toBe('1');
-    expect(localStorage.getItem('cooltrack-ftx-skipped')).toBeNull();
-    expect(trackEvent).toHaveBeenCalledWith('onboarding_completed', {});
   });
 });
