@@ -4,7 +4,6 @@ import { goTo } from '../../../core/router.js';
 import { Profile } from '../../../features/profile.js';
 import { trackEvent } from '../../../core/telemetry.js';
 import { getOperationalStatus } from '../../../core/equipmentRules.js';
-import { getSuggestedPreventiveDays } from '../../../domain/maintenance.js';
 import './firstTimeExperience.css';
 
 const FTX_KEY = 'cooltrack-ftx-done';
@@ -35,13 +34,6 @@ function getTodayIsoDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function addDays(isoDate, days) {
-  const date = new Date(`${isoDate}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return '';
-  date.setDate(date.getDate() + days);
-  return Utils.localDateString(date);
-}
-
 function buildInitialEquipment(nome) {
   return {
     id: Utils.uid(),
@@ -53,22 +45,7 @@ function buildInitialEquipment(nome) {
     tipo: 'Split Hi-Wall',
     fluido: 'R-410A',
     modelo: '',
-    onboardingStage: 'awaiting-first-maintenance',
-  };
-}
-
-function buildBaselineRegistro(equipId, tecnico) {
-  return {
-    id: Utils.uid(),
-    equipId,
-    data: Utils.nowDatetime(),
-    tipo: 'Linha de base inicial',
-    pecas: '',
-    obs: 'Equipamento criado no onboarding. Aguardando registro da última manutenção.',
-    proxima: '',
-    status: 'warn',
-    fotos: [],
-    tecnico,
+    controleBaseCriadoEm: Utils.nowDatetime(),
   };
 }
 
@@ -199,12 +176,9 @@ export const FirstTimeExperience = {
         Profile.saveLastTecnico(techName);
 
         const createdEquipment = buildInitialEquipment(nomeEquipamento);
-        const baselineRegistro = buildBaselineRegistro(createdEquipment.id, techName);
-
         setState((prev) => ({
           ...prev,
           equipamentos: [...prev.equipamentos, createdEquipment],
-          registros: [...prev.registros, baselineRegistro],
           tecnicos: prev.tecnicos.includes(techName) ? prev.tecnicos : [...prev.tecnicos, techName],
         }));
 
@@ -288,18 +262,10 @@ export const FirstTimeExperience = {
               lastStatus: registro.status,
               ultimoRegistro: { status: registro.status },
             });
-            const proxima =
-              maintenanceType === 'Manutenção Preventiva'
-                ? addDays(maintDate, getSuggestedPreventiveDays(item))
-                : '';
             return {
               ...item,
               status: op.uiStatus === 'unknown' ? item.status : op.uiStatus,
               statusDescricao: op.label,
-              onboardingStage: null,
-              ultimaManutencaoData: maintDate,
-              ultimaManutencaoTipo: maintenanceType,
-              proximaPreventivaOnboarding: proxima,
             };
           }),
         }));

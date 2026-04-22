@@ -18,9 +18,6 @@ async function loadFtx() {
   vi.doMock('../core/equipmentRules.js', () => ({
     getOperationalStatus: vi.fn(() => ({ uiStatus: 'ok', label: 'Operação normal' })),
   }));
-  vi.doMock('../domain/maintenance.js', () => ({
-    getSuggestedPreventiveDays: vi.fn(() => 30),
-  }));
   vi.doMock('../core/utils.js', () => ({
     Utils: {
       escapeAttr: (v) => String(v ?? ''),
@@ -54,7 +51,7 @@ describe('FirstTimeExperience > fluxo ativo', () => {
     expect(trackEvent).toHaveBeenCalledWith('onboarding_skipped', { step: 0 });
   });
 
-  it('cria equipamento + registro base ao confirmar primeira pergunta', async () => {
+  it('cria equipamento real ao confirmar primeira pergunta', async () => {
     const { FirstTimeExperience, setStateMock, trackEvent } = await loadFtx();
 
     FirstTimeExperience.show([]);
