@@ -92,13 +92,13 @@ export function buildLandingHtml() {
             </div>
 
             <h1 class="lp-hero__title">
-              Chega de planilha.<br>
-              Seu relatório de manutenção pronto em <span class="lp-grad">30&nbsp;segundos</span>.
+              Pare de digitar etiqueta.<br>
+              Cadastre equipamentos em <span class="lp-grad">segundos</span>.
             </h1>
 
             <p class="lp-hero__sub">
-              <strong class="lp-hero__sub-lead">Nunca mais digita etiqueta.</strong>
-              Aponta a câmera e a IA preenche marca, modelo, BTU e refrigerante em 5 segundos. Assina no celular, gera PDF e manda no WhatsApp — funciona offline.
+              <strong class="lp-hero__sub-lead">A IA preenche o equipamento para você.</strong>
+              Você revisa, registra o serviço e gera o PDF em poucos toques para enviar no WhatsApp. Mais rapidez no campo, com você no controle.
             </p>
 
             <div class="lp-hero__ctas">
@@ -140,7 +140,7 @@ export function buildLandingHtml() {
             <div
               class="lp-phone"
               role="img"
-              aria-label="Celular lendo a etiqueta de um ar-condicionado. A IA preenche marca, modelo e número de série automaticamente."
+              aria-label="Celular lendo a etiqueta de um ar-condicionado. A IA preenche os dados do equipamento para o técnico revisar e salvar."
             >
               <div class="lp-phone__screen">
                 <div class="lp-phone__notch" aria-hidden="true"></div>
@@ -233,7 +233,7 @@ export function buildLandingHtml() {
             <span class="lp-timestat__num lp-timestat__num--strong">
               <span class="lp-grad">30 segundos</span>
             </span>
-            <span class="lp-timestat__lbl">Foto, assinatura, PDF pronto pro WhatsApp.</span>
+            <span class="lp-timestat__lbl">Foto da etiqueta, cadastro acelerado e PDF em poucos toques.</span>
           </div>
         </div>
       </section>
@@ -242,30 +242,30 @@ export function buildLandingHtml() {
       <section class="lp-how" aria-labelledby="lp-how-title">
         <p class="lp-section-label">Como funciona</p>
         <h2 class="lp-how__title" id="lp-how-title">
-          Da foto da etiqueta<br>ao PDF assinado.
+          Da etiqueta ao relatório,<br>com fluxo real de campo.
         </h2>
         <ol class="lp-how__steps">
           <li class="lp-how__step">
             <div class="lp-how__step-num">1</div>
             <div class="lp-how__step-body">
-              <h3 class="lp-how__step-title">Foto da etiqueta &rarr; IA preenche</h3>
-              <p class="lp-how__step-text">Aponta a câmera, a IA lê a etiqueta e devolve marca, modelo, BTU, tensão e refrigerante em 5 segundos. Você só confere.</p>
+              <h3 class="lp-how__step-title">Aponta a câmera na etiqueta</h3>
+              <p class="lp-how__step-text">A IA lê a etiqueta e preenche marca, modelo, BTU, tensão e refrigerante em segundos.</p>
             </div>
           </li>
           <li class="lp-how__step-connector" aria-hidden="true"></li>
           <li class="lp-how__step">
             <div class="lp-how__step-num">2</div>
             <div class="lp-how__step-body">
-              <h3 class="lp-how__step-title">Registra o serviço em campo</h3>
-              <p class="lp-how__step-text">Descrição, peças, foto e assinatura do cliente. Funciona sem sinal.</p>
+              <h3 class="lp-how__step-title">IA preenche, você revisa e cadastra</h3>
+              <p class="lp-how__step-text">Confira os campos, ajuste se precisar e salve o equipamento sem digitar tudo do zero.</p>
             </div>
           </li>
           <li class="lp-how__step-connector" aria-hidden="true"></li>
           <li class="lp-how__step">
             <div class="lp-how__step-num">3</div>
             <div class="lp-how__step-body">
-              <h3 class="lp-how__step-title">Gera PDF em 1 toque</h3>
-              <p class="lp-how__step-text">Relatório pronto pra enviar no WhatsApp, imprimir ou arquivar.</p>
+              <h3 class="lp-how__step-title">Registra o serviço e gera o relatório</h3>
+              <p class="lp-how__step-text">Descrição, peças, fotos e assinatura do cliente. Depois disso, PDF pronto para WhatsApp, impressão ou arquivo.</p>
             </div>
           </li>
         </ol>
@@ -280,7 +280,7 @@ export function buildLandingHtml() {
           </h2>
           <p class="lp-ai__sub">
             Antes: 2 minutos digitando 16 campos por equipamento, checando a etiqueta pequena a cada linha.<br>
-            Depois: uma foto, 5 segundos, e a IA devolve tudo preenchido.
+            Depois: uma foto, a IA preenche quase tudo, você revisa e cadastra em poucos toques.
           </p>
         </div>
 
@@ -307,7 +307,7 @@ export function buildLandingHtml() {
             <ul class="lp-ai-card__list">
               <li>${ICON_CHECK} Aponta a câmera pra etiqueta</li>
               <li>${ICON_CHECK} IA lê e preenche 14 de 16 campos</li>
-              <li>${ICON_CHECK} Você confere, salva e vai pro próximo</li>
+              <li>${ICON_CHECK} Você revisa, cadastra e segue para o serviço</li>
             </ul>
           </article>
         </div>
@@ -796,7 +796,7 @@ export function buildLandingHtml() {
             </h3>
             <ul class="lp-compare__list lp-compare__list--before">
               <li>${ICON_X} 2 minutos digitando 16 campos por equipamento</li>
-              <li>${ICON_X} Relatório em 20 minutos, copiando tudo à mão</li>
+              <li>${ICON_X} Conferindo etiqueta linha por linha para evitar erro</li>
               <li>${ICON_X} Sem histórico: "quando foi a última preventiva mesmo?"</li>
               <li>${ICON_X} Cliente cobra serviço e ninguém acha a prova</li>
               <li>${ICON_X} Preventiva só quando o equipamento já quebrou</li>
@@ -811,9 +811,9 @@ export function buildLandingHtml() {
             </h3>
             <ul class="lp-compare__list lp-compare__list--after">
               <li>${ICON_SPARKLES} Foto da etiqueta &rarr; IA preenche em 5 segundos</li>
-              <li>${ICON_CHECK} PDF pronto em 30 segundos, com assinatura do cliente</li>
+              <li>${ICON_CHECK} Cadastro rápido: revisa e salva sem digitar campo por campo</li>
               <li>${ICON_CHECK} Histórico completo de cada equipamento, pesquisável</li>
-              <li>${ICON_CHECK} Cliente recebe o PDF no WhatsApp em 1 toque</li>
+              <li>${ICON_CHECK} Serviço registrado e PDF enviado no WhatsApp em poucos toques</li>
               <li>${ICON_CHECK} App avisa antes da preventiva vencer</li>
               <li>${ICON_CHECK} Fotos anexadas no registro, organizadas por equipamento</li>
             </ul>
