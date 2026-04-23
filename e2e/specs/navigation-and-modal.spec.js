@@ -9,7 +9,8 @@ test.beforeEach(async ({ page }) => {
   });
 
   await page.goto('/');
-  await expect(page.locator('#main-content')).toBeVisible();
+  await page.waitForLoadState('domcontentloaded');
+  await expect(page.locator('#nav-equipamentos')).toBeVisible({ timeout: 10000 });
 });
 
 test('equipamentos → detalhe → editor de foto fecha em cadeia com back', async ({ page }) => {
