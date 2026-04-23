@@ -39,8 +39,14 @@ import { EquipmentPhotos } from '../components/equipmentPhotos.js';
 import { Photos } from '../components/photos.js';
 import { getEquipmentVisualMeta } from '../components/equipmentVisual.js';
 import { uploadPendingPhotos, normalizePhotoList } from '../../core/photoStorage.js';
-import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
+import {
+  isCachedPlanPlusOrHigher,
+  isCachedPlanPro,
+  setCachedPlan,
+} from '../../core/plans/planCache.js';
 import { goTo } from '../../core/router.js';
+import { SETOR_NOME_MAX, validateSetorNome } from '../../core/setorRules.js';
+import { getEffectivePlan, hasProAccess } from '../../core/plans/subscriptionPlans.js';
 // Labels de UI (rótulos de status/condição/prioridade) ficam em módulo
 // separado pra permitir reuso pelo dashboard/historico sem arrastar toda
 // a view junto. Single source of truth.
@@ -53,6 +59,50 @@ import {
 // ── Edit mode tracking ─────────────────────────────────────────────────────
 // Quando preenchido, saveEquip() atualiza o equipamento existente em vez de criar um novo.
 let _editingEquipId = null;
+let _renderEquipPlanToken = 0;
+let _renderEquipPlanNeedsRefresh = true;
+let _renderEquipPlanEventsBound = false;
+
+function _bindRenderEquipPlanInvalidationEvents() {
+  if (_renderEquipPlanEventsBound || typeof window === 'undefined') return;
+  _renderEquipPlanEventsBound = true;
+  ['cooltrack:auth-changed', 'cooltrack:profile-updated', 'cooltrack:plan-changed'].forEach(
+    (eventName) => {
+      window.addEventListener(eventName, () => {
+        _renderEquipPlanNeedsRefresh = true;
+      });
+    },
+  );
+}
+
+function _stripRenderInternalOptions(options = {}) {
+  const { __skipPlanRefresh: _skip, ...publicOptions } = options || {};
+  return publicOptions;
+}
+
+function _refreshRenderEquipPlan({
+  filtro = '',
+  options = {},
+  renderToken,
+  isProAtRender = false,
+} = {}) {
+  (async () => {
+    try {
+      const { fetchMyProfileBillingCached } = await import('../../core/plans/monetization.js');
+      const { profile } = await fetchMyProfileBillingCached();
+      setCachedPlan(getEffectivePlan(profile));
+      _renderEquipPlanNeedsRefresh = false;
+      const nextIsPro = hasProAccess(profile);
+      if (renderToken !== _renderEquipPlanToken) return;
+      if (nextIsPro !== isProAtRender) {
+        renderEquip(filtro, { ...options, __skipPlanRefresh: true });
+      }
+    } catch {
+      /* fallback silencioso: mantém estado atual de render */
+    }
+  })();
+}
+
 export function getEditingEquipId() {
   return _editingEquipId;
 }
@@ -1550,16 +1600,21 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
 }
 
 export async function renderEquip(filtro = '', options = {}) {
-  // Detecta plano PRO
-  let isPro = false;
-  try {
-    const { fetchMyProfileBilling } = await import('../../core/plans/monetization.js');
-    const { hasProAccess } = await import('../../core/plans/subscriptionPlans.js');
-    const { profile } = await fetchMyProfileBilling();
-    isPro = hasProAccess(profile);
-    populateSetorSelect(isPro);
-  } catch {
-    /* fallback FREE */
+  _bindRenderEquipPlanInvalidationEvents();
+  const renderToken = ++_renderEquipPlanToken;
+  const renderOptions = _stripRenderInternalOptions(options);
+
+  // Renderiza imediatamente com snapshot local do plano (não bloqueia a tela).
+  // O refresh assíncrono corrige drift e evita fetch repetido em cada render.
+  const isPro = isCachedPlanPro();
+  populateSetorSelect(isPro);
+  if (!options?.__skipPlanRefresh && _renderEquipPlanNeedsRefresh) {
+    _refreshRenderEquipPlan({
+      filtro,
+      options: renderOptions,
+      renderToken,
+      isProAtRender: isPro,
+    });
   }
 
   // Hero + filters sempre no topo da view (hidden quando não há equipamentos).
@@ -1585,9 +1640,9 @@ export async function renderEquip(filtro = '', options = {}) {
     });
 
     if (_activeQuickFilter === 'sem-setor') {
-      renderFlatList(filtro, options, '__sem_setor__');
+      renderFlatList(filtro, renderOptions, '__sem_setor__');
     } else {
-      renderFlatList(filtro, { ...options, statusFilter: _activeQuickFilter }, null);
+      renderFlatList(filtro, { ...renderOptions, statusFilter: _activeQuickFilter }, null);
     }
     return;
   }
@@ -1610,7 +1665,7 @@ export async function renderEquip(filtro = '', options = {}) {
       title: 'Parque de Equipamentos',
       extraBtn: `<button class="btn btn--outline btn--sm" data-action="open-setor-modal">+ Novo setor</button>`,
     });
-    renderFlatList(filtro, options, null);
+    renderFlatList(filtro, renderOptions, null);
     return;
   }
 
@@ -1635,7 +1690,7 @@ export async function renderEquip(filtro = '', options = {}) {
     });
   }
 
-  renderFlatList(filtro, options, _activeSectorId);
+  renderFlatList(filtro, renderOptions, _activeSectorId);
 }
 
 // ─── Setor CRUD ───────────────────────────────────────────────────────────────
@@ -1681,8 +1736,12 @@ const SETOR_PALETTE = [
   { hex: '#ff7043', nome: 'Laranja' },
   { hex: '#26a69a', nome: 'Teal' },
 ];
-const SETOR_NOME_LIMIT = 40;
 const SETOR_DESC_LIMIT = 120;
+
+function _getSetorNomeValidation(nomeRaw = Utils.getVal('setor-nome') || '') {
+  const { empty, tooLong, isValid } = validateSetorNome(nomeRaw);
+  return { empty, tooLong, isValid };
+}
 
 /** Relative luminance (WCAG). hex deve estar em forma #RRGGBB. */
 function _hexLuminance(hex) {
@@ -1724,6 +1783,14 @@ function _setSetorNomeValidationState({ showError, focus = false, markTouched = 
     nomeInput.setAttribute('aria-invalid', showError ? 'true' : 'false');
     if (focus) nomeInput.focus();
   }
+}
+
+function _syncSetorSaveButtonState() {
+  const saveBtn = Utils.getEl('setor-save-btn');
+  if (!saveBtn) return;
+  const { isValid } = _getSetorNomeValidation();
+  saveBtn.disabled = !isValid;
+  saveBtn.setAttribute('aria-disabled', isValid ? 'false' : 'true');
 }
 
 // Estado do fluxo de edição do setor. Quando preenchido, saveSetor()
@@ -1769,6 +1836,7 @@ export function clearSetorEditingState() {
 
   _syncSetorModalPreview();
   _syncSetorModalCounters();
+  _syncSetorSaveButtonState();
 }
 
 export function openEditSetor(id) {
@@ -1813,6 +1881,7 @@ export function openEditSetor(id) {
 
   _syncSetorModalPreview();
   _syncSetorModalCounters();
+  _syncSetorSaveButtonState();
 
   import('../../core/modal.js').then(({ Modal: M }) => M.open('modal-add-setor'));
 }
@@ -1876,14 +1945,15 @@ function _syncSetorModalCounters() {
   const desc = Utils.getVal('setor-descricao') || '';
   const nomeCounter = Utils.getEl('setor-nome-counter');
   if (nomeCounter) {
-    nomeCounter.textContent = `${nome.length}/${SETOR_NOME_LIMIT}`;
-    nomeCounter.classList.toggle('setor-modal__counter--over', nome.length > SETOR_NOME_LIMIT);
+    nomeCounter.textContent = `${nome.length}/${SETOR_NOME_MAX}`;
+    nomeCounter.classList.toggle('setor-modal__counter--over', nome.length > SETOR_NOME_MAX);
   }
   const descCounter = Utils.getEl('setor-descricao-counter');
   if (descCounter) {
     descCounter.textContent = `${desc.length}/${SETOR_DESC_LIMIT}`;
     descCounter.classList.toggle('setor-modal__counter--over', desc.length > SETOR_DESC_LIMIT);
   }
+  _syncSetorSaveButtonState();
 }
 
 /**
@@ -1924,17 +1994,17 @@ export function initSetorColorPicker() {
     if (nomeInput) {
       nomeInput.addEventListener('input', () => {
         nomeInput.dataset.interacted = '1';
-        const isEmpty = !nomeInput.value.trim();
+        const { empty, tooLong } = _getSetorNomeValidation(nomeInput.value);
         const wasTouched = nomeInput.dataset.touched === '1';
-        _setSetorNomeValidationState({ showError: isEmpty && wasTouched });
+        _setSetorNomeValidationState({ showError: wasTouched && (empty || tooLong) });
         _syncSetorModalPreview();
         _syncSetorModalCounters();
       });
       nomeInput.addEventListener('blur', () => {
-        const isEmpty = !nomeInput.value.trim();
+        const { empty, tooLong } = _getSetorNomeValidation(nomeInput.value);
         const wasTouched = nomeInput.dataset.touched === '1';
         const interacted = nomeInput.dataset.interacted === '1';
-        if (!isEmpty || (!wasTouched && !interacted)) return;
+        if ((!empty && !tooLong) || (!wasTouched && !interacted)) return;
         _setSetorNomeValidationState({
           showError: true,
           markTouched: true,
@@ -1947,6 +2017,7 @@ export function initSetorColorPicker() {
 
   _syncSetorModalPreview();
   _syncSetorModalCounters();
+  _syncSetorSaveButtonState();
 }
 
 export async function saveSetor() {
@@ -1954,15 +2025,21 @@ export async function saveSetor() {
   const allowed = await ensureProForSetores({ action: isEditing ? 'update' : 'create' });
   if (!allowed) return false;
 
-  const nome = (Utils.getVal('setor-nome') || '').trim();
-  if (!nome) {
+  const nomeRaw = Utils.getVal('setor-nome') || '';
+  const { empty, tooLong } = _getSetorNomeValidation(nomeRaw);
+  if (empty || tooLong) {
     // Validação inline: mostra erro abaixo do input + foco + toast leve.
     // Marca o campo como "touched" pra que o erro passe a reaparecer
     // automaticamente se o usuário esvaziar o input depois de digitar.
     _setSetorNomeValidationState({ showError: true, focus: true, markTouched: true });
-    Toast.warning('Digite um nome para o setor.');
+    Toast.warning(
+      tooLong
+        ? `Use no máximo ${SETOR_NOME_MAX} caracteres no nome do setor.`
+        : 'Digite um nome para o setor.',
+    );
     return false;
   }
+  const nome = nomeRaw.trim();
 
   const cor = Utils.getEl('setor-cor')?.value || SETOR_PALETTE[0].hex;
   const descricao = (Utils.getVal('setor-descricao') || '').trim().slice(0, SETOR_DESC_LIMIT);

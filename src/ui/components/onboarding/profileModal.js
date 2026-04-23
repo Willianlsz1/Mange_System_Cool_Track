@@ -274,6 +274,9 @@ export const ProfileModal = {
         empresa: overlay.querySelector('#prof-empresa')?.value.trim(),
         telefone: overlay.querySelector('#prof-telefone')?.value.trim(),
       });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cooltrack:profile-updated'));
+      }
       // Salvou → não há o que descartar, fecha direto.
       hardClose();
       Toast.success('Perfil salvo com sucesso.');
