@@ -255,7 +255,39 @@ describe('router', () => {
 
     expect(document.getElementById('lightbox').classList.contains('is-open')).toBe(false);
     expect(onEnterRegistros).not.toHaveBeenCalled();
-    expect(pushSpy).toHaveBeenCalledTimes(2); // entrada inicial + reinserção da rota atual
+    expect(pushSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('sequência de back: fecha foto e no back seguinte navega sem loop', async () => {
+    vi.useFakeTimers();
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const onEnterInicio = vi.fn();
+    const onEnterRegistros = vi.fn();
+
+    registerRoute('inicio', onEnterInicio);
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    goTo('registros');
+    vi.advanceTimersByTime(150);
+    initHistory();
+
+    // Foto/lightbox aberta após history bind: cria um nível de camada no histórico.
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="lightbox" class="lightbox is-open"></div>`,
+    );
+
+    // 1º back: fecha foto, não navega rota.
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+    expect(document.getElementById('lightbox').classList.contains('is-open')).toBe(false);
+    expect(onEnterInicio).toHaveBeenCalledTimes(1);
+    expect(onEnterRegistros).toHaveBeenCalledTimes(1);
+
+    // 2º back: navega para lista/início corretamente.
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'inicio' } }));
+    vi.advanceTimersByTime(150);
+    expect(onEnterInicio).toHaveBeenCalledTimes(2);
   });
 
   it('mantém compatibilidade com history state legado sem params', async () => {
@@ -295,7 +327,7 @@ describe('router', () => {
 
     expect(closeSignatureCaptureIfOpen).toHaveBeenCalled();
     expect(onEnterRegistros).not.toHaveBeenCalled();
-    expect(pushSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(pushSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
   });
 
   it('consome popstate para fechar assinatura (viewer) sem trocar rota', async () => {
@@ -318,7 +350,7 @@ describe('router', () => {
 
     expect(closeSignatureViewerIfOpen).toHaveBeenCalled();
     expect(onEnterRegistros).not.toHaveBeenCalled();
-    expect(pushSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(pushSpy.mock.calls.length).toBeGreaterThanOrEqual(1);
   });
 
   it('fecha apenas a camada do topo quando há múltiplas camadas bloqueantes', async () => {

@@ -15,6 +15,9 @@ let _current = null;
 let _currentParams = {};
 let _transitioning = false;
 let _historyBound = false;
+let _blockingLayerDepth = 0;
+let _blockingLayerSyncSuspended = false;
+let _blockingLayerObserver = null;
 const UI_CTX_VERSION = 1;
 
 function normalizeRouteParams(params) {
@@ -136,6 +139,55 @@ function closeTopBlockingLayer() {
 
   top?.close?.();
   return true;
+}
+
+function countOpenBlockingLayers() {
+  if (typeof document === 'undefined') return 0;
+  const modalCount = document.querySelectorAll('.modal-overlay.is-open').length;
+  const lightboxCount = document.getElementById('lightbox')?.classList.contains('is-open') ? 1 : 0;
+  const sigCaptureCount = document
+    .getElementById('modal-signature-overlay')
+    ?.classList.contains('is-open')
+    ? 1
+    : 0;
+  const sigViewerCount = document
+    .getElementById('modal-signature-viewer-overlay')
+    ?.classList.contains('is-open')
+    ? 1
+    : 0;
+  return modalCount + lightboxCount + sigCaptureCount + sigViewerCount;
+}
+
+function syncBlockingLayerHistoryDepth() {
+  if (typeof window === 'undefined' || !window.history || _blockingLayerSyncSuspended) return;
+  if (!_current) return;
+  const nextDepth = countOpenBlockingLayers();
+  if (nextDepth <= _blockingLayerDepth) {
+    _blockingLayerDepth = nextDepth;
+    return;
+  }
+
+  const delta = nextDepth - _blockingLayerDepth;
+  for (let i = 0; i < delta; i += 1) {
+    window.history.pushState(
+      buildHistoryState(_current, _currentParams),
+      '',
+      window.location.pathname + window.location.search,
+    );
+  }
+  _blockingLayerDepth = nextDepth;
+}
+
+function bindBlockingLayerHistoryObserver() {
+  if (_blockingLayerObserver || typeof document === 'undefined') return;
+  _blockingLayerDepth = countOpenBlockingLayers();
+  _blockingLayerObserver = new MutationObserver(() => syncBlockingLayerHistoryDepth());
+  _blockingLayerObserver.observe(document.body, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ['class'],
+  });
 }
 
 /**
@@ -322,22 +374,20 @@ export function currentRoute() {
   return _current;
 }
 
+export function currentRouteParams() {
+  return { ..._currentParams };
+}
+
 export function initHistory() {
   if (_historyBound || typeof window === 'undefined') return;
   _historyBound = true;
 
   window.addEventListener('popstate', (e) => {
     if (closeTopBlockingLayer()) {
-      // Consumimos o back para fechar camada sobreposta (modal/lightbox).
-      // Reinsere a rota atual no topo para manter a pilha consistente:
-      // próximo back continua no contexto interno antes de trocar de aba.
-      if (_current && window.history) {
-        window.history.pushState(
-          buildHistoryState(_current, _currentParams),
-          '',
-          window.location.pathname + window.location.search,
-        );
-      }
+      // Consumimos o back para fechar camada sobreposta, sem re-push corretivo.
+      _blockingLayerSyncSuspended = true;
+      _blockingLayerDepth = countOpenBlockingLayers();
+      _blockingLayerSyncSuspended = false;
       return;
     }
     const { route, params } = parseHistoryState(e.state);
@@ -356,4 +406,6 @@ export function initHistory() {
       window.history.back();
     }
   });
+
+  bindBlockingLayerHistoryObserver();
 }

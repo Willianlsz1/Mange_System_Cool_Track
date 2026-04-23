@@ -44,7 +44,7 @@ import {
   isCachedPlanPro,
   setCachedPlan,
 } from '../../core/plans/planCache.js';
-import { goTo } from '../../core/router.js';
+import { currentRoute, currentRouteParams, goTo } from '../../core/router.js';
 import { SETOR_NOME_MAX, validateSetorNome } from '../../core/setorRules.js';
 import { getEffectivePlan, hasProAccess } from '../../core/plans/subscriptionPlans.js';
 // Labels de UI (rótulos de status/condição/prioridade) ficam em módulo
@@ -233,6 +233,81 @@ function _isEquipFullyIdle(eq) {
   return !hasMetrics;
 }
 
+function _createEquipRenderEvalContext() {
+  const regsById = new Map();
+  const riskById = new Map();
+  const priorityById = new Map();
+  const actionPriorityById = new Map();
+  const maintenanceCtxById = new Map();
+  const suggestedActionById = new Map();
+  const fullyIdleById = new Map();
+
+  const getRegs = (id) => {
+    if (!regsById.has(id)) regsById.set(id, regsForEquip(id));
+    return regsById.get(id);
+  };
+  const getRisk = (eq) => {
+    if (!riskById.has(eq.id)) riskById.set(eq.id, evaluateEquipmentRisk(eq, getRegs(eq.id)));
+    return riskById.get(eq.id);
+  };
+  const getPriority = (eq) => {
+    if (!priorityById.has(eq.id))
+      priorityById.set(eq.id, evaluateEquipmentPriority(eq, getRegs(eq.id)));
+    return priorityById.get(eq.id);
+  };
+  const getActionPriority = (eq) => {
+    if (!actionPriorityById.has(eq.id))
+      actionPriorityById.set(eq.id, getActionPriorityScore(eq, getRegs(eq.id)));
+    return actionPriorityById.get(eq.id);
+  };
+  const getMaintenanceContextCached = (eq) => {
+    if (!maintenanceCtxById.has(eq.id))
+      maintenanceCtxById.set(eq.id, getEquipmentMaintenanceContext(eq, getRegs(eq.id)));
+    return maintenanceCtxById.get(eq.id);
+  };
+  const getSuggestedActionCached = (eq) => {
+    if (!suggestedActionById.has(eq.id))
+      suggestedActionById.set(eq.id, evaluateEquipmentSuggestedAction(eq, getRegs(eq.id)));
+    return suggestedActionById.get(eq.id);
+  };
+  const isFullyIdle = (eq) => {
+    if (fullyIdleById.has(eq.id)) return fullyIdleById.get(eq.id);
+    const context = getMaintenanceContextCached(eq);
+    const scls = Utils.safeStatus(eq.status);
+    if (scls !== 'ok') {
+      fullyIdleById.set(eq.id, false);
+      return false;
+    }
+    const risk = getRisk(eq);
+    if (risk.classification !== 'baixo') {
+      fullyIdleById.set(eq.id, false);
+      return false;
+    }
+    const suggestedAction = getSuggestedActionCached(eq);
+    const hasAction =
+      suggestedAction.actionCode !== ACTION_CODE.NONE &&
+      suggestedAction.actionCode !== ACTION_CODE.MONITOR;
+    if (hasAction) {
+      fullyIdleById.set(eq.id, false);
+      return false;
+    }
+    const hasMetrics = Boolean(context.ultimoRegistro) || Boolean(context.proximaPreventiva);
+    const result = !hasMetrics;
+    fullyIdleById.set(eq.id, result);
+    return result;
+  };
+
+  return {
+    getRegs,
+    getRisk,
+    getPriority,
+    getActionPriority,
+    getMaintenanceContext: getMaintenanceContextCached,
+    getSuggestedAction: getSuggestedActionCached,
+    isFullyIdle,
+  };
+}
+
 function _idleClusterHtml(idleCards, count) {
   // Markup: summary button (clickable row w/ counter + CTA) + hidden cards
   // container. O toggle-idle-cluster handler só flipa `data-expanded` — CSS
@@ -265,27 +340,29 @@ function equipCardIconBlock(eq) {
   if (photoUrl) {
     const safeUrl = Utils.escapeAttr(photoUrl);
     return `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--photo ${toneClass}" aria-hidden="true">
-      <img src="${safeUrl}" alt="" loading="lazy"
-        onload="this.parentElement.classList.add('equip-card__type-icon--loaded');"
-        onerror="this.parentElement.classList.add('equip-card__type-icon--fallback');this.remove();" />
+      <img src="${safeUrl}" alt="" loading="lazy" />
       ${fallbackHtml}
     </div>`;
   }
   return `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--fallback ${toneClass}" aria-hidden="true">${fallbackHtml}</div>`;
 }
 
-export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
-  const context = getEquipmentMaintenanceContext(eq, regsForEquip(eq.id));
+export function equipCardHtml(eq, { showLocal: _showLocal = true, evalCtx = null } = {}) {
+  const eqRegs = evalCtx?.getRegs ? evalCtx.getRegs(eq.id) : regsForEquip(eq.id);
+  const context = evalCtx?.getMaintenanceContext
+    ? evalCtx.getMaintenanceContext(eq)
+    : getEquipmentMaintenanceContext(eq, eqRegs);
   const last = context.ultimoRegistro;
   const score = calcHealthScore(eq.id);
   const hcls = getHealthClass(score);
   const scls = Utils.safeStatus(eq.status);
   const safeId = Utils.escapeAttr(eq.id);
   const prioridadeLabel = PRIORIDADE_LABEL[eq.criticidade] || PRIORIDADE_LABEL.media;
-  const eqRegs = regsForEquip(eq.id);
-  const risk = evaluateEquipmentRisk(eq, eqRegs);
+  const risk = evalCtx?.getRisk ? evalCtx.getRisk(eq) : evaluateEquipmentRisk(eq, eqRegs);
   const riskTrend = evaluateEquipmentRiskTrend(eq, eqRegs);
-  const suggestedAction = evaluateEquipmentSuggestedAction(eq, eqRegs);
+  const suggestedAction = evalCtx?.getSuggestedAction
+    ? evalCtx.getSuggestedAction(eq)
+    : evaluateEquipmentSuggestedAction(eq, eqRegs);
 
   function getCtaByAction(actionCode) {
     if (actionCode === ACTION_CODE.REGISTER_CORRECTIVE_IMMEDIATE)
@@ -490,8 +567,51 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true } = {}) {
 
 // ─── Setor (PRO) ──────────────────────────────────────────────────────────────
 
-/** ID do setor atualmente expandido; null = vista de grid de setores. */
-let _activeSectorId = null;
+function normalizeEquipCtx(rawCtx = {}) {
+  const source = rawCtx && typeof rawCtx === 'object' ? rawCtx : {};
+  const quickFilterRaw = source.quickFilter;
+  const quickFilter =
+    typeof quickFilterRaw === 'string' && quickFilterRaw && quickFilterRaw !== 'todos'
+      ? quickFilterRaw
+      : null;
+  const sectorRaw = source.sectorId;
+  const sectorId =
+    typeof sectorRaw === 'string' && sectorRaw
+      ? sectorRaw
+      : sectorRaw === '__sem_setor__'
+        ? '__sem_setor__'
+        : null;
+  if (quickFilter) return { sectorId: null, quickFilter };
+  return { sectorId, quickFilter: null };
+}
+
+function _getRouteEquipCtx() {
+  const routeParams = currentRouteParams?.() || {};
+  if (routeParams.equipCtx) return normalizeEquipCtx(routeParams.equipCtx);
+  // Compat: params antigos passados sem o wrapper equipCtx.
+  if ('sectorId' in routeParams || 'quickFilter' in routeParams) {
+    return normalizeEquipCtx(routeParams);
+  }
+  return normalizeEquipCtx();
+}
+
+function _resolveEquipCtx(options = {}) {
+  if (options?.equipCtx) return normalizeEquipCtx(options.equipCtx);
+  if ('sectorId' in (options || {}) || 'quickFilter' in (options || {})) {
+    return normalizeEquipCtx(options);
+  }
+  if (currentRoute() === 'equipamentos') return _getRouteEquipCtx();
+  return normalizeEquipCtx();
+}
+
+function _navigateEquipCtx(nextCtx) {
+  const normalized = normalizeEquipCtx(nextCtx);
+  if (currentRoute() === 'equipamentos') {
+    goTo('equipamentos', { equipCtx: normalized });
+    return;
+  }
+  renderEquip('', { equipCtx: normalized });
+}
 
 const _SETOR_CORES = ['#00c8e8', '#00c853', '#ffab40', '#ff5252', '#7c4dff', '#448aff'];
 
@@ -788,19 +908,16 @@ export function setorCardHtml(
 // Os 4 chips de filtro são drill-downs rápidos pra cada KPI + "Todos" (reset)
 // + "Sem setor" (só aparece como filtro destacado porque já é a dor #1).
 
-/** Quick filter ativo. null = visão padrão (grid/list). */
-let _activeQuickFilter = null;
-
 export function getActiveQuickFilter() {
-  return _activeQuickFilter;
+  return _getRouteEquipCtx().quickFilter;
 }
 export function setActiveQuickFilter(id) {
-  // null, 'sem-setor', 'em-atencao', 'criticos', 'preventiva-30d'
-  _activeQuickFilter = id && id !== 'todos' ? id : null;
-  // Ao ativar quick filter, sai do drill-down de setor (evita estados
-  // inconsistentes tipo "setor X + filtro Críticos").
-  if (_activeQuickFilter) _activeSectorId = null;
-  renderEquip();
+  const quickFilter = id && id !== 'todos' ? id : null;
+  const currentCtx = _getRouteEquipCtx();
+  _navigateEquipCtx({
+    sectorId: quickFilter ? null : currentCtx.sectorId,
+    quickFilter,
+  });
 }
 
 /** Computa os 4 KPIs do hero a partir do state atual.
@@ -982,7 +1099,7 @@ export function renderEquipFilters() {
     return;
   }
   bar.removeAttribute('hidden');
-  const active = _activeQuickFilter || 'todos';
+  const active = _getRouteEquipCtx().quickFilter || 'todos';
 
   const chips = [
     { id: 'todos', label: 'Todos' },
@@ -1343,8 +1460,7 @@ export async function saveEquipPhotos() {
 
   // Re-render do detail view pra atualizar o avatar/contadores.
   // Usa a própria viewEquip deste módulo (hoisted) — a mesma que o handler
-  // view-equip dispara. Não confundir com equipDetail.js (módulo legado,
-  // não conectado ao handler atual).
+  // view-equip dispara (source of truth única do detail flow).
   try {
     await viewEquip(equipId);
   } catch (_err) {
@@ -1401,12 +1517,10 @@ export function populateSetorSelect(isPro = false) {
 
 /** Navega para dentro de um setor (ou volta ao grid se id === null). */
 export function setActiveSector(id) {
-  _activeSectorId = id ?? null;
-  // Sair do quick filter ao entrar num setor — evita estados compostos tipo
-  // "setor X + chip Críticos" que o header não consegue expressar de um jeito
-  // simples.
-  if (_activeSectorId) _activeQuickFilter = null;
-  renderEquip();
+  _navigateEquipCtx({
+    sectorId: id ?? null,
+    quickFilter: null,
+  });
 }
 
 /** Renderiza a grade de setores (vista PRO). */
@@ -1452,6 +1566,7 @@ function renderSetorGrid() {
 /** Renderiza a lista flat de equipamentos (FREE ou drill-down de um setor). */
 function renderFlatList(filtro = '', options = {}, setorId = null) {
   const { equipamentos, registros } = getState();
+  const evalCtx = _createEquipRenderEvalContext();
   const q = filtro.toLowerCase();
   // Filtros por statusFilter — cada um constrói um Set de IDs permitidos (null = sem filtro).
   //  · 'preventiva-7d' (legado do handler "go-alertas")
@@ -1469,7 +1584,7 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
           const status = Utils.safeStatus(e.status);
           if (status === 'danger') return false; // críticos têm chip próprio
           try {
-            const pr = evaluateEquipmentPriority(e, regsForEquip(e.id));
+            const pr = evalCtx.getPriority(e);
             return pr.priorityLevel >= 3 || status === 'warn';
           } catch {
             return status === 'warn';
@@ -1503,15 +1618,15 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
   if (!el) return;
 
   const sortedList = [...list].sort((a, b) => {
-    const apA = getActionPriorityScore(a, regsForEquip(a.id));
-    const apB = getActionPriorityScore(b, regsForEquip(b.id));
+    const apA = evalCtx.getActionPriority(a);
+    const apB = evalCtx.getActionPriority(b);
     if (apB.actionPriorityScore !== apA.actionPriorityScore)
       return apB.actionPriorityScore - apA.actionPriorityScore;
-    const pa = evaluateEquipmentPriority(a, regsForEquip(a.id));
-    const pb = evaluateEquipmentPriority(b, regsForEquip(b.id));
+    const pa = evalCtx.getPriority(a);
+    const pb = evalCtx.getPriority(b);
     if (pb.priorityLevel !== pa.priorityLevel) return pb.priorityLevel - pa.priorityLevel;
-    const ra = evaluateEquipmentRisk(a, regsForEquip(a.id)).score;
-    const rb = evaluateEquipmentRisk(b, regsForEquip(b.id)).score;
+    const ra = evalCtx.getRisk(a).score;
+    const rb = evalCtx.getRisk(b).score;
     return rb - ra;
   });
 
@@ -1559,8 +1674,12 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
   //  · Posição: cluster sempre acima dos cards ativos — mas só se houver
   //    ao menos 1 card ativo pra contrastar. Em lista só-de-idle o cluster
   //    perde valor (nada pra "esconder") e volta a render linear.
-  const idleList = sortedList.filter((eq) => _isEquipFullyIdle(eq));
-  const activeList = sortedList.filter((eq) => !_isEquipFullyIdle(eq));
+  const idleList = [];
+  const activeList = [];
+  sortedList.forEach((eq) => {
+    if (evalCtx.isFullyIdle(eq)) idleList.push(eq);
+    else activeList.push(eq);
+  });
   const clusterActive =
     _resolveIdleClusterCollapsed(idleList.length) && idleList.length > 0 && activeList.length > 0;
 
@@ -1586,23 +1705,57 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
       }
       if (clusterActive) {
         const idleCardsHtml = idleList
-          .map((eq) => equipCardHtml(eq, { showLocal: !setorId }))
+          .map((eq) => equipCardHtml(eq, { showLocal: !setorId, evalCtx }))
           .join('');
         const activeCardsHtml = activeList
-          .map((eq) => equipCardHtml(eq, { showLocal: !setorId }))
+          .map((eq) => equipCardHtml(eq, { showLocal: !setorId, evalCtx }))
           .join('');
         el.innerHTML = _idleClusterHtml(idleCardsHtml, idleList.length) + activeCardsHtml;
       } else {
-        el.innerHTML = sortedList.map((eq) => equipCardHtml(eq, { showLocal: !setorId })).join('');
+        el.innerHTML = sortedList
+          .map((eq) => equipCardHtml(eq, { showLocal: !setorId, evalCtx }))
+          .join('');
       }
+      _bindEquipCardImageFallbacks(el);
     },
   );
+}
+
+function _bindEquipCardImageFallbacks(root) {
+  const scope = root instanceof Element ? root : document;
+  scope.querySelectorAll('.equip-card__type-icon--photo img').forEach((img) => {
+    if (!(img instanceof HTMLImageElement)) return;
+    if (img.dataset.fallbackBound === '1') return;
+    img.dataset.fallbackBound = '1';
+    const iconWrap = img.closest('.equip-card__type-icon');
+    if (!iconWrap) return;
+
+    const markLoaded = () => {
+      iconWrap.classList.add('equip-card__type-icon--loaded');
+    };
+    const applyFallback = () => {
+      iconWrap.classList.add('equip-card__type-icon--fallback');
+      img.remove();
+    };
+
+    img.addEventListener('load', markLoaded, { once: true });
+    img.addEventListener('error', applyFallback, { once: true });
+
+    // Cobertura para imagens já resolvidas no momento do bind (cache quente).
+    if (img.complete) {
+      if (img.naturalWidth > 0) markLoaded();
+      else applyFallback();
+    }
+  });
 }
 
 export async function renderEquip(filtro = '', options = {}) {
   _bindRenderEquipPlanInvalidationEvents();
   const renderToken = ++_renderEquipPlanToken;
   const renderOptions = _stripRenderInternalOptions(options);
+  const equipCtx = _resolveEquipCtx(renderOptions);
+  const activeSectorId = equipCtx.sectorId;
+  const activeQuickFilter = equipCtx.quickFilter;
 
   // Renderiza imediatamente com snapshot local do plano (não bloqueia a tela).
   // O refresh assíncrono corrige drift e evita fetch repetido em cada render.
@@ -1625,7 +1778,7 @@ export async function renderEquip(filtro = '', options = {}) {
   // Quick filter ativo sobrescreve o fluxo normal: vai pra flat list com
   // statusFilter correspondente. Sempre rende com a toolbar "← Todos" pra dar
   // caminho de volta claro.
-  if (_activeQuickFilter) {
+  if (activeQuickFilter) {
     const searchBar = Utils.getEl('equip-search-bar');
     if (searchBar) searchBar.style.display = '';
     const titleMap = {
@@ -1635,14 +1788,14 @@ export async function renderEquip(filtro = '', options = {}) {
       'preventiva-30d': 'Preventivas ≤30d',
     };
     _setToolbar({
-      title: titleMap[_activeQuickFilter] || 'Equipamentos',
+      title: titleMap[activeQuickFilter] || 'Equipamentos',
       extraBtn: `<button class="btn btn--outline btn--sm" data-action="equip-quickfilter" data-id="todos">← Todos</button>`,
     });
 
-    if (_activeQuickFilter === 'sem-setor') {
+    if (activeQuickFilter === 'sem-setor') {
       renderFlatList(filtro, renderOptions, '__sem_setor__');
     } else {
-      renderFlatList(filtro, { ...renderOptions, statusFilter: _activeQuickFilter }, null);
+      renderFlatList(filtro, { ...renderOptions, statusFilter: activeQuickFilter }, null);
     }
     return;
   }
@@ -1650,7 +1803,7 @@ export async function renderEquip(filtro = '', options = {}) {
   const searchBar = Utils.getEl('equip-search-bar');
   const { setores } = getState();
 
-  if (isPro && _activeSectorId === null) {
+  if (isPro && activeSectorId === null) {
     // Pro COM setores → grade de setores (organização por grupo).
     // Pro SEM setores ainda → lista flat igual Free, mas com CTA "+ Novo setor"
     // na toolbar. O usuário escolhe quando começar a organizar por setor —
@@ -1672,10 +1825,10 @@ export async function renderEquip(filtro = '', options = {}) {
   // Vista lista (FREE ou drill-down de setor)
   if (searchBar) searchBar.style.display = '';
 
-  if (_activeSectorId) {
+  if (activeSectorId) {
     // Drill-down: mostra equipamentos do setor
     const setor =
-      _activeSectorId === '__sem_setor__' ? { nome: 'Sem setor' } : findSetor(_activeSectorId);
+      activeSectorId === '__sem_setor__' ? { nome: 'Sem setor' } : findSetor(activeSectorId);
     const nome = setor?.nome ?? 'Setor';
     _setToolbar({
       title: Utils.truncate(nome, 28),
@@ -1690,7 +1843,7 @@ export async function renderEquip(filtro = '', options = {}) {
     });
   }
 
-  renderFlatList(filtro, renderOptions, _activeSectorId);
+  renderFlatList(filtro, renderOptions, activeSectorId);
 }
 
 // ─── Setor CRUD ───────────────────────────────────────────────────────────────
@@ -2095,7 +2248,11 @@ export async function deleteSetor(id) {
     /* ignora — a queue é melhor esforço */
   }
 
-  if (_activeSectorId === id) _activeSectorId = null;
+  const activeSectorId = _getRouteEquipCtx().sectorId;
+  if (activeSectorId === id) {
+    _navigateEquipCtx({ sectorId: null, quickFilter: null });
+    return;
+  }
   Toast.info('Setor removido. Os equipamentos foram movidos para "Sem setor".');
   renderEquip();
 }
