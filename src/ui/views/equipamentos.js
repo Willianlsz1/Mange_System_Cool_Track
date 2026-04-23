@@ -1684,6 +1684,18 @@ const SETOR_PALETTE = [
 const SETOR_NOME_LIMIT = 40;
 const SETOR_DESC_LIMIT = 120;
 
+function _getSetorNomeValidation(nomeRaw = Utils.getVal('setor-nome') || '') {
+  const nome = String(nomeRaw);
+  const trimmed = nome.trim();
+  const tooLong = nome.length > SETOR_NOME_LIMIT;
+  const empty = trimmed.length === 0;
+  return {
+    empty,
+    tooLong,
+    isValid: !empty && !tooLong,
+  };
+}
+
 /** Relative luminance (WCAG). hex deve estar em forma #RRGGBB. */
 function _hexLuminance(hex) {
   const h = String(hex || '').replace('#', '');
@@ -1724,6 +1736,14 @@ function _setSetorNomeValidationState({ showError, focus = false, markTouched = 
     nomeInput.setAttribute('aria-invalid', showError ? 'true' : 'false');
     if (focus) nomeInput.focus();
   }
+}
+
+function _syncSetorSaveButtonState() {
+  const saveBtn = Utils.getEl('setor-save-btn');
+  if (!saveBtn) return;
+  const { isValid } = _getSetorNomeValidation();
+  saveBtn.disabled = !isValid;
+  saveBtn.setAttribute('aria-disabled', isValid ? 'false' : 'true');
 }
 
 // Estado do fluxo de edição do setor. Quando preenchido, saveSetor()
@@ -1769,6 +1789,7 @@ export function clearSetorEditingState() {
 
   _syncSetorModalPreview();
   _syncSetorModalCounters();
+  _syncSetorSaveButtonState();
 }
 
 export function openEditSetor(id) {
@@ -1813,6 +1834,7 @@ export function openEditSetor(id) {
 
   _syncSetorModalPreview();
   _syncSetorModalCounters();
+  _syncSetorSaveButtonState();
 
   import('../../core/modal.js').then(({ Modal: M }) => M.open('modal-add-setor'));
 }
@@ -1884,6 +1906,7 @@ function _syncSetorModalCounters() {
     descCounter.textContent = `${desc.length}/${SETOR_DESC_LIMIT}`;
     descCounter.classList.toggle('setor-modal__counter--over', desc.length > SETOR_DESC_LIMIT);
   }
+  _syncSetorSaveButtonState();
 }
 
 /**
@@ -1924,17 +1947,17 @@ export function initSetorColorPicker() {
     if (nomeInput) {
       nomeInput.addEventListener('input', () => {
         nomeInput.dataset.interacted = '1';
-        const isEmpty = !nomeInput.value.trim();
+        const { empty, tooLong } = _getSetorNomeValidation(nomeInput.value);
         const wasTouched = nomeInput.dataset.touched === '1';
-        _setSetorNomeValidationState({ showError: isEmpty && wasTouched });
+        _setSetorNomeValidationState({ showError: wasTouched && (empty || tooLong) });
         _syncSetorModalPreview();
         _syncSetorModalCounters();
       });
       nomeInput.addEventListener('blur', () => {
-        const isEmpty = !nomeInput.value.trim();
+        const { empty, tooLong } = _getSetorNomeValidation(nomeInput.value);
         const wasTouched = nomeInput.dataset.touched === '1';
         const interacted = nomeInput.dataset.interacted === '1';
-        if (!isEmpty || (!wasTouched && !interacted)) return;
+        if ((!empty && !tooLong) || (!wasTouched && !interacted)) return;
         _setSetorNomeValidationState({
           showError: true,
           markTouched: true,
@@ -1947,6 +1970,7 @@ export function initSetorColorPicker() {
 
   _syncSetorModalPreview();
   _syncSetorModalCounters();
+  _syncSetorSaveButtonState();
 }
 
 export async function saveSetor() {
@@ -1954,15 +1978,21 @@ export async function saveSetor() {
   const allowed = await ensureProForSetores({ action: isEditing ? 'update' : 'create' });
   if (!allowed) return false;
 
-  const nome = (Utils.getVal('setor-nome') || '').trim();
-  if (!nome) {
+  const nomeRaw = Utils.getVal('setor-nome') || '';
+  const { empty, tooLong } = _getSetorNomeValidation(nomeRaw);
+  if (empty || tooLong) {
     // Validação inline: mostra erro abaixo do input + foco + toast leve.
     // Marca o campo como "touched" pra que o erro passe a reaparecer
     // automaticamente se o usuário esvaziar o input depois de digitar.
     _setSetorNomeValidationState({ showError: true, focus: true, markTouched: true });
-    Toast.warning('Digite um nome para o setor.');
+    Toast.warning(
+      tooLong
+        ? `Use no máximo ${SETOR_NOME_LIMIT} caracteres no nome do setor.`
+        : 'Digite um nome para o setor.',
+    );
     return false;
   }
+  const nome = nomeRaw.trim();
 
   const cor = Utils.getEl('setor-cor')?.value || SETOR_PALETTE[0].hex;
   const descricao = (Utils.getVal('setor-descricao') || '').trim().slice(0, SETOR_DESC_LIMIT);

@@ -366,6 +366,35 @@ describe('saveSetor validation (nome vazio)', () => {
     expect(err.hidden).toBe(false);
     expect(input.getAttribute('aria-invalid')).toBe('true');
   });
+
+  it('sincroniza erro e botão com trim/limite em tempo real', async () => {
+    const { initSetorColorPicker } = await import('../ui/views/equipamentos.js');
+    const input = document.getElementById('setor-nome');
+    const err = document.getElementById('setor-nome-err');
+    const saveBtn = document.getElementById('setor-save-btn');
+
+    initSetorColorPicker();
+    expect(saveBtn.disabled).toBe(true);
+
+    // Toca no campo e deixa inválido (apenas espaços) => erro visível
+    input.value = '   ';
+    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('blur'));
+    expect(err.hidden).toBe(false);
+    expect(saveBtn.disabled).toBe(true);
+
+    // Valor válido com trim => erro some imediatamente e botão habilita
+    input.value = '  Teste  ';
+    input.dispatchEvent(new Event('input'));
+    expect(err.hidden).toBe(true);
+    expect(saveBtn.disabled).toBe(false);
+
+    // Acima do limite (40) volta a invalidar
+    input.value = 'A'.repeat(41);
+    input.dispatchEvent(new Event('input'));
+    expect(err.hidden).toBe(false);
+    expect(saveBtn.disabled).toBe(true);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

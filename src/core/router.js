@@ -262,9 +262,21 @@ export function initHistory() {
   _historyBound = true;
 
   window.addEventListener('popstate', (e) => {
+    if (closeTopBlockingLayer()) {
+      // Consumimos o back para fechar camada sobreposta (modal/lightbox).
+      // Reinsere a rota atual no topo para manter a pilha consistente:
+      // próximo back continua no contexto interno antes de trocar de aba.
+      if (_current && window.history) {
+        window.history.pushState(
+          { route: _current },
+          '',
+          window.location.pathname + window.location.search,
+        );
+      }
+      return;
+    }
     const route = e.state?.route;
     if (route && _routes.has(route)) {
-      closeTopBlockingLayer();
       goTo(route, {}, { fromHistory: true });
     }
   });
