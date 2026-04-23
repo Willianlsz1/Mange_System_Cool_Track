@@ -18,7 +18,9 @@
     "test:related": "vitest related --run",
     "test:fast": "vitest run --bail=1 --silent --reporter=dot",
     "lint:css:dead": "node scripts/dead-css-report.mjs",
-    "prepare": "node .husky/install.mjs"
+    "prepare": "node .husky/install.mjs",
+    "test:e2e": "npx playwright@1.55.0 test -c e2e/playwright.config.js",
+    "test:e2e:ci": "npx playwright@1.55.0 test -c e2e/playwright.config.js --reporter=github"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
