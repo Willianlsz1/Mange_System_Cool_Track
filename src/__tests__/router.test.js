@@ -173,4 +173,26 @@ describe('router', () => {
     expect(backEvent.preventDefault).toHaveBeenCalledTimes(1);
     expect(backSpy).toHaveBeenCalledTimes(1);
   });
+
+  it('backbutton fecha modal aberto antes de navegar no histórico', async () => {
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const backSpy = vi.spyOn(window.history, 'back').mockImplementation(() => {});
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="modal-add-eq" class="modal-overlay is-open"></div>`,
+    );
+
+    registerRoute('inicio', vi.fn());
+    goTo('inicio');
+    initHistory();
+
+    const backEvent = new Event('backbutton');
+    backEvent.preventDefault = vi.fn();
+    document.dispatchEvent(backEvent);
+
+    expect(backEvent.preventDefault).toHaveBeenCalledTimes(1);
+    expect(document.getElementById('modal-add-eq').classList.contains('is-open')).toBe(false);
+    expect(backSpy).not.toHaveBeenCalled();
+  });
 });

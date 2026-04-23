@@ -6,6 +6,7 @@
 
 import { Toast } from './toast.js';
 import { handleError, ErrorCodes } from './errors.js';
+import { Modal } from './modal.js';
 
 const _routes = new Map(); // name → { onEnter, onLeave }
 let _current = null;
@@ -51,6 +52,28 @@ function emitRouteChanged(route, previousRoute) {
       detail: { route, previousRoute },
     }),
   );
+}
+
+function closeTopBlockingLayer() {
+  if (typeof document === 'undefined') return false;
+
+  // Fecha primeiro o modal overlay mais recente.
+  const overlays = [...document.querySelectorAll('.modal-overlay.is-open')];
+  if (overlays.length) {
+    const topOverlay = overlays[overlays.length - 1];
+    if (topOverlay?.id) Modal.close(topOverlay.id);
+    else topOverlay.classList.remove('is-open');
+    return true;
+  }
+
+  // Lightbox de fotos (não usa .modal-overlay).
+  const lightbox = document.getElementById('lightbox');
+  if (lightbox?.classList.contains('is-open')) {
+    lightbox.classList.remove('is-open');
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -241,11 +264,16 @@ export function initHistory() {
   window.addEventListener('popstate', (e) => {
     const route = e.state?.route;
     if (route && _routes.has(route)) {
+      closeTopBlockingLayer();
       goTo(route, {}, { fromHistory: true });
     }
   });
 
   document.addEventListener('backbutton', (e) => {
+    if (closeTopBlockingLayer()) {
+      e.preventDefault?.();
+      return;
+    }
     if (_current && _current !== 'inicio') {
       e.preventDefault?.();
       window.history.back();

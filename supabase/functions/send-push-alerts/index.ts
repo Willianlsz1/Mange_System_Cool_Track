@@ -1,5 +1,5 @@
-import webpush from 'npm:web-push@3';
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import webpush from 'https://esm.sh/web-push@3?target=denonext';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?target=denonext';
 
 const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY')!;
 const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY')!;
