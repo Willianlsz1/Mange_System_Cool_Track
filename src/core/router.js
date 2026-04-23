@@ -234,6 +234,7 @@ export function goTo(name, params = {}, options = {}) {
       _handleViewError(name, currentEl, syncError);
     }
 
+    _currentParams = safeParams;
     emitRouteChanged(name, name);
 
     if (!fromHistory && typeof window !== 'undefined' && window.history) {
