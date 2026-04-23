@@ -7,6 +7,13 @@
 import { attachDialogA11y } from '../../core/modal.js';
 
 const TOUR_DONE_KEY = 'cooltrack-tour-done';
+const TOUR_DONE_KEY_PREFIX = 'ct-tour-done:';
+
+function resolveTourDoneKey(userId) {
+  const normalizedUserId = String(userId || '').trim();
+  if (!normalizedUserId) return TOUR_DONE_KEY;
+  return `${TOUR_DONE_KEY_PREFIX}${normalizedUserId}`;
+}
 
 function renderDescriptionWithAllowedMarkup(target, rawDescription) {
   if (!target) return;
@@ -105,9 +112,20 @@ export const Tour = {
   active: false,
   modalEl: null,
   _a11yCleanup: null,
+  _doneKey: TOUR_DONE_KEY,
 
-  initIfFirstVisit() {
-    if (localStorage.getItem(TOUR_DONE_KEY) === '1') return;
+  initIfFirstVisit({ userId = null } = {}) {
+    const doneKey = resolveTourDoneKey(userId);
+    this._doneKey = doneKey;
+
+    // Migração legado: se a flag antiga global existia, carrega para a chave
+    // por usuário no primeiro boot após hardening.
+    if (doneKey !== TOUR_DONE_KEY && localStorage.getItem(TOUR_DONE_KEY) === '1') {
+      localStorage.setItem(doneKey, '1');
+      localStorage.removeItem(TOUR_DONE_KEY);
+    }
+
+    if (localStorage.getItem(doneKey) === '1') return;
     // Small delay so the dashboard renders first
     setTimeout(() => this.start(), 600);
   },
@@ -137,7 +155,7 @@ export const Tour = {
     this.modalEl?.remove();
     this.modalEl = null;
     if (!keepDoneFlag) {
-      localStorage.setItem(TOUR_DONE_KEY, '1');
+      localStorage.setItem(this._doneKey || TOUR_DONE_KEY, '1');
     }
   },
 

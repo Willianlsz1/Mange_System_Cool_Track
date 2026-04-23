@@ -35,6 +35,10 @@ async function loadFtx() {
 }
 
 describe('FirstTimeExperience > fluxo ativo', () => {
+  const USER_ID = 'user-123';
+  const doneKey = `ct-ftx-done:${USER_ID}`;
+  const skipKey = `ct-ftx-skipped:${USER_ID}`;
+
   beforeEach(() => {
     document.body.innerHTML = '';
     localStorage.clear();
@@ -43,18 +47,18 @@ describe('FirstTimeExperience > fluxo ativo', () => {
   it('skip no passo 0 grava skipped sem marcar done', async () => {
     const { FirstTimeExperience, trackEvent } = await loadFtx();
 
-    FirstTimeExperience.show([]);
+    FirstTimeExperience.show([], { userId: USER_ID });
     document.getElementById('ftx-skip-0').click();
 
-    expect(localStorage.getItem('cooltrack-ftx-skipped')).toBe('1');
-    expect(localStorage.getItem('cooltrack-ftx-done')).toBeNull();
+    expect(localStorage.getItem(skipKey)).toBe('1');
+    expect(localStorage.getItem(doneKey)).toBeNull();
     expect(trackEvent).toHaveBeenCalledWith('onboarding_skipped', { step: 0 });
   });
 
   it('cria equipamento real ao confirmar primeira pergunta', async () => {
     const { FirstTimeExperience, setStateMock, trackEvent } = await loadFtx();
 
-    FirstTimeExperience.show([]);
+    FirstTimeExperience.show([], { userId: USER_ID });
     const equipInput = document.getElementById('ftx-eq-name');
     equipInput.value = 'Split recepção';
     document.getElementById('ftx-create-equip').click();
@@ -70,19 +74,19 @@ describe('FirstTimeExperience > fluxo ativo', () => {
   it('skip no passo 1 mantém onboarding incompleto', async () => {
     const { FirstTimeExperience } = await loadFtx();
 
-    FirstTimeExperience.show([]);
+    FirstTimeExperience.show([], { userId: USER_ID });
     document.getElementById('ftx-eq-name').value = 'Split recepção';
     document.getElementById('ftx-create-equip').click();
     document.getElementById('ftx-skip-1').click();
 
-    expect(localStorage.getItem('cooltrack-ftx-skipped')).toBe('1');
-    expect(localStorage.getItem('cooltrack-ftx-done')).toBeNull();
+    expect(localStorage.getItem(skipKey)).toBe('1');
+    expect(localStorage.getItem(doneKey)).toBeNull();
   });
 
   it('fluxo completo marca done e navega para equipamentos', async () => {
     const { FirstTimeExperience, trackEvent, setStateMock, goToMock } = await loadFtx();
 
-    FirstTimeExperience.show([]);
+    FirstTimeExperience.show([], { userId: USER_ID });
     document.getElementById('ftx-eq-name').value = 'Câmara fria estoque';
     document.getElementById('ftx-create-equip').click();
 
@@ -90,8 +94,8 @@ describe('FirstTimeExperience > fluxo ativo', () => {
     document.getElementById('ftx-maint-type').value = 'Manutenção Preventiva';
     document.getElementById('ftx-save-maint').click();
 
-    expect(localStorage.getItem('cooltrack-ftx-done')).toBe('1');
-    expect(localStorage.getItem('cooltrack-ftx-skipped')).toBeNull();
+    expect(localStorage.getItem(doneKey)).toBe('1');
+    expect(localStorage.getItem(skipKey)).toBeNull();
     expect(setStateMock).toHaveBeenCalledTimes(2);
     expect(trackEvent).toHaveBeenCalledWith(
       'onboarding_activation_completed',
@@ -102,11 +106,22 @@ describe('FirstTimeExperience > fluxo ativo', () => {
 
   it('reopen limpa skip e reabre overlay', async () => {
     const { FirstTimeExperience } = await loadFtx();
-    localStorage.setItem('cooltrack-ftx-skipped', '1');
+    localStorage.setItem(skipKey, '1');
 
-    FirstTimeExperience.reopen([]);
+    FirstTimeExperience.reopen([], { userId: USER_ID });
 
-    expect(localStorage.getItem('cooltrack-ftx-skipped')).toBeNull();
+    expect(localStorage.getItem(skipKey)).toBeNull();
     expect(document.getElementById('ftx-overlay')).toBeTruthy();
+  });
+
+  it('migra chave legada global para chave por usuário', async () => {
+    const { FirstTimeExperience } = await loadFtx();
+    localStorage.setItem('cooltrack-ftx-done', '1');
+
+    FirstTimeExperience.show([], { userId: USER_ID });
+
+    expect(localStorage.getItem('cooltrack-ftx-done')).toBeNull();
+    expect(localStorage.getItem(doneKey)).toBe('1');
+    expect(document.getElementById('ftx-overlay')).toBeNull();
   });
 });

@@ -8,9 +8,37 @@ import './firstTimeExperience.css';
 
 const FTX_KEY = 'cooltrack-ftx-done';
 const FTX_SKIP_KEY = 'cooltrack-ftx-skipped';
+const FTX_DONE_KEY_PREFIX = 'ct-ftx-done:';
+const FTX_SKIP_KEY_PREFIX = 'ct-ftx-skipped:';
 
-function dismiss(overlay, { reason = 'completed', step = null } = {}) {
-  if (!localStorage.getItem(FTX_KEY)) {
+function resolveFtxKeys(userId) {
+  const normalizedUserId = String(userId || '').trim();
+  if (!normalizedUserId) {
+    return { doneKey: FTX_KEY, skipKey: FTX_SKIP_KEY };
+  }
+  return {
+    doneKey: `${FTX_DONE_KEY_PREFIX}${normalizedUserId}`,
+    skipKey: `${FTX_SKIP_KEY_PREFIX}${normalizedUserId}`,
+  };
+}
+
+function migrateLegacyFtxKeysIfNeeded({ doneKey, skipKey }) {
+  if (doneKey === FTX_KEY && skipKey === FTX_SKIP_KEY) return;
+  if (localStorage.getItem(FTX_KEY) === '1') {
+    localStorage.setItem(doneKey, '1');
+    localStorage.removeItem(FTX_KEY);
+  }
+  if (localStorage.getItem(FTX_SKIP_KEY) === '1') {
+    localStorage.setItem(skipKey, '1');
+    localStorage.removeItem(FTX_SKIP_KEY);
+  }
+}
+
+function dismiss(
+  overlay,
+  { reason = 'completed', step = null, doneKey = FTX_KEY, skipKey = FTX_SKIP_KEY } = {},
+) {
+  if (!localStorage.getItem(doneKey)) {
     if (reason === 'completed') {
       trackEvent('onboarding_completed', {});
     } else if (reason === 'skipped') {
@@ -21,10 +49,10 @@ function dismiss(overlay, { reason = 'completed', step = null } = {}) {
   }
 
   if (reason === 'completed') {
-    localStorage.setItem(FTX_KEY, '1');
-    localStorage.removeItem(FTX_SKIP_KEY);
+    localStorage.setItem(doneKey, '1');
+    localStorage.removeItem(skipKey);
   } else if (reason === 'skipped') {
-    localStorage.setItem(FTX_SKIP_KEY, '1');
+    localStorage.setItem(skipKey, '1');
   }
 
   overlay.remove();
@@ -66,10 +94,13 @@ function buildFirstMaintenanceRegistro({ equipId, data, tipo, tecnico }) {
 }
 
 export const FirstTimeExperience = {
-  show(equipamentos) {
+  show(equipamentos, { userId = null } = {}) {
+    const { doneKey, skipKey } = resolveFtxKeys(userId);
+    migrateLegacyFtxKeysIfNeeded({ doneKey, skipKey });
+
     if (equipamentos.length) return;
-    if (localStorage.getItem(FTX_KEY)) return;
-    if (localStorage.getItem(FTX_SKIP_KEY)) return;
+    if (localStorage.getItem(doneKey)) return;
+    if (localStorage.getItem(skipKey)) return;
 
     trackEvent('onboarding_started', {});
 
@@ -193,7 +224,7 @@ export const FirstTimeExperience = {
       });
 
       overlay.querySelector('#ftx-skip-0')?.addEventListener('click', () => {
-        dismiss(overlay, { reason: 'skipped', step: 0 });
+        dismiss(overlay, { reason: 'skipped', step: 0, doneKey, skipKey });
       });
     };
 
@@ -233,7 +264,7 @@ export const FirstTimeExperience = {
       dateInput?.addEventListener('input', () => dateInput.classList.remove('ftx-input--error'));
 
       overlay.querySelector('#ftx-skip-1')?.addEventListener('click', () => {
-        dismiss(overlay, { reason: 'skipped', step: 1 });
+        dismiss(overlay, { reason: 'skipped', step: 1, doneKey, skipKey });
       });
 
       btn.addEventListener('click', () => {
@@ -275,7 +306,7 @@ export const FirstTimeExperience = {
           maintenanceType,
         });
 
-        dismiss(overlay, { reason: 'completed' });
+        dismiss(overlay, { reason: 'completed', doneKey, skipKey });
         goTo('equipamentos');
       });
     };
@@ -283,8 +314,9 @@ export const FirstTimeExperience = {
     renderStepCreateEquipment();
   },
 
-  reopen(equipamentos) {
-    localStorage.removeItem(FTX_SKIP_KEY);
-    this.show(equipamentos);
+  reopen(equipamentos, { userId = null } = {}) {
+    const { skipKey } = resolveFtxKeys(userId);
+    localStorage.removeItem(skipKey);
+    this.show(equipamentos, { userId });
   },
 };
