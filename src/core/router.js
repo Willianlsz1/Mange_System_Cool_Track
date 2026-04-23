@@ -7,11 +7,37 @@
 import { Toast } from './toast.js';
 import { handleError, ErrorCodes } from './errors.js';
 import { Modal } from './modal.js';
+import { SignatureModal } from '../ui/components/signature/signature-modal.js';
+import { SignatureViewerModal } from '../ui/components/signature/signature-viewer-modal.js';
 
 const _routes = new Map(); // name → { onEnter, onLeave }
 let _current = null;
+let _currentParams = {};
 let _transitioning = false;
 let _historyBound = false;
+const UI_CTX_VERSION = 1;
+
+function normalizeRouteParams(params) {
+  if (!params || typeof params !== 'object' || Array.isArray(params)) return {};
+  return params;
+}
+
+function buildHistoryState(route, params = {}) {
+  return {
+    route,
+    params: normalizeRouteParams(params),
+    uiCtxVersion: UI_CTX_VERSION,
+  };
+}
+
+function parseHistoryState(state) {
+  if (!state || typeof state !== 'object') return { route: null, params: {} };
+  return {
+    route: typeof state.route === 'string' ? state.route : null,
+    // Compat legado: state antigo sem params
+    params: normalizeRouteParams(state.params),
+  };
+}
 
 function setRoutingState(isRouting) {
   if (typeof document === 'undefined') return;
@@ -57,23 +83,59 @@ function emitRouteChanged(route, previousRoute) {
 function closeTopBlockingLayer() {
   if (typeof document === 'undefined') return false;
 
-  // Fecha primeiro o modal overlay mais recente.
+  const candidates = [];
+
+  // Modal padrão (infra atual).
   const overlays = [...document.querySelectorAll('.modal-overlay.is-open')];
-  if (overlays.length) {
-    const topOverlay = overlays[overlays.length - 1];
-    if (topOverlay?.id) Modal.close(topOverlay.id);
-    else topOverlay.classList.remove('is-open');
-    return true;
+  const topOverlay = overlays[overlays.length - 1];
+  if (topOverlay) {
+    candidates.push({
+      element: topOverlay,
+      close: () => {
+        if (topOverlay?.id) Modal.close(topOverlay.id);
+        else topOverlay.classList.remove('is-open');
+      },
+    });
+  }
+
+  // Modais de assinatura (capture/viewer) — PR3 cobertura mínima.
+  const signatureCapture = document.getElementById('modal-signature-overlay');
+  if (signatureCapture?.classList.contains('is-open')) {
+    candidates.push({
+      element: signatureCapture,
+      close: () => SignatureModal.closeIfOpen(),
+    });
+  }
+
+  const signatureViewer = document.getElementById('modal-signature-viewer-overlay');
+  if (signatureViewer?.classList.contains('is-open')) {
+    candidates.push({
+      element: signatureViewer,
+      close: () => SignatureViewerModal.closeIfOpen(),
+    });
   }
 
   // Lightbox de fotos (não usa .modal-overlay).
   const lightbox = document.getElementById('lightbox');
   if (lightbox?.classList.contains('is-open')) {
-    lightbox.classList.remove('is-open');
-    return true;
+    candidates.push({
+      element: lightbox,
+      close: () => lightbox.classList.remove('is-open'),
+    });
   }
 
-  return false;
+  if (!candidates.length) return false;
+
+  // Fecha apenas a camada mais ao topo (última no DOM).
+  const top = candidates.reduce((currentTop, candidate) => {
+    if (!currentTop) return candidate;
+    const relation = currentTop.element.compareDocumentPosition(candidate.element);
+    const isCandidateAfterCurrent = Boolean(relation & Node.DOCUMENT_POSITION_FOLLOWING);
+    return isCandidateAfterCurrent ? candidate : currentTop;
+  }, null);
+
+  top?.close?.();
+  return true;
 }
 
 /**
@@ -95,6 +157,7 @@ export function registerRoute(name, onEnter, onLeave = null) {
  */
 export function goTo(name, params = {}, options = {}) {
   const { fromHistory = false, replaceHistory = false } = options;
+  const safeParams = normalizeRouteParams(params);
   if (_transitioning) return;
   if (!_routes.has(name)) {
     console.warn(`[Router] Rota desconhecida: "${name}"`);
@@ -111,7 +174,7 @@ export function goTo(name, params = {}, options = {}) {
     if (!currentEl) return;
 
     try {
-      const result = _routes.get(name)?.onEnter(params);
+      const result = _routes.get(name)?.onEnter(safeParams);
       if (result && typeof result.then === 'function') {
         result.catch((asyncError) => _handleViewError(name, currentEl, asyncError));
       }
@@ -123,7 +186,7 @@ export function goTo(name, params = {}, options = {}) {
 
     if (!fromHistory && typeof window !== 'undefined' && window.history) {
       // Mesma rota + params: evita poluir stack com entradas idênticas.
-      const state = { route: name };
+      const state = buildHistoryState(name, safeParams);
       window.history.replaceState(state, '', window.location.pathname + window.location.search);
     }
 
@@ -161,10 +224,10 @@ export function goTo(name, params = {}, options = {}) {
     prevEl.classList.add('is-exiting');
     afterAnimation(prevEl, 150, () => {
       prevEl.classList.remove('active', 'is-exiting');
-      _activateRoute(name, nextEl, params, { fromHistory, replaceHistory });
+      _activateRoute(name, nextEl, safeParams, { fromHistory, replaceHistory });
     });
   } else {
-    _activateRoute(name, nextEl, params, { fromHistory, replaceHistory });
+    _activateRoute(name, nextEl, safeParams, { fromHistory, replaceHistory });
   }
 }
 
@@ -207,6 +270,7 @@ function _handleViewError(name, el, error) {
 
 function _activateRoute(name, el, params, options = {}) {
   const { fromHistory = false, replaceHistory = false } = options;
+  const safeParams = normalizeRouteParams(params);
 
   const previousRoute = _current;
 
@@ -226,7 +290,7 @@ function _activateRoute(name, el, params, options = {}) {
   // renderiza fallback dentro do container pra evitar tela em branco
   // e garante que _transitioning seja resetado.
   try {
-    const result = _routes.get(name)?.onEnter(params);
+    const result = _routes.get(name)?.onEnter(safeParams);
     if (result && typeof result.then === 'function') {
       result.catch((asyncError) => _handleViewError(name, el, asyncError));
     }
@@ -235,11 +299,12 @@ function _activateRoute(name, el, params, options = {}) {
   }
 
   _current = name;
+  _currentParams = safeParams;
   emitRouteChanged(name, previousRoute);
   _transitioning = false;
 
   if (!fromHistory && typeof window !== 'undefined' && window.history) {
-    const state = { route: name };
+    const state = buildHistoryState(name, safeParams);
     if (replaceHistory)
       window.history.replaceState(state, '', window.location.pathname + window.location.search);
     else window.history.pushState(state, '', window.location.pathname + window.location.search);
@@ -268,16 +333,16 @@ export function initHistory() {
       // próximo back continua no contexto interno antes de trocar de aba.
       if (_current && window.history) {
         window.history.pushState(
-          { route: _current },
+          buildHistoryState(_current, _currentParams),
           '',
           window.location.pathname + window.location.search,
         );
       }
       return;
     }
-    const route = e.state?.route;
+    const { route, params } = parseHistoryState(e.state);
     if (route && _routes.has(route)) {
-      goTo(route, {}, { fromHistory: true });
+      goTo(route, params, { fromHistory: true });
     }
   });
 

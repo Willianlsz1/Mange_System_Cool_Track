@@ -1,3 +1,5 @@
+import { SETOR_NOME_MAX } from '../../../core/setorRules.js';
+
 export function renderShellModals() {
   return String.raw`
 <!-- MODAL: Cadastrar Equipamento -->
@@ -590,7 +592,7 @@ export function renderShellModals() {
               Nome do setor
               <span class="setor-modal__label-req" aria-hidden="true">*</span>
             </label>
-            <span class="setor-modal__counter" id="setor-nome-counter" aria-live="polite">0/40</span>
+            <span class="setor-modal__counter" id="setor-nome-counter" aria-live="polite">0/${SETOR_NOME_MAX}</span>
           </div>
           <input
             id="setor-nome"
@@ -598,7 +600,7 @@ export function renderShellModals() {
             type="text"
             placeholder="Ex: Bloco Cirúrgico, UTI, Cozinha…"
             autocomplete="off"
-            maxlength="40"
+            maxlength="${SETOR_NOME_MAX}"
             required
             aria-describedby="setor-nome-err"
           />

@@ -1,4 +1,5 @@
 const VALID_STATUS = new Set(['ok', 'warn', 'danger']);
+import { SETOR_NOME_MAX } from './setorRules.js';
 
 export const EQUIPMENT_FIELD_LIMITS = Object.freeze({
   nome: 120,
@@ -273,7 +274,6 @@ export function sanitizePersistedEquipamento(payload) {
   };
 }
 
-const SETOR_NOME_MAX = 80;
 const SETOR_DESCRICAO_MAX = 240;
 const SETOR_RESPONSAVEL_MAX = 120;
 const SETOR_COR_REGEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;

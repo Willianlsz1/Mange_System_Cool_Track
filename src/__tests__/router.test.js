@@ -1,3 +1,18 @@
+const closeSignatureCaptureIfOpen = vi.fn(() => true);
+const closeSignatureViewerIfOpen = vi.fn(() => true);
+
+vi.mock('../ui/components/signature/signature-modal.js', () => ({
+  SignatureModal: {
+    closeIfOpen: closeSignatureCaptureIfOpen,
+  },
+}));
+
+vi.mock('../ui/components/signature/signature-viewer-modal.js', () => ({
+  SignatureViewerModal: {
+    closeIfOpen: closeSignatureViewerIfOpen,
+  },
+}));
+
 function mountRouterDom() {
   document.body.innerHTML = `
     <main id="main-content" tabindex="-1"></main>
@@ -21,6 +36,8 @@ describe('router', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.useRealTimers();
+    closeSignatureCaptureIfOpen.mockClear();
+    closeSignatureViewerIfOpen.mockClear();
     mountRouterDom();
   });
 
@@ -81,6 +98,22 @@ describe('router', () => {
 
     expect(replaceSpy).toHaveBeenCalledTimes(1);
     expect(pushSpy).toHaveBeenCalledTimes(0);
+  });
+
+  it('persiste params no history state em goTo', async () => {
+    const { registerRoute, goTo } = await loadRouterModule();
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+
+    registerRoute('registros', vi.fn());
+    goTo('registros', { equipId: 'eq-1', source: 'kpi' });
+
+    expect(pushSpy).toHaveBeenCalledTimes(1);
+    const [state] = pushSpy.mock.calls[0];
+    expect(state).toMatchObject({
+      route: 'registros',
+      params: { equipId: 'eq-1', source: 'kpi' },
+    });
+    expect(state.uiCtxVersion).toBeTypeOf('number');
   });
 
   it('permite reentrar na mesma rota quando há params e usa replaceState', async () => {
@@ -162,9 +195,14 @@ describe('router', () => {
     goTo('inicio');
     initHistory();
 
-    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+    window.dispatchEvent(
+      new PopStateEvent('popstate', {
+        state: { route: 'registros', params: { statusFilter: 'preventiva-7d' }, uiCtxVersion: 1 },
+      }),
+    );
     vi.advanceTimersByTime(150);
     expect(onEnterRegistros).toHaveBeenCalledTimes(1);
+    expect(onEnterRegistros).toHaveBeenCalledWith({ statusFilter: 'preventiva-7d' });
     expect(pushSpy).toHaveBeenCalledTimes(1);
 
     const backEvent = new Event('backbutton');
@@ -218,5 +256,100 @@ describe('router', () => {
     expect(document.getElementById('lightbox').classList.contains('is-open')).toBe(false);
     expect(onEnterRegistros).not.toHaveBeenCalled();
     expect(pushSpy).toHaveBeenCalledTimes(2); // entrada inicial + reinserção da rota atual
+  });
+
+  it('mantém compatibilidade com history state legado sem params', async () => {
+    vi.useFakeTimers();
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const onEnterRegistros = vi.fn();
+
+    registerRoute('inicio', vi.fn());
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    initHistory();
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+    vi.advanceTimersByTime(150);
+
+    expect(onEnterRegistros).toHaveBeenCalledWith({});
+  });
+
+  it('consome popstate para fechar assinatura (capture) sem trocar rota', async () => {
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const onEnterRegistros = vi.fn();
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="modal-signature-overlay" class="sig-capture-modal is-open"></div>`,
+    );
+
+    registerRoute('inicio', vi.fn());
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    initHistory();
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+
+    expect(closeSignatureCaptureIfOpen).toHaveBeenCalled();
+    expect(onEnterRegistros).not.toHaveBeenCalled();
+    expect(pushSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('consome popstate para fechar assinatura (viewer) sem trocar rota', async () => {
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const onEnterRegistros = vi.fn();
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="modal-signature-viewer-overlay" class="hist-signature-modal is-open"></div>`,
+    );
+
+    registerRoute('inicio', vi.fn());
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    initHistory();
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+
+    expect(closeSignatureViewerIfOpen).toHaveBeenCalled();
+    expect(onEnterRegistros).not.toHaveBeenCalled();
+    expect(pushSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('fecha apenas a camada do topo quando há múltiplas camadas bloqueantes', async () => {
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const onEnterRegistros = vi.fn();
+
+    // Ordem no DOM define topo: modal padrão -> lightbox -> assinatura viewer (topo).
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="modal-add-eq" class="modal-overlay is-open"></div>`,
+    );
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="lightbox" class="lightbox is-open"></div>`,
+    );
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="modal-signature-viewer-overlay" class="hist-signature-modal is-open"></div>`,
+    );
+
+    registerRoute('inicio', vi.fn());
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    initHistory();
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+
+    expect(closeSignatureViewerIfOpen).toHaveBeenCalled();
+    expect(document.getElementById('modal-add-eq').classList.contains('is-open')).toBe(true);
+    expect(document.getElementById('lightbox').classList.contains('is-open')).toBe(true);
+    expect(onEnterRegistros).not.toHaveBeenCalled();
   });
 });

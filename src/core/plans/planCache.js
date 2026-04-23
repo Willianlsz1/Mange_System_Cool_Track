@@ -51,6 +51,14 @@ export function setCachedPlan(planCode) {
         to: normalized,
       });
     }
+
+    if (previous !== normalized && typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('cooltrack:plan-changed', {
+          detail: { previous: previous || null, next: normalized },
+        }),
+      );
+    }
   } catch {
     // ignora erros de storage (modo privado, etc.)
   }

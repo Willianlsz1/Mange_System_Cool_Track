@@ -395,6 +395,29 @@ describe('saveSetor validation (nome vazio)', () => {
     expect(err.hidden).toBe(false);
     expect(saveBtn.disabled).toBe(true);
   });
+
+  it('em edição, nome com 41 chars permanece inválido e não salva', async () => {
+    findSetor.mockReturnValue({
+      id: 's-long',
+      nome: 'A'.repeat(41),
+      cor: '#00c8e8',
+      descricao: '',
+      responsavel: '',
+    });
+
+    const { openEditSetor, saveSetor, initSetorColorPicker } =
+      await import('../ui/views/equipamentos.js');
+
+    openEditSetor('s-long');
+    initSetorColorPicker();
+
+    const saveBtn = document.getElementById('setor-save-btn');
+    expect(saveBtn.disabled).toBe(true);
+
+    const ok = await saveSetor();
+    expect(ok).toBe(false);
+    expect(toastMock.warning).toHaveBeenCalledWith(expect.stringMatching(/máximo 40/i));
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
