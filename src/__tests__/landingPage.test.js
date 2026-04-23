@@ -19,11 +19,11 @@ describe('LandingPage', () => {
     expect(heroText).toContain('5s');
     // Kicker agora sinaliza IA
     expect(heroText).toContain('agora com IA');
-    // H1 preservado (prova numérica "30 segundos" em grad word)
-    expect(heroText).toContain('Chega de planilha');
-    expect(heroText).toContain('30 segundos');
-    // CTA padronizado pós-redesign
-    expect(heroText).toContain('Experimentar grátis');
+    // H1 reposicionado para promessa real: fim da digitação da etiqueta.
+    expect(heroText).toContain('Pare de digitar etiqueta');
+    expect(heroText).toContain('Cadastre equipamentos');
+    // CTA principal do topo
+    expect(heroText).toContain('Testar grátis');
     // Chips do mockup mostram dados extraídos da etiqueta (signature moment 3)
     expect(heroText).toContain('USNW092WSG3');
     expect(heroText).toContain('R-410A');
@@ -48,7 +48,8 @@ describe('LandingPage', () => {
 
     // Social proof strip
     const socialText = document.querySelector('.lp-social')?.textContent || '';
-    expect(socialText).toContain('técnicos');
+    expect(socialText).toContain('Usado por técnicos em campo');
+    expect(socialText).toContain('2.400+');
     expect(socialText).toContain('offline-ready');
   });
 
@@ -197,6 +198,10 @@ describe('LandingPage', () => {
 
     const how = document.querySelector('.lp-how');
     expect(how).toBeTruthy();
+    expect(how.querySelector('.lp-how__tabs-label')?.textContent).toContain(
+      'Veja como funciona na prática',
+    );
+    expect(how.querySelector('.lp-how__tab--active')?.textContent).toContain('Como funciona');
 
     // 3 passos numerados
     const steps = how.querySelectorAll('.lp-how__step');
@@ -206,12 +211,12 @@ describe('LandingPage', () => {
     // step 1 = foto da etiqueta com IA, step 2 = registro em campo, step 3 = PDF.
     const stepTexts = Array.from(steps).map((s) => s.textContent);
     expect(stepTexts[0]).toContain('1');
-    expect(stepTexts[0]).toContain('Foto da etiqueta');
-    expect(stepTexts[0]).toContain('IA preenche');
+    expect(stepTexts[0]).toContain('Aponta a câmera');
+    expect(stepTexts[1]).toContain('IA preenche');
     expect(stepTexts[1]).toContain('2');
-    expect(stepTexts[1]).toContain('Registra o serviço');
+    expect(stepTexts[1]).toContain('você revisa e cadastra');
     expect(stepTexts[2]).toContain('3');
-    expect(stepTexts[2]).toContain('PDF em 1 toque');
+    expect(stepTexts[2]).toContain('Você registra e gera o relatório');
 
     // Posição: depois do hero, antes da gallery
     const hero = document.querySelector('.lp-hero');
@@ -345,14 +350,18 @@ describe('LandingPage', () => {
     expect(beforeCard.querySelector('.lp-compare__badge--before')?.textContent).toContain('Antes');
     expect(afterCard.querySelector('.lp-compare__badge--after')?.textContent).toContain('Depois');
 
-    // Ancora-copy do messaging de transformação
+    // Âncoras de transformação mais fiéis ao fluxo real
     const beforeText = beforeCard.textContent.toLowerCase();
-    expect(beforeText).toContain('caderno');
-    expect(beforeText).toContain('20 minutos');
+    expect(beforeText).toContain('digitando etiqueta manualmente');
+    expect(beforeText).toContain('16 campos');
+    expect(beforeText).toContain('erros constantes');
+    expect(beforeText).toContain('perda de tempo');
 
     const afterText = afterCard.textContent.toLowerCase();
-    expect(afterText).toContain('30 segundos');
-    expect(afterText).toContain('assinatura');
+    expect(afterText).toContain('foto da etiqueta');
+    expect(afterText).toContain('dados preenchidos automaticamente');
+    expect(afterText).toContain('registro rápido');
+    expect(afterText).toContain('relatório em poucos toques');
 
     // Posição: depois do trust strip, antes do pricing
     const trust = document.querySelector('.lp-trust');
@@ -377,22 +386,23 @@ describe('LandingPage', () => {
     expect(summaries.length).toBe(items.length);
   });
 
-  it('hero has a single primary CTA (no Google button competing with trial)', () => {
+  it('hero keeps one primary trial button and one anchor de apoio (no Google)', () => {
     LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
 
-    // Hero deve conter apenas o CTA primário "Experimentar grátis"
-    // Pós-redesign #72: o wrapper virou .lp-hero__ctas.
+    // Hero mantém 1 botão primário e 1 link secundário "Ver como funciona".
     const heroCtas = document.querySelector('.lp-hero .lp-hero__ctas');
     expect(heroCtas).toBeTruthy();
     const heroButtons = heroCtas.querySelectorAll('button');
     expect(heroButtons.length).toBe(1);
+    const heroAnchors = heroCtas.querySelectorAll('a');
+    expect(heroAnchors.length).toBe(1);
 
-    // Hero NÃO pode ter secondary (ex. "Continuar com Google") — dilui conversão.
-    expect(heroCtas.querySelector('.lp-btn-secondary')).toBeNull();
+    // Hero NÃO pode ter button social (ex. "Continuar com Google") — dilui conversão.
     expect(heroCtas.textContent).not.toContain('Google');
 
     // O único botão do hero deve disparar trial (não login).
     expect(heroButtons[0].dataset.action).toBe('start-trial');
+    expect(heroAnchors[0].getAttribute('href')).toBe('#lp-how-title');
   });
 
   it('renders institutional footer with brand, legal links and contact', () => {
@@ -509,18 +519,18 @@ describe('LandingPage', () => {
     expect(faqCalls[0][1]).toEqual({ question: 'offline' });
   });
 
-  it('hero sub-hero leads with honest "Nunca mais digita etiqueta" promise (L-A)', () => {
+  it('hero sub-hero leads with honest promise about IA + revisão humana (L-A)', () => {
     LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
 
     const sub = document.querySelector('.lp-hero__sub');
     expect(sub).toBeTruthy();
-    // A lead line honesta sobre o escopo real da IA: preenche cadastro via foto.
+    // A lead line honesta sobre o escopo real da IA: preenche cadastro para revisão.
     const lead = sub.querySelector('.lp-hero__sub-lead');
     expect(lead).toBeTruthy();
-    expect(lead.textContent).toContain('Nunca mais digita etiqueta');
-    // O restante do sub continua explicando o fluxo IA+assinatura+offline.
-    expect(sub.textContent.toLowerCase()).toContain('câmera');
-    expect(sub.textContent.toLowerCase()).toContain('offline');
+    expect(lead.textContent).toContain('IA lê a etiqueta e preenche os dados do equipamento');
+    // O restante do sub continua explicando registro do serviço e geração de relatório.
+    expect(sub.textContent.toLowerCase()).toContain('serviço');
+    expect(sub.textContent.toLowerCase()).toContain('relatório');
   });
 
   it('renders time-stat strip "20 min → 30 segundos" between hero and how (L-B)', () => {
@@ -547,18 +557,18 @@ describe('LandingPage', () => {
     expect(stat.compareDocumentPosition(how) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it('hero CTA uses verbo-ação específico só no hero (L-C)', () => {
+  it('hero CTA e CTAs de meio/final seguem a estrutura pedida (L-C)', () => {
     LandingPage.render({ onStartTrial: vi.fn(), onLogin: vi.fn() });
 
     const heroCta = document.querySelector('.lp-hero .lp-hero__cta');
     expect(heroCta).toBeTruthy();
-    expect(heroCta.textContent).toContain('Cadastrar meu primeiro equipamento');
-    // "Experimentar grátis" continua nos outros pontos (final/sticky) pra manter
-    // consistência do CTA universal fora do hero.
+    expect(heroCta.textContent).toContain('Testar grátis');
+    const middleCta = document.querySelector('.lp-hero .lp-hero__cta-secondary');
+    expect(middleCta.textContent).toContain('Ver como funciona');
     const finalCta = document.querySelector('.lp-final .lp-btn-primary');
     const stickyCta = document.querySelector('.lp-sticky .lp-btn-primary');
-    expect(finalCta.textContent).toContain('Experimentar grátis');
-    expect(stickyCta.textContent).toContain('Experimentar grátis');
+    expect(finalCta.textContent).toContain('Começar agora');
+    expect(stickyCta.textContent).toContain('Começar agora');
   });
 
   it('Plus badge e microcopy reposicionam o plano como técnico autônomo (L-D)', () => {
