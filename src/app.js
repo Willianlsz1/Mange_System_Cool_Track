@@ -130,6 +130,13 @@ async function bootstrap() {
 
     Auth.onAuthChange((nextUser) => {
       if (nextUser) localStorage.removeItem('cooltrack-guest-mode');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('cooltrack:auth-changed', {
+            detail: { userId: nextUser?.id || null },
+          }),
+        );
+      }
     });
 
     // Inline do LandingPage.clear() pra evitar baixar o chunk da landing quando

@@ -14,11 +14,40 @@ vi.mock('../core/state.js', () => ({
 
 // priorityEngine só importa pra contar "em-atencao" — mock devolve níveis
 // determinísticos baseados em eq.__mockPriority pra test fixtures.
+const evaluateEquipmentPriorityMock = vi.fn((eq) => ({
+  priorityLevel: eq?.__mockPriority ?? 1, // 1 = OK, 3 = ALTA, 4 = URGENTE
+  priorityLabel: 'mock',
+}));
 vi.mock('../domain/priorityEngine.js', () => ({
-  evaluateEquipmentPriority: vi.fn((eq) => ({
-    priorityLevel: eq?.__mockPriority ?? 1, // 1 = OK, 3 = ALTA, 4 = URGENTE
-    priorityLabel: 'mock',
-  })),
+  PRIORITY_LEVEL: {
+    OK: 1,
+    BAIXA: 2,
+    ALTA: 3,
+    URGENTE: 4,
+  },
+  evaluateEquipmentPriority: evaluateEquipmentPriorityMock,
+}));
+
+const getActionPriorityScoreMock = vi.fn(() => ({ actionPriorityScore: 10 }));
+vi.mock('../domain/actionPriority.js', () => ({
+  getActionPriorityScore: getActionPriorityScoreMock,
+}));
+
+const evaluateEquipmentSuggestedActionMock = vi.fn(() => ({
+  actionCode: 'none',
+  actionLabel: 'Sem ação',
+}));
+vi.mock('../domain/suggestedAction.js', () => ({
+  ACTION_CODE: {
+    NONE: 'none',
+    MONITOR: 'monitor',
+    COLLECT_DATA: 'collect_data',
+    REGISTER_CORRECTIVE: 'register_corrective',
+    REGISTER_CORRECTIVE_IMMEDIATE: 'register_corrective_immediate',
+    REGISTER_PREVENTIVE: 'register_preventive',
+    SCHEDULE_PREVENTIVE: 'schedule_preventive',
+  },
+  evaluateEquipmentSuggestedAction: evaluateEquipmentSuggestedActionMock,
 }));
 
 // alerts.getPreventivaDueEquipmentIds é a fonte do KPI preventiva30d.
@@ -35,9 +64,19 @@ vi.mock('../ui/components/skeleton.js', () => ({
 
 // Maintenance só é usado por renderEquipHero indiretamente (não diretamente
 // — mas o módulo importa). Mock básico.
+const evaluateEquipmentRiskMock = vi.fn(() => ({
+  score: 50,
+  classification: 'baixo',
+  factors: ['rotina estável'],
+}));
 vi.mock('../domain/maintenance.js', () => ({
   evaluateEquipmentHealth: vi.fn(() => ({ score: 80, context: { daysToNext: 30 } })),
-  evaluateEquipmentRisk: vi.fn(() => ({ score: 50 })),
+  getHealthClass: vi.fn((score) => {
+    if (score >= 85) return 'ok';
+    if (score >= 60) return 'warn';
+    return 'danger';
+  }),
+  evaluateEquipmentRisk: evaluateEquipmentRiskMock,
   evaluateEquipmentRiskTrend: vi.fn(() => ({ trend: 'stable', delta: 0 })),
   getEquipmentMaintenanceContext: vi.fn(() => ({
     ultimoRegistro: null,
@@ -302,6 +341,199 @@ describe('renderEquipFilters', () => {
     // contrato exposto (o DOM rendering é coberto pelos testes de renderEquipFilters).
     setActiveQuickFilter(null);
     expect(getActiveQuickFilter()).toBeNull();
+  });
+});
+
+describe('equip card photo events hardening', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <section id="equip-hero" hidden>
+        <p id="equip-hero-sub"></p>
+        <div id="equip-hero-sem-setor-cta" hidden></div>
+        <div id="equip-hero-kpis"></div>
+      </section>
+      <nav id="equip-filters" hidden></nav>
+      <div id="equip-page-title"></div>
+      <div id="equip-toolbar-actions"></div>
+      <div id="equip-search-bar"></div>
+      <div id="lista-equip"></div>
+    `;
+  });
+
+  it('marks photo icon as loaded on image load event', async () => {
+    getState.mockReturnValue({
+      equipamentos: [
+        {
+          id: 'e1',
+          nome: 'Evaporadora 01',
+          tipo: 'Split',
+          local: 'Sala',
+          tag: 'EVP-01',
+          fluido: 'R410A',
+          status: 'ok',
+          criticidade: 'media',
+          fotos: ['https://example.com/photo.jpg'],
+        },
+      ],
+      registros: [],
+      setores: [],
+    });
+
+    const { renderEquip } = await import('../ui/views/equipamentos.js');
+    await renderEquip('', { __skipPlanRefresh: true });
+
+    const icon = document.querySelector('.equip-card__type-icon--photo');
+    const img = icon?.querySelector('img');
+    expect(icon).not.toBeNull();
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('load'));
+    expect(icon.classList.contains('equip-card__type-icon--loaded')).toBe(true);
+  });
+
+  it('applies fallback class and removes broken image on error event', async () => {
+    getState.mockReturnValue({
+      equipamentos: [
+        {
+          id: 'e1',
+          nome: 'Evaporadora 01',
+          tipo: 'Split',
+          local: 'Sala',
+          tag: 'EVP-01',
+          fluido: 'R410A',
+          status: 'ok',
+          criticidade: 'media',
+          fotos: ['https://example.com/broken.jpg'],
+        },
+      ],
+      registros: [],
+      setores: [],
+    });
+
+    const { renderEquip } = await import('../ui/views/equipamentos.js');
+    await renderEquip('', { __skipPlanRefresh: true });
+
+    const icon = document.querySelector('.equip-card__type-icon--photo');
+    const img = icon?.querySelector('img');
+    expect(icon).not.toBeNull();
+    expect(img).not.toBeNull();
+
+    img.dispatchEvent(new Event('error'));
+    expect(icon.classList.contains('equip-card__type-icon--fallback')).toBe(true);
+    expect(icon.querySelector('img')).toBeNull();
+  });
+});
+
+describe('renderEquip memoization on large lists', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <section id="equip-hero" hidden>
+        <p id="equip-hero-sub"></p>
+        <div id="equip-hero-sem-setor-cta" hidden></div>
+        <div id="equip-hero-kpis"></div>
+      </section>
+      <nav id="equip-filters" hidden></nav>
+      <div id="equip-page-title"></div>
+      <div id="equip-toolbar-actions"></div>
+      <div id="equip-search-bar"></div>
+      <div id="lista-equip"></div>
+    `;
+    evaluateEquipmentRiskMock.mockClear();
+    evaluateEquipmentPriorityMock.mockClear();
+    getActionPriorityScoreMock.mockClear();
+  });
+
+  it('reuses per-item evaluations during filter/sort/partition/card render', async () => {
+    getState.mockReturnValue({
+      equipamentos: [
+        {
+          id: 'e1',
+          nome: 'EVP 1',
+          tipo: 'Split',
+          local: 'Sala 1',
+          tag: 'EVP-1',
+          fluido: 'R410A',
+          status: 'ok',
+          criticidade: 'media',
+          fotos: [],
+        },
+        {
+          id: 'e2',
+          nome: 'EVP 2',
+          tipo: 'Split',
+          local: 'Sala 2',
+          tag: 'EVP-2',
+          fluido: 'R410A',
+          status: 'ok',
+          criticidade: 'media',
+          fotos: [],
+        },
+      ],
+      registros: [],
+      setores: [],
+    });
+
+    const { renderEquip } = await import('../ui/views/equipamentos.js');
+    await renderEquip();
+
+    // Com memo local por render, cada métrica pesada roda 1x por equipamento.
+    expect(evaluateEquipmentRiskMock).toHaveBeenCalledTimes(2);
+    // 2 chamadas vêm do hero KPI (em-atencao) + 2 do sort list.
+    expect(evaluateEquipmentPriorityMock).toHaveBeenCalledTimes(4);
+    expect(getActionPriorityScoreMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps rendered output consistency with priority sorting', async () => {
+    getActionPriorityScoreMock.mockImplementation((eq) => ({
+      actionPriorityScore: eq.id === 'e2' ? 20 : 10,
+    }));
+    evaluateEquipmentPriorityMock.mockImplementation((eq) => ({
+      priorityLevel: eq.id === 'e2' ? 4 : 2,
+      priorityLabel: 'mock',
+    }));
+    evaluateEquipmentRiskMock.mockImplementation((eq) => ({
+      score: eq.id === 'e2' ? 90 : 40,
+      classification: 'baixo',
+      factors: ['rotina estável'],
+    }));
+
+    getState.mockReturnValue({
+      equipamentos: [
+        {
+          id: 'e1',
+          nome: 'Equipamento A',
+          tipo: 'Split',
+          local: 'Sala A',
+          tag: 'A',
+          fluido: 'R410A',
+          status: 'ok',
+          criticidade: 'media',
+          fotos: [],
+        },
+        {
+          id: 'e2',
+          nome: 'Equipamento B',
+          tipo: 'Split',
+          local: 'Sala B',
+          tag: 'B',
+          fluido: 'R410A',
+          status: 'ok',
+          criticidade: 'media',
+          fotos: [],
+        },
+      ],
+      registros: [],
+      setores: [],
+    });
+
+    const { renderEquip } = await import('../ui/views/equipamentos.js');
+    await renderEquip();
+
+    const names = Array.from(document.querySelectorAll('.equip-card__name')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(names[0]).toBe('Equipamento B');
+    expect(names[1]).toBe('Equipamento A');
   });
 });
 
