@@ -1433,12 +1433,16 @@ export async function saveEquipPhotos() {
 
   // Update narrow: só o campo fotos. O subscriber do setState persiste no
   // Supabase via mapEquipamentoRow (que inclui fotos).
-  setState((prev) => ({
+  const photosPersisted = setState((prev) => ({
     ...prev,
     equipamentos: prev.equipamentos.map((e) =>
       e.id === equipId ? { ...e, fotos: fotosPayload } : e,
     ),
   }));
+  if (!photosPersisted) {
+    Toast.error('Não foi possível salvar as fotos localmente. Libere espaço e tente novamente.');
+    return false;
+  }
 
   trackEvent('equip_photos_saved', {
     equipId,
@@ -2205,17 +2209,25 @@ export async function saveSetor() {
 
   if (isEditing) {
     const editingId = _editingSetorId;
-    setState((prev) => ({
+    const persisted = setState((prev) => ({
       ...prev,
       setores: (prev.setores || []).map((s) =>
         s.id === editingId ? { ...s, nome, cor, descricao, responsavel } : s,
       ),
     }));
+    if (!persisted) {
+      Toast.error('Não foi possível salvar o setor localmente. Libere espaço e tente novamente.');
+      return false;
+    }
   } else {
-    setState((prev) => ({
+    const persisted = setState((prev) => ({
       ...prev,
       setores: [...(prev.setores || []), { id: Utils.uid(), nome, cor, descricao, responsavel }],
     }));
+    if (!persisted) {
+      Toast.error('Não foi possível salvar o setor localmente. Libere espaço e tente novamente.');
+      return false;
+    }
   }
 
   try {
@@ -2240,11 +2252,15 @@ export async function deleteSetor(id) {
   if (!allowed) return;
 
   // Remove setorId dos equipamentos que pertencem ao setor
-  setState((prev) => ({
+  const persisted = setState((prev) => ({
     ...prev,
     setores: (prev.setores || []).filter((s) => s.id !== id),
     equipamentos: prev.equipamentos.map((e) => (e.setorId === id ? { ...e, setorId: null } : e)),
   }));
+  if (!persisted) {
+    Toast.error('Não foi possível remover o setor localmente. Libere espaço e tente novamente.');
+    return;
+  }
 
   // Enfileira deleção remota (Supabase). ON DELETE SET NULL no FK cuida dos equipamentos.
   try {
@@ -2273,12 +2289,16 @@ export async function assignEquipToSetor(equipId, setorId) {
   const allowed = await ensureProForSetores({ action: 'assign' });
   if (!allowed) return;
 
-  setState((prev) => ({
+  const persisted = setState((prev) => ({
     ...prev,
     equipamentos: prev.equipamentos.map((e) =>
       e.id === equipId ? { ...e, setorId: setorId || null } : e,
     ),
   }));
+  if (!persisted) {
+    Toast.error('Não foi possível atualizar o setor deste equipamento localmente.');
+    return;
+  }
   const setor = setorId ? findSetor(setorId) : null;
   const label = setor ? `"${setor.nome}"` : '"Sem setor"';
   Toast.success(`${Utils.escapeHtml(eq.nome)} movido para ${label}.`);
@@ -2579,7 +2599,7 @@ export async function saveEquip() {
   if (_editingEquipId) {
     // ── UPDATE: atualiza equipamento existente ──────────────────────────────
     const editingId = _editingEquipId;
-    setState((prev) => ({
+    const persisted = setState((prev) => ({
       ...prev,
       equipamentos: prev.equipamentos.map((e) =>
         e.id === editingId
@@ -2601,9 +2621,15 @@ export async function saveEquip() {
           : e,
       ),
     }));
+    if (!persisted) {
+      Toast.error(
+        'Não foi possível salvar o equipamento localmente. Libere espaço e tente novamente.',
+      );
+      return false;
+    }
   } else {
     // ── CREATE: novo equipamento ────────────────────────────────────────────
-    setState((prev) => ({
+    const persisted = setState((prev) => ({
       ...prev,
       equipamentos: [
         ...prev.equipamentos,
@@ -2625,6 +2651,12 @@ export async function saveEquip() {
         },
       ],
     }));
+    if (!persisted) {
+      Toast.error(
+        'Não foi possível salvar o equipamento localmente. Libere espaço e tente novamente.',
+      );
+      return false;
+    }
   }
 
   const wasEditing = Boolean(_editingEquipId);
@@ -3050,13 +3082,18 @@ export async function viewEquip(id) {
 export async function deleteEquip(id) {
   const { registros } = getState();
   const linkedRegistros = registros.filter((r) => r.equipId === id).map((r) => r.id);
-  Storage.markEquipDeleted(id, linkedRegistros);
-
-  setState((prev) => ({
+  const persisted = setState((prev) => ({
     ...prev,
     equipamentos: prev.equipamentos.filter((e) => e.id !== id),
     registros: prev.registros.filter((r) => r.equipId !== id),
   }));
+  if (!persisted) {
+    Toast.error(
+      'Não foi possível excluir o equipamento localmente. Libere espaço e tente novamente.',
+    );
+    return;
+  }
+  Storage.markEquipDeleted(id, linkedRegistros);
   try {
     const { Modal: M } = await import('../../core/modal.js');
     M.close('modal-eq-det');

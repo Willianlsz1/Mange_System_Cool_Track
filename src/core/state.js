@@ -45,15 +45,22 @@ export function subscribe(listener) {
 }
 
 export function persist() {
-  Storage.save(state);
+  return Storage.save(state);
 }
 
 export function setState(updater, options = { persist: true, emit: true }) {
-  _regsCache = null;
   const nextState = updater(state);
-  if (nextState) state = nextState;
-  if (options.persist) persist();
+  if (!nextState) return true;
+
+  if (options.persist) {
+    const persisted = Storage.save(nextState);
+    if (!persisted) return false;
+  }
+
+  _regsCache = null;
+  state = nextState;
   if (options.emit) emit();
+  return true;
 }
 
 export function findEquip(id) {

@@ -125,6 +125,7 @@ beforeEach(() => {
   vi.resetModules();
   mountSetorModalDom();
   getState.mockReturnValue({ equipamentos: [], registros: [], setores: [] });
+  setStateMock.mockReturnValue(true);
 });
 
 // ─────────────────────────────────────────────────────────────────────────

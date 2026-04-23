@@ -2,7 +2,7 @@ const emptyState = { equipamentos: [], registros: [], tecnicos: [] };
 
 async function loadStateModule(initial = emptyState) {
   vi.resetModules();
-  const saveSpy = vi.fn();
+  const saveSpy = vi.fn(() => true);
 
   vi.doMock('../core/storage.js', () => ({
     Storage: {
@@ -33,6 +33,20 @@ describe('state module', () => {
     expect(state.equipamentos).toHaveLength(1);
     expect(state.tecnicos).toEqual(['Ana']);
     expect(saveSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not mutate in-memory state when persist fails', async () => {
+    const { getState, setState, saveSpy } = await loadStateModule(emptyState);
+    saveSpy.mockReturnValue(false);
+
+    const ok = setState(() => ({
+      equipamentos: [{ id: 'e1', nome: 'AC', local: 'Ala', status: 'ok' }],
+      registros: [],
+      tecnicos: ['Ana'],
+    }));
+
+    expect(ok).toBe(false);
+    expect(getState().equipamentos).toHaveLength(0);
   });
 
   it('subscribe publishes updates and unsubscribe stops notifications', async () => {

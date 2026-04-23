@@ -423,9 +423,7 @@ function _equipCardMini(eq) {
 
   const cardIcon = visual.photoUrl
     ? `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--photo equip-card__type-icon--fallback-t${visual.tone}" aria-hidden="true">
-        <img src="${Utils.escapeAttr(visual.photoUrl)}" alt="" loading="lazy"
-          onload="this.parentElement.classList.add('equip-card__type-icon--loaded');"
-          onerror="this.parentElement.classList.add('equip-card__type-icon--fallback');this.remove();" />
+        <img src="${Utils.escapeAttr(visual.photoUrl)}" alt="" loading="lazy" />
         <span class="equip-card__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
         <span class="equip-card__fallback-glyph" aria-hidden="true">${visual.icon}</span>
       </div>`
@@ -471,6 +469,33 @@ function _equipCardMini(eq) {
       <button class="equip-card__cta" data-action="go-register-equip" data-id="${safeId}">${ctaLabel}</button>
     </div>
   </div>`;
+}
+
+function _bindDashboardCardImageFallbacks(root) {
+  const scope = root instanceof Element ? root : document;
+  scope.querySelectorAll('.equip-card__type-icon--photo img').forEach((img) => {
+    if (!(img instanceof HTMLImageElement)) return;
+    if (img.dataset.fallbackBound === '1') return;
+    img.dataset.fallbackBound = '1';
+    const iconWrap = img.closest('.equip-card__type-icon');
+    if (!iconWrap) return;
+
+    const markLoaded = () => {
+      iconWrap.classList.add('equip-card__type-icon--loaded');
+    };
+    const applyFallback = () => {
+      iconWrap.classList.add('equip-card__type-icon--fallback');
+      img.remove();
+    };
+
+    img.addEventListener('load', markLoaded, { once: true });
+    img.addEventListener('error', applyFallback, { once: true });
+
+    if (img.complete) {
+      if (img.naturalWidth > 0) markLoaded();
+      else applyFallback();
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -877,6 +902,7 @@ function _renderCriticosSection({ equipamentos, alerts }) {
   }
   section.hidden = false;
   container.innerHTML = `<div class="dash-criticos-list">${critical.map((eq) => _equipCardMini(eq)).join('')}</div>`;
+  _bindDashboardCardImageFallbacks(container);
 }
 
 function _renderRecentesSection({ registros }) {

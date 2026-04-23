@@ -68,6 +68,15 @@ test('modal de setor valida nome obrigatório e salva quando válido', async ({ 
 
   await page.click('#setor-save-btn');
   await expect(page.locator('#setor-nome-err')).toBeVisible();
+  await expect(page.locator('#setor-save-btn')).toBeDisabled();
+
+  await page.fill('#setor-nome', 'Teste');
+  await expect(page.locator('#setor-nome-err')).toBeHidden();
+  await expect(page.locator('#setor-save-btn')).toBeEnabled();
+
+  await page.fill('#setor-nome', '   ');
+  await expect(page.locator('#setor-nome-err')).toBeVisible();
+  await expect(page.locator('#setor-save-btn')).toBeDisabled();
 
   await page.fill('#setor-nome', 'UTI');
   await page.click('#setor-save-btn');
@@ -110,4 +119,71 @@ test('contexto de quickfilter é preservado ao abrir/voltar detalhe', async ({ p
   await expect(
     page.locator('[data-action="equip-quickfilter"][data-id="sem-setor"].equip-filter--active'),
   ).toHaveCount(1);
+});
+
+test('não confirma save de equipamento quando persistência local falha', async ({ page }) => {
+  await page.click('#nav-equipamentos');
+
+  await page.evaluate(() => {
+    const originalSetItem = Storage.prototype.setItem;
+    // Simula quota/storage failure apenas no write principal de estado.
+    Storage.prototype.setItem = function patchedSetItem(key, value) {
+      if (key === 'cooltrack_v3') {
+        throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      }
+      return originalSetItem.call(this, key, value);
+    };
+  });
+
+  const addEquipBtn = page.locator('[data-action="open-modal"][data-id="modal-add-eq"]').first();
+  await expect(addEquipBtn).toBeVisible();
+  await addEquipBtn.click();
+
+  await expect(page.locator('#modal-add-eq')).toHaveClass(/is-open/);
+  await page.fill('#eq-nome', 'Equipamento Falha Persistência');
+  await page.fill('#eq-local', 'Sala teste');
+
+  await page.click('[data-action="save-equip"]');
+
+  await expect(page.locator('#modal-add-eq')).toHaveClass(/is-open/);
+  await expect(
+    page.getByText(
+      'Não foi possível salvar o equipamento localmente. Libere espaço e tente novamente.',
+    ),
+  ).toBeVisible();
+});
+
+test('back fecha overlays heterogêneos em cadeia mantendo contexto', async ({ page }) => {
+  await page.click('#nav-equipamentos');
+
+  const firstEquipCard = page.locator('[data-action="open-equip"]').first();
+  await firstEquipCard.click();
+  const detailModal = page.locator('#modal-eq-det');
+  await expect(detailModal).toHaveClass(/is-open/);
+
+  await page.evaluate(async () => {
+    const { Photos } = await import('/src/ui/components/photos.js');
+    Photos.openLightbox('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==');
+  });
+  const lightbox = page.locator('#lightbox');
+  await expect(lightbox).toHaveClass(/is-open/);
+
+  await page.goBack();
+  await expect(lightbox).not.toHaveClass(/is-open/);
+  await expect(detailModal).toHaveClass(/is-open/);
+
+  await page.evaluate(async () => {
+    const { SignatureModal } = await import('/src/ui/components/signature/signature-modal.js');
+    SignatureModal.request('reg-back-1', 'Split Teste');
+  });
+  const signatureOverlay = page.locator('#modal-signature-overlay');
+  await expect(signatureOverlay).toHaveClass(/is-open/);
+
+  await page.goBack();
+  await expect(signatureOverlay).toHaveCount(0);
+  await expect(detailModal).toHaveClass(/is-open/);
+
+  await page.goBack();
+  await expect(detailModal).not.toHaveClass(/is-open/);
+  await expect(page.locator(OVERLAY_OPEN_SELECTOR)).toHaveCount(0);
 });

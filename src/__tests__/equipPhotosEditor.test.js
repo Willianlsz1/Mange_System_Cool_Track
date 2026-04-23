@@ -153,10 +153,12 @@ function mountEditorDom() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.resetModules();
   photosState.pending = [];
   photosState.existing = [];
   isCachedPlanPlusOrHigher.mockReturnValue(true);
   getState.mockReturnValue({ equipamentos: [], registros: [], setores: [] });
+  setState.mockReturnValue(true);
   mountEditorDom();
 });
 

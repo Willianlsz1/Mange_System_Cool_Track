@@ -20,7 +20,7 @@
     "lint:css:dead": "node scripts/dead-css-report.mjs",
     "prepare": "node .husky/install.mjs",
     "test:e2e": "npx playwright@1.55.0 test -c e2e/playwright.config.js",
-    "test:e2e:ci": "npx playwright@1.55.0 test -c e2e/playwright.config.js --reporter=github"
+    "test:e2e:ci": "playwright test -c e2e/playwright.config.js --reporter=github"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
@@ -41,7 +41,8 @@
     "rollup-plugin-visualizer": "^7.0.1",
     "supabase": "^2.89.1",
     "vite": "^5.4.21",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "@playwright/test": "1.55.0"
   },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "^4.60.2",
