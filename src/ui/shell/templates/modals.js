@@ -598,7 +598,7 @@ export function renderShellModals() {
             type="text"
             placeholder="Ex: Bloco Cirúrgico, UTI, Cozinha…"
             autocomplete="off"
-            maxlength="50"
+            maxlength="40"
             required
             aria-describedby="setor-nome-err"
           />

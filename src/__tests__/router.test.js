@@ -195,4 +195,28 @@ describe('router', () => {
     expect(document.getElementById('modal-add-eq').classList.contains('is-open')).toBe(false);
     expect(backSpy).not.toHaveBeenCalled();
   });
+
+  it('consome popstate para fechar camada aberta sem trocar rota', async () => {
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const onEnterInicio = vi.fn();
+    const onEnterRegistros = vi.fn();
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="lightbox" class="lightbox is-open"></div>`,
+    );
+
+    registerRoute('inicio', onEnterInicio);
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    initHistory();
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+
+    expect(document.getElementById('lightbox').classList.contains('is-open')).toBe(false);
+    expect(onEnterRegistros).not.toHaveBeenCalled();
+    expect(pushSpy).toHaveBeenCalledTimes(2); // entrada inicial + reinserção da rota atual
+  });
 });
