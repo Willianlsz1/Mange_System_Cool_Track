@@ -93,12 +93,12 @@ export function buildLandingHtml() {
 
             <h1 class="lp-hero__title">
               Pare de digitar etiqueta.<br>
-              Cadastre equipamentos em <span class="lp-grad">segundos</span>.
+              Cadastre equipamentos em segundos e gere relatórios sem esforço.
             </h1>
 
             <p class="lp-hero__sub">
-              <strong class="lp-hero__sub-lead">A IA preenche o equipamento para você.</strong>
-              Você revisa, registra o serviço e gera o PDF em poucos toques para enviar no WhatsApp. Mais rapidez no campo, com você no controle.
+              <strong class="lp-hero__sub-lead">A IA lê a etiqueta e preenche os dados do equipamento.</strong>
+              Você só registra o serviço e gera o relatório em poucos toques.
             </p>
 
             <div class="lp-hero__ctas">
@@ -109,8 +109,11 @@ export function buildLandingHtml() {
                 data-source="hero"
               >
                 ${ICON_BOLT}
-                Cadastrar meu primeiro equipamento
+                Testar grátis
               </button>
+              <a class="lp-btn-secondary lp-hero__cta-secondary" href="#lp-how-title">
+                Ver como funciona
+              </a>
               <span class="lp-hero__cta-meta">
                 <span>Sem cadastro</span>
                 <span class="sep" aria-hidden="true">&middot;</span>
@@ -240,6 +243,14 @@ export function buildLandingHtml() {
 
       <!-- ── COMO FUNCIONA (3 passos) ── -->
       <section class="lp-how" aria-labelledby="lp-how-title">
+        <p class="lp-how__tabs-label">Veja como funciona na prática</p>
+        <div class="lp-how__tabs" role="tablist" aria-label="Navegação da seção">
+          <button class="lp-how__tab lp-how__tab--active" type="button" role="tab" aria-selected="true">
+            Como funciona
+          </button>
+          <a class="lp-how__tab" href="#lp-compare-title" role="tab" aria-selected="false">Antes vs. Depois</a>
+          <a class="lp-how__tab" href="#lp-offline-title" role="tab" aria-selected="false">Offline</a>
+        </div>
         <p class="lp-section-label">Como funciona</p>
         <h2 class="lp-how__title" id="lp-how-title">
           Da etiqueta ao relatório,<br>com fluxo real de campo.
@@ -264,7 +275,7 @@ export function buildLandingHtml() {
           <li class="lp-how__step">
             <div class="lp-how__step-num">3</div>
             <div class="lp-how__step-body">
-              <h3 class="lp-how__step-title">Registra o serviço e gera o relatório</h3>
+              <h3 class="lp-how__step-title">Você registra e gera o relatório</h3>
               <p class="lp-how__step-text">Descrição, peças, fotos e assinatura do cliente. Depois disso, PDF pronto para WhatsApp, impressão ou arquivo.</p>
             </div>
           </li>
@@ -683,10 +694,10 @@ export function buildLandingHtml() {
         <div class="lp-offline__head">
           <p class="lp-section-label">Offline-first</p>
           <h2 class="lp-offline__title" id="lp-offline-title">
-            Sem sinal?<br>Seu trabalho <span class="lp-grad">continua</span>.
+            Sem sinal? Continue trabalhando normalmente.
           </h2>
           <p class="lp-offline__sub">
-            Subsolo, cobertura, obra sem Wi-Fi. Você registra, assina e gera o PDF offline. Sincroniza sozinho quando o sinal volta.
+            Subsolo, cobertura, obra sem Wi-Fi. Seus serviços ficam salvos e sincronizam automaticamente.
           </p>
         </div>
 
@@ -734,8 +745,7 @@ export function buildLandingHtml() {
       <!-- ── SOCIAL PROOF STRIP ── -->
       <section class="lp-social" aria-label="Números do CoolTrack">
         <span class="lp-social__item">
-          <span class="lp-social__num">142+</span>
-          técnicos
+          Usado por técnicos em campo
         </span>
         <span class="lp-social__sep" aria-hidden="true"></span>
         <span class="lp-social__item">
@@ -795,10 +805,10 @@ export function buildLandingHtml() {
               Caderno, WhatsApp e planilha
             </h3>
             <ul class="lp-compare__list lp-compare__list--before">
-              <li>${ICON_X} 2 minutos digitando 16 campos por equipamento</li>
-              <li>${ICON_X} Conferindo etiqueta linha por linha para evitar erro</li>
-              <li>${ICON_X} Sem histórico: "quando foi a última preventiva mesmo?"</li>
-              <li>${ICON_X} Cliente cobra serviço e ninguém acha a prova</li>
+              <li>${ICON_X} Digitando etiqueta manualmente</li>
+              <li>${ICON_X} 16 campos por equipamento</li>
+              <li>${ICON_X} Erros constantes</li>
+              <li>${ICON_X} Perda de tempo em todo atendimento</li>
               <li>${ICON_X} Preventiva só quando o equipamento já quebrou</li>
               <li>${ICON_X} Fotos perdidas no rolo de câmera do celular</li>
             </ul>
@@ -810,10 +820,12 @@ export function buildLandingHtml() {
               CoolTrack no celular
             </h3>
             <ul class="lp-compare__list lp-compare__list--after">
-              <li>${ICON_SPARKLES} Foto da etiqueta &rarr; IA preenche em 5 segundos</li>
-              <li>${ICON_CHECK} Cadastro rápido: revisa e salva sem digitar campo por campo</li>
+              <li>${ICON_SPARKLES} Foto da etiqueta</li>
+              <li>${ICON_CHECK} Dados preenchidos automaticamente</li>
+              <li>${ICON_CHECK} Registro rápido</li>
+              <li>${ICON_CHECK} Relatório em poucos toques</li>
               <li>${ICON_CHECK} Histórico completo de cada equipamento, pesquisável</li>
-              <li>${ICON_CHECK} Serviço registrado e PDF enviado no WhatsApp em poucos toques</li>
+              <li>${ICON_CHECK} Serviço registrado e PDF enviado no WhatsApp</li>
               <li>${ICON_CHECK} App avisa antes da preventiva vencer</li>
               <li>${ICON_CHECK} Fotos anexadas no registro, organizadas por equipamento</li>
             </ul>
@@ -1105,7 +1117,7 @@ export function buildLandingHtml() {
               data-source="final"
             >
               ${ICON_BOLT}
-              Experimentar grátis
+              Começar agora
             </button>
             <button
               class="lp-btn-secondary"
@@ -1207,7 +1219,7 @@ export function buildLandingHtml() {
         data-source="sticky"
       >
         ${ICON_BOLT}
-        Experimentar grátis
+        Começar agora
       </button>
     </div>
   `;

@@ -286,6 +286,9 @@ body {
   width: 16px;
   height: 16px;
 }
+.lp-hero__cta-secondary {
+  min-height: 48px;
+}
 .lp-hero__cta-meta {
   font-size: 12.5px;
   color: #8aaac8;
@@ -2100,6 +2103,40 @@ body {
   width: 100%;
   text-align: center;
 }
+.lp-how__tabs-label {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #8aaac8;
+}
+.lp-how__tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 6px;
+  border-radius: 12px;
+  background: rgba(8, 19, 31, 0.8);
+  border: 1px solid rgba(0, 200, 232, 0.18);
+}
+.lp-how__tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #8aaac8;
+  border: 1px solid transparent;
+  background: transparent;
+  text-decoration: none;
+}
+.lp-how__tab--active {
+  color: #e8f2fa;
+  border-color: rgba(0, 200, 232, 0.4);
+  background: rgba(0, 200, 232, 0.12);
+}
 .lp-how__title {
   font-size: clamp(1.75rem, 4vw, 2.15rem);
   font-weight: 700;
@@ -2571,6 +2608,9 @@ body {
     width: 100%;
     justify-content: center;
   }
+  .lp-hero__cta-secondary {
+    width: 100%;
+  }
   .lp-hero__cta-meta {
     justify-content: center;
   }
@@ -2584,6 +2624,14 @@ body {
   .lp-phone {
     width: 232px;
     height: 468px;
+  }
+  .lp-how__tabs {
+    display: flex;
+    width: 100%;
+  }
+  .lp-how__tab {
+    flex: 1 1 auto;
+    min-width: 0;
   }
   .lp-hero__timer {
     width: 82px;
