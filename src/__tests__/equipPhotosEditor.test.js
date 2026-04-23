@@ -107,12 +107,6 @@ vi.mock('../core/plans/subscriptionPlans.js', async (importOriginal) => {
   };
 });
 
-// equipDetail — viewEquip é chamado no fim do saveEquipPhotos pra re-render.
-const viewEquipMock = vi.fn(async () => {});
-vi.mock('../ui/views/equipamentos/equipDetail.js', () => ({
-  viewEquip: viewEquipMock,
-}));
-
 // Heavies: priorityEngine, alerts, skeleton, maintenance — stubs no-op.
 vi.mock('../domain/priorityEngine.js', () => ({
   evaluateEquipmentPriority: vi.fn(() => ({ priorityLevel: 1, priorityLabel: 'mock' })),
@@ -391,7 +385,7 @@ describe('saveEquipPhotos — Plus+ (upload + update narrow)', () => {
     expect(modalClose).toHaveBeenCalledWith('modal-eq-photos');
     expect(photosResetTargets).toHaveBeenCalledTimes(1);
     // Re-render do detail view é chamado via viewEquip do próprio módulo
-    // (não de equipDetail.js). O importante aqui é que o fluxo de save
+    // equipamentos.js (source of truth atual). O importante aqui é que o fluxo de save
     // completa sem throw — a verificação do avatar atualizado é
     // responsabilidade do teste do viewEquip, não deste.
   });

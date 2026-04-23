@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 vi.mock('../core/router.js', () => ({
   goTo: vi.fn(),
@@ -107,11 +108,29 @@ describe('Tour', () => {
     const title = document.getElementById('tour-title')?.textContent;
     expect(title).toContain('Score de Risco');
 
-    const desc = document.getElementById('tour-desc')?.innerHTML;
+    const descEl = document.getElementById('tour-desc');
+    const desc = descEl?.textContent || '';
     // Must explain factors, the track-record bonus and the 30-day trend
     expect(desc).toMatch(/0 a 100/);
     expect(desc).toMatch(/bônus/i);
     // Trend arrows rendered via Unicode
     expect(desc).toMatch(/[↓→↑]/);
+    // Description allows only controlled emphasis markup (<strong>)
+    const tags = Array.from(descEl?.querySelectorAll('*') || []).map((el) =>
+      el.tagName.toLowerCase(),
+    );
+    expect(tags).toEqual(expect.arrayContaining(['strong']));
+    expect(tags.every((tag) => tag === 'strong')).toBe(true);
+  });
+
+  it('fails if inline event handlers appear in hardened files', () => {
+    const files = ['src/ui/views/equipamentos.js', 'src/ui/components/tour.js'];
+    const inlineEventPattern =
+      /\s(onload|onerror|onclick|oninput|onchange|onsubmit|onkeydown|onkeyup)\s*=/i;
+
+    files.forEach((filePath) => {
+      const source = readFileSync(filePath, 'utf-8');
+      expect(source).not.toMatch(inlineEventPattern);
+    });
   });
 });

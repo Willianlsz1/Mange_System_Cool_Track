@@ -25,6 +25,7 @@ export const SIGNATURE_CANCELED = Symbol('signature-canceled');
 export const SignatureModal = {
   CANCELED: SIGNATURE_CANCELED,
   _resolve: null,
+  _closeOpenInstance: null,
 
   request(registroId, equipNome) {
     return new Promise((resolve) => {
@@ -40,6 +41,7 @@ export const SignatureModal = {
     const overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
     overlay.className = 'sig-capture-modal is-open';
+    overlay.dataset.blockingLayer = 'signature-capture';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-labelledby', 'sig-title');
@@ -149,6 +151,7 @@ export const SignatureModal = {
     const cancelAndResolve = () => {
       teardown();
       this._resolve?.(SIGNATURE_CANCELED);
+      this._closeOpenInstance = null;
     };
 
     // Skip (botão "Salvar sem assinatura") → resolve com null. Caller salva
@@ -156,7 +159,10 @@ export const SignatureModal = {
     const skipAndResolve = () => {
       teardown();
       this._resolve?.(null);
+      this._closeOpenInstance = null;
     };
+
+    this._closeOpenInstance = cancelAndResolve;
 
     const detachA11y = attachDialogA11y(overlay, { onDismiss: cancelAndResolve });
     dismiss = detachA11y;
@@ -188,6 +194,19 @@ export const SignatureModal = {
       const dataUrl = signatureCanvas.toDataUrl();
       teardown();
       this._resolve?.(dataUrl);
+      this._closeOpenInstance = null;
     });
+  },
+
+  closeIfOpen() {
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay?.classList.contains('is-open')) return false;
+    if (typeof this._closeOpenInstance === 'function') {
+      this._closeOpenInstance();
+      this._closeOpenInstance = null;
+      return true;
+    }
+    overlay.remove();
+    return true;
   },
 };

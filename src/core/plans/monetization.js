@@ -21,6 +21,16 @@ import { DevPlanOverride } from './devPlanOverride.js';
 export const PREMIUM_FEATURE_EQUIPAMENTOS = 'equipamentos';
 export const PREMIUM_FEATURE_PDF_EXPORT = 'pdf_export';
 
+const BILLING_CACHE_INVALIDATE_EVENTS = [
+  'cooltrack:auth-changed',
+  'cooltrack:profile-updated',
+  'cooltrack:plan-changed',
+];
+
+let _billingProfileCache = null;
+let _billingProfileInFlight = null;
+let _billingCacheListenersBound = false;
+
 // Re-export da API nova para permitir `import { hasFeature } from '.../monetization.js'`
 export {
   hasFeature,
@@ -101,6 +111,46 @@ export function canUsePremiumFeature(profile, feature) {
     return hasFeature(profile, FEATURE_PDF_EXPORT);
   }
   return false;
+}
+
+export function getCachedBillingProfileSnapshot() {
+  return _billingProfileCache;
+}
+
+export function invalidateBillingProfileCache() {
+  _billingProfileCache = null;
+  _billingProfileInFlight = null;
+}
+
+function _bindBillingCacheInvalidationListeners() {
+  if (_billingCacheListenersBound || typeof window === 'undefined') return;
+  _billingCacheListenersBound = true;
+  BILLING_CACHE_INVALIDATE_EVENTS.forEach((eventName) => {
+    window.addEventListener(eventName, () => invalidateBillingProfileCache());
+  });
+}
+
+export async function fetchMyProfileBillingCached({ forceRefresh = false } = {}) {
+  _bindBillingCacheInvalidationListeners();
+
+  if (!forceRefresh && _billingProfileCache) {
+    return _billingProfileCache;
+  }
+
+  if (!forceRefresh && _billingProfileInFlight) {
+    return _billingProfileInFlight;
+  }
+
+  _billingProfileInFlight = fetchMyProfileBilling()
+    .then((result) => {
+      _billingProfileCache = result;
+      return result;
+    })
+    .finally(() => {
+      _billingProfileInFlight = null;
+    });
+
+  return _billingProfileInFlight;
 }
 
 export async function fetchMyProfileBilling({ supabaseClient = supabase } = {}) {

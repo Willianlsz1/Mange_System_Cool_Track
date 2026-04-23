@@ -28,6 +28,7 @@ import { getSignatureForRecord } from './signature-storage.js';
 const OVERLAY_ID = 'modal-signature-viewer-overlay';
 
 export const SignatureViewerModal = {
+  _closeOpenInstance: null,
   /**
    * Abre o modal com a assinatura do registro.
    * @param {Object} registro - O registro completo (contém data, clienteNome, etc.)
@@ -45,6 +46,7 @@ export const SignatureViewerModal = {
     const overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
     overlay.className = 'hist-signature-modal is-open';
+    overlay.dataset.blockingLayer = 'signature-viewer';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-labelledby', 'sig-viewer-title');
@@ -140,7 +142,10 @@ export const SignatureViewerModal = {
         /* no-op */
       }
       overlay.remove();
+      this._closeOpenInstance = null;
     };
+
+    this._closeOpenInstance = teardown;
 
     const detachA11y = attachDialogA11y(overlay, { onDismiss: teardown });
     dismiss = detachA11y;
@@ -155,5 +160,16 @@ export const SignatureViewerModal = {
     });
 
     return Promise.resolve();
+  },
+
+  closeIfOpen() {
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay?.classList.contains('is-open')) return false;
+    if (typeof this._closeOpenInstance === 'function') {
+      this._closeOpenInstance();
+      return true;
+    }
+    overlay.remove();
+    return true;
   },
 };

@@ -17,6 +17,7 @@
 .setor-modal {
   width: 100%;
   max-width: 460px;
+  max-height: min(92vh, 860px);
   background: var(--surface, #0c1929);
   border: 1px solid var(--border-2, rgba(255, 255, 255, 0.1));
   border-radius: 14px;
@@ -149,8 +150,10 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
   max-height: calc(100vh - 260px);
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* ── Field wrapper ────────────────────────────────────────── */
@@ -160,6 +163,7 @@
   justify-content: space-between;
   margin-bottom: 6px;
   gap: 8px;
+  min-width: 0;
 }
 
 .setor-modal__label {
@@ -395,6 +399,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
   font: 500 11px/1 var(--font-body);
   color: var(--text-3, #6b8196);
 }
@@ -410,6 +416,7 @@
 .setor-modal__color-hex {
   font-family: ui-monospace, 'JetBrains Mono', Menlo, Consolas, monospace;
   font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 /* ── Preview ──────────────────────────────────────────────── */
@@ -423,6 +430,7 @@
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 6px;
+  min-width: 0;
 }
 
 .setor-modal__preview-label {
@@ -449,6 +457,7 @@
   letter-spacing: normal;
   opacity: 0.9;
   margin-left: 2px;
+  overflow-wrap: anywhere;
 }
 
 .setor-modal__contrast {
@@ -589,9 +598,11 @@
 
 .setor-modal__preview-status-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
   font: 500 11px/1 var(--font-body);
   color: var(--text-2, #8aaac8);
 }
@@ -612,6 +623,9 @@
 .setor-modal__preview-status-meta {
   color: var(--text-3, #6b8196);
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .setor-modal__preview-bar {
@@ -641,6 +655,7 @@
   justify-content: space-between;
   font: 400 12px/1 var(--font-body);
   color: var(--text-2, #8aaac8);
+  min-width: 0;
 }
 
 .setor-modal__preview-cta-text {
@@ -675,6 +690,9 @@
   gap: 12px;
   border-top: 1px solid var(--border-2, rgba(255, 255, 255, 0.1));
   background: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(0, 200, 232, 0.04));
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
 }
 
 .setor-modal__btn {
@@ -752,6 +770,7 @@
        dos modais mobile. */
     max-width: 100%;
     border-radius: 14px 14px 0 0;
+    max-height: min(96vh, 920px);
   }
 
   .setor-modal__hero {
