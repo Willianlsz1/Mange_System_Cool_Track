@@ -6,6 +6,9 @@ vi.mock('../core/router.js', () => ({
 }));
 
 describe('Tour', () => {
+  const USER_ID = 'user-123';
+  const userDoneKey = `ct-tour-done:${USER_ID}`;
+
   beforeEach(() => {
     document.body.innerHTML = '';
     localStorage.clear();
@@ -59,16 +62,18 @@ describe('Tour', () => {
   it('finishes and marks done when Pular tour is clicked', async () => {
     const { Tour } = await import('../ui/components/tour.js');
 
+    Tour.initIfFirstVisit({ userId: USER_ID });
     Tour.start();
     document.getElementById('tour-skip')?.click();
 
-    expect(localStorage.getItem('cooltrack-tour-done')).toBe('1');
+    expect(localStorage.getItem(userDoneKey)).toBe('1');
     expect(document.getElementById('tour-modal')).toBeNull();
   });
 
   it('finishes when last step Próximo is clicked', async () => {
     const { Tour } = await import('../ui/components/tour.js');
 
+    Tour.initIfFirstVisit({ userId: USER_ID });
     Tour.start();
     // Click next 5 times to reach last step (6 steps total)
     for (let i = 0; i < 5; i++) {
@@ -77,7 +82,7 @@ describe('Tour', () => {
     // Now on last step — click "Começar a usar"
     document.getElementById('tour-next')?.click();
 
-    expect(localStorage.getItem('cooltrack-tour-done')).toBe('1');
+    expect(localStorage.getItem(userDoneKey)).toBe('1');
     expect(document.getElementById('tour-modal')).toBeNull();
   });
 
@@ -87,12 +92,23 @@ describe('Tour', () => {
   });
 
   it('does not start if tour already done', async () => {
+    localStorage.setItem(userDoneKey, '1');
+    const { Tour } = await import('../ui/components/tour.js');
+
+    Tour.initIfFirstVisit({ userId: USER_ID });
+
+    // Modal should NOT appear since tour is done
+    expect(document.getElementById('tour-modal')).toBeNull();
+  });
+
+  it('migra chave legada global para chave por usuário', async () => {
     localStorage.setItem('cooltrack-tour-done', '1');
     const { Tour } = await import('../ui/components/tour.js');
 
-    Tour.initIfFirstVisit();
+    Tour.initIfFirstVisit({ userId: USER_ID });
 
-    // Modal should NOT appear since tour is done
+    expect(localStorage.getItem('cooltrack-tour-done')).toBeNull();
+    expect(localStorage.getItem(userDoneKey)).toBe('1');
     expect(document.getElementById('tour-modal')).toBeNull();
   });
 

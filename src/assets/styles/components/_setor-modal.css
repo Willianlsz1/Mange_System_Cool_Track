@@ -114,6 +114,7 @@
   margin: 2px 0 0;
   font: 400 12.5px/1.5 var(--font-body);
   color: var(--text-2, #8aaac8);
+  overflow-wrap: anywhere;
 }
 
 .setor-modal__close {
@@ -172,6 +173,8 @@
   gap: 6px;
   font: 600 12px/1 var(--font-body);
   color: var(--text, #fff);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .setor-modal__label > svg {
@@ -266,6 +269,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .setor-modal__optional-summary::-webkit-details-marker {
@@ -308,6 +314,10 @@
   margin-top: 6px;
   font: 500 11.5px/1.3 var(--font-body);
   color: var(--danger, #ff5577);
+}
+
+.setor-modal__error[hidden] {
+  display: none;
 }
 
 .setor-modal__error-badge {
@@ -611,6 +621,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .setor-modal__preview-status-dot {
@@ -662,6 +675,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .setor-modal__preview-cta-text > svg {

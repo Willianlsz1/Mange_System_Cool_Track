@@ -37,7 +37,6 @@ function openAccountOrProfile() {
         onEditProfile: () => ProfileModal.open(),
         onSignOut: () => {
           localStorage.removeItem('cooltrack-guest-mode');
-          localStorage.removeItem('cooltrack-ftx-done');
           Auth.signOut();
         },
       });

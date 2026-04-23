@@ -214,10 +214,10 @@ async function bootstrap() {
 
     requestAnimationFrame(() => {
       const { equipamentos } = getState();
-      FirstTimeExperience.show(equipamentos);
+      FirstTimeExperience.show(equipamentos, { userId: user?.id || null });
     });
 
-    Tour.initIfFirstVisit();
+    Tour.initIfFirstVisit({ userId: user?.id || null });
   } catch (error) {
     handleError(error, {
       code: ErrorCodes.NETWORK_ERROR,
