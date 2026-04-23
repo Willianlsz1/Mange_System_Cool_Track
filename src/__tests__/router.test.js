@@ -307,6 +307,49 @@ describe('router', () => {
     expect(onEnterRegistros).toHaveBeenCalledWith({});
   });
 
+  it('initHistory normaliza history.state atual quando rota ativa não bate com state', async () => {
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const replaceSpy = vi.spyOn(window.history, 'replaceState');
+
+    registerRoute('inicio', vi.fn());
+    goTo('inicio', { origem: 'teste' });
+    // Simula state legado/externo quebrado após navegação inicial.
+    window.history.replaceState({ route: 'legado', params: {} }, '', window.location.pathname);
+
+    initHistory();
+
+    expect(replaceSpy).toHaveBeenCalled();
+    const [state] = replaceSpy.mock.calls.at(-1);
+    expect(state).toMatchObject({
+      route: 'inicio',
+      params: { origem: 'teste' },
+    });
+  });
+
+  it('popstate com route inválida faz fallback para inicio (sem push extra)', async () => {
+    vi.useFakeTimers();
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const onEnterInicio = vi.fn();
+    const onEnterRegistros = vi.fn();
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+
+    registerRoute('inicio', onEnterInicio);
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    goTo('registros');
+    vi.advanceTimersByTime(150);
+    initHistory();
+
+    const pushesAntes = pushSpy.mock.calls.length;
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'nao-existe' } }));
+    vi.advanceTimersByTime(150);
+
+    expect(onEnterInicio).toHaveBeenCalledTimes(2);
+    expect(onEnterRegistros).toHaveBeenCalledTimes(1);
+    expect(pushSpy).toHaveBeenCalledTimes(pushesAntes);
+  });
+
   it('consome popstate para fechar assinatura (capture) sem trocar rota', async () => {
     const { registerRoute, goTo, initHistory } = await loadRouterModule();
     const onEnterRegistros = vi.fn();
