@@ -62,6 +62,7 @@ let _editingEquipId = null;
 let _renderEquipPlanToken = 0;
 let _renderEquipPlanNeedsRefresh = true;
 let _renderEquipPlanEventsBound = false;
+let _renderEquipPlanRefreshPromise = null;
 
 function _bindRenderEquipPlanInvalidationEvents() {
   if (_renderEquipPlanEventsBound || typeof window === 'undefined') return;
@@ -86,7 +87,9 @@ function _refreshRenderEquipPlan({
   renderToken,
   isProAtRender = false,
 } = {}) {
-  (async () => {
+  if (_renderEquipPlanRefreshPromise) return;
+
+  _renderEquipPlanRefreshPromise = (async () => {
     try {
       const { fetchMyProfileBillingCached } = await import('../../core/plans/monetization.js');
       const { profile } = await fetchMyProfileBillingCached();
@@ -99,6 +102,8 @@ function _refreshRenderEquipPlan({
       }
     } catch {
       /* fallback silencioso: mantém estado atual de render */
+    } finally {
+      _renderEquipPlanRefreshPromise = null;
     }
   })();
 }

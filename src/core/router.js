@@ -382,6 +382,26 @@ export function initHistory() {
   if (_historyBound || typeof window === 'undefined') return;
   _historyBound = true;
 
+  // Garante que a entrada atual da rota tenha shape consistente
+  // ({ route, params, uiCtxVersion }). Sem isso, um reload profundo pode
+  // deixar `history.state` nulo e o primeiro back perde contexto da UI.
+  if (_current && window.history) {
+    const { route, params } = parseHistoryState(window.history.state);
+    if (route !== _current) {
+      window.history.replaceState(
+        buildHistoryState(_current, _currentParams),
+        '',
+        window.location.pathname + window.location.search,
+      );
+    } else if (JSON.stringify(params) !== JSON.stringify(_currentParams)) {
+      window.history.replaceState(
+        buildHistoryState(_current, _currentParams),
+        '',
+        window.location.pathname + window.location.search,
+      );
+    }
+  }
+
   window.addEventListener('popstate', (e) => {
     if (closeTopBlockingLayer()) {
       // Consumimos o back para fechar camada sobreposta, sem re-push corretivo.
@@ -393,6 +413,14 @@ export function initHistory() {
     const { route, params } = parseHistoryState(e.state);
     if (route && _routes.has(route)) {
       goTo(route, params, { fromHistory: true });
+      return;
+    }
+
+    // Fallback defensivo: histórico externo/legado sem route válida pode
+    // chegar aqui. Se houver rota inicial registrada, volta pra ela em vez
+    // de deixar a UI em estado indefinido.
+    if (_routes.has('inicio') && _current !== 'inicio') {
+      goTo('inicio', {}, { fromHistory: true });
     }
   });
 
