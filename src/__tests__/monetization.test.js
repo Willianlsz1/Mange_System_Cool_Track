@@ -92,6 +92,36 @@ describe('monetization', () => {
     expect(supabaseMock.mocks.select).toHaveBeenCalledWith('*');
   });
 
+  it('fetchMyProfileBillingCached deduplica chamadas concorrentes e reutiliza snapshot', async () => {
+    const supabaseMock = createSupabaseMock();
+    const mod = await loadMonetizationWithMock(supabaseMock);
+    mod.invalidateBillingProfileCache();
+
+    const [first, second] = await Promise.all([
+      mod.fetchMyProfileBillingCached(),
+      mod.fetchMyProfileBillingCached(),
+    ]);
+    const third = await mod.fetchMyProfileBillingCached();
+
+    expect(first.profile.id).toBe('user-1');
+    expect(second.profile.id).toBe('user-1');
+    expect(third.profile.id).toBe('user-1');
+    expect(supabaseMock.auth.getUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('invalida cache de billing ao receber evento de auth/profile/plano', async () => {
+    const supabaseMock = createSupabaseMock();
+    const mod = await loadMonetizationWithMock(supabaseMock);
+    mod.invalidateBillingProfileCache();
+
+    await mod.fetchMyProfileBillingCached();
+    expect(supabaseMock.auth.getUser).toHaveBeenCalledTimes(1);
+
+    window.dispatchEvent(new CustomEvent('cooltrack:plan-changed'));
+    await mod.fetchMyProfileBillingCached();
+    expect(supabaseMock.auth.getUser).toHaveBeenCalledTimes(2);
+  });
+
   it('startCheckout fails without session', async () => {
     const mod = await loadMonetizationWithMock(
       createSupabaseMock({ session: null, functionResponse: { data: null, error: null } }),

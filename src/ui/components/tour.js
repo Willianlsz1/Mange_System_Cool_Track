@@ -8,6 +8,32 @@ import { attachDialogA11y } from '../../core/modal.js';
 
 const TOUR_DONE_KEY = 'cooltrack-tour-done';
 
+function renderDescriptionWithAllowedMarkup(target, rawDescription) {
+  if (!target) return;
+  target.textContent = '';
+  const input = String(rawDescription || '');
+  const strongPattern = /<strong>(.*?)<\/strong>/gis;
+  let cursor = 0;
+  let match = strongPattern.exec(input);
+
+  while (match) {
+    const [fullMatch, strongText = ''] = match;
+    const matchIndex = match.index ?? cursor;
+    if (matchIndex > cursor) {
+      target.appendChild(document.createTextNode(input.slice(cursor, matchIndex)));
+    }
+    const strongEl = document.createElement('strong');
+    strongEl.textContent = strongText;
+    target.appendChild(strongEl);
+    cursor = matchIndex + fullMatch.length;
+    match = strongPattern.exec(input);
+  }
+
+  if (cursor < input.length) {
+    target.appendChild(document.createTextNode(input.slice(cursor)));
+  }
+}
+
 const STEPS = [
   {
     icon: '🧊',
@@ -296,7 +322,7 @@ export const Tour = {
     // Content
     this.modalEl.querySelector('#tour-icon').textContent = step.icon;
     this.modalEl.querySelector('#tour-title').textContent = step.title;
-    this.modalEl.querySelector('#tour-desc').innerHTML = step.description;
+    renderDescriptionWithAllowedMarkup(this.modalEl.querySelector('#tour-desc'), step.description);
 
     const tipEl = this.modalEl.querySelector('#tour-tip');
     if (step.tip) {

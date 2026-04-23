@@ -41,6 +41,7 @@ const vitestConfig = {
     VITE_SUPABASE_URL: 'https://placeholder.supabase.co',
     VITE_SUPABASE_KEY: 'placeholder-key-for-tests',
   },
+  exclude: ['e2e/**', '**/node_modules/**', '**/dist/**', '**/.{idea,git,cache,output,temp}/**'],
   coverage: {
     provider: 'v8',
     reporter: ['text', 'lcov'],
