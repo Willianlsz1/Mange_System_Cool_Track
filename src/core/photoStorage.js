@@ -61,7 +61,7 @@ function blobToDataUrl(blob) {
   });
 }
 
-async function dataUrlToBlob(dataUrl) {
+export async function dataUrlToBlob(dataUrl) {
   const match = /^data:([^;,]+)?(?:;charset=[^;,]+)?(;base64)?,(.*)$/i.exec(
     String(dataUrl || '').trim(),
   );
@@ -94,7 +94,7 @@ async function dataUrlToBlob(dataUrl) {
   return new Blob([bytes], { type: mimeType });
 }
 
-async function createSignedUrl(bucket, path, ttlSeconds = SIGNED_URL_TTL_SECONDS) {
+export async function createSignedUrl(bucket, path, ttlSeconds = SIGNED_URL_TTL_SECONDS) {
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, ttlSeconds);
   if (error || !data?.signedUrl) {
     throw new AppError(

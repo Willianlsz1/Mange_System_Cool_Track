@@ -1,31 +1,55 @@
 /**
  * CoolTrack Pro - SignatureViewerModal
- * Lightbox read-only da assinatura coletada. Lê o PNG do localStorage via
- * getSignatureForRecord e exibe em tamanho grande com fundo claro pra
- * preservar a rubrica original.
+ *
+ * Lightbox read-only da assinatura coletada. Resolve a assinatura via
+ * `resolveSignatureForRecord` (async), que tenta Storage remoto primeiro
+ * e cai pro localStorage como cache. Mostra skeleton enquanto carrega.
  *
  * API pública:
  *   SignatureViewerModal.open(registro, { equipNome }) → Promise<void>
  *
  * Edge cases:
- *   - PNG ausente no device (cleanup, outro aparelho): o chamador não deve
- *     abrir o modal; a view usa o fallback "chip-only + tooltip".
- *     Mesmo assim, o modal tolera ausência e mostra mensagem amigável.
+ *   - Assinatura só-local E dispositivo diferente: Storage → null,
+ *     localStorage → null. Mostra "Assinatura não disponível".
+ *   - Assinatura no Storage mas offline: Storage falha → cai pro localStorage.
+ *     Se tiver cache, mostra. Senão, "não disponível".
+ *   - Assinatura legacy (só localStorage em registro novo): resolveSignatureForRecord
+ *     encontra no cache local e retorna dataUrl diretamente.
  *
  * Decisão de produto: não expomos "baixar PNG". A rubrica tem valor legal
  * atrelada ao registro e ao PDF oficial do serviço — baixar como arquivo
  * solto confundiria o fluxo.
- *
- * Markup: segue o contrato `.hist-signature-modal__*` definido no mockup do
- * Claude Design (docs/design/prompts/04-historico-redesign.md). As classes
- * visuais moram em components.css, scoped sob `#view-historico`.
  */
 
 import { Utils } from '../../../core/utils.js';
 import { attachDialogA11y } from '../../../core/modal.js';
-import { getSignatureForRecord } from './signature-storage.js';
+import { resolveSignatureForRecord } from './signature-storage.js';
 
 const OVERLAY_ID = 'modal-signature-viewer-overlay';
+
+function renderCanvasLoading() {
+  return `<div class="hist-signature-modal__loading" role="status" aria-live="polite">
+    <span class="hist-signature-modal__loading-text">Carregando assinatura…</span>
+  </div>`;
+}
+
+function renderCanvasImage(dataUrl, clienteNome) {
+  return `<img class="hist-signature-modal__image"
+    src="${Utils.escapeAttr(dataUrl)}"
+    alt="Assinatura do cliente ${Utils.escapeAttr(clienteNome)}" />`;
+}
+
+function renderCanvasMissing() {
+  return `<div class="hist-signature-modal__missing" role="status">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <strong>Assinatura não disponível neste dispositivo</strong>
+    <span>A rubrica foi coletada em outro aparelho e ainda não sincronizou — ou o cache local foi limpo. Se o dispositivo original estiver online, a assinatura aparece aqui automaticamente.</span>
+  </div>`;
+}
 
 export const SignatureViewerModal = {
   _closeOpenInstance: null,
@@ -34,14 +58,13 @@ export const SignatureViewerModal = {
    * @param {Object} registro - O registro completo (contém data, clienteNome, etc.)
    * @param {Object} options
    * @param {string} [options.equipNome] - Nome do equipamento pra meta
+   * @returns {Promise<void>}
    */
-  open(registro, { equipNome = '—' } = {}) {
-    if (!registro || !registro.id) return Promise.resolve();
+  async open(registro, { equipNome = '—' } = {}) {
+    if (!registro || !registro.id) return;
 
     // Remove instância anterior se houver (clique duplo).
     document.getElementById(OVERLAY_ID)?.remove();
-
-    const dataUrl = getSignatureForRecord(registro.id);
 
     const overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
@@ -55,21 +78,6 @@ export const SignatureViewerModal = {
     const clienteNome = registro.clienteNome?.trim() || '—';
     const clienteDoc = registro.clienteDocumento?.trim() || '—';
     const tipoServico = registro.tipo?.trim() || '—';
-
-    const canvasInner = dataUrl
-      ? `<img class="hist-signature-modal__image"
-             src="${Utils.escapeAttr(dataUrl)}"
-             alt="Assinatura do cliente ${Utils.escapeAttr(clienteNome)}" />`
-      : `<div class="hist-signature-modal__missing" role="status">
-           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-             <line x1="12" y1="16" x2="12.01" y2="16"/>
-           </svg>
-           <strong>Assinatura não disponível neste dispositivo</strong>
-           <span>A rubrica foi coletada em outro aparelho. Assinaturas ficam armazenadas localmente
-             por padrão — acesse o mesmo dispositivo em que o cliente assinou.</span>
-         </div>`;
 
     overlay.innerHTML = `
       <div class="hist-signature-modal__backdrop" data-action="close-viewer" aria-hidden="true"></div>
@@ -94,7 +102,7 @@ export const SignatureViewerModal = {
         </div>
 
         <div class="hist-signature-modal__body">
-          <div class="hist-signature-modal__canvas">${canvasInner}</div>
+          <div class="hist-signature-modal__canvas">${renderCanvasLoading()}</div>
 
           <div class="hist-signature-modal__meta">
             <div class="hist-signature-modal__meta-item">
@@ -159,7 +167,24 @@ export const SignatureViewerModal = {
       }
     });
 
-    return Promise.resolve();
+    // Async: resolve a assinatura (Storage → localStorage → null) e swap
+    // o conteúdo do canvas. Cache-first no caller: 99% dos casos tem cache
+    // local e resolve em 1 microtask (imperceptível).
+    try {
+      const dataUrl = await resolveSignatureForRecord(registro);
+      // Se o modal foi fechado entre o await e a resolução, não tenta escrever
+      // no DOM (evita warning de elemento destacado).
+      if (!document.body.contains(overlay)) return;
+
+      const canvas = overlay.querySelector('.hist-signature-modal__canvas');
+      if (!canvas) return;
+
+      canvas.innerHTML = dataUrl ? renderCanvasImage(dataUrl, clienteNome) : renderCanvasMissing();
+    } catch (_err) {
+      if (!document.body.contains(overlay)) return;
+      const canvas = overlay.querySelector('.hist-signature-modal__canvas');
+      if (canvas) canvas.innerHTML = renderCanvasMissing();
+    }
   },
 
   closeIfOpen() {

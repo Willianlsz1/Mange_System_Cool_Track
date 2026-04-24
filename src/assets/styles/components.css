@@ -13127,6 +13127,18 @@ select option {
   object-fit: contain;
   display: block;
 }
+.hist-signature-modal__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: 16px;
+  color: #64748b;
+}
+.hist-signature-modal__loading-text {
+  font-size: 13px;
+  font-weight: 500;
+}
 .hist-signature-modal__missing {
   display: flex;
   flex-direction: column;

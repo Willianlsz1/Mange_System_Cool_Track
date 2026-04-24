@@ -617,6 +617,9 @@ export async function saveRegistro() {
   // D1: assinatura digital — recurso exclusivo Plus+ (diferencial pago).
   // Para Free, pulamos silenciosamente o modal para não interromper o fluxo.
   let assinatura = null;
+  // Reference do Storage quando upload OK; null quando offline ou plano Free.
+  // Shape: { version, provider, bucket, path, url, urlExpiresAt, ... }
+  let signatureReference = null;
   const canUseSignature = isCachedPlanPlusOrHigher();
   let SignatureModal;
   let saveSignatureForRecord;
@@ -642,7 +645,26 @@ export async function saveRegistro() {
       // assinatura ao registro. Se aparecer um valor (data URL), usamos.
       if (result && result !== SignatureModal.CANCELED) {
         assinatura = result;
-        if (saveSignatureForRecord) saveSignatureForRecord(novoId, assinatura);
+        if (saveSignatureForRecord) {
+          try {
+            // Upload pro Storage (async). Retorna reference object ou null
+            // se offline/falha — nesse caso a captura fica na queue
+            // `cooltrack-sig-pending-upload` pra sync posterior.
+            signatureReference = await saveSignatureForRecord(novoId, assinatura);
+            if (!signatureReference) {
+              Toast.info?.('Assinatura salva no dispositivo. Será sincronizada quando conectar.');
+            }
+          } catch (uploadError) {
+            // Falha inesperada — mantém flag local, queue já foi populada
+            // dentro do saveSignatureForRecord. Não bloqueia save do registro.
+            handleError(uploadError, {
+              code: ErrorCodes.SYNC_FAILED,
+              severity: 'warning',
+              message: 'Assinatura ficou salva localmente. Tentaremos sincronizar depois.',
+              context: { action: 'registro.saveRegistro.signatureUpload', registroId: novoId },
+            });
+          }
+        }
       } else if (result === SignatureModal.CANCELED) {
         Toast.info?.('Registro salvo sem assinatura. Você pode adicioná-la depois.');
       }
@@ -708,7 +730,10 @@ export async function saveRegistro() {
           clienteDocumento,
           localAtendimento,
           clienteContato,
-          assinatura: assinatura ? true : false,
+          // Prefer reference do Storage (cross-device). Se upload falhou e
+          // ficou só no localStorage, grava `true` pra indicar "tem
+          // assinatura" — queue reconcile troca pelo reference depois.
+          assinatura: signatureReference || (assinatura ? true : false),
         },
       ],
       equipamentos: prev.equipamentos.map((e) => {

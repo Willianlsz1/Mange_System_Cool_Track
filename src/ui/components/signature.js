@@ -8,5 +8,6 @@ export { SignatureViewerModal } from './signature/signature-viewer-modal.js';
 export {
   cleanupOrphanSignatures,
   getSignatureForRecord,
+  resolveSignatureForRecord,
   saveSignatureForRecord,
 } from './signature/signature-storage.js';

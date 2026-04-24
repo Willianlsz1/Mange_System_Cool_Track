@@ -11,7 +11,7 @@ import { jsPDF } from 'jspdf';
 // (cover, services) fazem esse import diretamente.
 import { getState } from '../core/state.js';
 import { Profile } from '../features/profile.js';
-import { getSignatureForRecord } from '../ui/components/signature.js';
+import { resolveSignatureForRecord } from '../ui/components/signature.js';
 import { drawWatermarkAllPages } from './pdf/primitives.js';
 import {
   buildOsNumber,
@@ -84,6 +84,25 @@ export const PDFGenerator = {
           null,
           reportContext,
         );
+
+        // Pré-resolve todas as assinaturas (Storage → localStorage) num Map
+        // <registroId, dataUrl>. Zero mudança no pipeline de signatures.js:
+        // passamos um getter sync que consulta o Map. Paralelizado via
+        // Promise.all pra não serializar latência de rede quando há
+        // múltiplas assinaturas no Storage.
+        const signatureDataUrls = new Map();
+        await Promise.all(
+          filtered.map(async (registro) => {
+            try {
+              const dataUrl = await resolveSignatureForRecord(registro);
+              if (dataUrl) signatureDataUrls.set(registro.id, dataUrl);
+            } catch (_err) {
+              /* signature falhou → trata como ausente no PDF */
+            }
+          }),
+        );
+        const getSignatureSync = (registroId) => signatureDataUrls.get(registroId) || null;
+
         drawSignaturePages(
           doc,
           pageWidth,
@@ -92,7 +111,7 @@ export const PDFGenerator = {
           filtered,
           equipamentos,
           profile,
-          getSignatureForRecord,
+          getSignatureSync,
           null,
           reportContext,
         );

@@ -8,6 +8,7 @@ import { STORAGE_KEY, Utils } from './utils.js';
 import { Toast } from './toast.js';
 import { supabase } from './supabase.js';
 import { migrateLegacyPhotosForRegistros, normalizePhotoList } from './photoStorage.js';
+import { flushPendingSignatures } from './signatureStorage.js';
 import { AppError, ErrorCodes, handleError } from './errors.js';
 import {
   normalizeCriticidade,
@@ -680,6 +681,20 @@ export const Storage = {
 
       // Migração gradual de fotos legadas (base64) para Storage sem bloquear o bootstrap
       this._migrateLegacyPhotosAsync(state, userId);
+
+      // Flush da queue de assinaturas pendentes (capturas feitas offline ou
+      // com falha de upload). Fire-and-forget, idempotente via upsert:true
+      // no upload. Se registros da queue ainda não sincronizaram, permanecem
+      // na queue pra próxima rodada de reconcile.
+      flushPendingSignatures().catch((err) => {
+        handleError(err, {
+          code: ErrorCodes.SYNC_FAILED,
+          severity: 'info',
+          message: 'Falha ao sincronizar assinaturas pendentes.',
+          context: { action: 'loadFromSupabase.flushPendingSignatures' },
+        });
+      });
+
       return state;
     } catch (err) {
       handleError(err, {
