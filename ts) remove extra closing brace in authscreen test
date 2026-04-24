@@ -1,0 +1,79 @@
+[33mcommit fd9075d0bef3ee45fdb6d635364ab531d6f267fc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m
+Author: Willianlsz1 <willianloopes123@gmail.com>
+Date:   Fri Apr 24 14:46:42 2026 -0300
+
+    feat: alinhar landing, login e pricing com Stripe + refinements de conversão
+    
+    Landing:
+    - Hero com accent em PDF/WhatsApp/menos-de-1-minuto
+    - Seção Antes vs Depois com imagens reais + destaque '<1 min'
+    - 3 passos com screenshots reais do app + copy action-first
+    - Quem sou: bio do Willian com foto
+    - Pricing cards com toggle mensal/anual (R\$ 29 / R\$ 99)
+    - Microcopy: 'Sem cartão · Gratuito pra sempre · Funciona offline · Cadastro em 30s'
+    - Final CTA consistente com hero
+    - Selos de confiança (LGPD · SSL · Stripe · Funciona offline)
+    
+    Login:
+    - Logo mark unificado com .lp-brand__mark da landing
+    - Headline: 'Do serviço ao PDF, direto do celular'
+    - 3 feature bullets ecoando os 3 passos da landing
+    - Stats velocity-first: <1min / ∞ / 100%
+    - CTA 'Entrar no app' (sem 'painel')
+    - Hint signup alinhado com landing
+    
+    Pricing (sync Stripe):
+    - Plus anual R\$ 24,17/mês (antes R\$ 20,75) cobrado R\$ 290/ano
+    - Pro mensal R\$ 99/mês (antes R\$ 49)
+    - Pro anual R\$ 82,50/mês (antes R\$ 34,92) cobrado R\$ 990/ano
+    - FAQ desconto ~17% (antes ~28% inventado)
+    - 'economiza' -> 'economize' (alinha voz com landing)
+    
+    Chore:
+    - test-results/ adicionado ao .gitignore
+    
+    Testes: 24/24 passando (landing 7 + login 8 + pricing 9)
+
+ .gitignore                                         |    1 [32m+[m
+ Landing Page v3.html                               | 2680 [32m++++++++++++++++++++[m
+ brand/Perfil.jpg                                   |  Bin [31m0[m -> [32m48894[m bytes
+ brand/antes.png                                    |  Bin [31m0[m -> [32m418655[m bytes
+ brand/depois.png                                   |  Bin [31m0[m -> [32m372660[m bytes
+ brand/hero-app-equipamentos.png                    |  Bin [31m0[m -> [32m66988[m bytes
+ brand/passo-1-cadastro.png                         |  Bin [31m0[m -> [32m111806[m bytes
+ brand/passo-2-registro.png                         |  Bin [31m0[m -> [32m148003[m bytes
+ brand/passo-3-pdf.png                              |  Bin [31m0[m -> [32m85598[m bytes
+ public/brand/Perfil.jpg                            |  Bin [31m0[m -> [32m48894[m bytes
+ public/brand/antes.png                             |  Bin [31m0[m -> [32m418655[m bytes
+ public/brand/depois.png                            |  Bin [31m0[m -> [32m372660[m bytes
+ public/brand/hero-app-equipamentos.png             |  Bin [31m0[m -> [32m66988[m bytes
+ public/brand/passo-1-cadastro.png                  |  Bin [31m0[m -> [32m111806[m bytes
+ public/brand/passo-2-registro.png                  |  Bin [31m0[m -> [32m148003[m bytes
+ public/brand/passo-3-pdf.png                       |  Bin [31m0[m -> [32m85598[m bytes
+ src/__tests__/authscreen.redesign.test.js          |    3 [32m+[m[31m-[m
+ src/__tests__/dadosPlacaExtras.test.js             |  112 [32m+[m
+ src/__tests__/dadosPlacaInsights.test.js           |  272 [32m++[m
+ src/__tests__/historicoView.test.js                |   31 [32m+[m[31m-[m
+ src/__tests__/landingPage.test.js                  |    6 [32m+[m[31m-[m
+ src/__tests__/nameplateExtras.test.js              |  101 [32m+[m
+ src/__tests__/reportExportHandlers.test.js         |   58 [32m+[m[31m-[m
+ src/__tests__/shareReport.test.js                  |  361 [32m+++[m
+ src/core/plans/subscriptionPlans.js                |    8 [32m+[m[31m-[m
+ src/domain/dadosPlacaDisplay.js                    |   86 [32m+[m[31m-[m
+ src/domain/dadosPlacaInsights.js                   |  298 [32m+++[m
+ src/domain/nameplateAnalysis.js                    |  142 [32m++[m
+ src/domain/pdf.js                                  |    9 [32m+[m
+ src/domain/pdf/sections/cover.js                   |  112 [32m+[m
+ src/domain/pdf/shareReport.js                      |  308 [32m+++[m
+ src/ui/components/authscreen.js                    |   84 [32m+[m[31m-[m
+ src/ui/components/landingPage/styles.css           |  690 [32m+++++[m
+ src/ui/components/landingPage/template.js          |  379 [32m+[m[31m--[m
+ src/ui/components/nameplateCapture.js              |  150 [32m++[m
+ src/ui/controller/handlers/reportExportHandlers.js |   56 [32m+[m[31m-[m
+ src/ui/views/equipamentos.js                       |   61 [32m+[m[31m-[m
+ src/ui/views/equipamentos/placaData.js             |   43 [32m+[m
+ src/ui/views/historico.js                          |   47 [32m+[m[31m-[m
+ src/ui/views/pricing.js                            |   16 [32m+[m[31m-[m
+ .../20260424120000_relatorios_bucket.sql           |  134 [32m+[m
+ test-results/.last-run.json                        |    4 [31m-[m
+ 42 files changed, 5920 insertions(+), 332 deletions(-)
