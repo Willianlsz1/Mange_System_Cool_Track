@@ -6,10 +6,17 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
     localStorage.setItem('cooltrack-guest-mode', '1');
+    localStorage.setItem('cooltrack-tour-done', '1');
   });
 
   await page.goto('/');
   await expect(page.locator('#main-content')).toBeVisible();
+
+  const overflowDismiss = page.locator('#dash-overflow-modal [data-action="dismiss"]');
+  if (await overflowDismiss.isVisible().catch(() => false)) {
+    await overflowDismiss.click();
+    await expect(page.locator('#dash-overflow-modal')).toHaveCount(0);
+  }
 });
 
 test('equipamentos → detalhe → editor de foto fecha em cadeia com back', async ({ page }) => {
@@ -110,4 +117,20 @@ test('contexto de quickfilter é preservado ao abrir/voltar detalhe', async ({ p
   await expect(
     page.locator('[data-action="equip-quickfilter"][data-id="sem-setor"].equip-filter--active'),
   ).toHaveCount(1);
+});
+
+test('back apos fechar modal pela UI volta para a rota anterior real', async ({ page }) => {
+  await page.click('#nav-equipamentos');
+  await expect(page.locator('body')).toHaveAttribute('data-route', 'equipamentos');
+
+  await page.click('[data-action="open-modal"][data-id="modal-add-eq"]');
+  const addEquipModal = page.locator('#modal-add-eq');
+  await expect(addEquipModal).toHaveClass(/is-open/);
+
+  await page.click('[data-action="close-modal"][data-id="modal-add-eq"]');
+  await expect(addEquipModal).not.toHaveClass(/is-open/);
+
+  await page.goBack();
+  await expect(page.locator('body')).toHaveAttribute('data-route', 'inicio');
+  await expect(page.locator('#nav-inicio')).toHaveClass(/is-active/);
 });

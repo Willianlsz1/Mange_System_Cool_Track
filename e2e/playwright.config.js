@@ -21,6 +21,10 @@ export default defineConfig({
     command: `npm run dev -- --host 127.0.0.1 --port ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
+    env: {
+      VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321',
+      VITE_SUPABASE_KEY: process.env.VITE_SUPABASE_KEY || 'test-anon-key',
+    },
     timeout: 120_000,
   },
   projects: [

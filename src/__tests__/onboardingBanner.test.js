@@ -1,6 +1,16 @@
-const getStateMock = vi.fn(() => ({ equipamentos: [] }));
+const { getStateMock, reopenMock } = vi.hoisted(() => ({
+  getStateMock: vi.fn(() => ({ equipamentos: [] })),
+  reopenMock: vi.fn(),
+}));
+
 vi.mock('../core/state.js', () => ({
   getState: () => getStateMock(),
+}));
+
+vi.mock('../ui/components/onboarding/firstTimeExperience.js', () => ({
+  FirstTimeExperience: {
+    reopen: reopenMock,
+  },
 }));
 
 import { OnboardingBanner } from '../ui/components/onboarding/onboardingBanner.js';
@@ -10,6 +20,7 @@ describe('OnboardingBanner', () => {
     document.body.innerHTML = '<div id="lista-equip"></div>';
     localStorage.clear();
     getStateMock.mockReturnValue({ equipamentos: [] });
+    reopenMock.mockClear();
   });
 
   it('renderiza banner quando não há equipamentos, ignorando flag antiga de dismiss', () => {
@@ -42,6 +53,51 @@ describe('OnboardingBanner', () => {
     // Botão é o "Continuar" com id próprio (não o data-action do modal)
     expect(document.getElementById('onboarding-banner-resume')).toBeTruthy();
     expect(banner.querySelector('[data-action="open-modal"]')).toBeFalsy();
+  });
+
+  it('renderiza variante "Continuar cadastro" usando skip por usuario', () => {
+    localStorage.setItem('ct-ftx-skipped:user-1', '1');
+
+    OnboardingBanner.render({ userId: 'user-1' });
+
+    const banner = document.getElementById('onboarding-banner');
+    expect(banner).toBeTruthy();
+    expect(banner.textContent).toContain('Ative seu primeiro equipamento');
+    expect(document.getElementById('onboarding-banner-resume')).toBeTruthy();
+  });
+
+  it('nao usa skip de outro usuario para renderizar retomada', () => {
+    localStorage.setItem('ct-ftx-skipped:user-1', '1');
+
+    OnboardingBanner.render({ userId: 'user-2' });
+
+    const banner = document.getElementById('onboarding-banner');
+    expect(banner).toBeTruthy();
+    expect(banner.textContent).toContain('Comece por 1 equipamento real');
+    expect(document.getElementById('onboarding-banner-resume')).toBeFalsy();
+  });
+
+  it('migra skip legado para a chave do usuario atual', () => {
+    localStorage.setItem('cooltrack-ftx-skipped', '1');
+
+    OnboardingBanner.render({ userId: 'user-1' });
+
+    expect(localStorage.getItem('ct-ftx-skipped:user-1')).toBe('1');
+    expect(localStorage.getItem('cooltrack-ftx-skipped')).toBeNull();
+    expect(document.getElementById('onboarding-banner-resume')).toBeTruthy();
+  });
+
+  it('reabre FTX passando o userId correto ao retomar', async () => {
+    const equipamentos = [];
+    localStorage.setItem('ct-ftx-skipped:user-1', '1');
+    getStateMock.mockReturnValue({ equipamentos });
+
+    OnboardingBanner.render({ userId: 'user-1' });
+    document.getElementById('onboarding-banner-resume').click();
+
+    await vi.waitFor(() => {
+      expect(reopenMock).toHaveBeenCalledWith(equipamentos, { userId: 'user-1' });
+    });
   });
 
   it('renderiza variante padrão quando FTX nunca foi pulado', () => {

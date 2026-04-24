@@ -18,6 +18,7 @@ let _historyBound = false;
 let _blockingLayerDepth = 0;
 let _blockingLayerSyncSuspended = false;
 let _blockingLayerObserver = null;
+let _blockingLayerHistoryCompacting = false;
 const UI_CTX_VERSION = 1;
 
 function normalizeRouteParams(params) {
@@ -25,11 +26,12 @@ function normalizeRouteParams(params) {
   return params;
 }
 
-function buildHistoryState(route, params = {}) {
+function buildHistoryState(route, params = {}, options = {}) {
   return {
     route,
     params: normalizeRouteParams(params),
     uiCtxVersion: UI_CTX_VERSION,
+    ...(options.blockingLayer ? { blockingLayer: true } : {}),
   };
 }
 
@@ -162,15 +164,23 @@ function syncBlockingLayerHistoryDepth() {
   if (typeof window === 'undefined' || !window.history || _blockingLayerSyncSuspended) return;
   if (!_current) return;
   const nextDepth = countOpenBlockingLayers();
-  if (nextDepth <= _blockingLayerDepth) {
+  if (nextDepth < _blockingLayerDepth) {
+    const delta = _blockingLayerDepth - nextDepth;
     _blockingLayerDepth = nextDepth;
+    if (window.history.state?.blockingLayer) {
+      _blockingLayerHistoryCompacting = true;
+      window.history.go(-delta);
+    }
+    return;
+  }
+  if (nextDepth === _blockingLayerDepth) {
     return;
   }
 
   const delta = nextDepth - _blockingLayerDepth;
   for (let i = 0; i < delta; i += 1) {
     window.history.pushState(
-      buildHistoryState(_current, _currentParams),
+      buildHistoryState(_current, _currentParams, { blockingLayer: true }),
       '',
       window.location.pathname + window.location.search,
     );
@@ -403,6 +413,10 @@ export function initHistory() {
   }
 
   window.addEventListener('popstate', (e) => {
+    if (_blockingLayerHistoryCompacting) {
+      _blockingLayerHistoryCompacting = false;
+      return;
+    }
     if (closeTopBlockingLayer()) {
       // Consumimos o back para fechar camada sobreposta, sem re-push corretivo.
       _blockingLayerSyncSuspended = true;
