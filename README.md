@@ -56,7 +56,6 @@ Fluxo principal:
 .github/
   workflows/
     ci.yml
-    deploy.yml
 src/
   __tests__/
   assets/
@@ -132,16 +131,16 @@ cp .env.example .env
 
 ## Secrets esperados no GitHub Actions
 
-### Workflow de CI (`.github/workflows/ci.yml`)
-
-- Nenhum secret obrigatório (roda lint/test/build sem injeção de credenciais).
-
-### Workflow de Deploy (`.github/workflows/deploy.yml`)
-
-Secrets obrigatórios no repositório:
+O CI (`.github/workflows/ci.yml`) roda lint + format + test + build no push/PR
+contra `main`. O step `Build` precisa das envs do Vite pra compilar sem erro —
+então o repositório exige:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_KEY` (**anon public key**, nunca `service_role`)
+
+Deploy real é feito pela Cloudflare Pages (integração direta com o repo).
+As env vars precisam estar **duplicadas** no painel da Cloudflare —
+as do GitHub não são herdadas. Ver `docs/runbook.md` para o checklist completo.
 
 ## Scripts disponíveis
 
@@ -164,7 +163,7 @@ Secrets obrigatórios no repositório:
 3. Validar localmente (`npm run lint`, `npm run test`, `npm run build`).
 4. Abrir Pull Request.
 5. Aguardar CI validar `install/lint/test/build`.
-6. Merge em `main` aciona deploy para GitHub Pages.
+6. Merge em `main` dispara build + deploy automático no Cloudflare Pages (integração direta com o repo via painel Cloudflare).
 
 ## Testes (estado atual)
 
@@ -197,8 +196,8 @@ Os headers de segurança e o redirect SPA ficam em `public/_headers` e `public/_
   1. Conectar o repositório em `app.netlify.com`.
   2. Definir as env vars (mesmas da lista acima).
   3. `Build command`: `npm run build`. `Publish directory`: `dist`. O `netlify.toml` já traz esses valores.
-- **GitHub Pages (fallback)**:
-  - `deploy.yml` continua publicando em `push` para `main`.
+- **GitHub Actions (CI only)**:
+  - `.github/workflows/ci.yml` roda lint + format + test + build no push/PR contra `main` como gate de qualidade. Não faz deploy — serve pra quebrar antes da Cloudflare gastar build time com código quebrado.
 - `vite.config.js` está com `base: '/'` para deploy em domínio customizado.
 
 ## Limitações atuais

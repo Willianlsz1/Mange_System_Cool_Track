@@ -4,12 +4,17 @@ import { readFileSync } from 'node:fs';
 const ANALYZE = process.env.ANALYZE === 'true';
 
 // Versão e commit curto injetados no build pra exibir no footer da landing/app.
-// `pkg.version` vem do package.json (source of truth). `VITE_APP_COMMIT` vem
-// do workflow GitHub Actions (step `git rev-parse --short HEAD`); fallback
-// 'dev' em builds locais onde a env var não está setada.
+// `pkg.version` vem do package.json (source of truth).
+// `APP_COMMIT` é resolvido nessa ordem:
+//   1. VITE_APP_COMMIT (explícito, pra casos especiais)
+//   2. CF_PAGES_COMMIT_SHA (injetado pelo Cloudflare Pages — fonte real em prod)
+//   3. 'dev' (fallback pra builds locais sem env var)
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const APP_VERSION = pkg.version;
-const APP_COMMIT = process.env.VITE_APP_COMMIT || 'dev';
+const APP_COMMIT =
+  process.env.VITE_APP_COMMIT ||
+  (process.env.CF_PAGES_COMMIT_SHA ? process.env.CF_PAGES_COMMIT_SHA.slice(0, 7) : '') ||
+  'dev';
 
 // `rollup-plugin-visualizer` é um devDep opcional — só carregado quando
 // ANALYZE=true. Mantemos o import dinâmico pra não quebrar `npm run dev`

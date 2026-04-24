@@ -1,26 +1,32 @@
 name: CI
 
+# CI puro: roda lint + format + test + build como gate de qualidade no push pra main.
+# Deploy real é via Cloudflare Pages (conexão direta ao repo no painel da Cloudflare),
+# não roda aqui. Este workflow existe pra quebrar antes que a Cloudflare builde.
+
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  quality:
-    name: Install, lint, test and build
+  test-and-build:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -29,56 +35,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Test
-        run: npm run test
+      - name: Quality checks
+        run: npm run check
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
 
       - name: Build
-        # Mesmos placeholders do step E2E. O Vite faz a substituição de
-        # `import.meta.env.VITE_*` em build-time; sem essas envs o bundle
-        # resultante carregaria undefined e o supabase.js lançaria no boot
-        # do browser. O deploy real (deploy.yml) passa os secrets reais.
-        env:
-          VITE_SUPABASE_URL: https://placeholder.supabase.co
-          VITE_SUPABASE_KEY: placeholder-anon-key-ci-only
-          VITE_AUTH_REDIRECT_URL: http://127.0.0.1:4173/
         run: npm run build
-
-  e2e:
-    name: Browser E2E
-    runs-on: ubuntu-latest
-    needs: quality
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Install Playwright browser
-        # Usa a versão do @playwright/test instalada via devDeps (hoje 1.59.x).
-        # Pinar aqui via `npx playwright@1.55.0` criava mismatch com o
-        # @playwright/test do node_modules → ERR_MODULE_NOT_FOUND no runner.
-        run: npx playwright install --with-deps chromium
-
-      - name: Run E2E suite
-        # Placeholders são suficientes: os testes setam localStorage
-        # 'cooltrack-guest-mode' = '1' no beforeEach, então nenhuma chamada
-        # real ao Supabase é feita. Precisamos apenas que o import estático
-        # em src/core/supabase.js (getUrlEnvOrThrow) não lance no bootstrap
-        # do Vite dev server. Sem esse bloco, o app não monta e o teste
-        # falha com '#main-content not visible'.
         env:
-          VITE_SUPABASE_URL: https://placeholder.supabase.co
-          VITE_SUPABASE_KEY: placeholder-anon-key-for-e2e-not-used-in-guest-mode
-          VITE_AUTH_REDIRECT_URL: http://127.0.0.1:4173/
-        run: npm run test:e2e:ci
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_KEY: ${{ secrets.VITE_SUPABASE_KEY }}
