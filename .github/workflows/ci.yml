@@ -36,6 +36,14 @@ jobs:
         run: npm run test
 
       - name: Build
+        # Mesmos placeholders do step E2E. O Vite faz a substituição de
+        # `import.meta.env.VITE_*` em build-time; sem essas envs o bundle
+        # resultante carregaria undefined e o supabase.js lançaria no boot
+        # do browser. O deploy real (deploy.yml) passa os secrets reais.
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_KEY: placeholder-anon-key-ci-only
+          VITE_AUTH_REDIRECT_URL: http://127.0.0.1:4173/
         run: npm run build
 
   e2e:
@@ -63,4 +71,14 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E suite
+        # Placeholders são suficientes: os testes setam localStorage
+        # 'cooltrack-guest-mode' = '1' no beforeEach, então nenhuma chamada
+        # real ao Supabase é feita. Precisamos apenas que o import estático
+        # em src/core/supabase.js (getUrlEnvOrThrow) não lance no bootstrap
+        # do Vite dev server. Sem esse bloco, o app não monta e o teste
+        # falha com '#main-content not visible'.
+        env:
+          VITE_SUPABASE_URL: https://placeholder.supabase.co
+          VITE_SUPABASE_KEY: placeholder-anon-key-for-e2e-not-used-in-guest-mode
+          VITE_AUTH_REDIRECT_URL: http://127.0.0.1:4173/
         run: npm run test:e2e:ci
