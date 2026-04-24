@@ -261,6 +261,10 @@ export function buildLandingHtml() {
                 <p class="lp-about__lead">Como não existia, construí. <strong>O CoolTrack PRO é o que eu queria ter tido no meu primeiro dia de profissão.</strong></p>
                 <p>Se você está lendo isso, provavelmente passa pelas mesmas coisas. A gente vai se entender.</p>
                 <p class="lp-about__stats">4 anos de campo <span>·</span> Feito por técnico, pra técnico <span>·</span> Atualizações semanais</p>
+                <a class="btn btn-outline lp-about__cta" href="mailto:suporte@cooltrackpro.com.br" aria-label="Falar com o suporte por e-mail">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><path d="m22 6-10 7L2 6"/></svg>
+                  Falar com o suporte
+                </a>
               </div>
             </div>
           </div>
@@ -334,6 +338,7 @@ export function buildLandingHtml() {
           </div>
           <div class="lp-footer__bottom">
             <span>© 2026 CoolTrack Pro</span>
+            <span class="lp-footer__version" aria-label="Versão do app">${typeof __APP_VERSION__ !== 'undefined' ? `v${__APP_VERSION__}${typeof __APP_COMMIT__ !== 'undefined' && __APP_COMMIT__ !== 'dev' ? ` · ${__APP_COMMIT__}` : ''}` : 'v1.0.0'}</span>
             <a href="mailto:suporte@cooltrackpro.com.br">suporte@cooltrackpro.com.br</a>
           </div>
         </div>

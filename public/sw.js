@@ -8,7 +8,7 @@
  * Isso evita mismatch entre o JS rodando no tab e os chunks no cache.
  */
 
-const CACHE_NAME = 'cooltrack-pro-v7';
+const CACHE_NAME = 'cooltrack-pro-v8';
 const OFFLINE_PAGE = '/offline.html';
 
 // Assets que sempre ficam em cache

@@ -1,6 +1,15 @@
 import { defineConfig } from 'vite';
+import { readFileSync } from 'node:fs';
 
 const ANALYZE = process.env.ANALYZE === 'true';
+
+// Versão e commit curto injetados no build pra exibir no footer da landing/app.
+// `pkg.version` vem do package.json (source of truth). `VITE_APP_COMMIT` vem
+// do workflow GitHub Actions (step `git rev-parse --short HEAD`); fallback
+// 'dev' em builds locais onde a env var não está setada.
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const APP_VERSION = pkg.version;
+const APP_COMMIT = process.env.VITE_APP_COMMIT || 'dev';
 
 // `rollup-plugin-visualizer` é um devDep opcional — só carregado quando
 // ANALYZE=true. Mantemos o import dinâmico pra não quebrar `npm run dev`
@@ -51,6 +60,10 @@ const vitestConfig = {
 
 export default defineConfig(async () => ({
   base: '/',
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+    __APP_COMMIT__: JSON.stringify(APP_COMMIT),
+  },
   server: {
     port: 5173,
     open: true,

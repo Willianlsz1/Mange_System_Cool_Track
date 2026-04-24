@@ -5,6 +5,10 @@ import eslintConfigPrettier from 'eslint-config-prettier';
 const baseGlobals = {
   ...globals.browser,
   ...globals.node,
+  // Constantes injetadas em build-time pelo Vite (define em vite.config.js).
+  // Exibidas no footer da landing (v1.0.0 · abc123).
+  __APP_VERSION__: 'readonly',
+  __APP_COMMIT__: 'readonly',
 };
 
 const testGlobals = {

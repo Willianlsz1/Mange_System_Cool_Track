@@ -734,6 +734,21 @@
   border-top: 1px solid rgba(139, 159, 174, 0.12);
 }
 
+.lp-footer__version {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  color: rgba(159, 177, 190, 0.55);
+  letter-spacing: 0.02em;
+}
+
+.lp-about__cta {
+  margin-top: 18px;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .lp-sticky {
   position: fixed;
   right: 0;
