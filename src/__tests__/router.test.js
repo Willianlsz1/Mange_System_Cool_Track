@@ -427,4 +427,43 @@ describe('router', () => {
     expect(document.getElementById('lightbox').classList.contains('is-open')).toBe(true);
     expect(onEnterRegistros).not.toHaveBeenCalled();
   });
+
+  it('compacta history sintetico quando camada bloqueante fecha pela UI', async () => {
+    vi.useFakeTimers();
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const goSpy = vi.spyOn(window.history, 'go').mockImplementation(() => {});
+    const pushSpy = vi.spyOn(window.history, 'pushState');
+    const onEnterInicio = vi.fn();
+    const onEnterRegistros = vi.fn();
+
+    registerRoute('inicio', onEnterInicio);
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    goTo('registros');
+    vi.advanceTimersByTime(150);
+    initHistory();
+
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="lightbox" class="lightbox is-open"></div>`,
+    );
+    await Promise.resolve();
+
+    const syntheticState = pushSpy.mock.calls.at(-1)?.[0];
+    expect(syntheticState).toMatchObject({ route: 'registros', blockingLayer: true });
+
+    document.getElementById('lightbox').classList.remove('is-open');
+    await Promise.resolve();
+
+    expect(goSpy).toHaveBeenCalledWith(-1);
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+    expect(onEnterInicio).toHaveBeenCalledTimes(1);
+    expect(onEnterRegistros).toHaveBeenCalledTimes(1);
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'inicio' } }));
+    vi.advanceTimersByTime(150);
+    expect(onEnterInicio).toHaveBeenCalledTimes(2);
+  });
 });

@@ -257,21 +257,22 @@ export function getHealthClass(score) {
 // ═══════════════════════════════════════════════════════
 async function resolveDashboardPlanContext() {
   if (localStorage.getItem('cooltrack-guest-mode') === '1') {
-    return { planCode: PLAN_CODE_FREE, hasPro: false };
+    return { planCode: PLAN_CODE_FREE, hasPro: false, userId: null };
   }
 
   const user = await Auth.getUser();
-  if (!user?.id) return { planCode: PLAN_CODE_FREE, hasPro: false };
+  if (!user?.id) return { planCode: PLAN_CODE_FREE, hasPro: false, userId: null };
 
   try {
     const { profile } = await fetchMyProfileBilling();
     return {
       planCode: getEffectivePlan(profile),
       hasPro: hasProAccess(profile),
+      userId: user.id,
     };
   } catch {
     const fallbackPlan = getEffectivePlan(null);
-    return { planCode: fallbackPlan, hasPro: fallbackPlan === PLAN_CODE_PRO };
+    return { planCode: fallbackPlan, hasPro: fallbackPlan === PLAN_CODE_PRO, userId: user.id };
   }
 }
 
@@ -1154,7 +1155,7 @@ export async function renderDashboard() {
     _renderRecentesSection({ registros });
 
     // Plan extras: onboarding + overflow banner (Free only)
-    OnboardingBanner.render();
+    OnboardingBanner.render({ userId: planContext.userId });
 
     // Banner + modal de overflow (só para Free acima dos limites).
     // Substitui o par usage-meter + upgrade-card anteriores — aparece

@@ -5,21 +5,43 @@ import { getState } from '../../../core/state.js';
 // no chunk inicial — o FirstTimeExperience é carregado sob demanda quando
 // o banner de retomada é acionado.
 const FTX_SKIP_KEY = 'cooltrack-ftx-skipped';
+const FTX_SKIP_KEY_PREFIX = 'ct-ftx-skipped:';
+
+function resolveFtxSkipKey(userId) {
+  const normalizedUserId = String(userId || '').trim();
+  return normalizedUserId ? `${FTX_SKIP_KEY_PREFIX}${normalizedUserId}` : FTX_SKIP_KEY;
+}
+
+function migrateLegacySkipKeyIfNeeded(skipKey) {
+  if (skipKey === FTX_SKIP_KEY) return;
+  if (localStorage.getItem(FTX_SKIP_KEY) === '1') {
+    localStorage.setItem(skipKey, '1');
+    localStorage.removeItem(FTX_SKIP_KEY);
+  }
+}
 
 export const OnboardingBanner = {
-  render() {
+  render({ userId = null } = {}) {
     const { equipamentos } = getState();
     const bannerEl = document.getElementById('onboarding-banner');
     if (equipamentos.length) {
       if (bannerEl) bannerEl.remove();
       return;
     }
-    if (bannerEl) return;
+    const skipKey = resolveFtxSkipKey(userId);
+    migrateLegacySkipKeyIfNeeded(skipKey);
+    const wasSkipped = !!localStorage.getItem(skipKey);
+    const bannerState = `${skipKey}:${wasSkipped ? 'skipped' : 'default'}`;
 
-    const wasSkipped = !!localStorage.getItem(FTX_SKIP_KEY);
+    if (bannerEl) {
+      if (bannerEl.dataset.ftxState === bannerState) return;
+      bannerEl.remove();
+    }
+
     const el = document.createElement('div');
     el.id = 'onboarding-banner';
     el.className = 'onboarding-banner';
+    el.dataset.ftxState = bannerState;
 
     if (wasSkipped) {
       // Usuário pulou o FTX deliberadamente — oferece retomar o cadastro
@@ -39,7 +61,7 @@ export const OnboardingBanner = {
         // Lazy import: só carrega o FTX (e seu CSS) quando o usuário
         // realmente quer retomar. Mantém o chunk inicial enxuto.
         const { FirstTimeExperience } = await import('./firstTimeExperience.js');
-        FirstTimeExperience.reopen(getState().equipamentos);
+        FirstTimeExperience.reopen(getState().equipamentos, { userId });
       });
       return;
     }
