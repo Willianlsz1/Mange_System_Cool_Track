@@ -1,1226 +1,324 @@
 /**
  * CoolTrack Pro - LandingPage / template
- * Markup HTML da landing page (hero com dual orb + grad word, gallery,
- * social proof, final CTA com dual orb, sticky mobile).
  *
- * V2Refined — 5 signature moments herdados do AccountModal:
- *   1. DUAL ORB (gold top-left + cyan bottom-right) no mockup do hero
- *   2. GRAD WORD (cyan→gold) em "achismo" (h1) e "organizar" (final CTA)
- *   3. FILLED CHIPS com check-circle inline no mockup
- *   4. CTA primary com bolt + sombra cyan projetada
- *   5. Mini cyan orb por phone frame na gallery
- *
- * Handlers preservados: data-action="start-trial" / "login" são usados
- * pelo orquestrador (landingPage.js) — não mexer sem atualizar os bindings.
+ * Markup HTML da landing. Mantem os handlers usados pelo orquestrador:
+ * data-action="start-trial" e data-action="login".
  */
 
 export function buildLandingHtml() {
-  // Ícones inline — stroke 1.75 currentColor, lucide-style. Zero emoji.
-  const ICON_BOLT = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 L4 14 L12 14 L11 22 L20 10 L12 10 Z"/></svg>`;
-  const ICON_LOGIN = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>`;
-  const ICON_CHECK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="8 12.5 11 15.5 16.5 10"/></svg>`;
-  const ICON_WIFI_OFF = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>`;
-  const ICON_CHEVRON = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>`;
-  const ICON_CAMERA = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
-  const ICON_SEND = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>`;
-  // Sparkles (lucide) — usado como signifier visual da análise por IA.
-  const ICON_SPARKLES = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.6 4.1L18 8.8l-4.4 1.7L12 14.6l-1.6-4.1L6 8.8l4.4-1.7z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8z"/><path d="M5 15l.6 1.6L7 17l-1.4.4L5 19l-.6-1.6L3 17l1.4-.4z"/></svg>`;
-  // Ícones de trust — stroke 1.75 currentColor, lucide-style, mesma linguagem visual.
-  const ICON_SHIELD = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>`;
-  const ICON_LOCK = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
-  const ICON_REFUND = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`;
-  const ICON_UNLOCK = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>`;
-  const ICON_X = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"/><line x1="15.5" y1="8.5" x2="8.5" y2="15.5"/></svg>`;
-  // Ícones pequenos do hero v3 — phone status bar, trust chips, sheet rows.
-  const ICON_CHECK_SM = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
-  const ICON_SHIELD_SM = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
-  const ICON_OFFLINE_SM = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12a7 7 0 0 1 14 0"/><path d="M5 12v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4"/><circle cx="12" cy="14" r="1.5"/></svg>`;
-  const ICON_CARD_SM = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18"/></svg>`;
-  const ICON_SIGNAL = `<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="1" y="8" width="3" height="8"/><rect x="6" y="6" width="3" height="10"/><rect x="11" y="4" width="3" height="12"/><rect x="16" y="2" width="3" height="14"/></svg>`;
-  const ICON_WIFI_SM = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12a10 10 0 0 1 14 0"/><path d="M8 15a6 6 0 0 1 8 0"/><circle cx="12" cy="18" r="1.2" fill="currentColor"/></svg>`;
-  const ICON_BATTERY = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="7" width="18" height="10" rx="2"/><rect x="5" y="10" width="10" height="4" fill="currentColor" stroke="none"/></svg>`;
-  const ICON_RING_SM = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>`;
+  const ICON_ARROW = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>`;
+  const ICON_LOGIN = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="m10 17 5-5-5-5"/><path d="M15 12H3"/></svg>`;
+  const ICON_CHECK = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>`;
+  const ICON_X = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+  const ICON_FILE = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>`;
+  const ICON_CAMERA = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`;
+  const ICON_CLOCK = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+  const ICON_WHATSAPP = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M9 8.5c.2 3 2 4.8 5 5"/><path d="M8.8 8.2 10 7l1.4 2-1 .8"/><path d="m13.8 13.5.8-1 2 1.4-1.2 1.2"/></svg>`;
+
+  const problemItems = [
+    'Anotação no papel que se perde',
+    'Fotos misturadas no WhatsApp',
+    'Relatório feito à noite, manual',
+    'Sem histórico do equipamento',
+  ];
+
+  const steps = [
+    {
+      title: 'Cadastre o equipamento em segundos',
+      text: 'Nome, local, tag e dados importantes ficam salvos para o próximo atendimento.',
+    },
+    {
+      title: 'Marque o que foi feito e tire fotos',
+      text: 'Registre limpeza, troca, teste, observacoes e imagens direto no celular.',
+    },
+    {
+      title: 'Gere o PDF e envie na hora pelo WhatsApp',
+      text: 'O cliente recebe o relatório antes de você sair do local.',
+    },
+  ];
+
+  const benefits = [
+    'Pare de voltar em cliente por falta de informação',
+    'Seu cliente recebe um relatório profissional',
+    'Cada equipamento com histórico completo',
+    'Terminou o serviço → relatório enviado em segundos',
+  ];
 
   return `
     <div class="lp">
-
-      <!-- ── TOPBAR ── -->
       <header class="lp-topbar" role="banner">
-        <div class="lp-brand">
-          <div class="lp-brand__icon">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-              <g stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
-                <g>
-                  <line x1="8" y1="2" x2="8" y2="14"/>
-                  <polyline points="6.5,3.2 8,2 9.5,3.2"/>
-                  <polyline points="6.5,12.8 8,14 9.5,12.8"/>
-                </g>
-                <g transform="rotate(60 8 8)">
-                  <line x1="8" y1="2" x2="8" y2="14"/>
-                  <polyline points="6.5,3.2 8,2 9.5,3.2"/>
-                  <polyline points="6.5,12.8 8,14 9.5,12.8"/>
-                </g>
-                <g transform="rotate(120 8 8)">
-                  <line x1="8" y1="2" x2="8" y2="14"/>
-                  <polyline points="6.5,3.2 8,2 9.5,3.2"/>
-                  <polyline points="6.5,12.8 8,14 9.5,12.8"/>
-                </g>
-              </g>
-              <circle cx="8" cy="8" r="0.9" fill="#00C8E8"/>
-            </svg>
-          </div>
-          <span class="lp-brand__name">CoolTrack</span>
-          <span class="lp-brand__badge">PRO</span>
-        </div>
-        <button class="lp-nav-btn" type="button" data-action="login" data-source="topbar">
+        <a class="lp-brand" href="#lp-hero-title" aria-label="CoolTrack Pro">
+          <span class="lp-brand__mark" aria-hidden="true">
+            <span></span>
+          </span>
+          <span class="lp-brand__text">
+            <span class="lp-brand__name">CoolTrack</span>
+            <span class="lp-brand__tag">PRO</span>
+          </span>
+        </a>
+
+        <nav class="lp-nav" aria-label="Secoes da landing">
+          <a href="#lp-problem-title">Problema</a>
+          <a href="#lp-how-title">Como funciona</a>
+          <a href="#lp-proof-title">Relatorio</a>
+        </nav>
+
+        <button class="lp-login" type="button" data-action="login" data-source="topbar">
           ${ICON_LOGIN}
           Entrar
         </button>
       </header>
 
-      <!-- ── HERO v3 — split layout com phone real lendo plaquinha HVAC ── -->
-      <section class="lp-hero">
-        <div class="lp-hero__grid" aria-hidden="true"></div>
-        <div class="lp-hero__inner">
+      <main>
+        <section class="lp-hero" aria-labelledby="lp-hero-title">
+          <div class="lp-container lp-hero__inner">
+            <div class="lp-hero__copy">
+              <p class="lp-kicker">Para técnico de ar-condicionado que precisa entregar rápido</p>
+              <h1 class="lp-hero__title" id="lp-hero-title">
+                Relatórios de manutenção prontos em minutos, direto do celular.
+              </h1>
+              <p class="lp-hero__sub">
+                Chega de perder tempo com papel e planilha. Cadastre o equipamento, registre o
+                serviço e envie o PDF pelo WhatsApp em menos de 1 minuto.
+              </p>
 
-          <!-- LEFT column: copy + CTA + trust chips -->
-          <div class="lp-hero__copy">
-            <div class="lp-hero__kicker">
-              <span class="lp-hero__kicker-dot" aria-hidden="true"></span>
-              Para técnicos de climatização
-              <span class="lp-hero__kicker-sep">&middot;</span> agora com IA
+              <div class="lp-hero__ctas">
+                <button
+                  class="lp-btn lp-btn--primary lp-hero__cta"
+                  type="button"
+                  data-action="start-trial"
+                  data-source="hero"
+                >
+                  Testar no próximo serviço
+                  ${ICON_ARROW}
+                </button>
+                <a class="lp-btn lp-btn--secondary lp-hero__cta-secondary" href="#lp-how-title">
+                  Ver como funciona
+                </a>
+              </div>
+
+              <p class="lp-impact">Antes: 15–20 min por relatório | Agora: menos de 1 minuto</p>
+              <p class="lp-microcopy">Sem cadastro complicado · Sem cartão · Funciona offline</p>
             </div>
 
-            <h1 class="lp-hero__title">
-              Pare de digitar etiqueta.<br>
-              Cadastre equipamentos em segundos e gere relatórios sem esforço.
-            </h1>
+            <div class="lp-hero__visual" aria-label="Mockup do CoolTrack Pro no celular">
+              <div class="lp-phone" role="img" aria-label="Tela do aplicativo registrando manutenção e gerando PDF">
+                <div class="lp-phone__screen">
+                  <div class="lp-phone__status">
+                    <span>09:41</span>
+                    <span>4G 87%</span>
+                  </div>
+                  <div class="lp-phone__header">
+                    <div>
+                      <span class="lp-phone__eyebrow">Serviço em campo</span>
+                      <strong>Split Sala 02</strong>
+                    </div>
+                    <span class="lp-phone__badge">Online</span>
+                  </div>
 
-            <p class="lp-hero__sub">
-              <strong class="lp-hero__sub-lead">A IA lê a etiqueta e preenche os dados do equipamento.</strong>
-              Você só registra o serviço e gera o relatório em poucos toques.
-            </p>
+                  <div class="lp-phone__card lp-phone__card--equipment">
+                    <span class="lp-phone__icon">${ICON_CLOCK}</span>
+                    <div>
+                      <strong>Manutenção preventiva</strong>
+                      <span>Cliente: Clinica Norte</span>
+                    </div>
+                  </div>
 
-            <div class="lp-hero__ctas">
+                  <div class="lp-phone__checklist">
+                    <div>${ICON_CHECK}<span>Filtros limpos</span></div>
+                    <div>${ICON_CHECK}<span>Dreno testado</span></div>
+                    <div>${ICON_CHECK}<span>Fotos anexadas</span></div>
+                  </div>
+
+                  <div class="lp-phone__photos" aria-hidden="true">
+                    <span>${ICON_CAMERA} Antes</span>
+                    <span>${ICON_CAMERA} Depois</span>
+                  </div>
+
+                  <div class="lp-phone__send">
+                    <div>
+                      <span>PDF gerado</span>
+                      <strong>Relatório enviado</strong>
+                    </div>
+                    <span class="lp-phone__whatsapp">${ICON_WHATSAPP}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lp-hero__ticket" aria-hidden="true">
+                <span>Tempo economizado</span>
+                <strong>18 min</strong>
+                <small>por atendimento</small>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="lp-problem" aria-labelledby="lp-problem-title">
+          <div class="lp-container">
+            <div class="lp-section-head">
+              <p class="lp-section-label">Problema</p>
+              <h2 id="lp-problem-title">Se você trabalha com manutenção, já passou por isso:</h2>
+            </div>
+
+            <div class="lp-problem__grid">
+              ${problemItems
+                .map(
+                  (item) => `
+                    <article class="lp-problem-card">
+                      <span class="lp-problem-card__icon">${ICON_X}</span>
+                      <h3>${item}</h3>
+                    </article>
+                  `,
+                )
+                .join('')}
+            </div>
+          </div>
+        </section>
+
+        <section class="lp-how" aria-labelledby="lp-how-title">
+          <div class="lp-container">
+            <div class="lp-section-head lp-section-head--center">
+              <p class="lp-section-label">Como funciona</p>
+              <h2 id="lp-how-title">Abriu, usou. Simples assim.</h2>
+            </div>
+
+            <ol class="lp-how__steps">
+              ${steps
+                .map(
+                  (step, index) => `
+                    <li class="lp-how__step">
+                      <span class="lp-how__num">${index + 1}</span>
+                      <div>
+                        <h3>${step.title}</h3>
+                        <p>${step.text}</p>
+                      </div>
+                    </li>
+                  `,
+                )
+                .join('')}
+            </ol>
+          </div>
+        </section>
+
+        <section class="lp-benefits" aria-labelledby="lp-benefits-title">
+          <div class="lp-container lp-benefits__inner">
+            <div class="lp-section-head">
+              <p class="lp-section-label">Beneficios</p>
+              <h2 id="lp-benefits-title">Mais organização no serviço, sem virar escritório.</h2>
+            </div>
+
+            <div class="lp-benefits__list">
+              ${benefits
+                .map(
+                  (item) => `
+                    <article class="lp-benefit">
+                      <span>${ICON_CHECK}</span>
+                      <h3>${item}</h3>
+                    </article>
+                  `,
+                )
+                .join('')}
+            </div>
+          </div>
+        </section>
+
+        <section class="lp-proof" aria-labelledby="lp-proof-title">
+          <div class="lp-container lp-proof__inner">
+            <div class="lp-proof__copy">
+              <p class="lp-section-label">Prova visual</p>
+              <h2 id="lp-proof-title">O relatório que o cliente recebe</h2>
+              <p>
+                PDF profissional, com dados, fotos e histórico. Não é planilha — é entrega de serviço.
+              </p>
+            </div>
+
+            <div class="lp-pdf" role="img" aria-label="Exemplo de PDF profissional gerado pelo CoolTrack Pro">
+              <div class="lp-pdf__top">
+                <div>
+                  <span>CoolTrack PRO</span>
+                  <strong>Relatório de manutenção</strong>
+                </div>
+                <span class="lp-pdf__status">Enviado</span>
+              </div>
+              <div class="lp-pdf__client">
+                <span>Cliente</span>
+                <strong>Clinica Norte</strong>
+              </div>
+              <div class="lp-pdf__rows">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="lp-pdf__photos">
+                <span>Foto antes</span>
+                <span>Foto depois</span>
+              </div>
+              <div class="lp-pdf__footer">
+                ${ICON_FILE}
+                <span>Assinatura e histórico anexados</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="lp-final" aria-labelledby="lp-final-title">
+          <div class="lp-container">
+            <div class="lp-final__card">
+              <p class="lp-section-label">Proximo atendimento</p>
+              <h2 id="lp-final-title">Use o CoolTrack na sua próxima manutenção</h2>
+              <p>Em menos de 10 minutos você já testa no campo e vê a diferença</p>
               <button
-                class="lp-hero__cta"
+                class="lp-btn lp-btn--primary"
                 type="button"
                 data-action="start-trial"
-                data-source="hero"
+                data-source="final"
               >
-                ${ICON_BOLT}
-                Testar grátis
+                Começar teste agora
+                ${ICON_ARROW}
               </button>
-              <a class="lp-btn-secondary lp-hero__cta-secondary" href="#lp-how-title">
-                Ver como funciona
-              </a>
-              <span class="lp-hero__cta-meta">
-                <span>Sem cadastro</span>
-                <span class="sep" aria-hidden="true">&middot;</span>
-                <span>Sem cartão</span>
-                <span class="sep" aria-hidden="true">&middot;</span>
-                <span>Comece em segundos</span>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="lp-footer">
+        <div class="lp-container lp-footer__inner">
+          <div class="lp-footer__brand">
+            <div class="lp-brand">
+              <span class="lp-brand__mark" aria-hidden="true"><span></span></span>
+              <span class="lp-brand__text">
+                <span class="lp-brand__name">CoolTrack</span>
+                <span class="lp-brand__tag">PRO</span>
               </span>
             </div>
-
-            <div class="lp-hero__trust">
-              <span class="lp-hero__trust-chip">${ICON_SHIELD_SM} LGPD</span>
-              <span class="lp-hero__trust-chip">${ICON_OFFLINE_SM} Funciona offline</span>
-              <span class="lp-hero__trust-chip">${ICON_CARD_SM} Sem cartão</span>
-              <span class="lp-hero__trust-chip">${ICON_CHECK_SM} Cancela quando quiser</span>
-            </div>
+            <p>Feito para técnico que quer terminar o serviço com tudo documentado.</p>
           </div>
 
-          <!-- RIGHT column: phone stage com timer + badge flutuantes ancorados ao device -->
-          <div class="lp-hero__stage">
-            <div class="lp-hero__timer" aria-hidden="true">
-              <div class="lp-hero__timer-inner">
-                <b>5s</b>
-                <span>Leitura</span>
-              </div>
-            </div>
-
-            <div
-              class="lp-phone"
-              role="img"
-              aria-label="Celular lendo a etiqueta de um ar-condicionado. A IA preenche os dados do equipamento para o técnico revisar e salvar."
-            >
-              <div class="lp-phone__screen">
-                <div class="lp-phone__notch" aria-hidden="true"></div>
-
-                <div class="lp-phone__status" aria-hidden="true">
-                  <span>9:41</span>
-                  <div class="lp-phone__status-right">
-                    ${ICON_SIGNAL}
-                    ${ICON_WIFI_SM}
-                    ${ICON_BATTERY}
-                  </div>
-                </div>
-
-                <div class="lp-phone__view">
-                  <!-- #73 ativado: foto real da etiqueta LG USNW092WSG3 substitui a
-                       plaquinha CSS-drawn. O fallback fica em HTML comentado pra
-                       recuperação rápida se precisar reverter. -->
-                  <img
-                    class="lp-nameplate-img"
-                    src="/img/etiqueta-hvac.jpg"
-                    alt="Etiqueta do ar-condicionado LG modelo USNW092WSG3, 9.000 BTU/h, 220V/60Hz, refrigerante R-410A"
-                    loading="lazy"
-                    decoding="async"
-                    width="480"
-                    height="222"
-                  >
-
-                  <div class="lp-scan" aria-hidden="true"></div>
-                </div>
-
-                <div class="lp-phone__corners" aria-hidden="true">
-                  <span></span><span></span><span></span><span></span>
-                </div>
-
-                <div class="lp-phone__sheet">
-                  <div class="lp-phone__sheet-head">
-                    <div class="lp-phone__sheet-title">${ICON_SPARKLES} IA preenchendo</div>
-                    <div class="lp-phone__sheet-count"><b>14</b>/16 campos</div>
-                  </div>
-
-                  <div class="lp-phone__row">
-                    <span class="lp-phone__row-k">Marca</span>
-                    <span class="lp-phone__row-v">LG</span>
-                    ${ICON_CHECK_SM}
-                  </div>
-                  <div class="lp-phone__row">
-                    <span class="lp-phone__row-k">Modelo</span>
-                    <span class="lp-phone__row-v">USNW092WSG3</span>
-                    ${ICON_CHECK_SM}
-                  </div>
-                  <div class="lp-phone__row">
-                    <span class="lp-phone__row-k">Corrente</span>
-                    <span class="lp-phone__row-v">4,63 A</span>
-                    ${ICON_CHECK_SM}
-                  </div>
-                  <div class="lp-phone__row">
-                    <span class="lp-phone__row-k">Refrig.</span>
-                    <span class="lp-phone__row-v lp-phone__row-v--typing">R-410A</span>
-                    <span class="lp-phone__row-icon lp-phone__row-icon--active">${ICON_RING_SM}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="lp-hero__badge" aria-hidden="true">
-              <div class="lp-hero__badge-mark">${ICON_SPARKLES}</div>
-              <div class="lp-hero__badge-text">
-                <b>IA preencheu 14/16</b>
-                <span>Você só confere e salva</span>
-              </div>
-            </div>
+          <div class="lp-footer__col">
+            <h3>Produto</h3>
+            <a href="#lp-how-title">Como funciona</a>
+            <a href="#lp-proof-title">Relatório em PDF</a>
+            <button type="button" data-action="login" data-source="footer">${ICON_LOGIN} Entrar</button>
           </div>
 
-        </div>
-      </section>
-
-      <!-- ── TIME STAT (ganho de tempo em minutos, não em R$) ── -->
-      <section class="lp-timestat" aria-label="Ganho de tempo do relatório">
-        <div class="lp-timestat__inner">
-          <div class="lp-timestat__item lp-timestat__item--before">
-            <span class="lp-timestat__tag">Tradicional</span>
-            <span class="lp-timestat__num">20 min</span>
-            <span class="lp-timestat__lbl">Caderno, planilha, digitar tudo à mão.</span>
-          </div>
-          <span class="lp-timestat__arrow" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </span>
-          <div class="lp-timestat__item lp-timestat__item--after">
-            <span class="lp-timestat__tag lp-timestat__tag--after">CoolTrack</span>
-            <span class="lp-timestat__num lp-timestat__num--strong">
-              <span class="lp-grad">30 segundos</span>
-            </span>
-            <span class="lp-timestat__lbl">Foto da etiqueta, cadastro acelerado e PDF em poucos toques.</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── COMO FUNCIONA (3 passos) ── -->
-      <section class="lp-how" aria-labelledby="lp-how-title">
-        <p class="lp-how__tabs-label">Veja como funciona na prática</p>
-        <div class="lp-how__tabs" role="tablist" aria-label="Navegação da seção">
-          <button class="lp-how__tab lp-how__tab--active" type="button" role="tab" aria-selected="true">
-            Como funciona
-          </button>
-          <a class="lp-how__tab" href="#lp-compare-title" role="tab" aria-selected="false">Antes vs. Depois</a>
-          <a class="lp-how__tab" href="#lp-offline-title" role="tab" aria-selected="false">Offline</a>
-        </div>
-        <p class="lp-section-label">Como funciona</p>
-        <h2 class="lp-how__title" id="lp-how-title">
-          Da etiqueta ao relatório,<br>com fluxo real de campo.
-        </h2>
-        <ol class="lp-how__steps">
-          <li class="lp-how__step">
-            <div class="lp-how__step-num">1</div>
-            <div class="lp-how__step-body">
-              <h3 class="lp-how__step-title">Aponta a câmera na etiqueta</h3>
-              <p class="lp-how__step-text">A IA lê a etiqueta e preenche marca, modelo, BTU, tensão e refrigerante em segundos.</p>
-            </div>
-          </li>
-          <li class="lp-how__step-connector" aria-hidden="true"></li>
-          <li class="lp-how__step">
-            <div class="lp-how__step-num">2</div>
-            <div class="lp-how__step-body">
-              <h3 class="lp-how__step-title">IA preenche, você revisa e cadastra</h3>
-              <p class="lp-how__step-text">Confira os campos, ajuste se precisar e salve o equipamento sem digitar tudo do zero.</p>
-            </div>
-          </li>
-          <li class="lp-how__step-connector" aria-hidden="true"></li>
-          <li class="lp-how__step">
-            <div class="lp-how__step-num">3</div>
-            <div class="lp-how__step-body">
-              <h3 class="lp-how__step-title">Você registra e gera o relatório</h3>
-              <p class="lp-how__step-text">Descrição, peças, fotos e assinatura do cliente. Depois disso, PDF pronto para WhatsApp, impressão ou arquivo.</p>
-            </div>
-          </li>
-        </ol>
-      </section>
-
-      <!-- ── CADASTRO POR FOTO (IA) — seção dedicada ── -->
-      <section class="lp-ai" aria-labelledby="lp-ai-title">
-        <div class="lp-ai__head">
-          <span class="lp-ai__pill">${ICON_SPARKLES} Novo &middot; Plus+ e Pro</span>
-          <h2 class="lp-ai__title" id="lp-ai-title">
-            Cadastro de equipamento<br>em <span class="lp-grad">5 segundos</span>, por foto.
-          </h2>
-          <p class="lp-ai__sub">
-            Antes: 2 minutos digitando 16 campos por equipamento, checando a etiqueta pequena a cada linha.<br>
-            Depois: uma foto, a IA preenche quase tudo, você revisa e cadastra em poucos toques.
-          </p>
-        </div>
-
-        <div class="lp-ai__grid">
-          <!-- Antes -->
-          <article class="lp-ai-card lp-ai-card--before">
-            <header class="lp-ai-card__head">
-              <span class="lp-ai-card__tag lp-ai-card__tag--before">Antes</span>
-              <span class="lp-ai-card__time">~2 min</span>
-            </header>
-            <ul class="lp-ai-card__list">
-              <li>${ICON_X} Digitando marca, modelo, nº série</li>
-              <li>${ICON_X} BTU, tensão, frequência, refrigerante</li>
-              <li>${ICON_X} 16 campos, etiqueta apagada, erro de digitação</li>
-            </ul>
-          </article>
-
-          <!-- Depois -->
-          <article class="lp-ai-card lp-ai-card--after">
-            <header class="lp-ai-card__head">
-              <span class="lp-ai-card__tag lp-ai-card__tag--after">${ICON_SPARKLES} Depois</span>
-              <span class="lp-ai-card__time">5 seg</span>
-            </header>
-            <ul class="lp-ai-card__list">
-              <li>${ICON_CHECK} Aponta a câmera pra etiqueta</li>
-              <li>${ICON_CHECK} IA lê e preenche 14 de 16 campos</li>
-              <li>${ICON_CHECK} Você revisa, cadastra e segue para o serviço</li>
-            </ul>
-          </article>
-        </div>
-
-        <!-- Mockup do fluxo IA: foto → fields -->
-        <div class="lp-ai__demo" aria-hidden="true">
-          <div class="lp-ai-demo__photo">
-            <div class="lp-ai-demo__photo-label">${ICON_CAMERA} etiqueta-lg-split.jpg</div>
-            <!-- #73 ativado: foto real no lugar do frame CSS-drawn. -->
-            <div class="lp-ai-demo__photo-frame lp-ai-demo__photo-frame--img">
-              <img
-                class="lp-ai-demo__photo-img"
-                src="/img/etiqueta-hvac.jpg"
-                alt="Etiqueta LG modelo USNW092WSG3, 9.000 BTU/h, 220V/60Hz, R-410A"
-                loading="lazy"
-                decoding="async"
-                width="1024"
-                height="475"
-              >
-            </div>
+          <div class="lp-footer__col">
+            <h3>Legal</h3>
+            <a href="/legal/termos.html">Termos de uso</a>
+            <a href="/legal/privacidade.html">Política de privacidade</a>
+            <a href="/legal/lgpd.html">LGPD</a>
           </div>
 
-          <div class="lp-ai-demo__arrow" aria-hidden="true">
-            <span class="lp-ai-demo__arrow-pill">${ICON_SPARKLES} 5s</span>
+          <div class="lp-footer__bottom">
+            <span>© 2026 CoolTrack Pro</span>
+            <a href="mailto:suporte@cooltrackpro.com.br">suporte@cooltrackpro.com.br</a>
           </div>
-
-          <div class="lp-ai-demo__fields">
-            <header class="lp-ai-demo__fields-head">
-              <span>Novo equipamento</span>
-              <span class="lp-ai-demo__fields-head-badge">${ICON_SPARKLES} 14/16 campos</span>
-            </header>
-            <ul class="lp-ai-demo__fields-list">
-              <li><span>Marca</span><b>LG</b></li>
-              <li><span>Modelo</span><b>USNW092WSG3</b></li>
-              <li><span>P/N</span><b>MEZ65808101</b></li>
-              <li><span>Tipo</span><b>Split Hi-Wall</b></li>
-              <li><span>Unidade</span><b>Evaporadora</b></li>
-              <li><span>Capacidade</span><b>9.000 BTU/h</b></li>
-              <li><span>Fase</span><b>1&phi;</b></li>
-              <li><span>Tensão</span><b>220 V</b></li>
-              <li><span>Frequência</span><b>60 Hz</b></li>
-              <li><span>Corrente (refrig.)</span><b>4,63 A</b></li>
-              <li><span>Corrente (aquec.)</span><b>4,15 A</b></li>
-              <li><span>Refrigerante</span><b>R-410A &middot; 650 g</b></li>
-              <li><span>Grau de proteção</span><b>IPX0</b></li>
-              <li><span>Pressões (suc./desc.)</span><b>2,4 / 4,2 MPa</b></li>
-            </ul>
-          </div>
-        </div>
-
-        <p class="lp-ai__microcopy">
-          Funciona com Split, VRF, Chiller, Fan-coil. Disponível no Plus+ e Pro.
-        </p>
-      </section>
-
-      <!-- ── SCREENSHOT GALLERY ── -->
-      <section class="lp-gallery">
-        <div class="lp-gallery__head">
-          <div>
-            <p class="lp-section-label">Veja o app em ação</p>
-            <h2 class="lp-gallery__title">Feito para o campo,<br>do celular ao laudo.</h2>
-          </div>
-          <span class="lp-gallery__hint">Deslize ${ICON_CHEVRON}</span>
-        </div>
-
-        <div
-          class="lp-gallery__track"
-          id="lp-gallery-track"
-          role="region"
-          aria-label="Telas do app CoolTrack (deslize ou use as setas do teclado)"
-          tabindex="0"
-        >
-
-          <!-- 1 · Captura por foto (IA) -->
-          <div class="lp-screen">
-            <div class="lp-screen__status">
-              <span>9:41</span>
-              <span>▮▮▮</span>
-            </div>
-            <div class="lp-screen__header">
-              <div class="lp-screen__header-label">Novo Equipamento</div>
-              <div class="lp-screen__header-title">Foto da etiqueta</div>
-            </div>
-            <div class="lp-screen__body">
-              <div class="lp-sc-camera">
-                <div class="lp-sc-camera__frame">
-                  <span class="lp-sc-camera__corner lp-sc-camera__corner--tl"></span>
-                  <span class="lp-sc-camera__corner lp-sc-camera__corner--tr"></span>
-                  <span class="lp-sc-camera__corner lp-sc-camera__corner--bl"></span>
-                  <span class="lp-sc-camera__corner lp-sc-camera__corner--br"></span>
-                  <div class="lp-sc-camera__plate">
-                    <span class="lp-sc-camera__brand">LG</span>
-                    <span>MODEL USNW092WSG3</span>
-                    <span>9.000 BTU/h &middot; 220V</span>
-                    <span>R-410A &middot; 60Hz</span>
-                  </div>
-                </div>
-                <div class="lp-sc-camera__cta">${ICON_CAMERA} Usar foto da etiqueta</div>
-              </div>
-              <div class="lp-sc-ai-progress">
-                <span class="lp-sc-ai-progress__label">${ICON_SPARKLES} Analisando com IA</span>
-                <span class="lp-sc-ai-progress__time">5s</span>
-              </div>
-              <div class="lp-sc-section">Campos detectados</div>
-              <div class="lp-sc-field lp-sc-field--filled lp-sc-field--ai">
-                <div class="lp-sc-field__label">Marca · Modelo</div>
-                <div class="lp-sc-field__value">LG · USNW092WSG3</div>
-              </div>
-              <div class="lp-sc-field lp-sc-field--filled lp-sc-field--ai">
-                <div class="lp-sc-field__label">Capacidade · Refrigerante</div>
-                <div class="lp-sc-field__value">9.000 BTU · R-410A</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 2 · Painel Geral -->
-          <div class="lp-screen">
-            <div class="lp-screen__status">
-              <span>9:41</span>
-              <span>▮▮▮</span>
-            </div>
-            <div class="lp-screen__header">
-              <div class="lp-screen__header-label">CoolTrack PRO</div>
-              <div class="lp-screen__header-title">Painel Geral</div>
-            </div>
-            <div class="lp-screen__body">
-              <div class="lp-sc-tiles">
-                <div class="lp-sc-tile">
-                  <div class="lp-sc-tile__val" style="color:#e8f2fa">8</div>
-                  <div class="lp-sc-tile__lbl">Equipamentos</div>
-                </div>
-                <div class="lp-sc-tile">
-                  <div class="lp-sc-tile__val" style="color:#ff5577">2</div>
-                  <div class="lp-sc-tile__lbl">Atenção</div>
-                </div>
-                <div class="lp-sc-tile">
-                  <div class="lp-sc-tile__val" style="color:#00c870">5</div>
-                  <div class="lp-sc-tile__lbl">Operando</div>
-                </div>
-                <div class="lp-sc-tile">
-                  <div class="lp-sc-tile__val" style="color:#e8b94a">1</div>
-                  <div class="lp-sc-tile__lbl">Preventiva</div>
-                </div>
-              </div>
-              <div class="lp-sc-section">Equipamentos</div>
-              <div class="lp-sc-row">
-                <div class="lp-sc-dot lp-sc-dot--danger"></div>
-                <div class="lp-sc-row__info">
-                  <div class="lp-sc-row__name">Chiller 02 — Hospital</div>
-                  <div class="lp-sc-row__sub">Risco 87 · Serviço há 18d</div>
-                </div>
-                <span class="lp-sc-badge lp-sc-badge--danger">CRÍTICO</span>
-              </div>
-              <div class="lp-sc-row">
-                <div class="lp-sc-dot lp-sc-dot--warn"></div>
-                <div class="lp-sc-row__info">
-                  <div class="lp-sc-row__name">Fan Coil — Sala VIP</div>
-                  <div class="lp-sc-row__sub">Risco 52 · Preventiva em 5d</div>
-                </div>
-                <span class="lp-sc-badge lp-sc-badge--warn">ATENÇÃO</span>
-              </div>
-              <div class="lp-sc-row">
-                <div class="lp-sc-dot lp-sc-dot--ok"></div>
-                <div class="lp-sc-row__info">
-                  <div class="lp-sc-row__name">Split — Recepção</div>
-                  <div class="lp-sc-row__sub">Risco 12 · Serviço há 3d</div>
-                </div>
-                <span class="lp-sc-badge lp-sc-badge--ok">OK</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- 2 · Detalhes do Equipamento -->
-          <div class="lp-screen">
-            <div class="lp-screen__status">
-              <span>9:41</span>
-              <span>▮▮▮</span>
-            </div>
-            <div class="lp-screen__header">
-              <div class="lp-screen__header-label">Equipamento</div>
-              <div class="lp-screen__header-title">Chiller 02</div>
-            </div>
-            <div class="lp-screen__body">
-              <div class="lp-sc-alert lp-sc-alert--danger">
-                <div class="lp-sc-alert__title">Ação recomendada</div>
-                <div class="lp-sc-alert__sub">Inspecionar compressor — corretiva urgente</div>
-              </div>
-              <div class="lp-sc-tiles" style="grid-template-columns:1fr 1fr 1fr; gap:4px">
-                <div class="lp-sc-tile">
-                  <div class="lp-sc-tile__val" style="color:#ff5577;font-size:14px">87</div>
-                  <div class="lp-sc-tile__lbl">Risco</div>
-                </div>
-                <div class="lp-sc-tile">
-                  <div class="lp-sc-tile__val" style="color:#e8f2fa;font-size:14px">18</div>
-                  <div class="lp-sc-tile__lbl">Dias</div>
-                </div>
-                <div class="lp-sc-tile">
-                  <div class="lp-sc-tile__val" style="color:#e8b94a;font-size:14px">3</div>
-                  <div class="lp-sc-tile__lbl">Ocorr.</div>
-                </div>
-              </div>
-              <div class="lp-sc-section">Histórico recente</div>
-              <div class="lp-sc-row">
-                <div class="lp-sc-dot lp-sc-dot--danger"></div>
-                <div class="lp-sc-row__info">
-                  <div class="lp-sc-row__name">Manutenção Corretiva</div>
-                  <div class="lp-sc-row__sub">15 abr 2026 · João Silva</div>
-                </div>
-              </div>
-              <div class="lp-sc-row">
-                <div class="lp-sc-dot lp-sc-dot--ok"></div>
-                <div class="lp-sc-row__info">
-                  <div class="lp-sc-row__name">Preventiva Mensal</div>
-                  <div class="lp-sc-row__sub">27 mar 2026 · João Silva</div>
-                </div>
-              </div>
-              <div class="lp-sc-row">
-                <div class="lp-sc-dot lp-sc-dot--ok"></div>
-                <div class="lp-sc-row__info">
-                  <div class="lp-sc-row__name">Troca de Filtros</div>
-                  <div class="lp-sc-row__sub">10 mar 2026 · João Silva</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3 · Novo Registro de Serviço -->
-          <div class="lp-screen">
-            <div class="lp-screen__status">
-              <span>9:41</span>
-              <span>▮▮▮</span>
-            </div>
-            <div class="lp-screen__header">
-              <div class="lp-screen__header-label">Novo Serviço</div>
-              <div class="lp-screen__header-title">Registrar atendimento</div>
-            </div>
-            <div class="lp-screen__body">
-              <div class="lp-sc-field lp-sc-field--filled">
-                <div class="lp-sc-field__label">Equipamento</div>
-                <div class="lp-sc-field__value">Chiller 02 — Hospital Central</div>
-              </div>
-              <div class="lp-sc-field lp-sc-field--filled">
-                <div class="lp-sc-field__label">Tipo de serviço</div>
-                <div class="lp-sc-field__value">Manutenção Corretiva</div>
-              </div>
-              <div class="lp-sc-field lp-sc-field--filled" style="min-height:52px">
-                <div class="lp-sc-field__label">Observações</div>
-                <div class="lp-sc-field__value" style="line-height:1.4">Substituído capacitor do compressor. Verificado nível de gás R-410A...</div>
-              </div>
-              <div class="lp-sc-field lp-sc-field--filled">
-                <div class="lp-sc-field__label">Peças utilizadas</div>
-                <div class="lp-sc-field__value">Capacitor 45µF CBB65</div>
-              </div>
-              <div style="display:flex;gap:5px">
-                <div class="lp-sc-field" style="flex:1">
-                  <div class="lp-sc-field__label">Custo peças</div>
-                  <div class="lp-sc-field__value">R$ 85,00</div>
-                </div>
-                <div class="lp-sc-field" style="flex:1">
-                  <div class="lp-sc-field__label">Mão de obra</div>
-                  <div class="lp-sc-field__value">R$ 120,00</div>
-                </div>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;padding:4px 0">
-                <div style="width:28px;height:28px;background:rgba(0,200,232,.1);border:1px solid rgba(0,200,232,.2);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#00c8e8">${ICON_CAMERA}</div>
-                <div style="font-size:9px;color:#8aaac8">2 fotos anexadas</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 4 · Alertas e Pendências -->
-          <div class="lp-screen">
-            <div class="lp-screen__status">
-              <span>9:41</span>
-              <span>▮▮▮</span>
-            </div>
-            <div class="lp-screen__header">
-              <div class="lp-screen__header-label">CoolTrack PRO</div>
-              <div class="lp-screen__header-title">Alertas</div>
-            </div>
-            <div class="lp-screen__body">
-              <div class="lp-sc-section" style="color:#ff5577"><span class="lp-sc-dot lp-sc-dot--danger" style="width:6px;height:6px"></span> Intervenção imediata</div>
-              <div class="lp-sc-alert lp-sc-alert--danger">
-                <div class="lp-sc-alert__title">Chiller 02 — Hospital</div>
-                <div class="lp-sc-alert__sub">Risco 87 · Compressor com falha</div>
-              </div>
-              <div class="lp-sc-alert lp-sc-alert--danger">
-                <div class="lp-sc-alert__title">VRF Bloco B — Andar 3</div>
-                <div class="lp-sc-alert__sub">Risco 74 · Sem serviço há 45 dias</div>
-              </div>
-              <div class="lp-sc-section" style="color:#e8b94a;margin-top:4px"><span class="lp-sc-dot lp-sc-dot--warn" style="width:6px;height:6px"></span> Preventivas próximas</div>
-              <div class="lp-sc-alert lp-sc-alert--warn">
-                <div class="lp-sc-alert__title">Fan Coil — Sala VIP</div>
-                <div class="lp-sc-alert__sub">Preventiva recomendada até 19/04</div>
-              </div>
-              <div class="lp-sc-alert lp-sc-alert--warn">
-                <div class="lp-sc-alert__title">Split — Diretoria</div>
-                <div class="lp-sc-alert__sub">Preventiva recomendada até 22/04</div>
-              </div>
-              <div class="lp-sc-alert lp-sc-alert--warn">
-                <div class="lp-sc-alert__title">Condensadora — Cobertura</div>
-                <div class="lp-sc-alert__sub">Limpeza de filtros vencida</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 5 · Relatório PDF gerado -->
-          <div class="lp-screen">
-            <div class="lp-screen__status">
-              <span>9:41</span>
-              <span>▮▮▮</span>
-            </div>
-            <div class="lp-screen__header">
-              <div class="lp-screen__header-label">Exportar</div>
-              <div class="lp-screen__header-title">Relatório PDF</div>
-            </div>
-            <div class="lp-screen__body">
-              <div class="lp-sc-pdf">
-                <div class="lp-sc-pdf__bar"></div>
-                <div class="lp-sc-pdf__title">COOLTRACK<span style="color:#00c8e8">PRO</span></div>
-                <div class="lp-sc-pdf__sub">Relatório de Serviços · Abr 2026</div>
-                <div class="lp-sc-pdf__grid">
-                  <div class="lp-sc-pdf__stat">
-                    <div class="lp-sc-pdf__stat-val" style="color:#e8f2fa">12</div>
-                    <div class="lp-sc-pdf__stat-lbl">Serviços</div>
-                  </div>
-                  <div class="lp-sc-pdf__stat">
-                    <div class="lp-sc-pdf__stat-val" style="color:#00c870">9</div>
-                    <div class="lp-sc-pdf__stat-lbl">Operando</div>
-                  </div>
-                  <div class="lp-sc-pdf__stat">
-                    <div class="lp-sc-pdf__stat-val" style="color:#e8b94a">2</div>
-                    <div class="lp-sc-pdf__stat-lbl">Atenção</div>
-                  </div>
-                  <div class="lp-sc-pdf__stat">
-                    <div class="lp-sc-pdf__stat-val" style="color:#ff5577">1</div>
-                    <div class="lp-sc-pdf__stat-lbl">Crítico</div>
-                  </div>
-                </div>
-                <div class="lp-sc-pdf__line"></div>
-                <div class="lp-sc-pdf__row">
-                  <span class="lp-sc-pdf__row-label">Técnico</span>
-                  <span class="lp-sc-pdf__row-val">João Silva</span>
-                </div>
-                <div class="lp-sc-pdf__row">
-                  <span class="lp-sc-pdf__row-label">Empresa</span>
-                  <span class="lp-sc-pdf__row-val">ClimaTech HVAC</span>
-                </div>
-                <div class="lp-sc-pdf__row">
-                  <span class="lp-sc-pdf__row-label">Custo total</span>
-                  <span class="lp-sc-pdf__row-val" style="color:#00c870">R$ 1.840,00</span>
-                </div>
-              </div>
-              <button class="lp-sc-fab">${ICON_SEND} Enviar pelo WhatsApp</button>
-              <div style="text-align:center;font-size:8px;color:#6a8ba8;margin-top:4px">PDF gerado em 1 toque</div>
-            </div>
-          </div>
-
-        </div><!-- /.lp-gallery__track -->
-
-        <div class="lp-gallery__dots" id="lp-gallery-dots">
-          <div class="lp-gallery__dot"></div>
-          <div class="lp-gallery__dot"></div>
-          <div class="lp-gallery__dot"></div>
-          <div class="lp-gallery__dot"></div>
-          <div class="lp-gallery__dot"></div>
-          <div class="lp-gallery__dot"></div>
-        </div>
-      </section>
-
-      <!-- ── OFFLINE DEMO (prova visual do diferencial offline-first) ── -->
-      <section class="lp-offline" aria-labelledby="lp-offline-title">
-        <div class="lp-offline__head">
-          <p class="lp-section-label">Offline-first</p>
-          <h2 class="lp-offline__title" id="lp-offline-title">
-            Sem sinal? Continue trabalhando normalmente.
-          </h2>
-          <p class="lp-offline__sub">
-            Subsolo, cobertura, obra sem Wi-Fi. Seus serviços ficam salvos e sincronizam automaticamente.
-          </p>
-        </div>
-
-        <div class="lp-offline__demo">
-          <div class="lp-offline__bar">
-            <span class="lp-offline__bar-icon">${ICON_WIFI_OFF}</span>
-            <span class="lp-offline__bar-text">Modo offline ativo</span>
-            <span class="lp-offline__bar-status">3 registros na fila</span>
-          </div>
-
-          <ul class="lp-offline__queue" role="list">
-            <li class="lp-offline__item">
-              <span class="lp-offline__check">${ICON_CHECK}</span>
-              <div class="lp-offline__item-body">
-                <div class="lp-offline__item-title">Chiller 02 — Preventiva mensal</div>
-                <div class="lp-offline__item-meta">Salvo local · 09:14</div>
-              </div>
-              <span class="lp-offline__pill">Pendente</span>
-            </li>
-            <li class="lp-offline__item">
-              <span class="lp-offline__check">${ICON_CHECK}</span>
-              <div class="lp-offline__item-body">
-                <div class="lp-offline__item-title">Fan Coil — Troca de filtros</div>
-                <div class="lp-offline__item-meta">Salvo local · 10:02</div>
-              </div>
-              <span class="lp-offline__pill">Pendente</span>
-            </li>
-            <li class="lp-offline__item">
-              <span class="lp-offline__check">${ICON_CHECK}</span>
-              <div class="lp-offline__item-body">
-                <div class="lp-offline__item-title">Split Diretoria — Corretiva</div>
-                <div class="lp-offline__item-meta">Salvo local · 11:28</div>
-              </div>
-              <span class="lp-offline__pill">Pendente</span>
-            </li>
-          </ul>
-
-          <div class="lp-offline__sync" role="status">
-            <span class="lp-offline__sync-dot" aria-hidden="true"></span>
-            Sincroniza sozinho assim que o sinal voltar.
-          </div>
-        </div>
-      </section>
-
-      <!-- ── SOCIAL PROOF STRIP ── -->
-      <section class="lp-social" aria-label="Números do CoolTrack">
-        <span class="lp-social__item">
-          Usado por técnicos em campo
-        </span>
-        <span class="lp-social__sep" aria-hidden="true"></span>
-        <span class="lp-social__item">
-          <span class="lp-social__num">2.400+</span>
-          relatórios gerados
-        </span>
-        <span class="lp-social__sep" aria-hidden="true"></span>
-        <span class="lp-social__item">
-          <span class="lp-social__icon">${ICON_WIFI_OFF}</span>
-          100% offline-ready
-        </span>
-      </section>
-
-      <!-- ── TRUST STRIP (objection busters) ── -->
-      <section class="lp-trust" aria-label="Compromissos do CoolTrack">
-        <div class="lp-trust__item">
-          <span class="lp-trust__icon">${ICON_SHIELD}</span>
-          <span class="lp-trust__text">
-            <strong>LGPD compliant</strong>
-            <span class="lp-trust__sub">DPO + Central LGPD</span>
-          </span>
-        </div>
-        <div class="lp-trust__item">
-          <span class="lp-trust__icon">${ICON_LOCK}</span>
-          <span class="lp-trust__text">
-            <strong>Dados criptografados</strong>
-            <span class="lp-trust__sub">em trânsito (HTTPS/TLS)</span>
-          </span>
-        </div>
-        <div class="lp-trust__item">
-          <span class="lp-trust__icon">${ICON_REFUND}</span>
-          <span class="lp-trust__text">
-            <strong>7 dias de garantia</strong>
-            <span class="lp-trust__sub">reembolso integral</span>
-          </span>
-        </div>
-        <div class="lp-trust__item">
-          <span class="lp-trust__icon">${ICON_UNLOCK}</span>
-          <span class="lp-trust__text">
-            <strong>Sem fidelidade</strong>
-            <span class="lp-trust__sub">cancela a qualquer hora</span>
-          </span>
-        </div>
-      </section>
-
-      <!-- ── ANTES vs DEPOIS (comparativo de transformação) ── -->
-      <section class="lp-compare" aria-labelledby="lp-compare-title">
-        <p class="lp-section-label lp-compare__label">Antes vs. Depois</p>
-        <h2 class="lp-compare__title" id="lp-compare-title">
-          A mudança<br>é concreta.
-        </h2>
-
-        <div class="lp-compare__grid">
-          <article class="lp-compare__card lp-compare__card--before" aria-label="Como era antes">
-            <h3 class="lp-compare__card-title">
-              <span class="lp-compare__badge lp-compare__badge--before">Antes</span>
-              Caderno, WhatsApp e planilha
-            </h3>
-            <ul class="lp-compare__list lp-compare__list--before">
-              <li>${ICON_X} Digitando etiqueta manualmente</li>
-              <li>${ICON_X} 16 campos por equipamento</li>
-              <li>${ICON_X} Erros constantes</li>
-              <li>${ICON_X} Perda de tempo em todo atendimento</li>
-              <li>${ICON_X} Preventiva só quando o equipamento já quebrou</li>
-              <li>${ICON_X} Fotos perdidas no rolo de câmera do celular</li>
-            </ul>
-          </article>
-
-          <article class="lp-compare__card lp-compare__card--after" aria-label="Como fica com CoolTrack">
-            <h3 class="lp-compare__card-title">
-              <span class="lp-compare__badge lp-compare__badge--after">Depois</span>
-              CoolTrack no celular
-            </h3>
-            <ul class="lp-compare__list lp-compare__list--after">
-              <li>${ICON_SPARKLES} Foto da etiqueta</li>
-              <li>${ICON_CHECK} Dados preenchidos automaticamente</li>
-              <li>${ICON_CHECK} Registro rápido</li>
-              <li>${ICON_CHECK} Relatório em poucos toques</li>
-              <li>${ICON_CHECK} Histórico completo de cada equipamento, pesquisável</li>
-              <li>${ICON_CHECK} Serviço registrado e PDF enviado no WhatsApp</li>
-              <li>${ICON_CHECK} App avisa antes da preventiva vencer</li>
-              <li>${ICON_CHECK} Fotos anexadas no registro, organizadas por equipamento</li>
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <!-- ── PRICING ── -->
-      <section class="lp-pricing" aria-labelledby="lp-pricing-title">
-        <div class="lp-pricing__head">
-          <p class="lp-section-label">Planos</p>
-          <h2 class="lp-pricing__title" id="lp-pricing-title">
-            Escolha o plano certo<br>pro seu jeito de trabalhar.
-          </h2>
-          <p class="lp-pricing__sub">Comece grátis. Faça upgrade quando precisar de mais.</p>
-
-          <div
-            class="lp-pricing-toggle"
-            id="lp-pricing-toggle"
-            role="group"
-            aria-label="Ciclo de cobrança"
-          >
-            <button
-              class="lp-pricing-toggle__btn lp-pricing-toggle__btn--active"
-              data-billing="monthly"
-              type="button"
-            >
-              Mensal
-            </button>
-            <button
-              class="lp-pricing-toggle__btn"
-              data-billing="annual"
-              type="button"
-            >
-              Anual <span class="lp-pricing-toggle__save">-28%</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="lp-pricing-grid" role="list">
-
-          <!-- ═════ FREE ═════ -->
-          <article class="lp-pricing-card" role="listitem" aria-label="Plano Gratuito">
-            <span class="lp-pricing-badge lp-pricing-badge--free">Grátis</span>
-            <h3 class="lp-pricing-card__title">Free</h3>
-            <div class="lp-pricing-card__price-block">
-              <p class="lp-pricing-card__price">
-                R$ 0 <span class="lp-pricing-card__period">/ sempre</span>
-              </p>
-            </div>
-            <ul class="lp-pricing-features">
-              <li>${ICON_CHECK} Até 3 equipamentos cadastrados</li>
-              <li>${ICON_CHECK} Registros de serviço ilimitados</li>
-              <li>${ICON_CHECK} Relatórios com marca d'água</li>
-              <li>${ICON_CHECK} Histórico dos últimos 15 dias</li>
-              <li>${ICON_CHECK} Funciona offline</li>
-            </ul>
-            <button
-              class="lp-pricing-card__cta lp-pricing-card__cta--free"
-              type="button"
-              data-action="start-trial"
-              data-source="pricing_free"
-            >
-              Começar grátis
-            </button>
-            <p class="lp-pricing-card__microcopy">Sem cartão &bull; Sem cadastro</p>
-          </article>
-
-          <!-- ═════ PLUS ═════ -->
-          <article
-            class="lp-pricing-card lp-pricing-card--plus"
-            role="listitem"
-            aria-label="Plano Plus"
-          >
-            <span class="lp-pricing-badge lp-pricing-badge--plus">Técnico autônomo</span>
-            <h3 class="lp-pricing-card__title">Plus</h3>
-            <div class="lp-pricing-card__price-block">
-              <p
-                class="lp-pricing-card__price lp-pricing-card__price--plus"
-                data-price-monthly
-              >
-                R$ 29 <span class="lp-pricing-card__period">/ mês</span>
-              </p>
-              <div class="lp-pricing-card__price-annual" data-price-annual hidden>
-                <p class="lp-pricing-card__price lp-pricing-card__price--plus">
-                  R$ 20<span class="lp-pricing-card__cents">,75</span>
-                  <span class="lp-pricing-card__period">/ mês</span>
-                </p>
-                <p class="lp-pricing-card__annual-detail">
-                  R$ 249/ano
-                  <span class="lp-pricing-card__save-pill">economiza R$ 99</span>
-                </p>
-              </div>
-            </div>
-            <ul class="lp-pricing-features">
-              <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — até 30 análises/mês</li>
-              <li>${ICON_CHECK} Até 15 equipamentos cadastrados</li>
-              <li>${ICON_CHECK} <strong>Registros ilimitados</strong></li>
-              <li>${ICON_CHECK} 120 PDFs/mês <strong>sem marca d'água</strong></li>
-              <li>${ICON_CHECK} <strong>Assinatura digital</strong> do cliente no PDF</li>
-              <li>${ICON_CHECK} Fotos dos equipamentos (até 3 por eq.)</li>
-              <li>${ICON_CHECK} Histórico completo</li>
-            </ul>
-            <button
-              class="lp-pricing-card__cta lp-pricing-card__cta--plus"
-              type="button"
-              data-action="start-trial"
-              data-source="pricing_plus"
-            >
-              Começar grátis
-            </button>
-            <p class="lp-pricing-card__microcopy">
-              Pra quem atende sozinho e cobra bem pelo próprio tempo.
-            </p>
-          </article>
-
-          <!-- ═════ PRO (highlighted) ═════ -->
-          <article
-            class="lp-pricing-card lp-pricing-card--pro lp-pricing-card--highlight"
-            role="listitem"
-            aria-label="Plano Pro"
-          >
-            <span class="lp-pricing-badge lp-pricing-badge--popular">★ Mais popular</span>
-            <h3 class="lp-pricing-card__title">Pro</h3>
-            <div class="lp-pricing-card__price-block">
-              <p
-                class="lp-pricing-card__price lp-pricing-card__price--pro"
-                data-price-monthly
-              >
-                R$ 49 <span class="lp-pricing-card__period">/ mês</span>
-              </p>
-              <div class="lp-pricing-card__price-annual" data-price-annual hidden>
-                <p class="lp-pricing-card__price lp-pricing-card__price--pro">
-                  R$ 34<span class="lp-pricing-card__cents">,92</span>
-                  <span class="lp-pricing-card__period">/ mês</span>
-                </p>
-                <p class="lp-pricing-card__annual-detail">
-                  R$ 419/ano
-                  <span class="lp-pricing-card__save-pill">economiza R$ 169</span>
-                </p>
-              </div>
-            </div>
-            <ul class="lp-pricing-features">
-              <li>${ICON_SPARKLES} <strong>Cadastro por foto (IA)</strong> — até 200 análises/mês</li>
-              <li>${ICON_CHECK} <strong>Equipamentos ilimitados</strong></li>
-              <li>${ICON_CHECK} <strong>PDFs e WhatsApp ilimitados</strong></li>
-              <li>${ICON_CHECK} Assinatura digital no PDF</li>
-              <li>${ICON_CHECK} <strong>Agrupamento por setores</strong></li>
-              <li>${ICON_CHECK} Fotos dos equipamentos</li>
-              <li>${ICON_CHECK} <strong>Suporte prioritário</strong></li>
-            </ul>
-            <button
-              class="lp-pricing-card__cta lp-pricing-card__cta--pro"
-              type="button"
-              data-action="start-trial"
-              data-source="pricing_pro"
-            >
-              Começar grátis
-            </button>
-            <p class="lp-pricing-card__microcopy">
-              Pra equipe ou quem já passa dos 15 equipamentos.
-            </p>
-          </article>
-
-        </div>
-      </section>
-
-      <!-- ── COUNTER-SIGNAL (pra quem é / não é) ── -->
-      <section class="lp-fit" aria-labelledby="lp-fit-title">
-        <p class="lp-section-label lp-fit__label">Honestidade</p>
-        <h2 class="lp-fit__title" id="lp-fit-title">
-          Não é pra todo mundo.<br>E isso é de propósito.
-        </h2>
-
-        <div class="lp-fit__grid">
-          <article class="lp-fit__card lp-fit__card--yes" aria-label="Feito pra quem">
-            <h3 class="lp-fit__card-title">
-              <span class="lp-fit__badge lp-fit__badge--yes">Feito pra</span>
-              técnicos que…
-            </h3>
-            <ul class="lp-fit__list lp-fit__list--yes">
-              <li>${ICON_CHECK} Fazem manutenção em campo, longe da oficina</li>
-              <li>${ICON_CHECK} Cadastram muitos equipamentos e odeiam digitar etiqueta por etiqueta</li>
-              <li>${ICON_CHECK} Precisam de PDF assinado pra prestar contas</li>
-              <li>${ICON_CHECK} Ainda usam papel, WhatsApp ou planilha e querem organizar</li>
-              <li>${ICON_CHECK} Querem ver histórico completo de cada equipamento</li>
-              <li>${ICON_CHECK} Trabalham em lugares com sinal ruim e precisam de offline</li>
-            </ul>
-          </article>
-
-          <article class="lp-fit__card lp-fit__card--no" aria-label="Não serve pra quem">
-            <h3 class="lp-fit__card-title">
-              <span class="lp-fit__badge lp-fit__badge--no">Não serve</span>
-              pra quem…
-            </h3>
-            <ul class="lp-fit__list lp-fit__list--no">
-              <li>${ICON_X} Precisa de ERP completo com NFe integrada</li>
-              <li>${ICON_X} Gerencia frota de 500+ equipamentos em paralelo</li>
-              <li>${ICON_X} Trabalha só de desktop e nunca abre o celular em serviço</li>
-              <li>${ICON_X} Quer um CRM de vendas (focamos em manutenção, não prospecção)</li>
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <!-- ── FAQ ── -->
-      <section class="lp-faq" aria-labelledby="lp-faq-title">
-        <p class="lp-section-label lp-faq__label">Perguntas frequentes</p>
-        <h2 class="lp-faq__title" id="lp-faq-title">Antes de começar.</h2>
-
-        <div class="lp-faq__list">
-          <details class="lp-faq__item" data-question="ai_how">
-            <summary>Como funciona o cadastro por foto da etiqueta?</summary>
-            <p>
-              Você aponta a câmera pra etiqueta do equipamento (split, VRF, chiller, fan-coil) e uma IA lê a foto e devolve marca, modelo, número de série, capacidade (BTU/TR), tensão, frequência e refrigerante já preenchidos. Leva cerca de 5 segundos. Você confere, ajusta se precisar, e salva. Cota mensal: <strong>Plus 30 análises/mês</strong>, <strong>Pro 200 análises/mês</strong>. Free ganha 1 análise/mês como teste.
-            </p>
-          </details>
-
-          <details class="lp-faq__item" data-question="ai_accuracy">
-            <summary>E se a IA errar algum campo?</summary>
-            <p>
-              A IA preenche tudo como sugestão — você sempre confere antes de salvar e pode editar qualquer campo. Em etiquetas bem iluminadas e ocupando o quadro, acerta acima de 90% dos campos. Quando não reconhece (etiqueta apagada, foto tremida), avisa e deixa você preencher manualmente. Nenhum equipamento é cadastrado sem sua confirmação.
-            </p>
-          </details>
-
-          <details class="lp-faq__item" data-question="ai_privacy">
-            <summary>A foto da etiqueta fica armazenada? É privada?</summary>
-            <p>
-              A foto é enviada criptografada pro servidor só pra análise e não fica salva. Só os campos extraídos (texto) entram no cadastro do equipamento. Nada é usado pra treinar modelo.
-            </p>
-          </details>
-
-          <details class="lp-faq__item" data-question="offline">
-            <summary>Funciona mesmo sem internet?</summary>
-            <p>
-              Sim. O CoolTrack é offline-first: você cadastra equipamentos, registra serviços e gera PDFs em campo, mesmo sem sinal. A sincronização com a nuvem acontece automaticamente quando o celular reconecta. O cadastro por foto da etiqueta precisa de sinal no momento da captura — depois disso, edição e uso do equipamento funcionam offline normalmente.
-            </p>
-          </details>
-
-          <details class="lp-faq__item" data-question="install">
-            <summary>Preciso instalar alguma coisa?</summary>
-            <p>
-              Não. O CoolTrack é uma webapp (PWA) — abre no navegador do celular e dá pra adicionar à tela inicial em 2 toques. Funciona como app nativo, sem precisar baixar de loja.
-            </p>
-          </details>
-
-          <details class="lp-faq__item" data-question="free_trial">
-            <summary>Posso testar de graça antes de pagar?</summary>
-            <p>
-              Pode. O plano <strong>Free</strong> é gratuito pra sempre, sem pedir cartão. Você usa o fluxo principal com 3 equipamentos, registros ilimitados e relatórios com marca d’água. Quando precisar de escala e versão profissional dos relatórios, faz upgrade pra Plus ou Pro.
-            </p>
-          </details>
-
-          <details class="lp-faq__item" data-question="signature">
-            <summary>O PDF tem assinatura digital com validade?</summary>
-            <p>
-              O cliente assina o PDF com o dedo na tela do celular e a assinatura fica gravada no documento gerado. Disponível nos planos <strong>Plus</strong> e <strong>Pro</strong>. É reconhecida como evidência de execução do serviço.
-            </p>
-          </details>
-
-          <details class="lp-faq__item" data-question="security">
-            <summary>Meus dados ficam seguros?</summary>
-            <p>
-              Sim. Os dados ficam armazenados localmente no celular e sincronizados via Supabase com criptografia em trânsito. Mesmo cancelando a assinatura, todo o histórico continua acessível no plano Free.
-            </p>
-          </details>
-
-          <details class="lp-faq__item" data-question="cancel">
-            <summary>Posso cancelar a qualquer momento?</summary>
-            <p>
-              Pode. Sem multa, sem fidelidade. O acesso pago fica ativo até o fim do período já cobrado. Depois disso você volta automaticamente pro plano Free e continua usando o que já cadastrou.
-            </p>
-          </details>
-        </div>
-      </section>
-
-      <!-- ── FINAL CTA (dual orb cyan+cyan + grad word "organizar") ── -->
-      <section class="lp-final" aria-labelledby="lp-final-title">
-        <div class="lp-final__card">
-          <h2 class="lp-final__title" id="lp-final-title">
-            Pronto para <span class="lp-grad">organizar</span> seus atendimentos?
-          </h2>
-          <p class="lp-final__sub">Comece agora. Leva menos de 30 segundos, sem cartão.</p>
-          <div class="lp-final__ctas">
-            <button
-              class="lp-btn-primary"
-              type="button"
-              data-action="start-trial"
-              data-source="final"
-            >
-              ${ICON_BOLT}
-              Começar agora
-            </button>
-            <button
-              class="lp-btn-secondary"
-              type="button"
-              data-action="login"
-              data-source="final"
-            >
-              Já tenho conta
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- ── FOOTER ── -->
-      <footer class="lp-footer" role="contentinfo">
-        <div class="lp-footer__inner">
-          <div class="lp-footer__brand-block">
-            <div class="lp-brand">
-              <div class="lp-brand__icon">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <g stroke="#00C8E8" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none">
-                    <g>
-                      <line x1="8" y1="2" x2="8" y2="14"/>
-                      <polyline points="6.5,3.2 8,2 9.5,3.2"/>
-                      <polyline points="6.5,12.8 8,14 9.5,12.8"/>
-                    </g>
-                    <g transform="rotate(60 8 8)">
-                      <line x1="8" y1="2" x2="8" y2="14"/>
-                      <polyline points="6.5,3.2 8,2 9.5,3.2"/>
-                      <polyline points="6.5,12.8 8,14 9.5,12.8"/>
-                    </g>
-                    <g transform="rotate(120 8 8)">
-                      <line x1="8" y1="2" x2="8" y2="14"/>
-                      <polyline points="6.5,3.2 8,2 9.5,3.2"/>
-                      <polyline points="6.5,12.8 8,14 9.5,12.8"/>
-                    </g>
-                  </g>
-                  <circle cx="8" cy="8" r="0.9" fill="#00C8E8"/>
-                </svg>
-              </div>
-              <span class="lp-brand__name">CoolTrack</span>
-              <span class="lp-brand__badge">PRO</span>
-            </div>
-            <p class="lp-footer__tagline">
-              Gestão de climatização e refrigeração para técnicos que vão a campo.
-            </p>
-          </div>
-
-          <div class="lp-footer__cols">
-            <nav class="lp-footer__col" aria-label="Produto">
-              <h4 class="lp-footer__col-title">Produto</h4>
-              <a class="lp-footer__link" href="#lp-pricing-title">Planos</a>
-              <a class="lp-footer__link" href="#lp-faq-title">Perguntas frequentes</a>
-              <button
-                class="lp-footer__link"
-                type="button"
-                data-action="login"
-                data-source="footer"
-              >
-                Entrar
-              </button>
-            </nav>
-
-            <nav class="lp-footer__col" aria-label="Legal">
-              <h4 class="lp-footer__col-title">Legal</h4>
-              <a class="lp-footer__link" href="/legal/termos.html">Termos de uso</a>
-              <a class="lp-footer__link" href="/legal/privacidade.html"
-                >Política de privacidade</a
-              >
-              <a class="lp-footer__link" href="/legal/lgpd.html">LGPD</a>
-            </nav>
-
-            <nav class="lp-footer__col" aria-label="Contato">
-              <h4 class="lp-footer__col-title">Contato</h4>
-              <a class="lp-footer__link" href="mailto:suporte@cooltrackpro.com.br">
-                suporte@cooltrackpro.com.br
-              </a>
-              <span class="lp-footer__meta">Resposta em até 24h úteis</span>
-            </nav>
-          </div>
-        </div>
-
-        <div class="lp-footer__bottom">
-          <span class="lp-footer__copy">
-            &copy; 2026 CoolTrack Pro. Todos os direitos reservados.
-          </span>
-          <span class="lp-footer__made">Feito no Brasil</span>
         </div>
       </footer>
 
-    </div><!-- /.lp -->
-
-    <!-- ── STICKY MOBILE ── -->
-    <div class="lp-sticky">
-      <button
-        class="lp-btn-primary"
-        type="button"
-        data-action="start-trial"
-        data-source="sticky"
-      >
-        ${ICON_BOLT}
-        Começar agora
-      </button>
+      <div class="lp-sticky" aria-label="Acao principal mobile">
+        <button class="lp-btn lp-btn--primary" type="button" data-action="start-trial" data-source="sticky">
+          Testar no próximo serviço
+        </button>
+      </div>
     </div>
   `;
 }
