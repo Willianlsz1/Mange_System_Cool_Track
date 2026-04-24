@@ -286,9 +286,9 @@ export function buildLandingHtml() {
               <h2 id="lp-pricing-title">Comece grátis. Cresça quando precisar.</h2>
               <p class="lp-section-sub">Sem fidelidade, sem contrato longo. Você testa em um cliente real e decide depois.</p>
             </div>
-            <div class="lp-pricing-toggle" id="lp-pricing-toggle" role="tablist" aria-label="Ciclo de cobrança">
-              <button type="button" class="lp-pricing-toggle__btn lp-pricing-toggle__btn--active" data-billing="monthly">Mensal</button>
-              <button type="button" class="lp-pricing-toggle__btn" data-billing="annual">Anual <span class="lp-pricing-toggle__save">-17%</span></button>
+            <div class="lp-pricing-toggle" id="lp-pricing-toggle" role="group" aria-label="Ciclo de cobrança">
+              <button type="button" class="lp-pricing-toggle__btn lp-pricing-toggle__btn--active" data-billing="monthly" aria-pressed="true">Mensal</button>
+              <button type="button" class="lp-pricing-toggle__btn" data-billing="annual" aria-pressed="false">Anual <span class="lp-pricing-toggle__save">-17%</span></button>
             </div>
             <div class="lp-pricing__grid">
               ${plans.map((plan) => `<article class="lp-plan${plan.featured ? ' lp-plan--featured' : ''}">${plan.badge ? `<span class="lp-plan__badge">${plan.badge}</span>` : ''}<h3 class="lp-plan__name">${plan.name}</h3><div class="lp-plan__prices"><p class="lp-plan__price" data-price-monthly>R$ ${plan.priceM}<span>${plan.sufM}</span></p><p class="lp-plan__price" data-price-annual hidden>R$ ${plan.priceY}<span>${plan.sufY}</span></p></div><p class="lp-plan__annual-note" data-price-annual hidden>${plan.annualNote}</p><p class="lp-plan__tag">${plan.tag}</p><ul class="lp-plan__list">${plan.deltaIntro ? `<li class="lp-plan__list-intro">${plan.deltaIntro}</li>` : ''}${plan.features.map((f) => `<li>${ICON_CHECK}<span>${f}</span></li>`).join('')}</ul><button class="lp-btn lp-btn--${plan.ctaVariant} lp-plan__cta" type="button" data-action="start-trial" data-source="plan-${plan.name.toLowerCase()}">${plan.cta}</button><p class="lp-plan__foot">${plan.foot}</p></article>`).join('')}

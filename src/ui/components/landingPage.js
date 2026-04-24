@@ -42,9 +42,11 @@ export const LandingPage = {
           const billing = btn.dataset.billing;
           const showAnnual = billing === 'annual';
 
-          pricingToggleBtns.forEach((b) =>
-            b.classList.toggle('lp-pricing-toggle__btn--active', b === btn),
-          );
+          pricingToggleBtns.forEach((b) => {
+            const isActive = b === btn;
+            b.classList.toggle('lp-pricing-toggle__btn--active', isActive);
+            b.setAttribute('aria-pressed', String(isActive));
+          });
 
           app.querySelectorAll('[data-price-monthly]').forEach((el) => {
             el.hidden = showAnnual;
