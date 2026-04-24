@@ -7,7 +7,10 @@ import { setupAuthedPage } from '../fixtures/authedSession.js';
  * dentro do próprio teste — evita flake por estado compartilhado.
  *
  * Asserts são behavior-based (data-route, overlay is-open) em vez de
- * classes CSS específicas, pra sobreviver a tweaks visuais.
+ * classes CSS específicas, pra sobreviver a tweaks visuais. Selectors
+ * críticos usam `data-testid` pra não competir com CTAs iguais em
+ * contextos diferentes (ex.: #dash-hero-cta fica no DOM em outras rotas
+ * e matchava `.first()` antes).
  */
 test.describe('CoolTrack PRO — fluxos críticos', () => {
   test.beforeEach(async ({ page }) => {
@@ -23,8 +26,10 @@ test.describe('CoolTrack PRO — fluxos críticos', () => {
     await page.click('#nav-equipamentos');
     await expect(page.locator('body')).toHaveAttribute('data-route', 'equipamentos');
 
-    // Comportamento: empty state deve ter um CTA pra novo equipamento.
-    const cta = page.locator('[data-action="open-modal"][data-id="modal-add-eq"]').first();
+    // Comportamento: CTA de equipamento está visível na rota. Usamos o
+    // testid estável pra não pegar o #dash-hero-cta que fica hidden
+    // fora da rota dashboard mas continua no DOM.
+    const cta = page.getByTestId('equipamentos-add-equipment');
     await expect(cta).toBeVisible();
   });
 
@@ -32,13 +37,14 @@ test.describe('CoolTrack PRO — fluxos críticos', () => {
     await page.click('#nav-equipamentos');
     await expect(page.locator('body')).toHaveAttribute('data-route', 'equipamentos');
 
-    // Abre modal
-    await page.locator('[data-action="open-modal"][data-id="modal-add-eq"]').first().click();
+    // Abre modal via CTA estável da rota equipamentos.
+    await page.getByTestId('equipamentos-add-equipment').click();
     const modal = page.locator('#modal-add-eq');
     await expect(modal).toHaveClass(/is-open/);
 
-    // Fecha modal pela UI (botão X)
-    await page.locator('[data-action="close-modal"][data-id="modal-add-eq"]').first().click();
+    // Fecha modal pela UI (botão X). O close-modal é único dentro do
+    // overlay aberto, então .first() aqui é seguro.
+    await page.locator('#modal-add-eq [data-action="close-modal"]').first().click();
     await expect(modal).not.toHaveClass(/is-open/);
 
     // Nenhum overlay deve ficar aberto
@@ -49,7 +55,7 @@ test.describe('CoolTrack PRO — fluxos críticos', () => {
     await page.click('#nav-equipamentos');
     await expect(page.locator('body')).toHaveAttribute('data-route', 'equipamentos');
 
-    await page.locator('[data-action="open-modal"][data-id="modal-add-eq"]').first().click();
+    await page.getByTestId('equipamentos-add-equipment').click();
     const modal = page.locator('#modal-add-eq');
     await expect(modal).toHaveClass(/is-open/);
 

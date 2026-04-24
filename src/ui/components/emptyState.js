@@ -13,8 +13,12 @@ function buildCtaHtml(cta, { variant = 'default' } = {}) {
   const actionAttr = cta.action ? ` data-action="${Utils.escapeAttr(cta.action)}"` : '';
   const idAttr = cta.id ? ` data-id="${Utils.escapeAttr(cta.id)}"` : '';
   const navAttr = cta.nav ? ` data-nav="${Utils.escapeAttr(cta.nav)}"` : '';
+  // `testid` permite que callers exponham um hook estável pra E2E sem
+  // acoplar o selector ao data-action (que pode repetir entre CTAs iguais
+  // em contextos diferentes — ex.: empty state vs toolbar).
+  const testIdAttr = cta.testid ? ` data-testid="${Utils.escapeAttr(cta.testid)}"` : '';
 
-  return `<button type="button" class="btn ${toneClass}${sizeClass}${autoClass}${centeredClass}${extraClass}"${actionAttr}${idAttr}${navAttr}>${label}</button>`;
+  return `<button type="button" class="btn ${toneClass}${sizeClass}${autoClass}${centeredClass}${extraClass}"${actionAttr}${idAttr}${navAttr}${testIdAttr}>${label}</button>`;
 }
 
 /**

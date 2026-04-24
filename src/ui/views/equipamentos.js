@@ -221,7 +221,8 @@ function _setToolbar({ title, extraBtn } = {}) {
       </button>
       <button class="btn btn--outline btn--sm"
         data-action="open-modal" data-id="modal-add-eq"
-        data-source="toolbar_manual">+ Novo equipamento</button>
+        data-source="toolbar_manual"
+        data-testid="equipamentos-add-equipment">+ Novo equipamento</button>
     `;
   }
 }
