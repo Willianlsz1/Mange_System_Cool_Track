@@ -14,6 +14,8 @@ import {
 import { goTo } from '../../core/router.js';
 import { getState } from '../../core/state.js';
 import { attachDialogA11y } from '../../core/modal.js';
+import { Toast } from '../../core/toast.js';
+import { exportUserData, deleteUserAccount } from '../../features/userData.js';
 
 const ACCOUNT_MODAL_ID = 'account-modal-overlay';
 // Handle do cleanup do focus trap / Escape para o overlay atual.
@@ -68,6 +70,19 @@ const ICON_ARROW = `
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M5 12h14M13 6l6 6-6 6"/>
   </svg>`;
+const ICON_DOWNLOAD = `
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
+  </svg>`;
+const ICON_TRASH = `
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 6h18"/>
+    <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    <path d="m6 6 1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>
+  </svg>`;
+const DELETE_CONFIRM_PHRASE = 'EXCLUIR MINHA CONTA';
 
 // Ícone do badge do plano no header do hero.
 function getPlanBadgeIconHtml(planCode) {
@@ -248,9 +263,19 @@ export function openAccountModal(user, { onEditProfile, onSignOut, billingProfil
           <span class="account-modal__action-chev">${ICON_ARROW}</span>
         </button>
         <div class="account-modal__action-separator" aria-hidden="true"></div>
+        <button type="button" class="account-modal__action account-modal__action--neutral" id="btn-export-data">
+          <span class="account-modal__action-icon">${ICON_DOWNLOAD}</span>
+          <span class="account-modal__action-label">Exportar meus dados</span>
+          <span class="account-modal__action-chev">${ICON_ARROW}</span>
+        </button>
         <button type="button" class="account-modal__action account-modal__action--danger" id="btn-signout">
           <span class="account-modal__action-icon">${ICON_LOGOUT}</span>
           <span class="account-modal__action-label">Sair da conta</span>
+        </button>
+        <button type="button" class="account-modal__action account-modal__action--danger" id="btn-delete-account">
+          <span class="account-modal__action-icon">${ICON_TRASH}</span>
+          <span class="account-modal__action-label">Excluir minha conta</span>
+          <span class="account-modal__action-chev">${ICON_ARROW}</span>
         </button>
       </nav>
     </div>
@@ -289,6 +314,29 @@ export function openAccountModal(user, { onEditProfile, onSignOut, billingProfil
     onSignOut?.();
   });
 
+  overlay.querySelector('#btn-export-data')?.addEventListener('click', async (event) => {
+    const btn = event.currentTarget;
+    const originalLabel = btn.querySelector('.account-modal__action-label')?.textContent;
+    const labelEl = btn.querySelector('.account-modal__action-label');
+    btn.disabled = true;
+    if (labelEl) labelEl.textContent = 'Exportando…';
+    try {
+      const result = await exportUserData();
+      if (result.ok) {
+        Toast.success('Download iniciado. Verifique sua pasta de downloads.');
+      } else {
+        Toast.error(result.message || 'Não foi possível exportar os dados.');
+      }
+    } finally {
+      btn.disabled = false;
+      if (labelEl && originalLabel) labelEl.textContent = originalLabel;
+    }
+  });
+
+  overlay.querySelector('#btn-delete-account')?.addEventListener('click', () => {
+    openDeleteConfirmDialog(overlay);
+  });
+
   document.body.appendChild(overlay);
 
   // A11y: focus trap + Escape + retorna foco ao fechar. Dispensa o listener
@@ -296,4 +344,102 @@ export function openAccountModal(user, { onEditProfile, onSignOut, billingProfil
   _a11yCleanup = attachDialogA11y(overlay, {
     onDismiss: () => closeAccountModal(),
   });
+}
+
+/**
+ * Dialog de confirmação dupla pra exclusão de conta. Padrão GitHub/Stripe:
+ * usuário precisa digitar a frase exata (DELETE_CONFIRM_PHRASE) pra habilitar
+ * o botão. Fica em overlay próprio por cima do accountModal.
+ */
+function openDeleteConfirmDialog(accountOverlay) {
+  const DIALOG_ID = 'account-modal-delete-dialog';
+  document.getElementById(DIALOG_ID)?.remove();
+
+  const dialog = document.createElement('div');
+  dialog.id = DIALOG_ID;
+  dialog.className = 'modal account-delete-dialog';
+  dialog.setAttribute('role', 'dialog');
+  dialog.setAttribute('aria-modal', 'true');
+  dialog.setAttribute('aria-labelledby', 'delete-dialog-title');
+  dialog.dataset.blockingLayer = 'delete-confirm';
+
+  dialog.innerHTML = `
+    <div class="account-delete-dialog__backdrop" data-action="close-delete" aria-hidden="true"></div>
+    <div class="account-delete-dialog__card" role="document">
+      <h2 class="account-delete-dialog__title" id="delete-dialog-title">
+        Excluir conta permanentemente?
+      </h2>
+      <p class="account-delete-dialog__lead">
+        Esta ação <strong>não pode ser desfeita</strong>. Todos os seus equipamentos,
+        registros, fotos e assinaturas serão removidos imediatamente dos nossos servidores.
+      </p>
+      <p class="account-delete-dialog__hint">
+        Se ainda não exportou seus dados, cancele e use <strong>"Exportar meus dados"</strong> antes.
+      </p>
+      <label class="account-delete-dialog__label" for="delete-confirm-input">
+        Para confirmar, digite <code>${DELETE_CONFIRM_PHRASE}</code> abaixo:
+      </label>
+      <input
+        type="text"
+        id="delete-confirm-input"
+        class="account-delete-dialog__input"
+        autocomplete="off"
+        autocapitalize="characters"
+        spellcheck="false"
+        placeholder="${DELETE_CONFIRM_PHRASE}"
+      />
+      <div class="account-delete-dialog__actions">
+        <button type="button" class="account-delete-dialog__cancel" data-action="close-delete">
+          Cancelar
+        </button>
+        <button type="button" class="account-delete-dialog__confirm" id="btn-confirm-delete" disabled>
+          Excluir minha conta
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(dialog);
+
+  const input = dialog.querySelector('#delete-confirm-input');
+  const confirmBtn = dialog.querySelector('#btn-confirm-delete');
+
+  input?.addEventListener('input', () => {
+    const match = input.value.trim() === DELETE_CONFIRM_PHRASE;
+    if (confirmBtn) confirmBtn.disabled = !match;
+  });
+
+  const closeDialog = () => {
+    dialog.remove();
+  };
+
+  dialog.addEventListener('click', (event) => {
+    if (event.target.closest?.('[data-action="close-delete"]')) {
+      event.preventDefault();
+      closeDialog();
+    }
+  });
+
+  confirmBtn?.addEventListener('click', async () => {
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Excluindo…';
+    const result = await deleteUserAccount();
+    if (result.ok) {
+      // Dados removidos + signOut local já rodou. Força reload pra state limpo.
+      closeDialog();
+      accountOverlay?.remove();
+      Toast.success('Conta excluída com sucesso.');
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } else {
+      Toast.error(result.message || 'Não foi possível excluir a conta.');
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Excluir minha conta';
+    }
+  });
+
+  // A11y: focus no input imediatamente + Escape fecha
+  setTimeout(() => input?.focus(), 50);
+  attachDialogA11y(dialog, { onDismiss: closeDialog });
 }

@@ -73,6 +73,66 @@ antes da Cloudflare gastar build time com código quebrado.
 - Integrar alertas do UptimeRobot com Sentry como breadcrumbs.
 - Aumentar intervalo pra 1min se migrar pro plano pago.
 
+## LGPD — Edge Functions
+
+Duas edge functions atendem o art. 18 (portabilidade + eliminação). Ambas
+rodam no projeto Supabase conectado:
+
+- `supabase/functions/export-user-data` — retorna JSON com todos os dados do usuário
+- `supabase/functions/delete-user-account` — apaga dados + remove auth.user
+
+### Deploy (Willian executa)
+
+```bash
+supabase functions deploy export-user-data --no-verify-jwt
+supabase functions deploy delete-user-account --no-verify-jwt
+```
+
+`--no-verify-jwt` porque o gateway valida JWT com HS256 e este projeto
+assina com ES256. A validação é feita dentro da função via admin API com
+service role.
+
+### Secrets necessários (já existem no projeto)
+
+Nenhum secret novo. Reutiliza `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+`SUPABASE_SERVICE_ROLE_KEY` — os mesmos usados por `create-portal-session`
+e `stripe-webhook`.
+
+### Testar manualmente
+
+Após deploy, com um usuário logado no app:
+
+```bash
+# Obter access_token via DevTools → Application → Local Storage → sb-<ref>-auth-token
+ACCESS_TOKEN="eyJ..."
+SUPABASE_URL="https://lrtfpeqdpzvbdrgfvasv.supabase.co"
+ANON_KEY="eyJ..."
+
+# Export (deve retornar JSON)
+curl -X POST "$SUPABASE_URL/functions/v1/export-user-data" \
+  -H "apikey: $ANON_KEY" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' | jq '.meta'
+
+# Delete (CUIDADO — destrutivo)
+curl -X POST "$SUPABASE_URL/functions/v1/delete-user-account" \
+  -H "apikey: $ANON_KEY" \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{}' | jq
+```
+
+### Ver logs
+
+Dashboard Supabase → Edge Functions → clica na função → aba Logs.
+
+### Recuperação de conta deletada
+
+**Não há.** Delete é imediato e irreversível por design (LGPD art. 18 VI).
+Se um usuário reclamar, só dá pra dizer que foi confirmação dupla e que o
+botão "Exportar meus dados" estava disponível antes.
+
 ## Secrets/envs em uso
 
 ### Cloudflare Pages (Production) — CRÍTICO
