@@ -225,6 +225,14 @@ export const OverflowBanner = {
    */
   maybeShowFirstTimeModal({ state } = {}) {
     if (!state?.overLimit) return;
+    // Opt-out para E2E: Playwright pode abrir com VITE_DISABLE_OVERFLOW_MODAL=1
+    // pra não ter o modal interceptando cliques. Prod ignora esta flag.
+    if (
+      typeof import.meta !== 'undefined' &&
+      import.meta.env?.VITE_DISABLE_OVERFLOW_MODAL === '1'
+    ) {
+      return;
+    }
     const seen = readOnboardedSet();
     // Quando o limite é "both", consideramos satisfeito se o usuário já viu
     // qualquer um dos dois tipos isolados — evita spam pro usuário que

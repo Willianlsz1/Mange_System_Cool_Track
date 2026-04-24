@@ -17,12 +17,6 @@ async function resolveBillingProfile() {
 }
 
 function openAccountOrProfile() {
-  const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
-  if (isGuest) {
-    ProfileModal.open();
-    return;
-  }
-
   Auth.getUser()
     .then(async (user) => {
       if (!user) {
@@ -35,10 +29,7 @@ function openAccountOrProfile() {
       openAccountModal(user, {
         billingProfile,
         onEditProfile: () => ProfileModal.open(),
-        onSignOut: () => {
-          localStorage.removeItem('cooltrack-guest-mode');
-          Auth.signOut();
-        },
+        onSignOut: () => Auth.signOut(),
       });
     })
     .catch((error) => {

@@ -58,13 +58,15 @@ export const LandingPage = {
       });
     }
 
+    // "Testar no próximo serviço" leva pro cadastro real (tab signup).
+    // O antigo modo guest (dados mockados) foi removido — o técnico cria
+    // conta e já usa o app real no próximo atendimento.
     const startTrialHandler =
       onStartTrial ||
       (() => {
-        // Entrou em modo guest — marca transição topo-de-funil → ativação.
-        trackEvent('guest_mode_started', { source: 'landing' });
-        localStorage.setItem('cooltrack-guest-mode', '1');
-        window.location.reload();
+        import('./authscreen.js').then(({ AuthScreen }) =>
+          AuthScreen.show({ initialTab: 'signup' }),
+        );
       });
 
     const loginHandler =

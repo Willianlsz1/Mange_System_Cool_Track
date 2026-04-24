@@ -6,17 +6,6 @@ import { PasswordRecoveryModal } from './passwordRecoveryModal.js';
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 
-const GUEST_DATA_KEYS = [
-  'cooltrack_v3',
-  'cooltrack-sync-dirty-v1',
-  'cooltrack-sync-deletions-v1',
-  'cooltrack-cache-owner-v1',
-];
-
-function clearGuestDemoData() {
-  GUEST_DATA_KEYS.forEach((k) => localStorage.removeItem(k));
-}
-
 function persistPostAuthRedirect(redirect) {
   if (!redirect?.route) return;
   localStorage.setItem(POST_AUTH_REDIRECT_KEY, JSON.stringify(redirect));
@@ -26,26 +15,14 @@ function focusFirstField(container, selector) {
   container.querySelector(selector)?.focus();
 }
 
-function getDefaultIntentOptions(intent) {
-  if (intent === 'guest-save') {
-    return {
-      highlightCopy: 'Salvar meus dados com Google',
-      source: 'guest-save',
-      wasGuest: true,
-    };
-  }
-
+function getDefaultIntentOptions() {
   return {
     highlightCopy: 'Continuar com Google',
     source: 'auth-screen',
-    wasGuest: localStorage.getItem('cooltrack-guest-mode') === '1',
   };
 }
 
 function handleAuthSuccess(overlay, postAuthRedirect) {
-  const wasGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
-  if (wasGuest) clearGuestDemoData();
-  localStorage.removeItem('cooltrack-guest-mode');
   persistPostAuthRedirect(postAuthRedirect);
   overlay.remove();
   window.location.reload();
@@ -188,10 +165,6 @@ const ICON_BELL = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" s
   <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
 </svg>`;
 
-const ICON_PLAY_CIRCLE = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-  <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
-</svg>`;
-
 const ICON_ARROW_RIGHT = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
 </svg>`;
@@ -206,10 +179,9 @@ const ICON_GOOGLE = `<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden
 
 export const AuthScreen = {
   show(options = {}) {
-    const intent = options.intent || 'default';
     const initialTab = options.initialTab === 'signup' ? 'signup' : 'signin';
     const postAuthRedirect = options.postAuthRedirect?.route ? options.postAuthRedirect : null;
-    const intentOptions = getDefaultIntentOptions(intent);
+    const intentOptions = getDefaultIntentOptions();
     const existing = document.getElementById('auth-overlay');
     if (existing) {
       focusFirstField(existing, '.auth-input');
@@ -351,39 +323,6 @@ export const AuthScreen = {
         }
         .auth-card-header__sub {
           font-size: 13px; color: #8aaac8; line-height: 1.5;
-        }
-
-        /* ── Demo card (topo do form — CTA guest verde) ── */
-        .auth-demo {
-          display: flex; align-items: center; gap: 12px;
-          background: rgba(0, 200, 112, 0.05);
-          border: 1px solid rgba(0, 200, 112, 0.2);
-          border-radius: 10px;
-          padding: 14px 16px;
-          margin-bottom: 20px;
-        }
-        .auth-demo__icon {
-          color: var(--success); display: flex; flex-shrink: 0;
-        }
-        .auth-demo__body { flex: 1; min-width: 0; }
-        .auth-demo__title {
-          font-size: 14px; font-weight: 600; color: #e8f2fa; line-height: 1.3;
-        }
-        .auth-demo__sub {
-          font-size: 12px; font-weight: 400; color: #8aaac8;
-          margin-top: 2px; line-height: 1.4;
-        }
-        .auth-demo__btn {
-          height: 32px; padding: 0 14px; border-radius: 8px;
-          background: transparent;
-          border: 1px solid rgba(0, 200, 112, 0.35);
-          color: var(--success); font-size: 13px; font-weight: 600;
-          font-family: inherit; cursor: pointer; white-space: nowrap;
-          transition: background .18s, border-color .18s;
-        }
-        .auth-demo__btn:hover {
-          background: rgba(0, 200, 112, 0.08);
-          border-color: rgba(0, 200, 112, 0.55);
         }
 
         /* ── Tabs (sem border no active — fix #9) ── */
@@ -599,16 +538,6 @@ export const AuthScreen = {
             <div class="auth-card-header__sub">Gestão de manutenção para técnicos de climatização.</div>
           </div>
 
-          <!-- Demo card (topo, verde) -->
-          <div class="auth-demo">
-            <div class="auth-demo__icon">${ICON_PLAY_CIRCLE}</div>
-            <div class="auth-demo__body">
-              <div class="auth-demo__title">Testar sem criar conta</div>
-              <div class="auth-demo__sub">Entre no app com dados de exemplo.</div>
-            </div>
-            <button class="auth-demo__btn" id="btn-guest" type="button">Abrir</button>
-          </div>
-
           <!-- Tabs -->
           <div class="auth-tabs" role="tablist" aria-label="Acesso">
             <button class="auth-tab active" id="tab-signin" type="button" role="tab" aria-selected="true" aria-controls="auth-form-signin">Entrar</button>
@@ -695,26 +624,12 @@ export const AuthScreen = {
     };
 
     const triggerGoogleAuth = async (button) => {
-      trackEvent('auth_google_clicked', {
-        source: intentOptions.source,
-        wasGuest: intentOptions.wasGuest,
-      });
+      trackEvent('auth_google_clicked', { source: intentOptions.source });
 
       await runAsyncAction(button, { loadingLabel: 'Redirecionando...' }, async () => {
-        const wasGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
-
-        if (wasGuest) {
-          clearGuestDemoData();
-          localStorage.removeItem('cooltrack-guest-mode');
-        }
-
-        const result = await Auth.signInWithGoogle({
-          source: intentOptions.source,
-          wasGuest: intentOptions.wasGuest,
-        });
+        const result = await Auth.signInWithGoogle({ source: intentOptions.source });
 
         if (!result?.ok) {
-          if (wasGuest) localStorage.setItem('cooltrack-guest-mode', '1');
           if (result?.message) Toast.error(result.message);
           return;
         }
@@ -809,13 +724,6 @@ export const AuthScreen = {
         if (!user) return;
         handleAuthSuccess(overlay, postAuthRedirect);
       });
-    });
-
-    overlay.querySelector('#btn-guest')?.addEventListener('click', () => {
-      trackEvent('guest_mode_started', { source: 'auth-screen' });
-      localStorage.setItem('cooltrack-guest-mode', '1');
-      overlay.remove();
-      window.location.reload();
     });
 
     setTab(initialTab);

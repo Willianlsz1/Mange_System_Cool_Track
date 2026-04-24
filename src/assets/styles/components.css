@@ -7782,14 +7782,12 @@ mark,
 
 .btn.is-busy,
 .auth-btn.is-busy,
-.auth-btn-guest.is-busy,
 .auth-btn-forgot.is-busy {
   cursor: progress;
 }
 
 .btn.is-busy::after,
 .auth-btn.is-busy::after,
-.auth-btn-guest.is-busy::after,
 .auth-btn-forgot.is-busy::after {
   content: '';
   width: 12px;
@@ -8006,8 +8004,7 @@ mark,
   margin: 2px 0 12px;
 }
 
-.auth-btn,
-.auth-btn-guest {
+.auth-btn {
   width: 100%;
   border-radius: 10px;
   padding: 14px;
@@ -8024,9 +8021,6 @@ mark,
   align-items: center;
   justify-content: center;
   gap: 8px;
-}
-
-.auth-btn {
   background: #00c8e8;
   color: #07111f;
   border: none;
@@ -8037,7 +8031,6 @@ mark,
 }
 
 .auth-btn:disabled,
-.auth-btn-guest:disabled,
 .auth-btn-forgot:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -8058,24 +8051,6 @@ mark,
 .auth-actions-center {
   text-align: center;
   margin-top: 12px;
-}
-
-.auth-guest-panel {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  text-align: center;
-}
-
-.auth-btn-guest {
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #8aaac8;
-}
-
-.auth-btn-guest:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  color: #e8f2fa;
 }
 
 .auth-btn-forgot {
@@ -11023,6 +10998,14 @@ mark,
 #view-registro .registro-hero__pill svg {
   width: 12px;
   height: 12px;
+}
+
+/* Mobile-first: em telas muito estreitas a pill é decorativa e rouba espaço
+   do título. Esconde abaixo de 360px (Galaxy S ≤5, iPhone SE vertical). */
+@media (max-width: 359px) {
+  #view-registro .registro-hero__pill {
+    display: none;
+  }
 }
 
 #view-registro .registro-hero__title {

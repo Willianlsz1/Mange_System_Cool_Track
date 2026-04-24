@@ -261,8 +261,7 @@ export function assertProAccess(profile, featureName = 'premium_feature') {
 }
 
 // ── Fetchers de plano ──────────────────────────────────────────────────────
-export function getPlanForUser({ isGuest, planCode = PLAN_CODE_FREE } = {}) {
-  if (isGuest) return PLAN_CATALOG[PLAN_CODE_FREE];
+export function getPlanForUser({ planCode = PLAN_CODE_FREE } = {}) {
   return PLAN_CATALOG[normalizePlanCode(planCode)];
 }
 
@@ -286,7 +285,7 @@ export async function getPlanCodeForUserId(userId, { supabaseClient = supabase }
 
 export async function getPlanForAuthenticatedUser(userId, options) {
   const planCode = await getPlanCodeForUserId(userId, options);
-  return getPlanForUser({ isGuest: false, planCode });
+  return getPlanForUser({ planCode });
 }
 
 export function getLimitLabel(resource) {

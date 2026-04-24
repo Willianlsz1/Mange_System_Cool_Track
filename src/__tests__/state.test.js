@@ -145,18 +145,4 @@ describe('state module', () => {
     expect(current.equipamentos).toHaveLength(1);
     expect(current.tecnicos).toEqual(['Ana']);
   });
-
-  it('seedIfEmpty populates initial data only when equipamentos is empty', async () => {
-    const { seedIfEmpty, getState } = await loadStateModule(emptyState);
-
-    seedIfEmpty();
-    const seeded = getState();
-    expect(seeded.equipamentos.length).toBeGreaterThan(0);
-    expect(seeded.registros.length).toBeGreaterThan(0);
-    expect(seeded.tecnicos.length).toBeGreaterThan(0);
-
-    const firstCount = seeded.equipamentos.length;
-    seedIfEmpty();
-    expect(getState().equipamentos).toHaveLength(firstCount);
-  });
 });

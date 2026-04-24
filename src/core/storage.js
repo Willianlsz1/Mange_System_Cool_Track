@@ -606,13 +606,6 @@ async function migrateIfNeeded(userId) {
     return;
   }
 
-  // Não migra se o usuário estava no modo guest — dados são do seed
-  const isGuestMode = localStorage.getItem('cooltrack-guest-mode') === '1';
-  if (isGuestMode) {
-    localStorage.setItem(MIGRATED_KEY, '1');
-    return;
-  }
-
   const raw = localStorage.getItem(STORAGE_KEY);
   if (!raw) {
     localStorage.setItem(MIGRATED_KEY, '1');
@@ -747,7 +740,6 @@ export const Storage = {
   },
 
   save(state) {
-    const isGuestMode = localStorage.getItem('cooltrack-guest-mode') === '1';
     // 1. Salva local imediatamente (offline first)
     try {
       const serialized = JSON.stringify(state);
@@ -760,9 +752,7 @@ export const Storage = {
         Toast.warning(`Uso de armazenamento elevado: ${Utils.formatBytes(byteSize)} / 5 MB.`);
       }
       localStorage.setItem(STORAGE_KEY, serialized);
-      if (!isGuestMode) {
-        markDirty();
-      }
+      markDirty();
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.STORAGE_QUOTA,
@@ -773,9 +763,7 @@ export const Storage = {
     }
 
     // 2. Sincroniza com Supabase em background (não bloqueia UI)
-    if (!isGuestMode) {
-      this._scheduleSync(state);
-    }
+    this._scheduleSync(state);
     return true;
   },
 
@@ -810,11 +798,6 @@ export const Storage = {
   },
 
   async _syncToSupabase(state, { silent = false, context = '_syncToSupabase' } = {}) {
-    if (localStorage.getItem('cooltrack-guest-mode') === '1') {
-      clearSyncMetadata();
-      return false;
-    }
-
     const userId = await getUserId();
     if (!userId) {
       updateSyncStatus({
@@ -885,19 +868,16 @@ export const Storage = {
   },
 
   markRegistroDeleted(id) {
-    if (localStorage.getItem('cooltrack-guest-mode') === '1') return;
     queueDeletions({ registros: [id] });
     markDirty();
   },
 
   markEquipDeleted(equipId, registroIds = []) {
-    if (localStorage.getItem('cooltrack-guest-mode') === '1') return;
     queueDeletions({ equipamentos: [equipId], registros: registroIds });
     markDirty();
   },
 
   markSetorDeleted(id) {
-    if (localStorage.getItem('cooltrack-guest-mode') === '1') return;
     queueDeletions({ setores: [id] });
     markDirty();
   },

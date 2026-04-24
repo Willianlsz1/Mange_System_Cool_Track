@@ -14,8 +14,6 @@ import { ErrorCodes, handleError } from '../../core/errors.js';
 import { uploadPendingPhotos } from '../../core/photoStorage.js';
 import { getOperationalStatus, validateOperationalPayload } from '../../core/equipmentRules.js';
 import { reconcileEquipmentStatusesAfterRegistroEdit } from '../../domain/registroStatus.js';
-import { isGuestMode } from '../../core/guestLimits.js';
-import { GuestConversionModal } from '../components/guestConversionModal.js';
 import { trackEvent } from '../../core/telemetry.js';
 import { withSkeleton } from '../components/skeleton.js';
 import { validateRegistroPayload } from '../../core/inputValidation.js';
@@ -487,7 +485,6 @@ export function applyQuickTemplate(templateId, triggerEl = null) {
 }
 
 export async function saveRegistro() {
-  const isGuest = isGuestMode();
   const prioridade = Utils.getVal('r-prioridade') || 'media';
   const { equipamentos } = getState();
 
@@ -639,16 +636,16 @@ export async function saveRegistro() {
   if (canUseSignature && SignatureModal?.request) {
     try {
       const result = await SignatureModal.request(novoId, eq?.nome || 'Equipamento');
-      // X / backdrop / Escape no modal de assinatura devolvem o sentinel
-      // SignatureModal.CANCELED — significa "cancelar tudo", não "pular
-      // assinatura". Interrompe o save do registro aqui pra que o usuário
-      // possa revisar o formulário e salvar de novo quando estiver pronto.
-      if (result === SignatureModal.CANCELED) {
-        Toast.info?.('Registro não salvo. Você pode continuar editando.');
-        return false;
+      // UX: a assinatura é opcional. Cancelar o modal (X/backdrop/Escape) não
+      // invalida mais o save — o técnico pode ter o cliente assinando depois
+      // ou o serviço foi concluído sem cliente presente. Apenas não anexa
+      // assinatura ao registro. Se aparecer um valor (data URL), usamos.
+      if (result && result !== SignatureModal.CANCELED) {
+        assinatura = result;
+        if (saveSignatureForRecord) saveSignatureForRecord(novoId, assinatura);
+      } else if (result === SignatureModal.CANCELED) {
+        Toast.info?.('Registro salvo sem assinatura. Você pode adicioná-la depois.');
       }
-      assinatura = result;
-      if (assinatura && saveSignatureForRecord) saveSignatureForRecord(novoId, assinatura);
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
@@ -759,10 +756,6 @@ export async function saveRegistro() {
   // volta pro feedback simples — user ainda precisa saber que salvou.
   if (!toastShown) {
     Toast.success('Serviço registrado com sucesso.');
-  }
-
-  if (isGuest) {
-    GuestConversionModal.open({ reason: 'save_attempt', source: 'save-registro' });
   }
 
   return true;

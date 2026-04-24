@@ -84,7 +84,6 @@ export async function sanitizeSessionForCurrentProject({ supabaseClient = supaba
   }
 
   await supabaseClient.auth.signOut();
-  localStorage.removeItem('cooltrack-guest-mode');
 
   throw createMonetizationError(
     'SESSION_PROJECT_MISMATCH',

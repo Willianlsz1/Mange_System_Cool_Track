@@ -16,7 +16,6 @@ const mocks = vi.hoisted(() => ({
       globalThis.__lastDialogA11yOpts = null;
     };
   }),
-  guestCtaOpen: vi.fn(),
 }));
 
 vi.mock('../features/profile.js', () => ({
@@ -39,10 +38,6 @@ vi.mock('../core/modal.js', () => ({
   // pelo hardClose(), então só precisamos capturar o onDismiss pra simular
   // Escape/a11y dismiss.
   attachDialogA11y: mocks.attachDialogA11y,
-}));
-
-vi.mock('../ui/components/onboarding/guestCtaModal.js', () => ({
-  GuestCtaModal: { open: mocks.guestCtaOpen },
 }));
 
 import { ProfileModal } from '../ui/components/onboarding/profileModal.js';
@@ -72,19 +67,11 @@ describe('ProfileModal', () => {
     mocks.profileSave.mockClear();
     mocks.toastSuccess.mockClear();
     mocks.toastWarning.mockClear();
-    mocks.guestCtaOpen.mockClear();
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
     globalThis.__lastDialogA11yOpts = null;
-  });
-
-  it('abre GuestCtaModal e não cria overlay quando usuário é guest', () => {
-    localStorage.setItem('cooltrack-guest-mode', '1');
-    ProfileModal.open();
-    expect(mocks.guestCtaOpen).toHaveBeenCalledTimes(1);
-    expect(getOverlay()).toBeNull();
   });
 
   it('renderiza overlay com os campos carregados do Profile.get()', () => {

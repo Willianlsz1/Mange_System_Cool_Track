@@ -24,8 +24,6 @@ function normalizePricingReason(reason) {
 }
 
 async function resolveCurrentPlanCode() {
-  if (localStorage.getItem('cooltrack-guest-mode') === '1') return PLAN_CODE_FREE;
-
   const user = await Auth.getUser();
   if (!user?.id) return PLAN_CODE_FREE;
 

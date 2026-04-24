@@ -30,15 +30,12 @@ describe('AuthScreen V2Refined redesign', () => {
     localStorage.clear();
   });
 
-  it('renders demo card at top with "Abrir" guest button', async () => {
+  it('does NOT render the removed demo/guest card', async () => {
     const { AuthScreen } = await loadAuthScreen();
     AuthScreen.show();
 
-    const demo = document.querySelector('.auth-demo');
-    expect(demo).toBeTruthy();
-    expect(demo.textContent).toContain('Testar sem criar conta');
-    expect(demo.textContent).toContain('Entre no app com dados de exemplo');
-    expect(document.querySelector('#btn-guest')?.textContent.trim()).toBe('Abrir');
+    expect(document.querySelector('.auth-demo')).toBeNull();
+    expect(document.querySelector('#btn-guest')).toBeNull();
   });
 
   it('Google button is primary (signin) with unified copy', async () => {
@@ -49,15 +46,6 @@ describe('AuthScreen V2Refined redesign', () => {
     expect(btn).toBeTruthy();
     expect(btn.classList.contains('auth-btn-google')).toBe(true);
     expect(btn.textContent).toContain('Continuar com Google');
-  });
-
-  it('Google button shows guest-save copy under guest-save intent', async () => {
-    const { AuthScreen } = await loadAuthScreen();
-    AuthScreen.show({ intent: 'guest-save' });
-
-    const btn = document.querySelector('#btn-google-signin');
-    expect(btn.textContent).toContain('Salvar meus dados com Google');
-    expect(btn.textContent).not.toContain('Continuar com Google');
   });
 
   it('headline is solid — no <em> highlight (login sóbrio)', async () => {

@@ -24,6 +24,9 @@ export default defineConfig({
     env: {
       VITE_SUPABASE_URL: process.env.VITE_SUPABASE_URL || 'http://127.0.0.1:54321',
       VITE_SUPABASE_KEY: process.env.VITE_SUPABASE_KEY || 'test-anon-key',
+      // Desativa o overflow modal em testes — ele ficava interceptando clicks
+      // e gerando flake. Prod ignora a flag (ver overflowBanner.js).
+      VITE_DISABLE_OVERFLOW_MODAL: '1',
     },
     timeout: 120_000,
   },

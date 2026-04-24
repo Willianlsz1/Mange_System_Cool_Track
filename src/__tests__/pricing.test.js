@@ -25,9 +25,11 @@ describe('pricing view', () => {
     document.body.innerHTML = '<div id="view-pricing"></div>';
   });
 
-  it('renders free plan for guest users without checkout CTA for free card', async () => {
-    localStorage.setItem('cooltrack-guest-mode', '1');
-    const { renderPricing, mocks } = await loadPricingModule();
+  it('renders free plan for unauthenticated session without checkout CTA for free card', async () => {
+    const { renderPricing } = await loadPricingModule({
+      user: null,
+      profile: null,
+    });
 
     await renderPricing();
 
@@ -35,7 +37,6 @@ describe('pricing view', () => {
     expect(html).toContain('Plano Gratuito');
     expect(html).toContain('Assinar Pro');
     expect(html).toContain('data-action="start-checkout"');
-    expect(mocks.getUser).not.toHaveBeenCalled();
   });
 
   it('renders pro plan as current with cancel button and no checkout CTA', async () => {

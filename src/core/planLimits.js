@@ -1,3 +1,10 @@
+/**
+ * CoolTrack Pro - Plan Limits
+ *
+ * Substitui o antigo `guestLimits.js` depois que o modo demo/guest foi
+ * removido. Aqui vive só a lógica de gate por plano do usuário autenticado.
+ */
+
 import { getState } from './state.js';
 import {
   PLAN_CODE_FREE,
@@ -8,14 +15,9 @@ import {
 } from './plans/subscriptionPlans.js';
 import { supabase } from './supabase.js';
 
-export function isGuestMode() {
-  return localStorage.getItem('cooltrack-guest-mode') === '1';
-}
-
 /**
  * Conta quantos registros de serviço foram criados no mês corrente.
- * Mantido para métricas de uso e telemetria (não há mais bloqueio de registros
- * no plano Free).
+ * Mantido para métricas de uso e telemetria.
  *
  * Referência: `registro.data` é salvo como ISO datetime ('YYYY-MM-DDTHH:mm').
  */
@@ -33,25 +35,7 @@ export function getUsageSnapshot() {
   const state = getState();
   return {
     equipamentos: state.equipamentos.length,
-    // Registros do mês corrente (insumo de analytics e UI de uso mensal).
     registros: countRegistrosThisMonth(state.registros),
-  };
-}
-
-export function checkGuestLimit(resource) {
-  const guest = isGuestMode();
-  if (!guest) return { blocked: false, resource, limit: null, current: null };
-
-  const usage = getUsageSnapshot();
-  const plan = getPlanForUser({ isGuest: true });
-  const limit = plan.limits[resource];
-  const current = usage[resource];
-
-  return {
-    blocked: Number.isFinite(limit) ? current >= limit : false,
-    resource,
-    limit,
-    current,
   };
 }
 
@@ -68,25 +52,23 @@ export async function checkPlanLimit(resource, currentUsageOrOptions = {}, maybe
     hasExplicitUsage && Number.isFinite(parsedExplicitCurrent)
       ? Math.max(0, parsedExplicitCurrent)
       : snapshotCurrent;
-  const isGuest = isGuestMode();
+
   let planCode = PLAN_CODE_FREE;
   let profile = null;
 
-  if (!isGuest) {
-    try {
-      const {
-        data: { user },
-      } = await supabaseClient.auth.getUser();
-      profile = await getPlanProfileForUserId(user?.id, { supabaseClient });
-      planCode = getEffectivePlan(profile);
-    } catch {
-      // Em caso de erro, ainda respeita o dev mode se estiver ativo
-      planCode = getEffectivePlan(null);
-      profile = null;
-    }
+  try {
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser();
+    profile = await getPlanProfileForUserId(user?.id, { supabaseClient });
+    planCode = getEffectivePlan(profile);
+  } catch {
+    // Sem conexão → cai para o plano base (free), que é conservador.
+    planCode = getEffectivePlan(null);
+    profile = null;
   }
 
-  const plan = getPlanForUser({ isGuest: false, planCode });
+  const plan = getPlanForUser({ planCode });
   let limit = plan.limits[resource];
   let blocked = Number.isFinite(limit) ? current >= limit : false;
 
@@ -97,5 +79,5 @@ export async function checkPlanLimit(resource, currentUsageOrOptions = {}, maybe
     planCode = createDecision.planCode;
   }
 
-  return { blocked, resource, limit, current, isGuest, planCode };
+  return { blocked, resource, limit, current, planCode };
 }

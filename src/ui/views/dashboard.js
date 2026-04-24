@@ -256,10 +256,6 @@ export function getHealthClass(score) {
 // Plan context
 // ═══════════════════════════════════════════════════════
 async function resolveDashboardPlanContext() {
-  if (localStorage.getItem('cooltrack-guest-mode') === '1') {
-    return { planCode: PLAN_CODE_FREE, hasPro: false, userId: null };
-  }
-
   const user = await Auth.getUser();
   if (!user?.id) return { planCode: PLAN_CODE_FREE, hasPro: false, userId: null };
 
@@ -1091,7 +1087,7 @@ export async function renderDashboard() {
         icon: '🔧',
         title: 'Seu painel está pronto',
         description:
-          'Cadastre o primeiro equipamento para ver eficiência, alertas e histórico em tempo real.',
+          'Cadastre seu primeiro equipamento em menos de 1 minuto. A foto da etiqueta preenche os principais dados.',
         cta: {
           label: '+ Cadastrar meu primeiro equipamento',
           action: 'open-modal',

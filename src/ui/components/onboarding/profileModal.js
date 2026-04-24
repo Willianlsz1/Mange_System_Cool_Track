@@ -2,7 +2,6 @@ import { Utils } from '../../../core/utils.js';
 import { Toast } from '../../../core/toast.js';
 import { Profile } from '../../../features/profile.js';
 import { attachDialogA11y, CustomConfirm } from '../../../core/modal.js';
-import { GuestCtaModal } from './guestCtaModal.js';
 
 // Handle do cleanup do focus trap / Escape para o overlay atual.
 let _a11yCleanup = null;
@@ -80,12 +79,6 @@ function isDirty(initial, current) {
 export const ProfileModal = {
   open() {
     document.getElementById('modal-profile-overlay')?.remove();
-
-    const isGuest = localStorage.getItem('cooltrack-guest-mode') === '1';
-    if (isGuest) {
-      GuestCtaModal.open();
-      return;
-    }
 
     const profile = Profile.get() || {};
     const initials = getInitials(profile.nome);

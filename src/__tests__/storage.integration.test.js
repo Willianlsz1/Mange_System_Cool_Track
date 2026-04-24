@@ -214,27 +214,6 @@ describe('Storage integration (offline-first)', () => {
     expect(toastMock.success).toHaveBeenCalled();
   });
 
-  it('skips migration when guest mode is active and still marks user as migrated', async () => {
-    const { Storage, supabaseMock, toastMock } = await loadStorageModule({
-      supabase: {
-        userId: 'user-guest',
-        selectData: { equipamentos: [], registros: [], tecnicos: [] },
-      },
-    });
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleState()));
-    localStorage.setItem('cooltrack-guest-mode', '1');
-
-    await Storage.loadFromSupabase();
-
-    expect(localStorage.getItem('cooltrack-migrated-user-guest')).toBe('1');
-    expect(supabaseMock.upsertByTable.equipamentos).not.toHaveBeenCalled();
-    expect(supabaseMock.upsertByTable.registros).not.toHaveBeenCalled();
-    expect(supabaseMock.upsertByTable.tecnicos).not.toHaveBeenCalled();
-    expect(toastMock.info).not.toHaveBeenCalled();
-    expect(toastMock.success).not.toHaveBeenCalled();
-  });
-
   it('warns near storage quota and blocks writes at the 5MB limit', async () => {
     const { Storage, toastMock } = await loadStorageModule();
     const scheduleSpy = vi.spyOn(Storage, '_scheduleSync').mockImplementation(() => {});

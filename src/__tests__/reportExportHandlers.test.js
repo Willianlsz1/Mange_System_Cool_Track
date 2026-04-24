@@ -28,10 +28,8 @@ vi.mock('../domain/whatsapp.js', () => ({
   WhatsAppExport: { send },
 }));
 
-const open = vi.fn();
-vi.mock('../ui/components/guestConversionModal.js', () => ({
-  GuestConversionModal: { open },
-}));
+// Guest conversion modal foi removido quando o modo demo/guest saiu.
+// Os fluxos de limite agora usam Toast.warning + goTo('pricing').
 
 const trackEvent = vi.fn();
 vi.mock('../core/telemetry.js', () => ({
@@ -93,6 +91,14 @@ vi.mock('../core/modal.js', () => ({
   Modal: { open: vi.fn(), close: vi.fn() },
 }));
 
+const goTo = vi.fn();
+vi.mock('../core/router.js', () => ({
+  goTo,
+  currentRoute: vi.fn(),
+  currentRouteParams: vi.fn(() => ({})),
+  registerRoute: vi.fn(),
+}));
+
 describe('reportExportHandlers', () => {
   beforeEach(async () => {
     handlers.clear();
@@ -137,19 +143,16 @@ describe('reportExportHandlers', () => {
     mod.bindReportExportHandlers();
   });
 
-  it('blocks PDF for guests and opens conversion modal with preview', async () => {
+  it('blocks PDF when there is no authenticated user (defensive)', async () => {
     getUser.mockResolvedValueOnce(null);
 
     await handlers.get('export-pdf')({});
 
     expect(generateMaintenanceReport).not.toHaveBeenCalled();
-    expect(open).toHaveBeenCalledWith(
-      expect.objectContaining({
-        source: 'pdf_export_attempt',
-        preview: expect.objectContaining({ title: 'Previa do relatorio' }),
-      }),
-    );
-    expect(trackEvent).toHaveBeenCalledWith('pdf_export_blocked', { reason: 'guest' });
+    expect(warning).toHaveBeenCalledWith(expect.stringMatching(/login/i));
+    expect(trackEvent).toHaveBeenCalledWith('pdf_export_blocked', {
+      reason: 'not_authenticated',
+    });
   });
 
   it('buildReportFilters preserva registroId para fluxo pós-save', async () => {
@@ -195,15 +198,10 @@ describe('reportExportHandlers', () => {
     await handlers.get('export-pdf')({});
 
     expect(generateMaintenanceReport).not.toHaveBeenCalled();
-    expect(open).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reason: 'limit_pdf',
-        source: 'pdf_export_limit',
-      }),
-    );
-    // Mensagem deve guiar Free → Plus/Pro, não "plano Plus" genérico
-    const callArg = open.mock.calls[0][0];
-    expect(callArg.message).toMatch(/Plus/);
+    // Sem GuestConversionModal — agora mostra Toast com nudge pra Plus/Pro
+    expect(warning).toHaveBeenCalled();
+    const toastMsg = warning.mock.calls[warning.mock.calls.length - 1][0];
+    expect(toastMsg).toMatch(/Plus/);
   });
 
   it('allows authenticated Pro users to export PDF without incrementing quota', async () => {
@@ -254,12 +252,8 @@ describe('reportExportHandlers', () => {
     await handlers.get('whatsapp-export')({});
 
     expect(send).not.toHaveBeenCalled();
-    expect(open).toHaveBeenCalledWith(
-      expect.objectContaining({
-        reason: 'limit_whatsapp',
-        source: 'whatsapp_share_limit',
-      }),
-    );
+    // Sem GuestConversionModal — Toast.warning + goTo('pricing')
+    expect(warning).toHaveBeenCalled();
     expect(trackEvent).toHaveBeenCalledWith(
       'whatsapp_share_blocked',
       expect.objectContaining({ reason: 'limit_reached' }),

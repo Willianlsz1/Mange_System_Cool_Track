@@ -98,7 +98,7 @@ export function buildLandingHtml() {
               </div>
 
               <p class="lp-impact">Antes: 15–20 min por relatório | Agora: menos de 1 minuto</p>
-              <p class="lp-microcopy">Sem cadastro complicado · Sem cartão · Funciona offline</p>
+              <p class="lp-microcopy">Cadastro em 30 segundos · Sem cartão · Funciona offline</p>
             </div>
 
             <div class="lp-hero__visual" aria-label="Mockup do CoolTrack Pro no celular">
@@ -272,7 +272,7 @@ export function buildLandingHtml() {
                 data-action="start-trial"
                 data-source="final"
               >
-                Começar teste agora
+                Testar no próximo serviço
                 ${ICON_ARROW}
               </button>
             </div>

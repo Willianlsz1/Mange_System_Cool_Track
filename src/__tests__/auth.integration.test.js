@@ -154,6 +154,27 @@ describe('Auth integration wrapper', () => {
     expect(supabaseMock.auth.signOut).toHaveBeenCalled();
   });
 
+  it('signOut limpa chaves ct:<uid>:* do userStorage (audit §1.1)', async () => {
+    const { setCurrentUser, userStorage } = await import('../core/userStorage.js');
+    setCurrentUser('u-1');
+    userStorage.set('last-tecnico', 'Ana');
+    userStorage.set('profile', '{"nome":"Ana"}');
+    expect(localStorage.getItem('ct:u-1:last-tecnico')).toBe('Ana');
+
+    const { Auth } = await loadAuthModule();
+    // loadAuthModule faz vi.resetModules(), então precisamos re-escopar o user
+    // no módulo já carregado pelo Auth import chain.
+    const fresh = await import('../core/userStorage.js');
+    fresh.setCurrentUser('u-1');
+    fresh.userStorage.set('last-tecnico', 'Ana');
+    fresh.userStorage.set('profile', '{"nome":"Ana"}');
+
+    await Auth.signOut();
+
+    expect(localStorage.getItem('ct:u-1:last-tecnico')).toBeNull();
+    expect(localStorage.getItem('ct:u-1:profile')).toBeNull();
+  });
+
   it('handles password reset request validation and API responses', async () => {
     const { Auth, supabaseMock } = await loadAuthModule();
 

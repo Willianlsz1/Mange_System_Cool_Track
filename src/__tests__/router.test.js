@@ -258,6 +258,40 @@ describe('router', () => {
     expect(pushSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('consome popstate para fechar dash-overflow-modal (audit §1.3)', async () => {
+    const { registerRoute, goTo, initHistory } = await loadRouterModule();
+    const onEnterInicio = vi.fn();
+    const onEnterRegistros = vi.fn();
+
+    // O overflow modal é criado dinamicamente via appendChild e só existe
+    // no DOM enquanto aberto — NÃO usa class `is-open`, só presença. Simulamos
+    // aqui o comportamento real do overflowBanner.js: dismiss button remove
+    // o overlay do DOM.
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      `<div id="dash-overflow-modal" role="dialog" class="overflow-modal-overlay">
+         <button data-action="dismiss">Continuar assim</button>
+       </div>`,
+    );
+    const overflow = document.getElementById('dash-overflow-modal');
+    overflow.querySelector('[data-action="dismiss"]').addEventListener('click', () => {
+      overflow.remove();
+    });
+
+    registerRoute('inicio', onEnterInicio);
+    registerRoute('registros', onEnterRegistros);
+
+    goTo('inicio');
+    initHistory();
+
+    window.dispatchEvent(new PopStateEvent('popstate', { state: { route: 'registros' } }));
+
+    // Overflow modal foi fechado (via click no dismiss) e o popstate NÃO
+    // propagou pra trocar de rota.
+    expect(document.getElementById('dash-overflow-modal')).toBeNull();
+    expect(onEnterRegistros).not.toHaveBeenCalled();
+  });
+
   it('sequência de back: fecha foto e no back seguinte navega sem loop', async () => {
     vi.useFakeTimers();
     const { registerRoute, goTo, initHistory } = await loadRouterModule();

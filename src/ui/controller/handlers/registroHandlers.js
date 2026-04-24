@@ -1,7 +1,6 @@
 import { on } from '../../../core/events.js';
 import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
-import { GuestTracker } from '../../../core/guestTracker.js';
 import { saveRegistro, clearRegistro, applyQuickTemplate } from '../../views/registro.js';
 import { deleteReg } from '../../views/historico.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
@@ -12,11 +11,6 @@ export function bindRegistroHandlers() {
       await runAsyncAction(el, { loadingLabel: 'Salvando...' }, async () => {
         const saved = await saveRegistro();
         if (!saved) return;
-        GuestTracker.increment();
-        if (GuestTracker.isGuest() && GuestTracker.shouldShowCta()) {
-          const { GuestCtaModal } = await import('../../components/onboarding/guestCtaModal.js');
-          setTimeout(() => GuestCtaModal.open(), 800);
-        }
       });
     } catch (error) {
       handleError(error, {

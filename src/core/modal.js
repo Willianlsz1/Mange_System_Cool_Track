@@ -34,6 +34,9 @@ export const Modal = {
     modalEl._returnFocusEl =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     modalEl.classList.add('is-open');
+    // Sinal explícito pra quem depende do modal stack (ex.: router sincronizar
+    // a pilha de history). MutationObserver continua como safety net.
+    document.dispatchEvent(new CustomEvent('modal:opened', { detail: { id } }));
     const modalContent = modalEl.querySelector('.modal');
     if (modalContent) modalContent.classList.remove('is-closing');
     requestAnimationFrame(() => {
@@ -65,10 +68,12 @@ export const Modal = {
         modalEl.classList.remove('is-open');
         modalContent.classList.remove('is-closing');
         restoreFocus();
+        document.dispatchEvent(new CustomEvent('modal:closed', { detail: { id } }));
       });
     } else {
       modalEl.classList.remove('is-open');
       restoreFocus();
+      document.dispatchEvent(new CustomEvent('modal:closed', { detail: { id } }));
     }
   },
 

@@ -1,5 +1,6 @@
 import { supabase } from './supabase.js';
 import { Toast } from './toast.js';
+import { userStorage } from './userStorage.js';
 import { AppError, ErrorCodes, handleError } from './errors.js';
 import { trackEvent } from './telemetry.js';
 
@@ -287,6 +288,11 @@ export const Auth = {
       // mostrava "Olá, <nome_antigo>" até o novo FTX sobrescrever. Varremos
       // todas as chaves com prefixo `cooltrack` exceto preferências de
       // dispositivo (tema), que fazem sentido persistir entre contas.
+      //
+      // Também limpamos as chaves `ct:<uid>:*` do userStorage wrapper —
+      // até a auditoria pós-estabilização esse passo não existia e os novos
+      // dados escopados vazavam entre signOuts (audit §1.1 / 2026-04-24).
+      userStorage.clearCurrent();
       clearUserScopedStorage();
 
       await supabase.auth.signOut();

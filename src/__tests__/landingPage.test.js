@@ -28,7 +28,7 @@ describe('LandingPage', () => {
       'Ver como funciona',
     );
     expect(hero.textContent).toContain('Antes: 15–20 min por relatório');
-    expect(hero.textContent).toContain('Sem cadastro complicado');
+    expect(hero.textContent).toContain('Cadastro em 30 segundos');
   });
 
   it('renders the phone mockup with service and WhatsApp/PDF state', () => {
@@ -71,7 +71,7 @@ describe('LandingPage', () => {
     const final = document.querySelector('.lp-final');
     expect(final.textContent).toContain('Use o CoolTrack na sua próxima manutenção');
     expect(final.querySelector('[data-action="start-trial"]')?.textContent).toContain(
-      'Começar teste agora',
+      'Testar no próximo serviço',
     );
   });
 

@@ -6,12 +6,12 @@ import { ErrorCodes, handleError } from '../../../core/errors.js';
 // quando o usuário clica "Gerar PDF".
 import { WhatsAppExport } from '../../../domain/whatsapp.js';
 import { Auth } from '../../../core/auth.js';
+import { goTo } from '../../../core/router.js';
 import { trackEvent } from '../../../core/telemetry.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
 import { ShareSuccessToast } from '../../components/shareSuccessToast.js';
 import { PdfSuccessToast } from '../../components/pdfSuccessToast.js';
 import { PdfQuotaBadge } from '../../components/pdfQuotaBadge.js';
-import { GuestConversionModal } from '../../components/guestConversionModal.js';
 import {
   getEffectivePlan,
   getPlanCodeForUserId,
@@ -40,19 +40,6 @@ export function buildReportFilters({
     filtEq: String(filtEq || equipId || ''),
     de: String(de || ''),
     ate: String(ate || ''),
-  };
-}
-
-function buildPdfPreview(filters) {
-  return {
-    title: 'Previa do relatorio',
-    items: [
-      { label: 'Equipamento', value: filters.filtEq || 'Todos os equipamentos' },
-      { label: 'Periodo', value: `${filters.de || 'Inicio'} ate ${filters.ate || 'Hoje'}` },
-      { label: 'Servico #1', value: '................' },
-      { label: 'Servico #2', value: '................' },
-      { label: 'Assinatura', value: '................' },
-    ],
   };
 }
 
@@ -96,29 +83,20 @@ function buildPdfLimitMessage(planCode, pdfLimit) {
  * Retorna `{ ok: false }` quando bloqueia (guest ou limite) e o caller sai.
  * Retorna `{ ok: true, user, planCode, pdfUsed, pdfLimit, commit }` no happy path.
  */
-async function ensureReportBudget({
-  attemptedEvent,
-  blockedEvent,
-  guestSource,
-  guestPreview,
-  limitSource,
-}) {
+async function ensureReportBudget({ attemptedEvent, blockedEvent }) {
   const user = await Auth.getUser();
-  const isGuest = !user;
-  if (isGuest) {
-    trackEvent(attemptedEvent, { isGuest: true, plan: 'guest' });
-    trackEvent(blockedEvent, { reason: 'guest' });
-    GuestConversionModal.open({
-      reason: 'save_attempt',
-      source: guestSource,
-      ...(guestPreview ? { preview: guestPreview } : {}),
-    });
+  if (!user) {
+    // Defensivo: sem usuário autenticado, sem export. Na prática o bootstrap
+    // já redireciona pra landing quando não há sessão, mas se por algum motivo
+    // chegar aqui sem user, mostramos um aviso em vez de quebrar.
+    trackEvent(blockedEvent, { reason: 'not_authenticated' });
+    Toast.warning('Faça login para gerar o relatório.');
     return { ok: false };
   }
 
   const { profile } = await fetchMyProfileBilling();
   const planCode = getEffectivePlan(profile);
-  trackEvent(attemptedEvent, { isGuest: false, plan: planCode });
+  trackEvent(attemptedEvent, { plan: planCode });
 
   // ── Quota mensal: Free=ilimitado (com marca d'água), Plus=120, Pro=ilimitado ─
   const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
@@ -133,12 +111,8 @@ async function ensureReportBudget({
     })
   ) {
     trackEvent(blockedEvent, { reason: 'limit_reached', plan: planCode });
-    GuestConversionModal.open({
-      reason: 'limit_pdf',
-      source: limitSource,
-      title: 'Limite mensal atingido',
-      message: buildPdfLimitMessage(planCode, pdfLimit),
-    });
+    Toast.warning(buildPdfLimitMessage(planCode, pdfLimit));
+    goTo('pricing');
     return { ok: false };
   }
 
@@ -178,9 +152,6 @@ async function executePdfExport(filters) {
   const budget = await ensureReportBudget({
     attemptedEvent: 'pdf_export_attempted',
     blockedEvent: 'pdf_export_blocked',
-    guestSource: 'pdf_export_attempt',
-    guestPreview: buildPdfPreview(filters),
-    limitSource: 'pdf_export_limit',
   });
   if (!budget.ok) return false;
 
@@ -239,15 +210,12 @@ function bindWhatsAppExport() {
 
 async function executeWhatsAppShare(filters) {
   const user = await Auth.getUser();
-  const isGuest = !user;
-  trackEvent('whatsapp_share_attempted', { isGuest });
+  trackEvent('whatsapp_share_attempted', {});
 
-  if (isGuest) {
-    trackEvent('whatsapp_share_blocked', { reason: 'guest' });
-    GuestConversionModal.open({
-      reason: 'save_attempt',
-      source: 'whatsapp_share_attempt',
-    });
+  if (!user) {
+    // Defensivo: bootstrap já redireciona não-autenticados pra landing.
+    trackEvent('whatsapp_share_blocked', { reason: 'not_authenticated' });
+    Toast.warning('Faça login para compartilhar o relatório.');
     return false;
   }
 
@@ -267,12 +235,8 @@ async function executeWhatsAppShare(filters) {
       planCode === 'plus'
         ? `Voce atingiu ${whatsappLimit} compartilhamentos este mes no Plus. O Pro tem envios ilimitados.`
         : `Voce atingiu ${whatsappLimit} compartilhamentos este mes. Faca upgrade para Plus ou Pro.`;
-    GuestConversionModal.open({
-      reason: 'limit_whatsapp',
-      source: 'whatsapp_share_limit',
-      title: 'Limite mensal atingido',
-      message: upgradeMessage,
-    });
+    Toast.warning(upgradeMessage);
+    goTo('pricing');
     return false;
   }
 
