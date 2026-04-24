@@ -129,4 +129,3 @@ describe('AuthScreen V2Refined redesign', () => {
     });
   });
 });
-});
