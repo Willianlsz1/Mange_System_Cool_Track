@@ -3,6 +3,7 @@
 // e o gateway Supabase só valida HS256. A verificação é feita internamente via
 // admin API com service role key — igual ou mais seguro que a validação do gateway.
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { verifyUserToken } from '../_shared/auth.ts';
 import Stripe from 'https://esm.sh/stripe@14?target=denonext';
 
 function jsonResponse(req: Request, payload: unknown, status = 200) {
@@ -16,18 +17,6 @@ function getRequiredEnv(name: string) {
   const value = Deno.env.get(name);
   if (!value || !value.trim()) throw new Error(`MISSING_ENV_${name}`);
   return value.trim();
-}
-
-/** Decodifica o payload de um JWT sem verificar a assinatura. */
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(base64));
-  } catch {
-    return null;
-  }
 }
 
 Deno.serve(async (req) => {
@@ -48,48 +37,16 @@ Deno.serve(async (req) => {
 
     const stripe = new Stripe(stripeSecretKey);
 
-    // ── 1. Extrai o token do header ──────────────────────────────────────────
-    const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization') ?? '';
-    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-
-    if (!token) {
-      return jsonResponse(
-        req,
-        { code: 'AUTH_REQUIRED', message: 'Sem token de autenticação.' },
-        401,
-      );
+    // ── 1. Valida autenticação REAL via Auth server ──────────────────────────
+    // verifyUserToken cria um client Supabase com o access_token do user e
+    // chama .auth.getUser(), que valida a assinatura ES256. Tokens forjados
+    // são rejeitados pelo Auth server antes do código rodar.
+    const auth = await verifyUserToken(req, supabaseUrl, supabaseAnonKey);
+    if (!auth.ok) {
+      return jsonResponse(req, { code: auth.code, message: auth.message }, auth.status);
     }
-
-    // ── 2. Decodifica o payload para obter o userId ──────────────────────────
-    const jwtPayload = decodeJwtPayload(token);
-    const userId = (jwtPayload?.sub ?? '') as string;
-
-    if (!userId) {
-      return jsonResponse(
-        req,
-        { code: 'INVALID_JWT', message: 'Token sem identificador de usuário.' },
-        401,
-      );
-    }
-
-    // ── 3. Verifica que o userId é real via admin API (service role) ─────────
-    const adminUserRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
-      headers: {
-        apikey: serviceRoleKey,
-        Authorization: `Bearer ${serviceRoleKey}`,
-      },
-    });
-
-    if (!adminUserRes.ok) {
-      console.error('[create-portal-session] admin user lookup falhou', {
-        status: adminUserRes.status,
-        userId,
-      });
-      return jsonResponse(req, { code: 'INVALID_JWT', message: 'Usuário não encontrado.' }, 401);
-    }
-
-    const authUser = await adminUserRes.json();
-    const userEmail = (authUser.email ?? jwtPayload?.email ?? '') as string;
+    const userId = auth.user.id;
+    const userEmail = (auth.user.email ?? '') as string;
 
     console.log('[create-portal-session] usuário verificado', { userId });
 

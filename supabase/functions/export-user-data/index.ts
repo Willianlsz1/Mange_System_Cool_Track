@@ -1,7 +1,8 @@
 // @ts-nocheck
 // Deployed with --no-verify-jwt porque este projeto usa ES256 para assinar JWTs
 // e o gateway Supabase só valida HS256. A verificação é feita internamente via
-// admin API com service role key — igual ou mais seguro que a validação do gateway.
+// `verifyUserToken` — que cria um client Supabase com o access_token do user
+// e chama .auth.getUser(), validando a assinatura via Auth server real.
 //
 // Endpoint: POST /functions/v1/export-user-data
 // Auth:     Authorization: Bearer <user access_token>
@@ -12,6 +13,7 @@
 // expõe feedback/analytics anonimizados (user_id = null) porque esses já não
 // são mais do usuário.
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { verifyUserToken } from '../_shared/auth.ts';
 
 function jsonResponse(
   req: Request,
@@ -35,18 +37,6 @@ function getRequiredEnv(name: string) {
   return value.trim();
 }
 
-/** Decodifica o payload de um JWT sem verificar a assinatura. */
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const parts = token.split('.');
-    if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(base64));
-  } catch {
-    return null;
-  }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: getCorsHeaders(req) });
@@ -61,51 +51,22 @@ Deno.serve(async (req) => {
     const supabaseAnonKey = getRequiredEnv('SUPABASE_ANON_KEY');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? supabaseAnonKey;
 
-    // ── 1. Extrai e decodifica token ─────────────────────────────────────────
-    const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization') ?? '';
-    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-
-    if (!token) {
-      return jsonResponse(
-        req,
-        { code: 'AUTH_REQUIRED', message: 'Sem token de autenticação.' },
-        401,
-      );
+    // ── 1. Valida autenticação REAL via Auth server ──────────────────────────
+    const auth = await verifyUserToken(req, supabaseUrl, supabaseAnonKey);
+    if (!auth.ok) {
+      return jsonResponse(req, { code: auth.code, message: auth.message }, auth.status);
     }
+    const userId = auth.user.id;
 
-    const jwtPayload = decodeJwtPayload(token);
-    const userId = (jwtPayload?.sub ?? '') as string;
-
-    if (!userId) {
-      return jsonResponse(
-        req,
-        { code: 'INVALID_JWT', message: 'Token sem identificador de usuário.' },
-        401,
-      );
-    }
-
-    // ── 2. Valida via admin API (prova que user existe) ──────────────────────
-    const adminUserRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
-      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
-    });
-
-    if (!adminUserRes.ok) {
-      console.error('[export-user-data] admin user lookup falhou', {
-        status: adminUserRes.status,
-        userId,
-      });
-      return jsonResponse(req, { code: 'INVALID_JWT', message: 'Usuário não encontrado.' }, 401);
-    }
-
-    const authUser = await adminUserRes.json();
-
-    // ── 3. Cliente admin (service_role) pra queries ──────────────────────────
+    // ── 2. Cliente admin (service_role) pra queries amplas ───────────────────
+    // service_role bypass RLS — necessário pra ler tabelas que o user normal
+    // não alcançaria via policies (ex.: feedback/analytics anonimizados).
     const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false },
     });
 
-    // ── 4. Queries em paralelo ───────────────────────────────────────────────
+    // ── 3. Queries em paralelo ───────────────────────────────────────────────
     const [
       { data: profile },
       { data: equipamentos },
@@ -149,9 +110,9 @@ Deno.serve(async (req) => {
         },
       },
       account: {
-        email: authUser?.email ?? null,
-        createdAt: authUser?.created_at ?? null,
-        lastSignInAt: authUser?.last_sign_in_at ?? null,
+        email: auth.user.email ?? null,
+        createdAt: auth.user.created_at ?? null,
+        lastSignInAt: auth.user.last_sign_in_at ?? null,
       },
       profiles: profile ? [profile] : [],
       equipamentos: equipamentos ?? [],

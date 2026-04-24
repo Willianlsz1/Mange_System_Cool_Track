@@ -32,6 +32,7 @@
  */
 
 import { getCorsHeaders } from '../_shared/cors.ts';
+import { verifyUserToken } from '../_shared/auth.ts';
 
 const CLAUDE_MODEL = 'claude-sonnet-4-6';
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
@@ -467,44 +468,26 @@ Deno.serve(async (req: Request) => {
     return errorResponse(req, 'MISSING_API_KEY', 'Server misconfigured', 500);
   }
 
-  // ── Auth: valida JWT via admin API ─────────────────────────────────────
+  // ── Auth: valida token via Supabase Auth server ─────────────────────────
   // Gateway está com --no-verify-jwt (necessário — projeto usa ES256, gateway
-  // só valida HS256), então a validação real acontece aqui.
+  // só valida HS256), então a validação real acontece aqui via
+  // verifyUserToken, que cria um client com o token do user e chama
+  // .auth.getUser(). O Auth server valida a assinatura ES256 e rejeita
+  // tokens forjados. Decodificar JWT manualmente + checar UUID no admin API
+  // NÃO autentica — é uma vulnerabilidade.
   const supabaseUrl = Deno.env.get('SUPABASE_URL')?.trim();
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')?.trim();
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')?.trim();
-  if (!supabaseUrl || !serviceRoleKey) {
-    console.error('[analyze-nameplate] SUPABASE_URL/SERVICE_ROLE_KEY not set');
+  if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+    console.error('[analyze-nameplate] SUPABASE_URL/ANON_KEY/SERVICE_ROLE_KEY not set');
     return errorResponse(req, 'SERVER_MISCONFIGURED', 'Server misconfigured', 500);
   }
 
-  const authHeader = req.headers.get('Authorization') ?? req.headers.get('authorization') ?? '';
-  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!token) {
-    return errorResponse(req, 'AUTH_REQUIRED', 'Login obrigatório pra analisar placa', 401);
+  const auth = await verifyUserToken(req, supabaseUrl, anonKey);
+  if (!auth.ok) {
+    return errorResponse(req, auth.code, auth.message, auth.status);
   }
-
-  const jwtPayload = decodeJwtPayload(token);
-  const userId = (jwtPayload?.sub ?? '') as string;
-  if (!userId) {
-    return errorResponse(req, 'INVALID_JWT', 'Token sem identificador de usuário', 401);
-  }
-
-  // Verifica que o userId é real. Isto "custa" um request HTTP mas impede
-  // que alguém forje um JWT com um sub arbitrário (o gateway normalmente
-  // faria isso, mas como ele tá com --no-verify-jwt, cabe a nós).
-  let userRes: Response;
-  try {
-    userRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}`, {
-      headers: { apikey: serviceRoleKey, Authorization: `Bearer ${serviceRoleKey}` },
-    });
-  } catch (err) {
-    console.error('[analyze-nameplate] admin user lookup failed', err);
-    return errorResponse(req, 'AUTH_UNAVAILABLE', 'Não foi possível validar sessão', 503);
-  }
-  if (!userRes.ok) {
-    console.warn('[analyze-nameplate] invalid userId', { userId, status: userRes.status });
-    return errorResponse(req, 'INVALID_JWT', 'Sessão inválida', 401);
-  }
+  const userId = auth.user.id;
 
   // ── Plan gate: Plus+ obrigatório ───────────────────────────────────────
   // Carrega plan_code do profile. Fallback pra 'free' se não achar (ou se a

@@ -39,19 +39,27 @@ function normalizeRequestedPlan(raw: unknown): string {
 }
 
 /**
- * Resolve o Price ID para o plano pedido, com fallback graceful:
- *   plus_annual → plus → pro_annual → pro
- *   pro_annual  → pro
- * Assim, se o Stripe ainda não tem o price anual ou o tier Plus cadastrado,
- * o checkout cai num preço válido em vez de explodir.
+ * Resolve o Price ID para o plano pedido.
+ *
+ * Fallback apenas DENTRO do mesmo tier (anual→mensal quando anual não
+ * existe). Fallback cross-tier foi removido — o risco é crítico: user
+ * pede Plus, env `STRIPE_PRICE_PLUS` está ausente por acidente (rotação
+ * de secret, typo em deploy), e o sistema silenciosamente cobra Pro em
+ * vez de travar. Isso é cobrança sem consentimento do usuário.
+ *
+ * Regra:
+ *   plus_annual → plus (se não existir, erro)
+ *   plus        → erro se não existir (NÃO cai para pro)
+ *   pro_annual  → pro  (se não existir, erro)
+ *   pro         → erro se não existir
  */
 function resolvePriceId(plan: string): { priceId: string; resolvedPlan: string } {
   const fallbackChain: string[] = (() => {
     switch (plan) {
       case 'plus_annual':
-        return ['plus_annual', 'plus', 'pro_annual', 'pro'];
+        return ['plus_annual', 'plus'];
       case 'plus':
-        return ['plus', 'pro'];
+        return ['plus'];
       case 'pro_annual':
         return ['pro_annual', 'pro'];
       case 'pro':
@@ -68,8 +76,10 @@ function resolvePriceId(plan: string): { priceId: string; resolvedPlan: string }
     }
   }
 
-  // Se nem o Pro tem price configurado, estoura com a mensagem padrão de env ausente.
-  throw new Error(`MISSING_ENV_${PLAN_TO_ENV.pro}`);
+  // Nenhum price dentro do tier configurado — falha fechado. Evita cobrar
+  // user em tier diferente do que foi pedido.
+  const primaryEnv = PLAN_TO_ENV[fallbackChain[0]] ?? PLAN_TO_ENV.pro;
+  throw new Error(`MISSING_ENV_${primaryEnv}`);
 }
 
 Deno.serve(async (req) => {

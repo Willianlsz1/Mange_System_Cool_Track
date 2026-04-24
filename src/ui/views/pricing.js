@@ -166,7 +166,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
           ? `<div class="pricing-billing-toggle pricing-billing-toggle--global" role="group" aria-label="Ciclo de cobrança">
               <button class="pricing-billing-toggle__btn pricing-billing-toggle__btn--active" data-billing="monthly" type="button">Mensal</button>
               <button class="pricing-billing-toggle__btn" data-billing="annual" type="button">
-                Anual <span class="pricing-billing-toggle__save">-28%</span>
+                Anual <span class="pricing-billing-toggle__save">-17%</span>
               </button>
             </div>`
           : ''
