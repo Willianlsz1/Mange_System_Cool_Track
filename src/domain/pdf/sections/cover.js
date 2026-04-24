@@ -3,6 +3,7 @@ import { Utils } from '../../../core/utils.js';
 import { PDF_COLORS as C, PDF_TYPO as T, STATUS_CLIENTE } from '../constants.js';
 import { formatStatusConclusion, sanitizePublicText } from '../sanitizers.js';
 import { accentLine, fillPage, fillRect, roundRect, txt } from '../primitives.js';
+import { formatDadosPlacaRows } from '../../dadosPlacaDisplay.js';
 
 // -------------------------------- helpers --------------------------------
 
@@ -357,6 +358,116 @@ function drawEquipamentosTable(doc, pageWidth, margin, startY, filtered, equipam
 
 // --------------------------- pendências ---------------------------
 
+function drawFichaTecnica(doc, pageWidth, pageHeight, margin, startY, filtered, equipamentos) {
+  // Reúne equipamentos distintos do filtro que tenham ao menos uma linha de
+  // ficha técnica. Sem categorização/insights — só:
+  //   "Dados da etiqueta"         (campos fixos de FIELD_ORDER)
+  //   "Outras informações da etiqueta" (camposExtras flat, com cap)
+  const PDF_EXTRAS_CAP = 10; // cap global de extras por equipamento no PDF
+  const unique = listEquipamentosUnicos(filtered, equipamentos);
+
+  const blocks = unique
+    .map(({ eq }) => {
+      const allRows = formatDadosPlacaRows(eq.dadosPlaca);
+      return {
+        eq,
+        fixedRows: allRows.filter((r) => !r.extra),
+        extraRows: allRows.filter((r) => r.extra),
+      };
+    })
+    .filter((b) => b.fixedRows.length > 0 || b.extraRows.length > 0);
+
+  if (!blocks.length) return startY;
+
+  // Cabeçalho da seção
+  let y = startY + 6;
+  if (y + 20 > pageHeight - margin) {
+    doc.addPage();
+    y = margin;
+  }
+  txt(doc, 'FICHA TÉCNICA DO EQUIPAMENTO', margin, y, {
+    size: T.h2.size,
+    style: T.h2.style,
+    color: C.text3,
+  });
+  y += 2;
+  accentLine(doc, margin, y + 1, pageWidth - margin, C.border);
+  y += 5;
+
+  const renderTable = (rows) => {
+    autoTable(doc, {
+      startY: y,
+      body: rows.map((r) => [r.label, r.value]),
+      theme: 'plain',
+      margin: { left: margin, right: margin },
+      styles: { font: 'helvetica', fontSize: 8, cellPadding: 1.2 },
+      columnStyles: {
+        0: { cellWidth: 55, textColor: C.text3 },
+        1: { cellWidth: 'auto', textColor: C.text1 },
+      },
+    });
+    y = (doc.lastAutoTable?.finalY ?? y) + 2;
+  };
+
+  const ensureSpace = (needed) => {
+    if (y + needed > pageHeight - margin) {
+      doc.addPage();
+      y = margin;
+    }
+  };
+
+  for (const { eq, fixedRows, extraRows } of blocks) {
+    ensureSpace(14);
+
+    txt(doc, String(eq.nome || eq.tag || '—'), margin, y, {
+      size: T.h3?.size ?? 9,
+      style: T.h3?.style ?? 'bold',
+      color: C.text2,
+    });
+    y += 4;
+
+    if (fixedRows.length) {
+      txt(doc, 'Dados da etiqueta', margin, y, {
+        size: 8,
+        style: 'bold',
+        color: C.text3,
+      });
+      y += 3;
+      ensureSpace(fixedRows.length * 5);
+      renderTable(fixedRows);
+    }
+
+    if (extraRows.length) {
+      const display = extraRows.slice(0, PDF_EXTRAS_CAP);
+      const truncated = extraRows.length - display.length;
+
+      ensureSpace(8 + display.length * 5 + (truncated ? 4 : 0));
+
+      txt(doc, 'Outras informações da etiqueta', margin, y, {
+        size: 8,
+        style: 'bold',
+        color: C.text3,
+      });
+      y += 3;
+
+      renderTable(display);
+
+      if (truncated > 0) {
+        txt(doc, `(+${truncated} campos omitidos)`, margin, y, {
+          size: 7,
+          style: 'italic',
+          color: C.text3,
+        });
+        y += 4;
+      }
+    }
+
+    y += 3; // respiro entre blocos de equipamentos
+  }
+
+  return y;
+}
+
 function drawPendencias(doc, pageWidth, pageHeight, margin, startY, filtered, equipamentos) {
   const pendentes = listPendencias(filtered);
   if (!pendentes.length) return; // Sem fallback "nada pendente" — redundante com o resumo
@@ -429,5 +540,6 @@ export function drawCover(
   y = drawResumoExecutivo(doc, pageWidth, margin, y, filtered, equipamentos);
   y = drawEquipamentosTable(doc, pageWidth, margin, y, filtered, equipamentos);
   y = drawConclusao(doc, pageWidth, margin, y, filtered);
+  y = drawFichaTecnica(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
   drawPendencias(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
 }

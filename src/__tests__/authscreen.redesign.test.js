@@ -55,7 +55,7 @@ describe('AuthScreen V2Refined redesign', () => {
     const headline = document.querySelector('.auth-brand__headline');
     expect(headline).toBeTruthy();
     expect(headline.querySelector('em')).toBeNull();
-    expect(headline.textContent).toContain('Controle total');
+    expect(headline.textContent).toContain('Do serviço ao PDF');
   });
 
   it('signup panel renders strength meter and updated hint', async () => {
@@ -128,4 +128,5 @@ describe('AuthScreen V2Refined redesign', () => {
       expect(/[\u{1F300}-\u{1FAFF}]/u.test(el.textContent)).toBe(false);
     });
   });
+});
 });

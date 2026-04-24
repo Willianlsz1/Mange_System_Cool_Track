@@ -108,6 +108,147 @@ export function composeMarcaModelo(marca, modelo) {
   return m || md || null;
 }
 
+// ── Extras dinâmicos ──────────────────────────────────────────────────────
+// Conjunto de chaves que JÁ têm casa no form. Qualquer chave da resposta da
+// IA que NÃO esteja aqui vira "campo extra" — preservada em `camposExtras`
+// em vez de descartada. Isso permite que técnicos cadastrem etiquetas de
+// chillers, câmaras frias, water coolers etc. sem perder dados que não são
+// de ar-condicionado split.
+const KNOWN_API_KEYS = new Set([
+  'identified',
+  'confidence',
+  'tipo_equipamento',
+  'refrigerante',
+  'marca',
+  'modelo',
+  'numero_serie',
+  'capacidade_btu',
+  'capacidade_tr',
+  'tensao',
+  'potencia_w',
+  'corrente_a',
+  'corrente_aquec_a',
+  'fases',
+  'frequencia_hz',
+  'pressao_succao_mpa',
+  'pressao_descarga_mpa',
+  'grau_protecao',
+  'ano_fabricacao',
+  'notas',
+  // Metadata que a função pode incluir no nível top (não é campo de etiqueta).
+  'trial',
+  'usage',
+  'campos_extras',
+]);
+
+// Dicionário de prettify em pt-BR pra chaves comuns que aparecem em etiquetas
+// mas não têm slot dedicado no form. O fallback usa humanizeSnakeCase pra
+// qualquer outra chave desconhecida.
+const EXTRA_KEY_PT_LABELS = {
+  mca: 'Corrente mínima do circuito (MCA)',
+  mocp: 'Proteção máxima do circuito (MOCP)',
+  compressor_model: 'Modelo do compressor',
+  compressor_serial: 'Nº série do compressor',
+  compressor_brand: 'Marca do compressor',
+  peso_kg: 'Peso (kg)',
+  peso: 'Peso',
+  seer: 'SEER',
+  eer: 'EER',
+  cop: 'COP',
+  iplv: 'IPLV',
+  ieer: 'IEER',
+  pressao_max: 'Pressão máxima',
+  pressao_min: 'Pressão mínima',
+  pressure: 'Pressão',
+  refrigerant: 'Fluido refrigerante',
+  tr: 'Capacidade (TR)',
+  vazao_ar_m3h: 'Vazão de ar (m³/h)',
+  vazao_ar: 'Vazão de ar',
+  nivel_ruido_db: 'Nível de ruído (dB)',
+  classe_energetica: 'Classe energética',
+  norma: 'Norma',
+  certificacao: 'Certificação',
+  pais_origem: 'País de origem',
+  codigo_fabricante: 'Código do fabricante',
+  numero_lote: 'Nº de lote',
+};
+
+/**
+ * Humaniza uma chave snake_case/camelCase em Portuguese Title-ish Case.
+ *   'pressao_maxima' → 'Pressao maxima'
+ *   'compressorModel' → 'Compressor model'
+ *
+ * Não tenta traduzir; só normaliza separadores e capitaliza a primeira letra.
+ * O dicionário `EXTRA_KEY_PT_LABELS` cuida de traduções quando conhecidas.
+ */
+export function humanizeExtraKey(key) {
+  if (key == null) return '';
+  const str = String(key).trim();
+  if (!str) return '';
+  const lower = str.toLowerCase();
+  if (EXTRA_KEY_PT_LABELS[lower]) return EXTRA_KEY_PT_LABELS[lower];
+  const spaced = str
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+}
+
+/**
+ * Constrói a lista de camposExtras a partir do payload cru da API.
+ * Uma entrada `{key, value}` é criada por chave que:
+ *   (a) não está em `KNOWN_API_KEYS`
+ *   (b) tem valor não-nulo/não-vazio
+ * E também a partir do bloco opcional `apiFields.campos_extras` (caso o server
+ * comece a mandar extras explícitos no futuro).
+ *
+ * Sempre retorna array (possivelmente vazio) pra facilitar o merge downstream.
+ */
+export function buildCamposExtras(apiFields) {
+  if (!apiFields || typeof apiFields !== 'object') return [];
+  const out = [];
+  const seen = new Set();
+
+  // (1) Chaves top-level que não são conhecidas — heurística principal.
+  for (const [key, value] of Object.entries(apiFields)) {
+    if (KNOWN_API_KEYS.has(key)) continue;
+    if (value == null || value === '') continue;
+    if (typeof value === 'object') continue; // só escalares
+    const keyStr = String(key);
+    if (seen.has(keyStr)) continue;
+    seen.add(keyStr);
+    out.push({ key: keyStr, label: humanizeExtraKey(keyStr), value: String(value) });
+  }
+
+  // (2) Bloco explícito `campos_extras` (opcional, futura expansão do server).
+  const explicit = apiFields.campos_extras;
+  if (Array.isArray(explicit)) {
+    for (const entry of explicit) {
+      if (!entry || typeof entry !== 'object') continue;
+      const k = entry.key ?? entry.chave ?? entry.name ?? null;
+      const v = entry.value ?? entry.valor ?? null;
+      if (k == null || v == null || v === '') continue;
+      const keyStr = String(k);
+      if (seen.has(keyStr)) continue;
+      seen.add(keyStr);
+      out.push({
+        key: keyStr,
+        label: entry.label || entry.rotulo || humanizeExtraKey(keyStr),
+        value: String(v),
+      });
+    }
+  } else if (explicit && typeof explicit === 'object') {
+    for (const [k, v] of Object.entries(explicit)) {
+      if (v == null || v === '') continue;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push({ key: k, label: humanizeExtraKey(k), value: String(v) });
+    }
+  }
+
+  return out;
+}
+
 /**
  * Transforma a resposta crua da função na struct que o wire-up do modal usa
  * pra setar os inputs. Campos omitidos viram null — o caller é responsável
@@ -139,6 +280,7 @@ export function mapApiFieldsToFormShape(apiFields) {
     grauProtecao: apiFields.grau_protecao ?? null,
     anoFabricacao: apiFields.ano_fabricacao ?? null,
     notas: apiFields.notas ?? null,
+    camposExtras: buildCamposExtras(apiFields),
   };
 }
 

@@ -33,6 +33,7 @@ import { goTo } from '../../core/router.js';
 import { Modal } from '../../core/modal.js';
 import { trackEvent } from '../../core/telemetry.js';
 import { Toast } from '../../core/toast.js';
+import { setNameplateMetadata } from '../views/equipamentos/placaData.js';
 import {
   analyzeNameplate,
   NameplateAnalysisError,
@@ -306,6 +307,7 @@ function bindOnce() {
       const filledCount = countFilled(fields);
       const detectedPercent = Math.round((filledCount / AI_FIELD_TOTAL) * 100);
 
+      setNameplateMetadata({ source: 'ai', notas: fields?.notas || null });
       applyFieldsToForm(fields);
       flashEtiquetaStatus(filledCount);
       showAiBanner(filledCount);
@@ -533,8 +535,156 @@ function applyFieldsToForm(fields) {
   setInput(ID_GRAU_PROTECAO, fields.grauProtecao ?? null);
   setInput(ID_ANO_FABRICACAO, fields.anoFabricacao);
 
+  // Campos extras (chaves da etiqueta que não têm slot fixo no form) —
+  // renderizadas como lista editável "Outras informações encontradas"
+  // dentro do próprio modal. Trabalham com um array em memória; no save,
+  // são serializadas em `dados_placa.camposExtras`.
+  renderCamposExtrasReview(fields.camposExtras);
+
   // Scroll suave até a subseção "Dados da etiqueta" pro user ver o resultado
   requestAnimationFrame(() => scrollToDetails());
+}
+
+// ── Campos extras (review UI) ──────────────────────────────────────────────
+// Array em escopo de módulo; cada openEditEquip/save reseta via
+// `resetCamposExtrasState()`. Cada item: { key, label, value }.
+const CAMPOS_EXTRAS_CONTAINER_ID = 'eq-campos-extras';
+const CAMPOS_EXTRAS_LIST_ID = 'eq-campos-extras-list';
+let _camposExtras = [];
+
+export function getCamposExtrasSnapshot() {
+  return _camposExtras.map((e) => ({ ...e }));
+}
+
+export function setCamposExtrasState(extras) {
+  _camposExtras = Array.isArray(extras)
+    ? extras
+        .filter((e) => e && typeof e === 'object')
+        .map((e) => ({
+          key: String(e.key ?? ''),
+          label: String(e.label ?? e.key ?? ''),
+          value: String(e.value ?? ''),
+        }))
+        .filter((e) => e.key && e.value)
+    : [];
+  renderCamposExtrasReview(_camposExtras);
+}
+
+export function resetCamposExtrasState() {
+  _camposExtras = [];
+  renderCamposExtrasReview([]);
+}
+
+function ensureCamposExtrasContainer() {
+  let container = document.getElementById(CAMPOS_EXTRAS_CONTAINER_ID);
+  if (container) return container;
+  const step2 = document.getElementById(ID_STEP_2);
+  if (!step2) return null;
+  container = document.createElement('div');
+  container.id = CAMPOS_EXTRAS_CONTAINER_ID;
+  container.className = 'eq-campos-extras';
+  container.setAttribute('aria-label', 'Outras informações encontradas');
+  container.innerHTML = `
+    <div class="eq-campos-extras__head">
+      <span class="eq-campos-extras__title">Outras informações encontradas</span>
+      <button type="button" class="btn btn--ghost btn--sm"
+              data-action="campos-extras-add"
+              aria-label="Adicionar campo manualmente">+ Campo</button>
+    </div>
+    <ul id="${CAMPOS_EXTRAS_LIST_ID}" class="eq-campos-extras__list" role="list"></ul>
+  `;
+  step2.appendChild(container);
+  bindCamposExtrasHandlers(container);
+  return container;
+}
+
+function bindCamposExtrasHandlers(container) {
+  if (container.dataset.bound === '1') return;
+  container.dataset.bound = '1';
+
+  container.addEventListener('click', (e) => {
+    const addBtn = e.target.closest('[data-action="campos-extras-add"]');
+    if (addBtn) {
+      _camposExtras.push({ key: '', label: '', value: '' });
+      renderCamposExtrasReview(_camposExtras);
+      return;
+    }
+    const removeBtn = e.target.closest('[data-action="campos-extras-remove"]');
+    if (removeBtn) {
+      const idx = Number(removeBtn.dataset.index);
+      if (Number.isFinite(idx)) {
+        _camposExtras.splice(idx, 1);
+        renderCamposExtrasReview(_camposExtras);
+      }
+    }
+  });
+
+  container.addEventListener('input', (e) => {
+    const target = e.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const idx = Number(target.dataset.index);
+    const field = target.dataset.field;
+    if (!Number.isFinite(idx) || !field || !_camposExtras[idx]) return;
+    if (field === 'label' || field === 'value') {
+      _camposExtras[idx][field] = target.value;
+      if (field === 'label') {
+        // Mantém key sincronizada com label quando o user digita manualmente.
+        _camposExtras[idx].key = _camposExtras[idx].key || slugifyExtraKey(target.value);
+      }
+    }
+  });
+}
+
+function slugifyExtraKey(label) {
+  return (
+    String(label || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .slice(0, 40) || 'campo'
+  );
+}
+
+function renderCamposExtrasReview(extras) {
+  const list = Array.isArray(extras) ? extras : [];
+  _camposExtras = list;
+
+  const container = ensureCamposExtrasContainer();
+  if (!container) return;
+
+  // Hide quando vazio — mas mantém o container no DOM pra o "+ Campo" ficar
+  // sempre acessível? Decisão UX: mostrar o cabeçalho + botão mesmo vazio,
+  // assim o técnico sabe que pode adicionar algo manualmente. A lista some.
+  const ul = container.querySelector(`#${CAMPOS_EXTRAS_LIST_ID}`);
+  if (!ul) return;
+  if (!list.length) {
+    ul.innerHTML = '';
+    return;
+  }
+
+  ul.innerHTML = list
+    .map((item, idx) => {
+      const safeLabel = Utils.escapeAttr(item.label || '');
+      const safeValue = Utils.escapeAttr(item.value || '');
+      return `
+        <li class="eq-campos-extras__item" role="listitem">
+          <input type="text" class="form-control form-control--sm eq-campos-extras__key"
+                 data-index="${idx}" data-field="label"
+                 value="${safeLabel}" placeholder="Rótulo (ex.: Pressão máxima)"
+                 aria-label="Rótulo do campo ${idx + 1}" />
+          <input type="text" class="form-control form-control--sm eq-campos-extras__value"
+                 data-index="${idx}" data-field="value"
+                 value="${safeValue}" placeholder="Valor"
+                 aria-label="Valor do campo ${idx + 1}" />
+          <button type="button" class="btn btn--ghost btn--sm eq-campos-extras__remove"
+                  data-action="campos-extras-remove" data-index="${idx}"
+                  aria-label="Remover campo ${idx + 1}">×</button>
+        </li>`;
+    })
+    .join('');
 }
 
 /** Seta value num select se houver uma option matching. Se não, marca not-detected. */

@@ -1,5 +1,26 @@
 import { Utils } from '../../../core/utils.js';
 import { parseDadosPlacaFloat } from '../../../domain/dadosPlacaValidation.js';
+import { getCamposExtrasSnapshot } from '../../components/nameplateCapture.js';
+
+// Metadata do payload `dados_placa` — fontes além do form fixo.
+// - `_camposExtrasManual` é preenchido pelo review UI de extras (nameplate
+//   capture), quando a IA acha chaves sem slot dedicado OU o user adiciona
+//   campos manuais. Salvos em `dados_placa.camposExtras`.
+// - `_notas` vem do pass de IA (analyze-nameplate). Salvos em `dados_placa.notas`.
+// - `_source` marca origem: 'ai' se a captura passou por applyFieldsToForm,
+//   'manual' caso contrário. Salvos em `dados_placa._source`.
+let _notas = null;
+let _source = 'manual';
+
+export function setNameplateMetadata({ notas = null, source = null } = {}) {
+  if (notas != null) _notas = String(notas);
+  if (source === 'ai' || source === 'manual') _source = source;
+}
+
+export function resetNameplateMetadata() {
+  _notas = null;
+  _source = 'manual';
+}
 
 /**
  * IDs e paths dos 13 campos da etiqueta persistidos em `dados_placa` (JSONB).
@@ -79,6 +100,28 @@ export function collectDadosPlaca() {
       result[key] = String(raw).trim();
     }
   }
+
+  // Merge dos campos extras vindos do review UI. Filtramos entradas vazias
+  // (user clicou "+ Campo" mas não preencheu) e colisões com keys já no
+  // form fixo (evita duplicação no display).
+  const knownKeys = new Set(DADOS_PLACA_FIELDS.map((f) => f.key));
+  const extrasSnapshot = getCamposExtrasSnapshot()
+    .filter((e) => e && e.key && e.value)
+    .filter((e) => !knownKeys.has(e.key));
+  if (extrasSnapshot.length) {
+    result.camposExtras = extrasSnapshot.map((e) => ({
+      key: e.key,
+      label: e.label || e.key,
+      value: String(e.value),
+    }));
+  }
+
+  // Metadata: preserva origem (ai/manual) e notas da IA. Chaves `_*` são
+  // tratadas como metadata pelo display/PDF e omitidas do render; ficam
+  // auditáveis no DB.
+  result._source = _source || 'manual';
+  if (_notas) result.notas = _notas;
+
   return result;
 }
 

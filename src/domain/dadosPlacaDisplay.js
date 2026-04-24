@@ -159,18 +159,55 @@ function formatValue(key, raw) {
 }
 
 /**
+ * Cap máximo de extras renderizados. Protege o detail/PDF de payloads
+ * exagerados. Se houver mais que isso, os últimos são omitidos (com
+ * indicador de truncamento quando consumido pelo PDF).
+ */
+export const CAMPOS_EXTRAS_DISPLAY_CAP = 10;
+
+/**
+ * Prettifica uma chave de campo extra (snake_case ou camelCase) em rótulo
+ * legível em pt-BR. Usada pelo display quando um campo chega sem `label`
+ * (ex.: payload legado onde salvamos só `{ key, value }`).
+ *
+ *   prettifyDadosPlacaKey('pressao_maxima') → 'Pressao maxima'
+ *   prettifyDadosPlacaKey('compressorModel') → 'Compressor model'
+ */
+export function prettifyDadosPlacaKey(key) {
+  if (key == null) return '';
+  const str = String(key).trim();
+  if (!str) return '';
+  const spaced = str
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+  if (!spaced) return '';
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase();
+}
+
+/**
+ * Chaves que são metadata (não campo de etiqueta). Não entram no render
+ * do detail view nem do PDF. Qualquer chave iniciada com `_` também é
+ * tratada como metadata.
+ */
+const METADATA_KEYS = new Set(['camposExtras', 'notas']);
+
+function isMetadataKey(key) {
+  if (typeof key !== 'string') return true;
+  if (key.startsWith('_')) return true;
+  return METADATA_KEYS.has(key);
+}
+
+/**
  * Converte o blob `dados_placa` em array de linhas prontas pra renderização.
- * Preserva ordem semântica (FIELD_ORDER) e omite campos sem valor válido.
+ * Preserva ordem semântica (FIELD_ORDER) e inclui campos extras (quando
+ * presentes em `dadosPlaca.camposExtras`) como seção secundária.
+ *
+ * Omite campos sem valor válido, metadata (`_*`, `notas`, `camposExtras`)
+ * e extras que colidem com keys já renderizadas (evita duplicação).
  *
  * @param {object|null|undefined} dadosPlaca
- * @returns {Array<{key: string, label: string, value: string, mono?: boolean}>}
- *
- * @example
- *   formatDadosPlacaRows({ numero_serie: 'ABC123', capacidade_btu: 9000, _source: 'ai' })
- *   // → [
- *   //   { key: 'numero_serie', label: 'Nº de série', value: 'ABC123', mono: true },
- *   //   { key: 'capacidade_btu', label: 'Capacidade', value: '9.000 BTU' },
- *   // ]
+ * @returns {Array<{key: string, label: string, value: string, mono?: boolean, extra?: boolean}>}
  */
 export function formatDadosPlacaRows(dadosPlaca) {
   if (!dadosPlaca || typeof dadosPlaca !== 'object' || Array.isArray(dadosPlaca)) {
@@ -178,6 +215,9 @@ export function formatDadosPlacaRows(dadosPlaca) {
   }
 
   const rows = [];
+  const renderedKeys = new Set();
+
+  // (1) Campos fixos da etiqueta (ordem semântica).
   for (const key of FIELD_ORDER) {
     const value = formatValue(key, dadosPlaca[key]);
     if (value == null) continue;
@@ -188,7 +228,35 @@ export function formatDadosPlacaRows(dadosPlaca) {
       row.mono = true;
     }
     rows.push(row);
+    renderedKeys.add(key);
   }
+
+  // (2) Campos extras — lista de `{ key, label, value }` provenientes da IA
+  //     ou do review UI manual. Respeita o cap e evita duplicação com os
+  //     campos fixos. Fallback de label pra prettify quando ausente.
+  const extras = Array.isArray(dadosPlaca.camposExtras) ? dadosPlaca.camposExtras : [];
+  let added = 0;
+  for (const entry of extras) {
+    if (added >= CAMPOS_EXTRAS_DISPLAY_CAP) break;
+    if (!entry || typeof entry !== 'object') continue;
+    const rawKey = entry.key;
+    const rawValue = entry.value;
+    if (rawKey == null || rawValue == null || String(rawValue).trim() === '') continue;
+    const keyStr = String(rawKey).trim();
+    if (!keyStr) continue;
+    if (isMetadataKey(keyStr)) continue;
+    if (renderedKeys.has(keyStr)) continue;
+    const label = entry.label ? String(entry.label).trim() : '';
+    rows.push({
+      key: keyStr,
+      label: label || prettifyDadosPlacaKey(rawKey),
+      value: String(rawValue).trim(),
+      extra: true,
+    });
+    renderedKeys.add(keyStr);
+    added += 1;
+  }
+
   return rows;
 }
 

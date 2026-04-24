@@ -102,50 +102,10 @@ function passwordInputHTML(id, placeholder, autocomplete) {
     </div>`;
 }
 
-// Inline SVGs — CoolTrack snowflake dentro do squircle (6 arms com V-tips)
-const ICON_LOGO = `<svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" style="display:block">
-  <rect x="2" y="2" width="28" height="28" rx="7" fill="rgba(0,200,232,0.10)" stroke="#00c8e8" stroke-width="1.6"/>
-  <g stroke="#00c8e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <g>
-      <line x1="16" y1="7" x2="16" y2="25"/>
-      <polyline points="13.5,9 16,7 18.5,9"/>
-      <polyline points="13.5,23 16,25 18.5,23"/>
-    </g>
-    <g transform="rotate(60 16 16)">
-      <line x1="16" y1="7" x2="16" y2="25"/>
-      <polyline points="13.5,9 16,7 18.5,9"/>
-      <polyline points="13.5,23 16,25 18.5,23"/>
-    </g>
-    <g transform="rotate(120 16 16)">
-      <line x1="16" y1="7" x2="16" y2="25"/>
-      <polyline points="13.5,9 16,7 18.5,9"/>
-      <polyline points="13.5,23 16,25 18.5,23"/>
-    </g>
-  </g>
-  <circle cx="16" cy="16" r="1.3" fill="#00c8e8"/>
-</svg>`;
+// Brand mark — alinhado com .lp-brand__mark da landing (arco cyan em squircle)
+const ICON_LOGO = `<span style="display:inline-grid;place-items:center;width:32px;height:32px;border:1px solid rgba(0,200,232,0.42);border-radius:8px;background:#071722" aria-hidden="true"><span style="display:block;width:14px;height:14px;border:2px solid #00c8e8;border-top-color:transparent;border-radius:999px"></span></span>`;
 
-const ICON_LOGO_SM = `<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true" style="display:block">
-  <rect x="2" y="2" width="28" height="28" rx="7" fill="rgba(0,200,232,0.10)" stroke="#00c8e8" stroke-width="1.6"/>
-  <g stroke="#00c8e8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <g>
-      <line x1="16" y1="7" x2="16" y2="25"/>
-      <polyline points="13.5,9 16,7 18.5,9"/>
-      <polyline points="13.5,23 16,25 18.5,23"/>
-    </g>
-    <g transform="rotate(60 16 16)">
-      <line x1="16" y1="7" x2="16" y2="25"/>
-      <polyline points="13.5,9 16,7 18.5,9"/>
-      <polyline points="13.5,23 16,25 18.5,23"/>
-    </g>
-    <g transform="rotate(120 16 16)">
-      <line x1="16" y1="7" x2="16" y2="25"/>
-      <polyline points="13.5,9 16,7 18.5,9"/>
-      <polyline points="13.5,23 16,25 18.5,23"/>
-    </g>
-  </g>
-  <circle cx="16" cy="16" r="1.3" fill="#00c8e8"/>
-</svg>`;
+const ICON_LOGO_SM = `<span style="display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid rgba(0,200,232,0.42);border-radius:6px;background:#071722" aria-hidden="true"><span style="display:block;width:10px;height:10px;border:1.5px solid #00c8e8;border-top-color:transparent;border-radius:999px"></span></span>`;
 
 const ICON_SNOWFLAKE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/>
@@ -477,49 +437,49 @@ export const AuthScreen = {
         </div>
 
         <h1 class="auth-brand__headline">
-          Controle total sobre cada equipamento que você atende.
+          Do serviço ao PDF, direto do celular.
         </h1>
         <p class="auth-brand__sub">
-          Gestão de manutenção para técnicos de climatização. Do diagnóstico
-          ao relatório PDF — tudo em um só lugar.
+          Cadastre o equipamento, registre o serviço e envie o relatório no
+          WhatsApp em menos de 1 minuto — sem sair do local.
         </p>
 
         <div class="auth-brand__features">
           <div class="auth-brand__feat">
             <div class="auth-brand__feat-icon">${ICON_SNOWFLAKE}</div>
             <div>
-              <div class="auth-brand__feat-title">Histórico completo de cada equipamento</div>
-              <div class="auth-brand__feat-desc">Todas as manutenções, peças trocadas e anomalias — organizadas por equipamento.</div>
+              <div class="auth-brand__feat-title">Cadastro por foto da placa</div>
+              <div class="auth-brand__feat-desc">Tire foto, a IA preenche modelo, marca e dados técnicos.</div>
             </div>
           </div>
           <div class="auth-brand__feat">
             <div class="auth-brand__feat-icon">${ICON_FILETEXT}</div>
             <div>
-              <div class="auth-brand__feat-title">Relatórios PDF com sua assinatura</div>
-              <div class="auth-brand__feat-desc">Gere laudos profissionais em segundos, prontos para enviar ao cliente via WhatsApp.</div>
+              <div class="auth-brand__feat-title">Checklist rápido do serviço</div>
+              <div class="auth-brand__feat-desc">Preventiva, corretiva, limpeza, carga de gás — em segundos.</div>
             </div>
           </div>
           <div class="auth-brand__feat">
             <div class="auth-brand__feat-icon">${ICON_BELL}</div>
             <div>
-              <div class="auth-brand__feat-title">Alertas inteligentes de preventivas</div>
-              <div class="auth-brand__feat-desc">Nunca perca um prazo. O sistema avisa quais equipamentos precisam de atenção hoje.</div>
+              <div class="auth-brand__feat-title">PDF no WhatsApp em um toque</div>
+              <div class="auth-brand__feat-desc">Relatório pronto com sua logo, fotos e assinatura do cliente.</div>
             </div>
           </div>
         </div>
 
         <div class="auth-brand__stats">
           <div>
-            <div class="auth-brand__stat-num">100%</div>
-            <div class="auth-brand__stat-label">Offline ready</div>
-          </div>
-          <div>
-            <div class="auth-brand__stat-num">PDF</div>
-            <div class="auth-brand__stat-label">Instantâneo</div>
+            <div class="auth-brand__stat-num">&lt;1min</div>
+            <div class="auth-brand__stat-label">Relatório pronto</div>
           </div>
           <div>
             <div class="auth-brand__stat-num">∞</div>
-            <div class="auth-brand__stat-label">Histórico</div>
+            <div class="auth-brand__stat-label">Equipamentos no Pro</div>
+          </div>
+          <div>
+            <div class="auth-brand__stat-num">100%</div>
+            <div class="auth-brand__stat-label">Funciona offline</div>
           </div>
         </div>
       </aside>
@@ -535,7 +495,7 @@ export const AuthScreen = {
               <span id="auth-title" style="font-size:18px;font-weight:700;color:#e8f2fa">CoolTrack</span>
               <span style="font-size:10px;font-weight:700;color:#e8b94a;background:rgba(232,185,74,0.12);padding:3px 7px;border-radius:4px;letter-spacing:0.6px">PRO</span>
             </div>
-            <div class="auth-card-header__sub">Gestão de manutenção para técnicos de climatização.</div>
+            <div class="auth-card-header__sub">Do serviço ao PDF, direto do celular.</div>
           </div>
 
           <!-- Tabs -->
@@ -554,8 +514,8 @@ export const AuthScreen = {
             <label class="auth-label auth-label--first" for="signin-email">Email</label>
             <input class="auth-input" id="signin-email" type="email" placeholder="seu@email.com" autocomplete="email" />
             <label class="auth-label" for="signin-password">Senha</label>
-            ${passwordInputHTML('signin-password', 'Sua senha', 'current-password')}
-            <button class="auth-btn" id="btn-signin" type="button">Acessar meu painel ${ICON_ARROW_RIGHT}</button>
+            ${passwordInputHTML('signin-password', 'senha', 'current-password')}
+            <button class="auth-btn" id="btn-signin" type="button">Entrar no app ${ICON_ARROW_RIGHT}</button>
             <div class="auth-actions-center">
               <button class="auth-btn-forgot" id="btn-forgot" type="button">Esqueci minha senha</button>
             </div>
@@ -586,7 +546,7 @@ export const AuthScreen = {
             <label class="auth-label" for="signup-confirm">Confirmar senha</label>
             ${passwordInputHTML('signup-confirm', 'repita a senha', 'new-password')}
             <button class="auth-btn" id="btn-signup" type="button">Começar gratuitamente ${ICON_ARROW_RIGHT}</button>
-            <div class="auth-hint">Plano gratuito · Sem cartão · PDF com marca d’água</div>
+            <div class="auth-hint">Grátis pra sempre · Sem cartão · PDF com marca d’água no free</div>
           </div>
 
         </div>

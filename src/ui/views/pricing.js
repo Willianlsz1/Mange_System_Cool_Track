@@ -47,7 +47,7 @@ const ICON_X = `<svg class="pricing-features__icon pricing-features__icon--no" w
 const FREE_FEATURES = [
   'Até 3 equipamentos cadastrados',
   'Registros de serviço ilimitados',
-  'Histórico dos últimos 15 dias',
+  'Histórico completo do equipamento',
   "Relatórios com marca d'água",
   '5 envios via WhatsApp/mês',
   'Cadastro por foto (IA): 1 análise/mês',
@@ -256,10 +256,10 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
             </p>
             <div id="plus-price-annual" style="display:none">
               <p class="pricing-card__price pricing-card__price--plus">
-                R$ 20<span class="pricing-card__price-cents">,75</span> <span class="pricing-card__price-period">/ mês</span>
+                R$ 24<span class="pricing-card__price-cents">,17</span> <span class="pricing-card__price-period">/ mês</span>
               </p>
               <p class="pricing-card__price-desc">
-                Cobrado como R$ 249/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 99</span>
+                Cobrado como R$ 290/ano &nbsp;<span class="pricing-card__annual-save">economize R$ 58</span>
               </p>
             </div>
           </div>
@@ -313,17 +313,17 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
           <div class="pricing-card__price-group">
             <p class="pricing-card__price pricing-card__price--pro" id="pro-price-monthly">
-              R$ 49 <span class="pricing-card__price-period">/ mês</span>
+              R$ 99 <span class="pricing-card__price-period">/ mês</span>
             </p>
             <p class="pricing-card__price-desc" id="pro-price-desc-monthly">
               Cobrado mensalmente. Cancele quando quiser.
             </p>
             <div id="pro-price-annual" style="display:none">
               <p class="pricing-card__price pricing-card__price--pro">
-                R$ 34<span class="pricing-card__price-cents">,92</span> <span class="pricing-card__price-period">/ mês</span>
+                R$ 82<span class="pricing-card__price-cents">,50</span> <span class="pricing-card__price-period">/ mês</span>
               </p>
               <p class="pricing-card__price-desc">
-                Cobrado como R$ 419/ano &nbsp;<span class="pricing-card__annual-save">economiza R$ 169</span>
+                Cobrado como R$ 990/ano &nbsp;<span class="pricing-card__annual-save">economize R$ 198</span>
               </p>
             </div>
           </div>
@@ -397,7 +397,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
               </tr>
               <tr>
                 <th scope="row">Histórico</th>
-                <td>15 dias</td>
+                <td>Completo</td>
                 <td>Completo</td>
                 <td>Completo</td>
               </tr>
@@ -506,7 +506,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
 
         <details class="pricing-faq__item">
           <summary>Como funciona o plano anual?</summary>
-          <p>Você paga o valor anual de uma vez (Plus R$ 249, Pro R$ 419) e economiza ~28% em relação ao mensal. Pode cancelar a qualquer momento — o reembolso proporcional é feito conforme a política do Stripe.</p>
+          <p>Você paga o valor anual de uma vez (Plus R$ 290, Pro R$ 990) e economiza ~17% em relação ao mensal. Pode cancelar a qualquer momento — o reembolso proporcional é feito conforme a política do Stripe.</p>
         </details>
       </section>
 

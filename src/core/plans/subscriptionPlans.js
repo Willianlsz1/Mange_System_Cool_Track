@@ -56,14 +56,14 @@ export const PLAN_CATALOG = {
     limits: {
       equipamentos: 3,
       registros: Number.POSITIVE_INFINITY,
-      // Histórico em dias visível na view do Histórico (filtrado em runtime).
-      // Registros mais antigos continuam salvos, mas aparecem bloqueados com CTA.
-      historicoDias: 15,
+      // Nota: `historicoDias` foi removido. Todos os planos têm histórico
+      // completo — a limitação temporal no Free foi derrubada porque
+      // histórico é parte essencial do valor pra técnico em campo.
     },
     perks: [
       'Até 3 equipamentos cadastrados',
       'Registros de serviço ilimitados',
-      'Histórico dos últimos 15 dias',
+      'Histórico completo do equipamento',
       'Relatórios em PDF com marca d\u2019água',
       '5 envios de relatório via WhatsApp/mês',
       'Cadastro por foto (IA) com teste mensal',

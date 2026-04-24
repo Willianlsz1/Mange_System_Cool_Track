@@ -42,10 +42,6 @@ vi.mock('../ui/views/dashboard.js', () => ({
 vi.mock('../core/equipmentRules.js', () => ({
   getOperationalStatus: vi.fn(() => ({ uiStatus: 'ok', label: 'Em dia' })),
 }));
-vi.mock('../core/plans/planCache.js', () => ({
-  isCachedPlanPlusOrHigher: vi.fn(() => true),
-}));
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -278,5 +274,32 @@ describe('getEquipStatusPill', () => {
     });
     expect(result.tone).toBe('warn');
     expect(result.label).toBe('Preventiva vencida há 3 dias');
+  });
+});
+
+describe('histórico — acesso completo para todos os planos (sem corte por data)', () => {
+  it('o plano Free não define `historicoDias` — histórico é ilimitado no tempo', async () => {
+    const plans = await import('../core/plans/subscriptionPlans.js');
+    const freeLimits = plans.PLAN_CATALOG[plans.PLAN_CODE_FREE].limits;
+    expect(freeLimits.historicoDias).toBeUndefined();
+  });
+
+  it('a perk do Free menciona "histórico completo", não mais 15 dias', async () => {
+    const plans = await import('../core/plans/subscriptionPlans.js');
+    const freePerks = plans.PLAN_CATALOG[plans.PLAN_CODE_FREE].perks;
+    const joined = freePerks.join(' ').toLowerCase();
+    expect(joined).toContain('histórico completo');
+    expect(joined).not.toContain('15 dias');
+  });
+
+  it('historico view não usa mais `isCachedPlanPlusOrHigher` pra filtrar histórico', async () => {
+    // Ajuda a detectar regressão se alguém reintroduzir um corte temporal
+    // baseado em plano. O módulo continua válido pra outras features, mas
+    // historico.js não deve importar ele.
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const source = fs.readFileSync(path.resolve('./src/ui/views/historico.js'), 'utf-8');
+    expect(source).not.toMatch(/isCachedPlanPlusOrHigher/);
+    expect(source).not.toMatch(/HIST_FREE_LIMIT_DAYS/);
   });
 });

@@ -28,7 +28,7 @@ describe('LandingPage', () => {
       'Ver como funciona',
     );
     expect(hero.textContent).toContain('Antes: 15–20 min por relatório');
-    expect(hero.textContent).toContain('Cadastro em 30 segundos');
+    expect(hero.textContent).toContain('Cadastro em 30s');
   });
 
   it('renders the phone mockup with service and WhatsApp/PDF state', () => {
@@ -54,7 +54,7 @@ describe('LandingPage', () => {
     const steps = document.querySelectorAll('.lp-how__step');
     expect(steps).toHaveLength(3);
     expect(document.querySelector('.lp-how')?.textContent).toContain('Abriu, usou. Simples assim.');
-    expect(steps[2].textContent).toContain('Gere o PDF e envie na hora pelo WhatsApp');
+    expect(steps[2].textContent).toContain('Envie o relatório');
 
     const benefits = document.querySelectorAll('.lp-benefit');
     expect(benefits).toHaveLength(4);
@@ -69,7 +69,7 @@ describe('LandingPage', () => {
     expect(document.querySelector('.lp-pdf')).toBeTruthy();
 
     const final = document.querySelector('.lp-final');
-    expect(final.textContent).toContain('Use o CoolTrack na sua próxima manutenção');
+    expect(final.textContent).toContain('Use no seu próximo atendimento');
     expect(final.querySelector('[data-action="start-trial"]')?.textContent).toContain(
       'Testar no próximo serviço',
     );

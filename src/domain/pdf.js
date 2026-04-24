@@ -113,6 +113,15 @@ export const PDFGenerator = {
       }
 
       const fileName = buildReportFileName(profile);
+
+      // Novo modo pra share: retorna { fileName, blob } sem disparar o
+      // download do browser. Permite upload/Web Share API sem acionar
+      // duas ações no usuário (baixar + compartilhar).
+      if (options.asBlob === true) {
+        const blob = doc.output('blob');
+        return { fileName, blob };
+      }
+
       doc.save(fileName);
       return fileName;
     } catch (err) {

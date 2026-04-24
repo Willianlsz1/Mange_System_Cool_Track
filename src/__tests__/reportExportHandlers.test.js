@@ -24,8 +24,14 @@ vi.mock('../domain/pdf.js', () => ({
 }));
 
 const send = vi.fn();
+const generateText = vi.fn(() => null);
 vi.mock('../domain/whatsapp.js', () => ({
-  WhatsAppExport: { send },
+  WhatsAppExport: { send, generateText },
+}));
+
+const shareReportPdf = vi.fn();
+vi.mock('../domain/pdf/shareReport.js', () => ({
+  shareReportPdf,
 }));
 
 // Guest conversion modal foi removido quando o modo demo/guest saiu.
@@ -234,15 +240,59 @@ describe('reportExportHandlers', () => {
     expect(handlers.has('print')).toBe(false);
   });
 
-  it('whatsapp: abre wa.me diretamente com texto pronto e consome quota', async () => {
+  it('whatsapp: gera PDF como Blob, chama shareReportPdf e consome quota', async () => {
     getUser.mockResolvedValue({ id: 'u1' });
-    send.mockReturnValue(true);
+    generateMaintenanceReport.mockResolvedValueOnce({
+      fileName: 'relatorio.pdf',
+      blob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+    shareReportPdf.mockResolvedValueOnce({ ok: true, channel: 'wa-link' });
 
     await handlers.get('whatsapp-export')({});
 
-    expect(send).toHaveBeenCalledTimes(1);
+    // PDF foi gerado em modo blob (sem dispara doc.save)
+    expect(generateMaintenanceReport).toHaveBeenCalledWith(
+      expect.objectContaining({ asBlob: true }),
+      expect.objectContaining({ planCode: expect.any(String) }),
+    );
+    // Share orchestrator foi chamado com o blob + metadata
+    expect(shareReportPdf).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileName: 'relatorio.pdf',
+        metadata: expect.objectContaining({ userId: 'u1' }),
+      }),
+    );
+    // Quota consumida só quando share ok
     expect(incrementMonthlyUsage).toHaveBeenCalledWith('u1', 'whatsapp_share');
     expect(show).toHaveBeenCalled();
+    // Caminho antigo texto-only NÃO deve ser chamado
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('whatsapp: cancelamento do Web Share não consome quota', async () => {
+    getUser.mockResolvedValue({ id: 'u1' });
+    generateMaintenanceReport.mockResolvedValueOnce({
+      fileName: 'r.pdf',
+      blob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
+    shareReportPdf.mockResolvedValueOnce({ ok: false, cancelled: true, channel: 'web-share' });
+
+    await handlers.get('whatsapp-export')({});
+
+    expect(shareReportPdf).toHaveBeenCalled();
+    expect(incrementMonthlyUsage).not.toHaveBeenCalled();
+    expect(show).not.toHaveBeenCalled();
+  });
+
+  it('whatsapp: PDF gen falha → warning + quota preservada', async () => {
+    getUser.mockResolvedValue({ id: 'u1' });
+    generateMaintenanceReport.mockResolvedValueOnce(null);
+
+    await handlers.get('whatsapp-export')({});
+
+    expect(shareReportPdf).not.toHaveBeenCalled();
+    expect(warning).toHaveBeenCalled();
+    expect(incrementMonthlyUsage).not.toHaveBeenCalled();
   });
 
   it('blocks whatsapp share for free users above monthly limit', async () => {

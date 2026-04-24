@@ -22,11 +22,12 @@ import {
   normalizePeriodicidadePreventivaDias,
 } from '../../domain/maintenance.js';
 import { getPreventivaDueEquipmentIds } from '../../domain/alerts.js';
-import { formatDadosPlacaRows, hasAnyDadosPlaca } from '../../domain/dadosPlacaDisplay.js';
+import { formatDadosPlacaRows } from '../../domain/dadosPlacaDisplay.js';
 import { DadosPlacaValidationError, formatDecimalHint } from '../../domain/dadosPlacaValidation.js';
 import { emptyStateHtml } from '../components/emptyState.js';
 import { validateEquipamentoPayload } from '../../core/inputValidation.js';
 import { EquipmentPhotos } from '../components/equipmentPhotos.js';
+import { resetCamposExtrasState, setCamposExtrasState } from '../components/nameplateCapture.js';
 import { Photos } from '../components/photos.js';
 import { getEquipmentVisualMeta } from '../components/equipmentVisual.js';
 import { normalizePhotoList } from '../../core/photoStorage.js';
@@ -53,6 +54,8 @@ import { configureEquipPhotos, syncContextGroupVisibility } from './equipamentos
 import {
   DADOS_PLACA_INPUT_IDS,
   collectDadosPlaca,
+  resetNameplateMetadata,
+  setNameplateMetadata,
   restoreDadosPlaca,
 } from './equipamentos/placaData.js';
 import { setorCardHtml } from './equipamentos/setores.js';
@@ -143,6 +146,13 @@ export function clearEditingState() {
   } catch (_err) {
     /* componente pode ainda não estar inicializado */
   }
+  // Reset dos extras + metadata da nameplate pra próximo cadastro começar limpo.
+  try {
+    resetCamposExtrasState();
+  } catch (_e) {
+    /* review UI ainda não renderizada */
+  }
+  resetNameplateMetadata();
 }
 
 /**
@@ -1076,6 +1086,19 @@ export async function openEditEquip(id) {
   Utils.setVal('eq-prioridade', eq.prioridadeOperacional || 'normal');
   Utils.setVal('eq-periodicidade', String(eq.periodicidadePreventivaDias || 90));
   restoreDadosPlaca(eq.dadosPlaca);
+  // Seed review UI dos extras + metadata a partir do payload salvo. Se o
+  // equipamento foi cadastrado antes desta feature, eq.dadosPlaca?.camposExtras
+  // é undefined e a lista fica vazia — comportamento retrocompatível.
+  try {
+    const extras = Array.isArray(eq.dadosPlaca?.camposExtras) ? eq.dadosPlaca.camposExtras : [];
+    setCamposExtrasState(extras);
+    setNameplateMetadata({
+      source: eq.dadosPlaca?._source === 'ai' ? 'ai' : 'manual',
+      notas: eq.dadosPlaca?.notas || null,
+    });
+  } catch (_e) {
+    /* review UI pode ainda não ter montado — ok, ficará vazia */
+  }
 
   // Marca periodicidade como manual para não ser sobrescrita pelo auto-sugestão
   const periodicidadeInput = Utils.getEl('eq-periodicidade');
@@ -1522,20 +1545,35 @@ export async function viewEquip(id) {
   // remete a PCB/componente eletrônico). Internamente a column e os identifiers
   // continuam como `dados_placa`/`dadosPlaca` pra não quebrar schema + tests.
   const dadosPlacaRows = formatDadosPlacaRows(eq.dadosPlaca);
-  const dadosPlacaSectionHtml = hasAnyDadosPlaca(eq.dadosPlaca)
+  // Separa campos fixos (FIELD_ORDER) de extras dinâmicos. Extras ficam em
+  // UMA seção simples "Outras informações da etiqueta" — preservamos os
+  // dados mas sem insights automáticos (phase-out/disjuntor) pra não criar
+  // ruído visual nem prometer análise que exige validação humana.
+  const dadosPlacaFixedRows = dadosPlacaRows.filter((r) => !r.extra);
+  const dadosPlacaExtraRows = dadosPlacaRows.filter((r) => r.extra);
+
+  const rowHtml = (row) => `
+            <div class="info-row">
+              <span class="info-row__label">${Utils.escapeHtml(row.label)}</span>
+              <span class="info-row__value${row.mono ? ' info-row__value--mono' : ''}">${Utils.escapeHtml(row.value)}</span>
+            </div>`;
+
+  const dadosPlacaSectionHtml = dadosPlacaFixedRows.length
     ? `
       <div class="eq-tech-sheet__section">
         <div class="eq-tech-sheet__title">Dados da etiqueta</div>
         <div class="info-list info-list--spaced info-list--soft">
-          ${dadosPlacaRows
-            .map(
-              (row) => `
-            <div class="info-row">
-              <span class="info-row__label">${Utils.escapeHtml(row.label)}</span>
-              <span class="info-row__value${row.mono ? ' info-row__value--mono' : ''}">${Utils.escapeHtml(row.value)}</span>
-            </div>`,
-            )
-            .join('')}
+          ${dadosPlacaFixedRows.map(rowHtml).join('')}
+        </div>
+      </div>`
+    : '';
+
+  const dadosPlacaExtrasSectionHtml = dadosPlacaExtraRows.length
+    ? `
+      <div class="eq-tech-sheet__section">
+        <div class="eq-tech-sheet__title">Outras informações da etiqueta</div>
+        <div class="info-list info-list--spaced info-list--soft">
+          ${dadosPlacaExtraRows.map(rowHtml).join('')}
         </div>
       </div>`
     : '';
@@ -1616,6 +1654,7 @@ export async function viewEquip(id) {
           </div>
         </div>
         ${dadosPlacaSectionHtml}
+        ${dadosPlacaExtrasSectionHtml}
       </div>
 
       <!-- ── Histórico de serviços ── -->

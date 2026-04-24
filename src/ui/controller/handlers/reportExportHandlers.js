@@ -240,9 +240,40 @@ async function executeWhatsAppShare(filters) {
     return false;
   }
 
-  const ok = WhatsAppExport.send(filters);
-  if (!ok) {
+  // Gera o PDF como Blob (sem disparar download) e deixa o shareReport
+  // decidir o canal: Web Share API (mobile) ou upload+wa.me (desktop/fallback).
+  Toast.info?.('Gerando relatório...');
+  const { PDFGenerator } = await import('../../../domain/pdf.js');
+  const pdfResult = await PDFGenerator.generateMaintenanceReport(
+    { ...filters, asBlob: true },
+    { planCode },
+  );
+  if (!pdfResult || !pdfResult.blob) {
+    trackEvent('whatsapp_share_blocked', { reason: 'pdf_generation_failed', plan: planCode });
     Toast.warning('Nenhum registro para enviar.');
+    return false;
+  }
+
+  // Texto curto pro share — usa o prefixo canônico do WhatsAppExport quando
+  // houver registros; fallback pra mensagem padrão do shareReport senão.
+  const prefixText = WhatsAppExport.generateText(filters) || null;
+
+  Toast.info?.('Preparando compartilhamento...');
+  const { shareReportPdf } = await import('../../../domain/pdf/shareReport.js');
+  const shareResult = await shareReportPdf({
+    pdfBlob: pdfResult.blob,
+    fileName: pdfResult.fileName,
+    whatsappText: prefixText,
+    metadata: { userId: user.id, registroId: filters?.registroId || null },
+  });
+
+  // Cancelamento do share sheet não conta como erro nem consome quota.
+  if (!shareResult.ok && shareResult.cancelled) {
+    return false;
+  }
+
+  if (!shareResult.ok) {
+    Toast.warning('Não foi possível compartilhar o PDF. Tente baixar o relatório.');
     return false;
   }
 
@@ -251,9 +282,24 @@ async function executeWhatsAppShare(filters) {
     newUsedCount = await incrementMonthlyUsage(user.id, USAGE_RESOURCE_WHATSAPP_SHARE);
   }
 
-  ShareSuccessToast.show(
-    Number.isFinite(whatsappLimit) ? { used: newUsedCount, limit: whatsappLimit } : {},
-  );
+  // Copy diferente por canal — web-share foi disparado com o arquivo real,
+  // wa-link abre WhatsApp com link público, download é o fallback offline.
+  const successCopy =
+    shareResult.channel === 'web-share'
+      ? { title: 'Relatório pronto para compartilhar' }
+      : shareResult.channel === 'download'
+        ? { title: 'Relatório baixado. Envie manualmente pelo WhatsApp.' }
+        : { title: 'Relatório enviado para o WhatsApp' };
+
+  trackEvent('whatsapp_share_completed', {
+    channel: shareResult.channel,
+    plan: planCode,
+  });
+
+  ShareSuccessToast.show({
+    ...(Number.isFinite(whatsappLimit) ? { used: newUsedCount, limit: whatsappLimit } : {}),
+    ...successCopy,
+  });
   return true;
 }
 
