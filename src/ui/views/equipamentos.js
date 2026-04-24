@@ -13,6 +13,7 @@ import { Profile } from '../../features/profile.js';
 import { getHealthClass, updateHeader } from './dashboard.js';
 import { ErrorCodes, handleError } from '../../core/errors.js';
 import { checkPlanLimit } from '../../core/planLimits.js';
+import { goTo } from '../../core/router.js';
 import { trackEvent } from '../../core/telemetry.js';
 import {
   evaluateEquipmentHealth,

@@ -7,7 +7,6 @@
 
 import { getState } from './state.js';
 import {
-  PLAN_CODE_FREE,
   canCreateEquipment,
   getEffectivePlan,
   getPlanForUser,
@@ -53,8 +52,10 @@ export async function checkPlanLimit(resource, currentUsageOrOptions = {}, maybe
       ? Math.max(0, parsedExplicitCurrent)
       : snapshotCurrent;
 
-  let planCode = PLAN_CODE_FREE;
-  let profile = null;
+  // `profile`/`planCode` são sempre atribuídos dentro do try/catch abaixo —
+  // não inicializamos aqui pra evitar "no-useless-assignment" do ESLint.
+  let planCode;
+  let profile;
 
   try {
     const {
@@ -64,8 +65,8 @@ export async function checkPlanLimit(resource, currentUsageOrOptions = {}, maybe
     planCode = getEffectivePlan(profile);
   } catch {
     // Sem conexão → cai para o plano base (free), que é conservador.
-    planCode = getEffectivePlan(null);
     profile = null;
+    planCode = getEffectivePlan(null);
   }
 
   const plan = getPlanForUser({ planCode });

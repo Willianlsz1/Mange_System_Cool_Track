@@ -20,7 +20,6 @@ const FAKE_USER_EMAIL = 'tecnico@teste.cooltrack';
 // JWT placeholder com payload válido (sub/role/exp). Não precisa ser
 // assinado corretamente — como todas as respostas da API são interceptadas,
 // o backend nunca valida a assinatura.
-// eslint-disable-next-line max-len
 const FAKE_ACCESS_TOKEN =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
   'eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTAwMDAtMDAwMC0wMDAwMDAwMDAwMDEiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImV4cCI6OTk5OTk5OTk5OX0.' +
