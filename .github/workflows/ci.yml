@@ -57,7 +57,10 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browser
-        run: npx playwright@1.55.0 install --with-deps chromium
+        # Usa a versão do @playwright/test instalada via devDeps (hoje 1.59.x).
+        # Pinar aqui via `npx playwright@1.55.0` criava mismatch com o
+        # @playwright/test do node_modules → ERR_MODULE_NOT_FOUND no runner.
+        run: npx playwright install --with-deps chromium
 
       - name: Run E2E suite
         run: npm run test:e2e:ci

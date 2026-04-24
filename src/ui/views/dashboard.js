@@ -332,13 +332,20 @@ function _criticalNowItemHtml({
   id = '',
   ctaLabel = 'Abrir',
 }) {
+  // SECURITY: defense-in-depth. O chamador já escapa, mas escapar aqui dentro
+  // garante que qualquer chamada nova (ou refactor que esqueça o escape lá
+  // em cima) não reabra um XSS. `icon` é literal controlada pelo código
+  // (`!` ou `!!`), logo não precisa escape — mantido como está.
+  const safeTitle = Utils.escapeHtml(title);
+  const safeSubtitle = subtitle ? Utils.escapeHtml(subtitle) : '';
+  const safeCtaLabel = Utils.escapeHtml(ctaLabel);
   return `<button class="critical-now-item critical-now-item--${tone}" data-action="${Utils.escapeAttr(action)}" data-id="${Utils.escapeAttr(id)}">
     <span class="critical-now-item__icon" aria-hidden="true">${icon}</span>
     <span class="critical-now-item__body">
-      <span class="critical-now-item__title">${title}</span>
-      ${subtitle ? `<span class="critical-now-item__subtitle">${subtitle}</span>` : ''}
+      <span class="critical-now-item__title">${safeTitle}</span>
+      ${safeSubtitle ? `<span class="critical-now-item__subtitle">${safeSubtitle}</span>` : ''}
     </span>
-    <span class="critical-now-item__cta">${ctaLabel}</span>
+    <span class="critical-now-item__cta">${safeCtaLabel}</span>
   </button>`;
 }
 
@@ -779,7 +786,12 @@ function _renderCriticalNowSection(equipamentos) {
         return _criticalNowItemHtml({
           icon: score.group === 'critico' ? '!!' : '!',
           tone,
-          title: `${eq.nome || 'Equipamento'} · ${score.suggestedAction.actionLabel}`,
+          // SECURITY: escapa user-controlled `eq.nome` antes de interpolar.
+          // `score.suggestedAction.actionLabel` hoje vem de string hard-coded
+          // (ACTION_META_BY_CODE em domain/suggestedAction.js), mas escapamos
+          // por defesa em profundidade — se alguém tornar o label dinâmico
+          // lá no futuro, o XSS já fica bloqueado aqui.
+          title: `${Utils.escapeHtml(eq.nome || 'Equipamento')} · ${Utils.escapeHtml(score.suggestedAction.actionLabel)}`,
           subtitle: score.reasons.join(' · ') || 'Ação recomendada',
           action: actionMeta.action,
           id: eq.id,
