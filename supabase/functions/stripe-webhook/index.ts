@@ -14,6 +14,14 @@ function getOptionalEnv(name: string) {
   return Deno.env.get(name)?.trim() ?? null;
 }
 
+function getServiceRoleKey() {
+  return (
+    getOptionalEnv('SUPABASE_SERVICE_ROLE_KEY') ??
+    getOptionalEnv('SERVICE_ROLE_KEY') ??
+    getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY')
+  );
+}
+
 function logWebhook(eventType: string, payload: Record<string, unknown>) {
   console.log(`[stripe-webhook] ${eventType}`, payload);
 }
@@ -100,6 +108,13 @@ async function updateProfileByUserId(
     error: result.error,
   });
 
+  if (result.error) {
+    throw new Error(`PROFILE_UPDATE_FAILED:${userId}:${result.error.message}`);
+  }
+  if (!result.data) {
+    throw new Error(`PROFILE_UPDATE_EMPTY:${userId}`);
+  }
+
   return result;
 }
 
@@ -120,6 +135,13 @@ async function updateProfileBySubscriptionId(
     data: result.data,
     error: result.error,
   });
+
+  if (result.error) {
+    throw new Error(`PROFILE_UPDATE_FAILED:${subscriptionId}:${result.error.message}`);
+  }
+  if (!Array.isArray(result.data) || result.data.length === 0) {
+    throw new Error(`PROFILE_UPDATE_EMPTY:${subscriptionId}`);
+  }
 
   return result;
 }
@@ -143,16 +165,20 @@ type EventLedgerMeta = {
   user_id?: string | null;
 };
 
+type EventClaimResult =
+  | { status: 'fresh'; error: null }
+  | { status: 'processed_duplicate'; error: null }
+  | { status: 'in_progress'; error: null }
+  | { status: 'retry_failed'; error: null }
+  | { status: 'error'; error: string };
+
 /**
  * Tenta "reivindicar" o evento inserindo-o no ledger. Retorna fresh=true se
  * o INSERT passou (deve processar), fresh=false se já existia (retry).
  * error != null sinaliza erro real de DB (diferente de duplicate) e exige
  * 500 pro Stripe reagendar o retry.
  */
-async function tryClaimEvent(
-  supabase: any,
-  event: Stripe.Event,
-): Promise<{ fresh: boolean; error: string | null }> {
+async function tryClaimEvent(supabase: any, event: Stripe.Event): Promise<EventClaimResult> {
   const { data, error } = await supabase
     .from('stripe_webhook_events')
     .insert({
@@ -166,12 +192,32 @@ async function tryClaimEvent(
     // 23505 = unique_violation. É o único caso em que não queremos erro:
     // significa que já processamos esse event.id.
     if (error.code === '23505') {
-      return { fresh: false, error: null };
+      const existing = await supabase
+        .from('stripe_webhook_events')
+        .select('event_id,processed_at,error_message')
+        .eq('event_id', event.id)
+        .maybeSingle();
+
+      if (existing.error) {
+        return { status: 'error', error: existing.error.message || 'ledger_lookup_failed' };
+      }
+      if (!existing.data) {
+        return { status: 'error', error: 'ledger_conflict_without_row' };
+      }
+      if (existing.data.processed_at) {
+        return { status: 'processed_duplicate', error: null };
+      }
+      if (existing.data.error_message) {
+        return { status: 'retry_failed', error: null };
+      }
+      return { status: 'in_progress', error: null };
     }
-    return { fresh: false, error: error.message || 'unknown_db_error' };
+    return { status: 'error', error: error.message || 'unknown_db_error' };
   }
 
-  return { fresh: !!data, error: null };
+  return data
+    ? { status: 'fresh', error: null }
+    : { status: 'error', error: 'ledger_insert_empty' };
 }
 
 async function markEventProcessed(supabase: any, eventId: string, meta: EventLedgerMeta) {
@@ -210,6 +256,18 @@ async function markEventFailed(supabase: any, eventId: string, message: string) 
   }
 }
 
+async function markEventRetrying(supabase: any, eventId: string) {
+  const { error } = await supabase
+    .from('stripe_webhook_events')
+    .update({ error_message: null })
+    .eq('event_id', eventId)
+    .is('processed_at', null);
+
+  if (error) {
+    throw new Error(`LEDGER_RETRY_MARK_FAILED:${eventId}:${error.message}`);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 });
@@ -225,7 +283,7 @@ Deno.serve(async (req) => {
     const stripeSecretKey = getRequiredEnv('STRIPE_SECRET_KEY');
     const webhookSecret = getRequiredEnv('STRIPE_WEBHOOK_SIGNING_SECRET');
     const supabaseUrl = getRequiredEnv('SUPABASE_URL');
-    const serviceRoleKey = getRequiredEnv('SERVICE_ROLE_KEY');
+    const serviceRoleKey = getServiceRoleKey();
 
     const stripe = new Stripe(stripeSecretKey);
     const signature = req.headers.get('Stripe-Signature');
@@ -255,7 +313,7 @@ Deno.serve(async (req) => {
     // é retry do Stripe — responde 200 e sai. Se der erro real de DB,
     // retorna 500 pro Stripe reagendar.
     const claim = await tryClaimEvent(supabase, event);
-    if (claim.error) {
+    if (claim.status === 'error') {
       console.error('[stripe-webhook] ledger insert failed', {
         eventId: event.id,
         eventType: event.type,
@@ -265,7 +323,7 @@ Deno.serve(async (req) => {
       // mesmo sem ter feito nada) ou 400 (que não retry).
       return new Response('Idempotency ledger unavailable', { status: 500 });
     }
-    if (!claim.fresh) {
+    if (claim.status === 'processed_duplicate') {
       logWebhook('duplicate_event_skipped', {
         eventId: event.id,
         eventType: event.type,
@@ -274,6 +332,20 @@ Deno.serve(async (req) => {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
+    }
+    if (claim.status === 'in_progress') {
+      logWebhook('duplicate_event_in_progress', {
+        eventId: event.id,
+        eventType: event.type,
+      });
+      return new Response('Event already processing', { status: 500 });
+    }
+    if (claim.status === 'retry_failed') {
+      logWebhook('failed_event_retrying', {
+        eventId: event.id,
+        eventType: event.type,
+      });
+      await markEventRetrying(supabase, event.id);
     }
     claimedEventId = event.id;
 
@@ -324,12 +396,14 @@ Deno.serve(async (req) => {
           }
         }
 
-        const resolvedPlan =
-          resolvePlanFromEvent({
-            metadata: session.metadata,
-            subscriptionItems,
-            priceIdMap,
-          }) ?? 'pro'; // default defensivo: se nada bateu, mantém comportamento legado
+        const resolvedPlan = resolvePlanFromEvent({
+          metadata: session.metadata,
+          subscriptionItems,
+          priceIdMap,
+        });
+        if (!resolvedPlan) {
+          throw new Error(`UNRESOLVED_CHECKOUT_PLAN:${session.id}`);
+        }
 
         await updateProfileByUserId(supabase, userId, {
           plan_code: resolvedPlan,
@@ -402,6 +476,10 @@ Deno.serve(async (req) => {
           appStatus = 'canceled';
         } else {
           appStatus = 'inactive';
+        }
+
+        if (appStatus === 'active' && !resolvedPlan) {
+          throw new Error(`UNRESOLVED_SUBSCRIPTION_PLAN:${subscriptionId}`);
         }
 
         const patch: Record<string, unknown> = {

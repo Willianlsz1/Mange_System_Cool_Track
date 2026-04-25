@@ -42,10 +42,10 @@ export const PDFGenerator = {
   async generateMaintenanceReport(options = {}, context = {}) {
     try {
       const { registros, equipamentos } = getState();
-      const { filtEq = '', de = '', ate = '' } = options;
+      const { filtEq = '', de = '', ate = '', registroId = '' } = options;
       const { planCode } = context;
       const profile = Profile.get();
-      const filtered = filterRegistrosForReport(registros, { filtEq, de, ate });
+      const filtered = filterRegistrosForReport(registros, { registroId, filtEq, de, ate });
 
       const now = new Date();
       const osNumber = buildOsNumber(now);
