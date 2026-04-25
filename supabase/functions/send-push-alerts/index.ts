@@ -1,21 +1,30 @@
 import webpush from 'https://esm.sh/web-push@3?target=denonext';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2?target=denonext';
+import { getCorsHeaders } from '../_shared/cors.ts';
 
 const VAPID_PUBLIC = Deno.env.get('VAPID_PUBLIC_KEY')!;
 const VAPID_PRIVATE = Deno.env.get('VAPID_PRIVATE_KEY')!;
 const VAPID_EMAIL = Deno.env.get('VAPID_EMAIL') ?? 'mailto:suporte@cooltrackpro.com.br';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Secret compartilhado com o trigger que invoca esta função (Supabase
+// Scheduled Functions / pg_cron). Sem ele, qualquer um na internet pode
+// disparar push spam pra todos os usuários — esta função usa service_role
+// e itera push_subscriptions inteira. Fail-closed: se a env não estiver
+// setada, todas as chamadas levam 403.
+const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 Deno.serve(async (req) => {
+  const corsHeaders = getCorsHeaders(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+
+  // Auth: header secreto do scheduler. Não tem JWT de usuário (cron-only).
+  const provided = req.headers.get('x-cron-secret') ?? '';
+  if (!CRON_SECRET || provided !== CRON_SECRET) {
+    return new Response('Forbidden', { status: 403, headers: corsHeaders });
+  }
 
   try {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
