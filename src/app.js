@@ -26,6 +26,13 @@ import { supabase } from './core/supabase.js';
 import { initTelemetrySink } from './core/telemetrySink.js';
 import { initObservability, setUser as setObservabilityUser } from './core/observability.js';
 import { initSwUpdate } from './core/swUpdate.js';
+import { initStaleBundleRecovery } from './core/recoverFromStaleBundle.js';
+
+// Liga listeners globais de recovery de bundle obsoleto ANTES de qualquer
+// import() dinamico. Se um chunk falhar ao carregar (deploy novo invalidou
+// o hash que o SW tem cacheado), o handler limpa Caches Storage, desregistra
+// o SW e recarrega a pagina automaticamente. Idempotente; seguro em SSR.
+initStaleBundleRecovery();
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
 

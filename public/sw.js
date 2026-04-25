@@ -2,13 +2,14 @@
  * CoolTrack Pro - Service Worker
  * Estratégia: Cache-first para assets estáticos, Network-first para API/Supabase.
  *
- * Fluxo de atualização: o SW NÃO chama skipWaiting() automaticamente —
- * entra em estado "waiting" até o cliente postar a mensagem SKIP_WAITING
- * (tipicamente após o usuário confirmar "Nova versão disponível").
- * Isso evita mismatch entre o JS rodando no tab e os chunks no cache.
+ * v10 (force-update): chama self.skipWaiting() automaticamente no install
+ * pra desbloquear clientes presos com cache do v9 servindo bundles cujos
+ * chunks ja nao existem no edge (sintoma: 404 em /assets/<hash>.js + erro
+ * "Failed to fetch dynamically imported module"). A partir do v11 voltar
+ * pro fluxo de banner "Nova versao disponivel" controlado pelo cliente.
  */
 
-const CACHE_NAME = 'cooltrack-pro-v9';
+const CACHE_NAME = 'cooltrack-pro-v10';
 const OFFLINE_PAGE = '/offline.html';
 
 // Assets que sempre ficam em cache
@@ -39,9 +40,11 @@ self.addEventListener('install', (event) => {
       });
     }),
   );
-  // NÃO chama skipWaiting() aqui — aguarda confirmação do cliente via
-  // postMessage({ type: 'SKIP_WAITING' }) para permitir UX de "Recarregar
-  // para atualizar".
+  // v10: skipWaiting() automatico para forcar update dos clientes presos
+  // com cache do v9 servindo bundles cujos chunks ja nao existem no edge.
+  // A partir do v11+, voltar a aguardar SKIP_WAITING do cliente para
+  // preservar a UX do banner "Nova versao disponivel".
+  self.skipWaiting();
 });
 
 // Permite o cliente forçar a ativação da nova versão quando o usuário
@@ -104,14 +107,29 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       caches.open(CACHE_NAME).then((cache) =>
         cache.match(request).then((cached) => {
-          const networkFetch = fetch(request).then((response) => {
-            // Não cacheia HTML em URL de asset (sintoma de SPA fallback servindo
-            // index.html para hash que não existe — envenenaria o cache).
-            if (response.ok && !isHtmlMasqueradingAsAsset(response, request)) {
-              cache.put(request, response.clone());
-            }
-            return response;
-          });
+          const networkFetch = fetch(request)
+            .then((response) => {
+              // Asset com hash sumiu do edge (deploy novo invalidou o hash).
+              // Remove a entrada cacheada pra evitar servir stub infinitamente -
+              // o cliente vai bater num erro de dynamic import e o handler em
+              // recoverFromStaleBundle.js dispara o reload de auto-recovery.
+              if (response.status === 404) {
+                cache.delete(request).catch(() => {});
+                return response;
+              }
+              // Nao cacheia HTML em URL de asset (sintoma de SPA fallback
+              // servindo index.html para hash que nao existe).
+              if (response.ok && !isHtmlMasqueradingAsAsset(response, request)) {
+                cache.put(request, response.clone());
+              }
+              return response;
+            })
+            .catch((err) => {
+              // Network falhou (offline). Se temos cached, o `cached ||`
+              // abaixo cobre. Senao, propagamos o erro.
+              if (cached) return cached;
+              throw err;
+            });
           return cached || networkFetch;
         }),
       ),
