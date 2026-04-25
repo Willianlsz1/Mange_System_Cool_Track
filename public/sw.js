@@ -87,9 +87,7 @@ self.addEventListener('fetch', (event) => {
   // Não cacheamos o index.html — se o HTML antigo ficar cacheado, o usuário
   // fica preso pedindo bundles com hash que não existem mais no deploy atual.
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request).catch(() => caches.match(OFFLINE_PAGE)),
-    );
+    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_PAGE)));
     return;
   }
 
