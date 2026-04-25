@@ -34,6 +34,41 @@ import { getOperationalStatus } from '../../core/equipmentRules.js';
 // Filtros auxiliares persistem na sessão — desaparecem ao fechar o app (intencional).
 const HIST_PERIOD_KEY = 'cooltrack-hist-period';
 const HIST_TIPO_KEY = 'cooltrack-hist-tipo';
+const HIST_SUMMARY_COLLAPSED_KEY = 'cooltrack-hist-summary-collapsed';
+
+// Helper de UA mobile-ish para decidir default colapsado.
+// Não confiamos só em viewport — touch + viewport <= 720px = mobile.
+function isMobileViewport() {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.matchMedia('(max-width: 720px)').matches;
+  } catch {
+    return (window.innerWidth || 0) <= 720;
+  }
+}
+
+function getSummaryCollapsedDefault() {
+  return isMobileViewport();
+}
+
+function isSummaryCollapsed() {
+  try {
+    const raw = sessionStorage.getItem(HIST_SUMMARY_COLLAPSED_KEY);
+    if (raw === '1') return true;
+    if (raw === '0') return false;
+    return getSummaryCollapsedDefault();
+  } catch {
+    return getSummaryCollapsedDefault();
+  }
+}
+
+function setSummaryCollapsed(value) {
+  try {
+    sessionStorage.setItem(HIST_SUMMARY_COLLAPSED_KEY, value ? '1' : '0');
+  } catch {
+    /* sessionStorage indisponivel: ignora */
+  }
+}
 
 // Períodos suportados. `days: null` = "tudo" (sem corte).
 const PERIOD_OPTIONS = [
@@ -321,6 +356,70 @@ export function getEquipStatusPill(eq) {
   return { tone, label };
 }
 
+// Agrupa lista de registros por categoria de data relativa pra renderizar
+// headers tipo "Hoje", "Ontem", "Esta semana" entre os grupos.
+// Espera lista ja ordenada (mais recente primeiro). Retorna lista de grupos
+// [{ id, label, items }] preservando a ordem dos items dentro do grupo.
+function groupRegistrosByDate(list) {
+  const today = Utils.localDateString();
+  const todayDate = new Date(today + 'T00:00:00');
+  const yesterdayDate = new Date(todayDate.getTime() - 24 * 60 * 60 * 1000);
+  const yesterday = yesterdayDate.toISOString().slice(0, 10);
+  const dow = todayDate.getDay();
+  const daysSinceMonday = dow === 0 ? 6 : dow - 1;
+  const weekStartDate = new Date(todayDate.getTime() - daysSinceMonday * 24 * 60 * 60 * 1000);
+  const weekStart = weekStartDate.toISOString().slice(0, 10);
+  const monthStartDate = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+  const monthStart = monthStartDate.toISOString().slice(0, 10);
+
+  const buckets = [
+    { id: 'hoje', label: 'Hoje', items: [] },
+    { id: 'ontem', label: 'Ontem', items: [] },
+    { id: 'semana', label: 'Esta semana', items: [] },
+    { id: 'mes', label: 'Este mes', items: [] },
+    { id: 'antigos', label: 'Anteriores', items: [] },
+  ];
+  const byId = Object.fromEntries(buckets.map((b) => [b.id, b]));
+
+  for (const r of list) {
+    const day = (r.data || '').slice(0, 10);
+    if (!day) {
+      byId.antigos.items.push(r);
+      continue;
+    }
+    if (day === today) byId.hoje.items.push(r);
+    else if (day === yesterday) byId.ontem.items.push(r);
+    else if (day >= weekStart) byId.semana.items.push(r);
+    else if (day >= monthStart) byId.mes.items.push(r);
+    else byId.antigos.items.push(r);
+  }
+
+  return buckets.filter((b) => b.items.length > 0);
+}
+
+function renderDayGroupHeader(group) {
+  const count = group.items.length;
+  const countLabel = count === 1 ? '1 servico' : count + ' servicos';
+  return (
+    '<div class="hist-day-group" role="presentation">' +
+    '<div class="hist-day-group__label">' +
+    '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>' +
+    '<line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>' +
+    '<line x1="3" y1="10" x2="21" y2="10"/>' +
+    '</svg>' +
+    '<span>' +
+    Utils.escapeHtml(group.label) +
+    '</span>' +
+    '<span class="hist-day-group__count">' +
+    countLabel +
+    '</span>' +
+    '</div>' +
+    '</div>'
+  );
+}
+
 // ──────────────────────────────────────────────────────────────────────
 // Render blocks
 // ──────────────────────────────────────────────────────────────────────
@@ -428,12 +527,24 @@ function renderSummaryCard(
 
   const ctaLabel = filtered ? 'Gerar Relatório desta seleção' : 'Gerar Relatório';
 
-  return `<section class="hist-summary-card" aria-label="Resumo do período">
+  const collapsed = isSummaryCollapsed();
+  const sectionClass = collapsed
+    ? 'hist-summary-card hist-summary-card--collapsed'
+    : 'hist-summary-card';
+  const expandedAttr = collapsed ? 'false' : 'true';
+  const toggleAriaLabel = collapsed ? 'Mostrar insights' : 'Ocultar insights';
+  const chevronPath = collapsed ? 'm6 9 6 6 6-6' : 'm18 15-6-6-6 6';
+
+  return `<section class="${sectionClass}" aria-label="Resumo do período">
     <div class="hist-summary-card__orbs" aria-hidden="true">
       <div class="hist-summary-card__orb hist-summary-card__orb--tl"></div>
       <div class="hist-summary-card__orb hist-summary-card__orb--br"></div>
     </div>
-    <div class="hist-summary-card__pill">
+    <button type="button" class="hist-summary-card__pill hist-summary-card__pill--toggle"
+      data-hist-action="toggle-summary"
+      aria-expanded="${expandedAttr}"
+      aria-controls="hist-summary-content"
+      aria-label="${Utils.escapeHtml(toggleAriaLabel)}">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
         stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         ${
@@ -442,8 +553,14 @@ function renderSummaryCard(
             : '<path d="M3 20V10M9 20V4M15 20v-7M21 20v-4"/>'
         }
       </svg>
-      ${Utils.escapeHtml(pillLabel)}
-    </div>
+      <span class="hist-summary-card__pill-label">${Utils.escapeHtml(pillLabel)}</span>
+      <svg class="hist-summary-card__pill-chev" width="14" height="14" viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" stroke-width="1.75"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="${chevronPath}"/>
+      </svg>
+    </button>
+    <div class="hist-summary-card__content" id="hist-summary-content" ${collapsed ? 'hidden' : ''}>
     <div class="hist-summary-card__kpis">
       <div class="hist-summary-card__kpi">
         <div class="hist-summary-card__kpi-value">${totalServicos}</div>
@@ -485,6 +602,7 @@ function renderSummaryCard(
       </svg>
       ${Utils.escapeHtml(ctaLabel)}
     </button>
+    </div>
   </section>`;
 }
 
@@ -969,15 +1087,26 @@ export function renderHist() {
       return;
     }
 
-    const itemsHtml = list
-      .map((r, idx) =>
-        renderTimelineItem(r, {
-          isFirst: idx === 0,
-          equipamentos,
-          setoresById,
-          currentFilterEquipId: filtEq || '',
-        }),
-      )
+    // Agrupa por data relativa para inserir headers entre grupos.
+    // Dentro de cada grupo, preserva a ordem (mais recente primeiro).
+    const groups = groupRegistrosByDate(list);
+    let globalIdx = 0;
+    const itemsHtml = groups
+      .map((group) => {
+        const groupItems = group.items
+          .map((r) => {
+            const html = renderTimelineItem(r, {
+              isFirst: globalIdx === 0,
+              equipamentos,
+              setoresById,
+              currentFilterEquipId: filtEq || '',
+            });
+            globalIdx += 1;
+            return html;
+          })
+          .join('');
+        return renderDayGroupHeader(group) + groupItems;
+      })
       .join('');
 
     el.innerHTML = `${preList}<div class="timeline">${itemsHtml}</div>`;
@@ -1006,6 +1135,17 @@ export function renderHist() {
 // ──────────────────────────────────────────────────────────────────────
 
 function attachFilterHandlers(container) {
+  // Toggle do card de Insights (collapsed/expanded). Persiste a escolha em
+  // sessionStorage para a sessão. Re-renderiza pra trocar o estado visual.
+  const summaryToggle = container.querySelector('[data-hist-action="toggle-summary"]');
+  if (summaryToggle) {
+    summaryToggle.addEventListener('click', () => {
+      const next = !isSummaryCollapsed();
+      setSummaryCollapsed(next);
+      renderHist();
+    });
+  }
+
   const { registros, equipamentos } = getState();
 
   // Handlers vivem em múltiplos containers agora (slots fora do #timeline).
