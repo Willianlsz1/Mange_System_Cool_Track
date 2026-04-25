@@ -11,6 +11,17 @@ export function renderShellModals() {
         <div class="modal-progress-header">
           <div>
             <div class="modal__title" id="modal-add-eq-title">Qual equipamento você quer monitorar?</div>
+            <!--
+              Subtítulo explícito (#11 do refino UX): a carga percebida do
+              modal é o problema #1 ("muita coisa pra preencher"). Um toggle
+              "rápido/completo" seria redundante — o progressive disclosure
+              (#7) e o accordion "Adicionar detalhes técnicos" já fazem o
+              modal começar mínimo. Mas o técnico só sabe disso quando vê.
+              Esta linha afirma upfront que 2 campos bastam.
+            -->
+            <p class="modal__subtitle modal__subtitle--muted" id="modal-add-eq-subtitle">
+              Só precisa de <b>nome</b> e <b>onde fica</b> — o resto é opcional.
+            </p>
             <nav class="modal-breadcrumb" aria-label="Seções do cadastro">
               <span class="modal-breadcrumb__item modal-breadcrumb__item--active" id="crumb-essenciais">
                 <span class="modal-breadcrumb__dot" aria-hidden="true">●</span> Essenciais
@@ -21,8 +32,11 @@ export function renderShellModals() {
               <span class="modal-breadcrumb__item modal-breadcrumb__item--muted" id="crumb-detalhes">Detalhes técnicos</span>
             </nav>
           </div>
+          <!-- Contador "1 / 2" removido: o breadcrumb de 3 seções já comunica
+               progresso; um contador numérico que desbate do breadcrumb (são
+               3 seções, não 2) só confunde. Os .visually-hidden dots ficam
+               por compat caso algum teste referencie os IDs. -->
           <div class="modal-steps modal-steps--counter" aria-label="Etapas">
-            <span class="modal-steps__counter" id="eq-step-counter">1 / 2</span>
             <span class="modal-step modal-step--active visually-hidden" id="step-dot-1">1</span>
             <span class="modal-step visually-hidden" id="step-dot-2">2</span>
           </div>
@@ -240,6 +254,14 @@ export function renderShellModals() {
             </div>
           </div>
 
+          <!--
+            Toggle "Detalhes técnicos" (V7 refino UX): label simplificado.
+            Antes era "+ Adicionar detalhes técnicos" / "− Detalhes técnicos"
+            com indicador textual +/− redundante com o chevron SVG. Agora
+            o label é estático ("Detalhes técnicos") e o chevron rotaciona
+            via CSS conforme aria-expanded — uma única fonte de verdade
+            visual sobre o estado aberto/fechado.
+          -->
           <button class="eq-expand-btn eq-expand-btn--pill" id="eq-expand-details" type="button" aria-expanded="false"
             aria-controls="eq-step-2">
             <span class="eq-expand-btn__body">
@@ -248,7 +270,7 @@ export function renderShellModals() {
                   <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
                     stroke-linejoin="round" />
                 </svg>
-                Adicionar detalhes técnicos
+                Detalhes técnicos
               </span>
               <span class="eq-expand-hint">TAG, fluido, modelo — pode preencher depois</span>
             </span>
@@ -258,9 +280,9 @@ export function renderShellModals() {
         <div id="eq-step-2" class="eq-details-panel" aria-hidden="true">
           <div class="eq-details-divider">Detalhes técnicos <span>(opcional — pode preencher depois)</span></div>
           <div class="form-group">
-            <label class="form-label" for="eq-tag">TAG / Código de identificação</label>
+            <label class="form-label" for="eq-tag" title="Ex: AC-01 (ar-condicionado 01), CF-FARM (câmara fria farmácia), VRF-A (VRF unidade A). Qualquer código curto que identifique o equipamento no local.">TAG / Código de identificação</label>
             <input id="eq-tag" class="form-control form-control--mono" type="text"
-              placeholder="Ex: AC-01, CF-FARM, VRF-A" aria-describedby="eq-tag-hint" />
+              placeholder="Ex: AC-01, CF-FARM" aria-describedby="eq-tag-hint" />
             <div class="form-hint" id="eq-tag-hint">Código que você usa na etiqueta ou plaqueta do equipamento</div>
           </div>
           <div class="form-row">
@@ -319,6 +341,20 @@ export function renderShellModals() {
             <span class="eq-details-subhead__label">Dados da etiqueta</span>
             <span class="eq-details-subhead__meta" id="eq-etiqueta-status">— opcional, a IA preenche por foto</span>
           </div>
+          <!--
+            Banner inline orientando que esses 10 campos são todos opcionais.
+            Antes a info ficava só como label cinza discreta "— opcional, a IA
+            preenche por foto" e o técnico não percebia que podia pular tudo.
+            Agora, afirmação explícita + CTA pra ativar a foto se ainda não o fez.
+          -->
+          <div class="eq-etiqueta-skip" role="note">
+            <svg class="eq-etiqueta-skip__icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>
+            </svg>
+            <span class="eq-etiqueta-skip__text">
+              Usou a foto da etiqueta? Pode pular tudo abaixo. Senão, preencha só o que souber — o resto fica em branco.
+            </span>
+          </div>
 
           <div class="form-row">
             <div class="form-group">
@@ -333,6 +369,26 @@ export function renderShellModals() {
             </div>
           </div>
 
+          <!--
+            Progressive disclosure (#7 do refino UX): os próximos 8 campos da
+            etiqueta (tensão/frequência/fase/potência/correntes/pressões/IP/ano)
+            são técnicos avançados — muitos técnicos só preenchem se a IA
+            pegou. Por default ficam ocultos atrás desse toggle; clicar revela
+            todo o bloco. Se a IA detecta qualquer valor nesses campos,
+            applyFieldsToForm abre o bloco automaticamente (ver
+            expandEtiquetaMoreIfNeeded em themeInitHelpers.js).
+          -->
+          <button type="button" class="eq-etiqueta-more-toggle"
+                  id="eq-etiqueta-more-toggle" aria-expanded="false"
+                  aria-controls="eq-etiqueta-more">
+            <svg class="eq-etiqueta-more-toggle__chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+            <span class="eq-etiqueta-more-toggle__label">Mais campos da etiqueta</span>
+            <span class="eq-etiqueta-more-toggle__hint">tensão, pressão, proteção, ano…</span>
+          </button>
+
+          <div id="eq-etiqueta-more" class="eq-etiqueta-more" hidden aria-hidden="true">
           <div class="form-row">
             <div class="form-group">
               <label class="form-label" for="eq-tensao">Tensão (V)</label>
@@ -387,12 +443,12 @@ export function renderShellModals() {
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="eq-pressao-suc">Pressão sucção (MPa)</label>
+              <label class="form-label" for="eq-pressao-suc" title="Pressão de sucção em MegaPascal (MPa). Para converter: 1 MPa ≈ 10 bar ≈ 145 PSI. Só preencha se tiver o valor exato da placa.">Pressão sucção (MPa)</label>
               <input id="eq-pressao-suc" class="form-control" type="number" min="0" max="10" step="0.1"
                 placeholder="Ex: 2,4" inputmode="decimal" data-decimal-hint="pressao" />
             </div>
             <div class="form-group">
-              <label class="form-label" for="eq-pressao-desc">Pressão descarga (MPa)</label>
+              <label class="form-label" for="eq-pressao-desc" title="Pressão de descarga em MegaPascal (MPa). 1 MPa ≈ 10 bar ≈ 145 PSI.">Pressão descarga (MPa)</label>
               <input id="eq-pressao-desc" class="form-control" type="number" min="0" max="10" step="0.1"
                 placeholder="Ex: 4,2" inputmode="decimal" data-decimal-hint="pressao" />
             </div>
@@ -400,9 +456,9 @@ export function renderShellModals() {
 
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="eq-grau-protecao">Grau de proteção</label>
+              <label class="form-label" for="eq-grau-protecao" title="Índice de Proteção IEC 60529. O primeiro dígito é proteção contra sólidos (0–6), o segundo contra água (0–8). Ex: IP24 = protegido contra objetos >12mm e respingos.">Grau de proteção</label>
               <input id="eq-grau-protecao" class="form-control form-control--mono" type="text"
-                placeholder="Ex: IPX0, IP24" autocomplete="off" />
+                placeholder="Ex: IP24, IPX0" autocomplete="off" />
             </div>
             <div class="form-group">
               <label class="form-label" for="eq-ano-fabricacao">Ano de fabricação</label>
@@ -410,14 +466,24 @@ export function renderShellModals() {
                 placeholder="Ex: 2024" inputmode="numeric" />
             </div>
           </div>
+          </div><!-- /#eq-etiqueta-more -->
 
           <div class="eq-details-subhead">
             <span class="eq-details-subhead__label">Operação</span>
           </div>
 
+          <!--
+            Criticidade vs Prioridade (#6 do refino UX): investigamos e os dois
+            campos são consumidos por código real (maintenance.js usa peso da
+            prioridade_operacional em cálculos). Não dá pra fundir sem perder
+            sinal. Resolução: mantemos os dois mas com tooltips explicativos
+            (label title attr) + label da prioridade marcada como opcional pra
+            o técnico saber que pode deixar no default sem culpa. Dica embaixo
+            do par deixa claro que a diferença é "ativo vs. dia a dia".
+          -->
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label" for="eq-criticidade">Criticidade do ativo</label>
+              <label class="form-label" for="eq-criticidade" title="O quão crítico é este equipamento pro negócio se parar. Ex: servidor do hospital = Crítica; ar-condicionado da sala de reunião = Baixa. Afeta o cálculo de prioridade de manutenção.">Criticidade do ativo</label>
               <select id="eq-criticidade" class="form-control">
                 <option value="baixa">Baixa</option>
                 <option value="media" selected>Média</option>
@@ -426,13 +492,16 @@ export function renderShellModals() {
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label" for="eq-prioridade">Prioridade operacional</label>
+              <label class="form-label" for="eq-prioridade" title="Como este equipamento deve ser tratado no dia a dia operacional. Diferente da criticidade: um ativo pode ser 'Média criticidade' e ter 'Alta prioridade' em período de pico. Na dúvida, deixe 'Normal'.">Prioridade operacional <span class="form-label__opt" aria-hidden="true">(opcional)</span></label>
               <select id="eq-prioridade" class="form-control">
                 <option value="baixa">Baixa</option>
                 <option value="normal" selected>Normal</option>
                 <option value="alta">Alta</option>
               </select>
             </div>
+          </div>
+          <div class="form-hint form-hint--pair">
+            <b>Criticidade</b> é sobre o ativo; <b>prioridade</b> é sobre o dia a dia. Na dúvida, deixe a prioridade em <b>Normal</b>.
           </div>
           <div class="form-group">
             <label class="form-label" for="eq-periodicidade">Periodicidade preventiva (dias)</label>
@@ -445,7 +514,7 @@ export function renderShellModals() {
 
       <div class="btn-group modal__footer">
         <button class="btn btn--outline" data-action="close-modal" data-id="modal-add-eq">Cancelar</button>
-        <button class="btn btn--primary" data-action="save-equip">&#10003; Confirmar e cadastrar</button>
+        <button class="btn btn--primary" data-action="save-equip">Cadastrar equipamento</button>
       </div>
       <p class="modal-trust-note modal-trust-note--footer">&#10003; Você pode editar ou excluir a qualquer momento
       </p>
@@ -493,7 +562,7 @@ export function renderShellModals() {
             </span>
           </label>
           <input type="file" id="eq-photos-gallery" accept="image/*" multiple
-            class="visually-hidden" data-action="eq-photos-add" />
+            class="visually-hidden" />
 
           <label class="equip-photo-shortcut" for="eq-photos-camera">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -504,7 +573,7 @@ export function renderShellModals() {
             Atalho: abrir câmera direto
           </label>
           <input type="file" id="eq-photos-camera" accept="image/*" capture="environment"
-            class="visually-hidden" data-action="eq-photos-add" />
+            class="visually-hidden" />
 
           <div class="equip-photo-counter photo-counter visually-hidden" aria-live="polite">0/3 fotos</div>
           <div class="photo-preview equip-photo-preview" id="eq-photos-preview" role="list"></div>

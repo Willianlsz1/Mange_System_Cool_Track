@@ -57,30 +57,18 @@ export function computeEquipKpis(state = getState()) {
   return { semSetor, emAtencao, criticos, preventiva30d };
 }
 
-/** Copy do subtítulo do hero, derivada dos KPIs (evita "0 de tudo" genérico). */
-function equipHeroSubCopy({ semSetor, emAtencao, criticos, preventiva30d }) {
-  if (criticos > 0) {
-    const plural = criticos !== 1 ? 's' : '';
-    return `${criticos} equipamento${plural} crítico${plural} precisam de ação imediata.`;
-  }
-  if (emAtencao > 0) {
-    const plural = emAtencao !== 1 ? 's' : '';
-    return `${emAtencao} equipamento${plural} pedindo atenção.`;
-  }
-  if (semSetor > 0) {
-    const plural = semSetor !== 1 ? 's' : '';
-    return `${semSetor} equipamento${plural} sem setor — organize pra acompanhar por área.`;
-  }
-  if (preventiva30d > 0) {
-    const plural = preventiva30d !== 1 ? 's' : '';
-    return `${preventiva30d} preventiva${plural} vencendo nos próximos 30 dias.`;
-  }
-  return 'Parque em ordem. Monitore as preventivas e organize por setor.';
-}
-
-/** Renderiza hero no slot #equip-hero. Idempotente; chamar sempre em render.
- *  `opts.isPro` bifurca o CTA "Sem setor": Pro vê atalho pra organizar,
- *  Free/Plus vê CTA educacional de upsell. */
+/**
+ * Renderiza hero "Organizar parque" no slot #equip-hero.
+ *
+ * Pós-simplificação UX (abr/2026): o hero aparece APENAS quando há
+ * equipamentos sem setor. As métricas (críticos/atenção/preventiva) foram
+ * unificadas com os chips de filtro logo abaixo (ver `renderEquipFilters`),
+ * eliminando a redundância entre os 4 KPI tiles e os 5 chips que faziam
+ * praticamente a mesma coisa.
+ *
+ * `opts.isPro` bifurca o CTA: Pro vê atalho "Organizar agora" (filtro);
+ * Free/Plus vê upsell educacional.
+ */
 export function renderEquipHero(opts = {}) {
   const { isPro = false } = opts || {};
   const hero = Utils.getEl('equip-hero');
@@ -92,91 +80,61 @@ export function renderEquipHero(opts = {}) {
     return;
   }
 
-  hero.removeAttribute('hidden');
   const kpis = computeEquipKpis();
+
+  // Hero só aparece quando há equipamentos sem setor — é o único caso em que
+  // "Organizar parque" tem utilidade acionável. Os chips contadorados abaixo
+  // cobrem críticos/atenção/preventiva sem precisar de duplicação aqui.
+  if (kpis.semSetor <= 0) {
+    hero.setAttribute('hidden', '');
+    return;
+  }
+
+  hero.removeAttribute('hidden');
+
   const sub = Utils.getEl('equip-hero-sub');
-  if (sub) sub.textContent = equipHeroSubCopy(kpis);
+  if (sub) {
+    const plural = kpis.semSetor !== 1 ? 's' : '';
+    sub.textContent = `${kpis.semSetor} equipamento${plural} sem setor — organize pra acompanhar por área.`;
+  }
 
   const ctaSlot = Utils.getEl('equip-hero-sem-setor-cta');
   if (ctaSlot) {
-    if (kpis.semSetor <= 0) {
-      ctaSlot.setAttribute('hidden', '');
-      ctaSlot.innerHTML = '';
+    ctaSlot.removeAttribute('hidden');
+    if (isPro) {
+      ctaSlot.innerHTML = `
+        <button type="button" class="equip-hero__cta-btn equip-hero__cta-btn--action"
+                data-action="equip-quickfilter" data-id="sem-setor"
+                aria-label="Organizar equipamentos sem setor agora">
+          <span>Organizar agora</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>`;
     } else {
-      ctaSlot.removeAttribute('hidden');
-      if (isPro) {
-        ctaSlot.innerHTML = `
-          <button type="button" class="equip-hero__cta-btn equip-hero__cta-btn--action"
-                  data-action="equip-quickfilter" data-id="sem-setor"
-                  aria-label="Organizar equipamentos sem setor agora">
-            <span>Organizar agora</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-          </button>`;
-      } else {
-        ctaSlot.innerHTML = `
-          <button type="button" class="equip-hero__cta-btn equip-hero__cta-btn--upsell"
-                  data-action="open-upgrade" data-upgrade-source="equip_sem_setor" data-highlight-plan="pro"
-                  aria-label="Ver como setores funcionam no plano Pro">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 21 12 16.5 5.8 21l2.4-7.1L2 9.4h7.6z"/></svg>
-            <span>Ver como setores funcionam</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-          </button>`;
-      }
+      ctaSlot.innerHTML = `
+        <button type="button" class="equip-hero__cta-btn equip-hero__cta-btn--upsell"
+                data-action="open-upgrade" data-upgrade-source="equip_sem_setor" data-highlight-plan="pro"
+                aria-label="Ver como setores funcionam no plano Pro">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 21 12 16.5 5.8 21l2.4-7.1L2 9.4h7.6z"/></svg>
+          <span>Ver como setores funcionam</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        </button>`;
     }
   }
 
+  // Slot de KPIs: esvaziado pós-simplificação (mantido no HTML pra não
+  // exigir mudança no shell template, mas sem conteúdo renderizado).
   const slot = Utils.getEl('equip-hero-kpis');
-  if (!slot) return;
-
-  const tiles = [
-    {
-      id: 'sem-setor',
-      icon: '#eq-ri-inbox',
-      tone: 'neutral',
-      value: kpis.semSetor,
-      label: 'Sem setor',
-    },
-    {
-      id: 'em-atencao',
-      icon: '#eq-ri-alert-triangle',
-      tone: kpis.emAtencao > 0 ? 'warn' : 'neutral',
-      value: kpis.emAtencao,
-      label: 'Em atenção',
-    },
-    {
-      id: 'criticos',
-      icon: '#eq-ri-alert-octagon',
-      tone: kpis.criticos > 0 ? 'danger' : 'neutral',
-      value: kpis.criticos,
-      label: 'Críticos',
-    },
-    {
-      id: 'preventiva-30d',
-      icon: '#eq-ri-calendar-clock',
-      tone: kpis.preventiva30d > 0 ? 'cyan' : 'neutral',
-      value: kpis.preventiva30d,
-      label: 'Preventivas ≤30d',
-    },
-  ];
-
-  slot.innerHTML = tiles
-    .map((t) => {
-      const safeId = Utils.escapeAttr(t.id);
-      return `
-        <button type="button" class="equip-hero__kpi equip-hero__kpi--${t.tone}" role="listitem"
-                data-action="equip-quickfilter" data-id="${safeId}"
-                aria-label="${Utils.escapeHtml(t.label)}: ${t.value}. Filtrar por ${Utils.escapeHtml(t.label)}">
-          <span class="equip-hero__kpi-icon" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="${t.icon}"/></svg>
-          </span>
-          <span class="equip-hero__kpi-value">${t.value}</span>
-          <span class="equip-hero__kpi-label">${Utils.escapeHtml(t.label)}</span>
-        </button>`;
-    })
-    .join('');
+  if (slot) slot.innerHTML = '';
 }
 
-/** Renderiza os chips de quick filter no slot #equip-filters. */
+/** Renderiza os chips de quick filter no slot #equip-filters.
+ *
+ * Cada chip mostra label + contador, unificando o que antes eram 4 KPI tiles
+ * + 5 chips. O contador usa os kpis globais já calculados por
+ * `computeEquipKpis`. Chips com count=0 ficam visualmente esmaecidos via
+ * modifier `--empty` mas continuam clicáveis (filtrar por 0 mostra empty
+ * state informativo, útil pro usuário confirmar que não há nada pendente).
+ */
 export function renderEquipFilters() {
   const bar = Utils.getEl('equip-filters');
   if (!bar) return;
@@ -188,24 +146,40 @@ export function renderEquipFilters() {
   }
   bar.removeAttribute('hidden');
   const active = getRouteEquipCtx().quickFilter || 'todos';
+  const kpis = computeEquipKpis();
 
   const chips = [
-    { id: 'todos', label: 'Todos' },
-    { id: 'sem-setor', label: 'Sem setor' },
-    { id: 'em-atencao', label: 'Em atenção' },
-    { id: 'criticos', label: 'Críticos' },
-    { id: 'preventiva-30d', label: 'Preventiva ≤30d' },
+    { id: 'todos', label: 'Todos', count: equipamentos.length, tone: 'neutral' },
+    { id: 'sem-setor', label: 'Sem setor', count: kpis.semSetor, tone: 'neutral' },
+    { id: 'em-atencao', label: 'Em atenção', count: kpis.emAtencao, tone: 'warn' },
+    { id: 'criticos', label: 'Críticos', count: kpis.criticos, tone: 'danger' },
+    {
+      id: 'preventiva-30d',
+      label: 'Preventivas em 30 dias',
+      count: kpis.preventiva30d,
+      tone: 'cyan',
+    },
   ];
 
   bar.innerHTML = chips
     .map((c) => {
       const isActive = c.id === active;
+      const isEmpty = c.count === 0 && c.id !== 'todos';
       const safeId = Utils.escapeAttr(c.id);
+      const modifiers = [
+        isActive ? 'equip-filter--active' : '',
+        isEmpty ? 'equip-filter--empty' : '',
+        c.count > 0 && c.id !== 'todos' ? `equip-filter--${c.tone}` : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
       return `
-        <button type="button" class="equip-filter${isActive ? ' equip-filter--active' : ''}"
+        <button type="button" class="equip-filter ${modifiers}"
                 data-action="equip-quickfilter" data-id="${safeId}"
-                aria-pressed="${isActive ? 'true' : 'false'}">
-          ${Utils.escapeHtml(c.label)}
+                aria-pressed="${isActive ? 'true' : 'false'}"
+                aria-label="${Utils.escapeHtml(c.label)}: ${c.count}">
+          <span class="equip-filter__label">${Utils.escapeHtml(c.label)}</span>
+          <span class="equip-filter__count" aria-hidden="true">${c.count}</span>
         </button>`;
     })
     .join('');

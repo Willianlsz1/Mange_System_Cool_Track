@@ -185,10 +185,14 @@ describe('renderEquipHero', () => {
     expect(document.getElementById('equip-hero').hasAttribute('hidden')).toBe(true);
   });
 
-  it('mostra 4 tiles de KPI quando há equipamentos', async () => {
+  it('hero esconde quando semSetor = 0 (métricas vivem nos chips, hero só aparece pra "Organizar parque")', async () => {
+    // Pós-simplificação UX: o hero só tem utilidade quando há equipamentos
+    // sem setor — aí o CTA "Organizar agora" (ou upsell) fica relevante.
+    // Quando tudo tá organizado, os chips contadorados abaixo já comunicam
+    // críticos/atenção/preventiva, sem precisar do hero.
     getState.mockReturnValue({
       equipamentos: [
-        { id: 'e1', setorId: null, status: 'ok' },
+        { id: 'e1', setorId: 's1', status: 'ok' },
         { id: 'e2', setorId: 's1', status: 'danger' },
       ],
       registros: [],
@@ -198,53 +202,51 @@ describe('renderEquipHero', () => {
     const { renderEquipHero } = await import('../ui/views/equipamentos.js');
     renderEquipHero();
 
+    expect(document.getElementById('equip-hero').hasAttribute('hidden')).toBe(true);
+  });
+
+  it('hero aparece quando há equipamentos sem setor', async () => {
+    getState.mockReturnValue({
+      equipamentos: [
+        { id: 'e1', setorId: null, status: 'ok' },
+        { id: 'e2', setorId: 's1', status: 'ok' },
+      ],
+      registros: [],
+    });
+
+    const { renderEquipHero } = await import('../ui/views/equipamentos.js');
+    renderEquipHero();
+
     const hero = document.getElementById('equip-hero');
     expect(hero.hasAttribute('hidden')).toBe(false);
-
-    const tiles = hero.querySelectorAll('.equip-hero__kpi');
-    expect(tiles.length).toBe(4);
-
-    // Cada tile tem data-id único (sem-setor / em-atencao / criticos / preventiva-30d)
-    const ids = Array.from(tiles)
-      .map((t) => t.dataset.id)
-      .sort();
-    expect(ids).toEqual(['criticos', 'em-atencao', 'preventiva-30d', 'sem-setor']);
   });
 
-  it('usa copy de críticos no sub quando há criticos > 0', async () => {
+  it('sub copy menciona equipamentos sem setor quando hero aparece', async () => {
     getState.mockReturnValue({
-      equipamentos: [{ id: 'e1', setorId: 's1', status: 'danger' }],
+      equipamentos: [
+        { id: 'e1', setorId: null, status: 'ok' },
+        { id: 'e2', setorId: null, status: 'danger' },
+      ],
       registros: [],
     });
     const { renderEquipHero } = await import('../ui/views/equipamentos.js');
     renderEquipHero();
 
-    expect(document.getElementById('equip-hero-sub').textContent).toMatch(/crítico/i);
+    expect(document.getElementById('equip-hero-sub').textContent).toMatch(/sem setor/i);
+    expect(document.getElementById('equip-hero-sub').textContent).toMatch(/2 equipamentos/);
   });
 
-  it('usa copy otimista quando parque está em ordem', async () => {
+  it('não renderiza mais tiles de KPI no hero (movidos pros chips)', async () => {
     getState.mockReturnValue({
-      equipamentos: [{ id: 'e1', setorId: 's1', status: 'ok' }],
+      equipamentos: [{ id: 'e1', setorId: null, status: 'ok' }],
       registros: [],
     });
-    getPreventivaDueEquipmentIds.mockReturnValue([]);
     const { renderEquipHero } = await import('../ui/views/equipamentos.js');
     renderEquipHero();
 
-    expect(document.getElementById('equip-hero-sub').textContent).toMatch(/em ordem/i);
-  });
-
-  it('CTA Sem setor: esconde quando semSetor = 0', async () => {
-    getState.mockReturnValue({
-      equipamentos: [{ id: 'e1', setorId: 's1', status: 'ok' }],
-      registros: [],
-    });
-    const { renderEquipHero } = await import('../ui/views/equipamentos.js');
-    renderEquipHero({ isPro: true });
-
-    const cta = document.getElementById('equip-hero-sem-setor-cta');
-    expect(cta.hasAttribute('hidden')).toBe(true);
-    expect(cta.innerHTML).toBe('');
+    const kpisSlot = document.getElementById('equip-hero-kpis');
+    expect(kpisSlot.innerHTML).toBe('');
+    expect(document.querySelectorAll('.equip-hero__kpi').length).toBe(0);
   });
 
   it('CTA Sem setor: Pro vê atalho "Organizar agora" com data-action equip-quickfilter', async () => {
@@ -326,6 +328,50 @@ describe('renderEquipFilters', () => {
     const active = bar.querySelector('.equip-filter--active');
     expect(active.dataset.id).toBe('todos');
     expect(active.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('cada chip exibe contador (unifica os KPI tiles antigos)', async () => {
+    getState.mockReturnValue({
+      equipamentos: [
+        { id: 'e1', setorId: null, status: 'ok' },
+        { id: 'e2', setorId: null, status: 'ok' },
+        { id: 'e3', setorId: 's1', status: 'danger' },
+      ],
+      registros: [],
+    });
+    getPreventivaDueEquipmentIds.mockReturnValue(['e1']);
+
+    const { renderEquipFilters } = await import('../ui/views/equipamentos.js');
+    renderEquipFilters();
+
+    const bar = document.getElementById('equip-filters');
+    const countOf = (id) =>
+      bar.querySelector(`[data-id="${id}"] .equip-filter__count`)?.textContent;
+
+    expect(countOf('todos')).toBe('3');
+    expect(countOf('sem-setor')).toBe('2');
+    expect(countOf('criticos')).toBe('1');
+    expect(countOf('preventiva-30d')).toBe('1');
+  });
+
+  it('chips com count=0 recebem modifier --empty (não "todos")', async () => {
+    getState.mockReturnValue({
+      equipamentos: [{ id: 'e1', setorId: 's1', status: 'ok' }],
+      registros: [],
+    });
+    getPreventivaDueEquipmentIds.mockReturnValue([]);
+
+    const { renderEquipFilters } = await import('../ui/views/equipamentos.js');
+    renderEquipFilters();
+
+    const bar = document.getElementById('equip-filters');
+    // sem-setor = 0, em-atencao = 0, criticos = 0, preventiva-30d = 0
+    expect(
+      bar.querySelector('[data-id="sem-setor"]').classList.contains('equip-filter--empty'),
+    ).toBe(true);
+    expect(bar.querySelector('[data-id="todos"]').classList.contains('equip-filter--empty')).toBe(
+      false,
+    );
   });
 
   it('marca o chip correspondente quando setActiveQuickFilter é chamado', async () => {
@@ -478,8 +524,14 @@ describe('renderEquip memoization on large lists', () => {
 
     // Com memo local por render, cada métrica pesada roda 1x por equipamento.
     expect(evaluateEquipmentRiskMock).toHaveBeenCalledTimes(2);
-    // 2 chamadas vêm do hero KPI (em-atencao) + 2 do sort list.
-    expect(evaluateEquipmentPriorityMock).toHaveBeenCalledTimes(4);
+    // Depois do refino UX (abr/2026) o hero não calcula mais KPIs próprios,
+    // mas renderEquipFilters passou a precisar de kpis pra contadores dos
+    // chips — então `computeEquipKpis` roda 1x no fluxo hero (condicional
+    // semSetor) + 1x no fluxo filters. Em equipamentos com setorId definido,
+    // cada chamada de `evaluateEquipmentPriority` roda 1x por equip. Isso
+    // resulta em 2 equips × (2 chamadas de computeEquipKpis + 1 no sort) =
+    // 6 chamadas totais.
+    expect(evaluateEquipmentPriorityMock).toHaveBeenCalledTimes(6);
     expect(getActionPriorityScoreMock).toHaveBeenCalledTimes(2);
   });
 
@@ -553,13 +605,17 @@ describe('setorCardHtml empty state', () => {
     expect(html).not.toContain('setor-card__health-fill');
     expect(html).not.toContain('/100');
 
-    // Em vez disso, tem empty body com "Setor vazio" + tone pill "Aguardando"
+    // Em vez disso, tem empty body com "Setor vazio" + tone pill "Vazio"
+    // (antes era "Aguardando", trocado pra "Vazio" no refino UX abr/2026 —
+    // "Aguardando o quê?" era vago; "Vazio" é informativo sem ser negativo).
     expect(html).toContain('setor-card__empty');
     expect(html).toContain('Setor vazio');
     expect(html).toContain('setor-card__tone-pill--neutral');
-    expect(html).toContain('Aguardando');
-    // Fallback copy vira subtítulo na descricao quando o setor não tem uma
-    expect(html).toMatch(/Atribua equipamentos/);
+    expect(html).toContain('>\n        Vazio\n      </span>');
+    // Descrição fallback "Atribua equipamentos..." foi removida (#2 do refino
+    // UX) pra não duplicar a mensagem do empty body. Setor sem descrição e
+    // sem equipamentos agora mostra APENAS o emptyHtml.
+    expect(html).not.toMatch(/Atribua equipamentos/);
   });
 
   it('renderiza meta strip com Equip/Score/Em dia quando setor tem equipamentos', async () => {

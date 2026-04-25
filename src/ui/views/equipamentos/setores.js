@@ -69,13 +69,58 @@ function setorHealthTone(equipamentosDoSetor) {
   return { tone: 'ok', dangerCount, warnCount };
 }
 
-/** Labels do tone pill — mesmas quatro categorias do mockup V3. */
+/** Labels do tone pill — mesmas quatro categorias do mockup V3.
+ *  `neutral` = setor sem equipamentos. Troquei de 'Aguardando' (vago —
+ *  "aguardando o quê?") pra 'Vazio' pra ser informativo sem ser negativo. */
 const _SETOR_TONE_LABELS = {
   ok: 'Estável',
   warn: 'Em atenção',
   danger: 'Crítico',
-  neutral: 'Aguardando',
+  neutral: 'Vazio',
 };
+
+/** Classe de modifier do dot de status usado no preview inline (#7).
+ *  `unknown` cai em neutral (mesma cor do meta dot) pra não destoar. */
+const _PREVIEW_DOT_CLASS = {
+  ok: 'setor-card__equip-preview-dot--ok',
+  warn: 'setor-card__equip-preview-dot--warn',
+  danger: 'setor-card__equip-preview-dot--danger',
+  unknown: 'setor-card__equip-preview-dot--neutral',
+};
+
+/** Limite de equipamentos mostrados inline no card. Acima disso, renderiza
+ *  um item "+N" que informa o excedente sem poluir o card. */
+const _PREVIEW_MAX = 3;
+
+/** Monta o HTML do preview inline dos equipamentos do setor (#7).
+ *  Puramente informativo — o card inteiro continua clicável via data-action
+ *  "open-setor" no article; os items não capturam click pra evitar conflito. */
+function _setorEquipPreviewHtml(equipamentosDoSetor) {
+  if (!equipamentosDoSetor.length) return '';
+  const shown = equipamentosDoSetor.slice(0, _PREVIEW_MAX);
+  const extra = equipamentosDoSetor.length - shown.length;
+  const itemsHtml = shown
+    .map((eq) => {
+      const status = Utils.safeStatus(eq.status);
+      const dotClass = _PREVIEW_DOT_CLASS[status] || _PREVIEW_DOT_CLASS.unknown;
+      const nome = eq.nome || 'Sem nome';
+      return `
+        <li class="setor-card__equip-preview" title="${Utils.escapeAttr(nome)}">
+          <span class="setor-card__equip-preview-dot ${dotClass}" aria-hidden="true"></span>
+          <span class="setor-card__equip-preview-name">${Utils.escapeHtml(nome)}</span>
+        </li>`;
+    })
+    .join('');
+  const extraHtml =
+    extra > 0
+      ? `<li class="setor-card__equip-preview setor-card__equip-preview--more" aria-label="Mais ${extra} equipamento${extra !== 1 ? 's' : ''}">+${extra}</li>`
+      : '';
+  return `
+      <ul class="setor-card__equips-preview" aria-label="Equipamentos do setor">
+        ${itemsHtml}
+        ${extraHtml}
+      </ul>`;
+}
 
 /** Iniciais (máx 2) pro avatar do responsável. Fallback " · " se vazio. */
 function _setorResponsavelInitials(name) {
@@ -123,12 +168,14 @@ export function setorCardHtml(
     .filter(Boolean)
     .join(' ');
 
+  // Descrição só aparece quando o setor TEM descrição própria. Quando está
+  // vazio, o emptyHtml abaixo já comunica "Setor vazio. Arraste equipamentos
+  // aqui ou use + Novo equipamento" — não faz sentido ter 2 mensagens com o
+  // mesmo papel no mesmo card (#2 do refino UX).
   const hasDescricao = !!setor.descricao && String(setor.descricao).trim() !== '';
   const descricaoHtml = hasDescricao
     ? `<p class="setor-card__descricao">${Utils.escapeHtml(setor.descricao)}</p>`
-    : count === 0
-      ? `<p class="setor-card__descricao">Atribua equipamentos pra começar a acompanhar por área.</p>`
-      : '';
+    : '';
 
   const tonePillHtml = `
       <span class="setor-card__tone-pill setor-card__tone-pill--${tone}">
@@ -246,6 +293,8 @@ export function setorCardHtml(
             Ver
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polyline points="9 6 15 12 9 18"/>
+        
+
             </svg>
           </button>
           <div class="setor-card__menu" id="${menuId}" role="menu" hidden>
@@ -279,19 +328,9 @@ export function setorCardHtml(
 
       ${metaHtml}
       ${healthHtml}
+      ${_setorEquipPreviewHtml(equipamentosDoSetor)}
       ${emptyHtml}
 
       ${footerHtml}
     </article>`;
 }
-
-// ─── Hero "Organizar parque" + Quick Filters ────────────────────────────────
-//
-// O hero mora acima da toolbar e é persistente entre views (grid de setores,
-// flat list Free, drill-down de quick filter). Ele NÃO duplica os KPIs do
-// Dashboard (eficiência / anomalias / serviços) — o ângulo aqui é gestão:
-// quantos equipamentos estão órfãos de setor? Quantos pedem atenção ou estão
-// críticos? Quantas preventivas vencem nos próximos 30 dias?
-//
-// Os 4 chips de filtro são drill-downs rápidos pra cada KPI + "Todos" (reset)
-// + "Sem setor" (só aparece como filtro destacado porque já é a dor #1).

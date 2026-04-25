@@ -134,7 +134,7 @@ export function clearEditingState() {
   const titleEl = Utils.getEl('modal-add-eq-title');
   if (titleEl) titleEl.textContent = 'Qual equipamento você quer monitorar?';
   const saveBtn = document.querySelector('[data-action="save-equip"]');
-  if (saveBtn) saveBtn.textContent = '✓ Confirmar e cadastrar';
+  if (saveBtn) saveBtn.textContent = 'Cadastrar equipamento';
   const detailsPanel = Utils.getEl('eq-step-2');
   if (detailsPanel) {
     detailsPanel.style.display = '';
@@ -211,28 +211,19 @@ function _setToolbar({ title, extraBtn } = {}) {
   const actionsEl = Utils.getEl('equip-toolbar-actions');
   if (titleEl) titleEl.textContent = title || 'Parque de Equipamentos';
   if (actionsEl) {
-    // Par de CTAs: "Cadastrar com foto" é o primário — advertise a feature
-    // de IA direto da toolbar, sem exigir que o técnico descubra o botão
-    // dentro do modal. Ambos abrem o mesmo modal-add-eq; o gate de trial
-    // (active/trial/locked) continua sendo aplicado dentro do modal por
-    // applyNameplateCtaGate, então não precisamos duplicar essa lógica aqui.
-    // A versão secundária "+ Novo equipamento" fica em estilo outline pra
-    // preservar muscle memory sem competir visualmente com o primário.
+    // CTA único "+ Novo equipamento". Antes eram 2 botões ("Cadastrar com
+    // foto" primário + "Novo equipamento" outline), o que duplicava a ação
+    // na toolbar — ambos abriam o mesmo modal-add-eq. A feature de foto
+    // continua 100% descobrível: o próprio modal tem um nameplate-cta hero
+    // ("Aponta a câmera pra etiqueta") renderizado no topo do formulário,
+    // com gate Plus/trial via applyNameplateCtaGate no controller.
     actionsEl.innerHTML = `
       ${extraBtn || ''}
-      <button class="btn btn--primary btn--sm equip-toolbar__photo-cta"
+      <button class="btn btn--primary btn--sm"
         data-action="open-modal" data-id="modal-add-eq"
-        data-source="toolbar_photo"
-        aria-label="Cadastrar equipamento tirando foto da etiqueta">
-        <span class="equip-toolbar__photo-cta-icon" aria-hidden="true">
-          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><use href="#ri-camera"/></svg>
-        </span>
-        <span>Cadastrar com foto</span>
-      </button>
-      <button class="btn btn--outline btn--sm"
-        data-action="open-modal" data-id="modal-add-eq"
-        data-source="toolbar_manual"
-        data-testid="equipamentos-add-equipment">+ Novo equipamento</button>
+        data-source="toolbar_primary"
+        data-testid="equipamentos-add-equipment"
+        aria-label="Cadastrar novo equipamento (manual ou via foto da etiqueta)">+ Novo equipamento</button>
     `;
   }
 }
@@ -1372,6 +1363,91 @@ export async function saveEquip() {
   return true;
 }
 
+/**
+ * Subtítulo do detail view: combina Local + TAG numa única linha muted
+ * abaixo do nome do equipamento. Local é obrigatório, TAG é opcional.
+ * Sem TAG: apenas o local. Sem local (caso impossível mas defensivo):
+ * apenas a TAG ou string vazia.
+ */
+function _eqDetailSubtitle(eq) {
+  const parts = [];
+  if (eq.local) parts.push(Utils.escapeHtml(eq.local));
+  if (eq.tag && String(eq.tag).trim() !== '') {
+    parts.push(
+      `<span class="eq-detail-title-block__tag">${Utils.escapeHtml(String(eq.tag).trim())}</span>`,
+    );
+  }
+  return parts.join(' · ');
+}
+
+/**
+ * Renderiza um info-row__value: mostra o valor se existe, ou um CTA
+ * "Adicionar X" clicável (abre o modal de editar) se vazio. Antes, campos
+ * vazios mostravam só "—" — desperdício de atenção do técnico. Agora o "—"
+ * vira convite a preencher no momento em que ele está lendo a ficha.
+ */
+function _infoRowValueOrEmpty(value, addLabel, safeId, variant = '') {
+  const clean = value && String(value).trim() !== '' ? String(value).trim() : null;
+  if (clean) {
+    const variantCls = variant === 'mono' ? ' info-row__value--mono' : '';
+    return `<span class="info-row__value${variantCls}">${Utils.escapeHtml(clean)}</span>`;
+  }
+  return `<button type="button" class="info-row__value info-row__value--add"
+    data-action="edit-equip" data-id="${safeId}"
+    aria-label="${Utils.escapeAttr(addLabel)}">
+    ${Utils.escapeHtml(addLabel)}
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  </button>`;
+}
+
+/**
+ * Mapeia um "factor" de risco (string vinda de evaluateEquipmentRisk) pra um
+ * chip com ou sem CTA. Pedido do refino UX: antes, os factors eram só texto
+ * informativo — "preventiva sem agenda" aparecia mas não levava a ação
+ * alguma. Agora, chips acionáveis viram atalho: click abre modal de editar
+ * (pra agendar) ou o fluxo de registro (pra preventiva vencida).
+ *
+ * Regra de decisão:
+ *  - "sem agenda" / "não agendada" → CTA "Agendar" (edit-equip)
+ *  - "vencida" / "atrasada" → CTA "Registrar" (go-register-equip)
+ *  - "criticidade alta/crítica/operacional" → CTA "Ajustar" (edit-equip)
+ *  - positivos ("rotina estável", "sem corretivas") → chip informativo
+ *  - outros → chip informativo neutro
+ */
+function _riskFactorChipHtml(factor, safeId) {
+  const factorStr = String(factor || '').trim();
+  const lower = factorStr.toLowerCase();
+  const escaped = Utils.escapeHtml(factorStr);
+
+  // Detecta intenção a partir do texto do factor.
+  let action = null;
+  let actionLabel = null;
+  if (lower.includes('sem agenda') || lower.includes('não agendada')) {
+    action = 'edit-equip';
+    actionLabel = 'Agendar';
+  } else if (lower.includes('vencida') || lower.includes('atrasada')) {
+    action = 'go-register-equip';
+    actionLabel = 'Registrar';
+  } else if (
+    lower.includes('criticidade') &&
+    (lower.includes('alta') || lower.includes('crítica') || lower.includes('operacional'))
+  ) {
+    action = 'edit-equip';
+    actionLabel = 'Ajustar';
+  }
+
+  if (!action) {
+    return `<span class="eq-risk-panel__factor">${escaped}</span>`;
+  }
+  return `<button type="button"
+      class="eq-risk-panel__factor eq-risk-panel__factor--actionable"
+      data-action="${action}" data-id="${safeId}"
+      aria-label="${escaped} — ${actionLabel}">
+      <span class="eq-risk-panel__factor-text">${escaped}</span>
+      <span class="eq-risk-panel__factor-cta">${actionLabel} <span aria-hidden="true">→</span></span>
+    </button>`;
+}
+
 export async function viewEquip(id) {
   const eq = findEquip(id);
   if (!eq) return;
@@ -1387,31 +1463,25 @@ export async function viewEquip(id) {
     : 'Sem agenda';
   const healthSummary = health.reasons.length
     ? Utils.escapeHtml(health.reasons.slice(0, 2).join(' | '))
-    : 'Historico dentro da rotina prevista';
+    : 'Histórico dentro da rotina prevista';
 
   // SVG ring progress
   const ringR = 30;
   const ringC = +(2 * Math.PI * ringR).toFixed(1);
   const ringOffset = +(ringC * (1 - score / 100)).toFixed(1);
 
-  // Setor select (inline na ficha técnica)
+  // Setor como info-row READONLY (não editável inline). Antes era um <select>
+  // embutido mas quebrava o padrão visual (todos os outros campos são só
+  // label + valor) e não tinha feedback de "quando salva?". Edição completa
+  // vai pro modal "Editar" no footer. Clique no "Alterar" leva pra lá.
   const setorSelectHtml = (() => {
     const { setores: _setores } = getState();
-    if (!_setores.length) return '';
-    const opts = _setores
-      .map(
-        (s) =>
-          `<option value="${Utils.escapeAttr(s.id)}"${eq.setorId === s.id ? ' selected' : ''}>${Utils.escapeHtml(s.nome)}</option>`,
-      )
-      .join('');
+    const setorObj = _setores.find((s) => s.id === eq.setorId);
+    const setorNome = setorObj ? setorObj.nome : 'Sem setor';
+    const setorVisual = setorObj ? '' : 'info-row__value--muted';
     return `<div class="info-row info-row--setor">
       <span class="info-row__label">Setor</span>
-      <span class="info-row__value">
-        <select class="info-row__setor-select" id="eq-det-setor-${safeId}" data-eq-id="${safeId}">
-          <option value=""${!eq.setorId ? ' selected' : ''}>Sem setor</option>
-          ${opts}
-        </select>
-      </span>
+      <span class="info-row__value ${setorVisual}">${Utils.escapeHtml(setorNome)}</span>
     </div>`;
   })();
 
@@ -1444,7 +1514,8 @@ export async function viewEquip(id) {
   // todo e o CTA "Gerenciar fotos" fica overlay no canto inferior direito.
   // Na listagem, o card continua com avatar/thumb redondo (equipCardIconBlock).
   const visual = getEquipmentVisualMeta(eq);
-  const tipoEmoji = visual.icon;
+  // tipoEmoji removido em V7 (avatar usa só iniciais).
+  // visual.icon ainda é usado por outros consumidores (ex: PDF cover).
   const firstPhotoUrl = visual.photoUrl;
   const photosCount = Array.isArray(eq.fotos)
     ? eq.fotos.filter((p) => p && (typeof p === 'string' ? p : p.url || p.path)).length
@@ -1492,14 +1563,25 @@ export async function viewEquip(id) {
   // dedicada logo abaixo — ação separada, visível, sem interferir na leitura.
   // Quando NÃO há foto (placeholder), o CTA continua centralizado sobre o
   // gradiente porque nesse caso ele É o próprio conteúdo convidando à ação.
+  // V7: emoji do tipo (floquinho/raio/etc) removido do cover fallback —
+  // mesmo princípio do avatar do card da listagem. Avatar usa só iniciais,
+  // identificação visual fina é responsabilidade da foto real.
   const coverFallback = `<div class="eq-detail-cover__fallback eq-detail-cover__fallback--tone-${visual.tone}">
       <span class="eq-detail-cover__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
-      <span class="eq-detail-cover__emoji eq-detail-cover__emoji--placeholder" aria-hidden="true">${tipoEmoji}</span>
     </div>`;
   const coverInner = firstPhotoUrl
     ? `<img class="eq-detail-cover__img" src="${Utils.escapeAttr(firstPhotoUrl)}" alt="Foto de ${Utils.escapeAttr(eq.nome)}" loading="lazy" />
        ${coverFallback}
-       <button type="button" class="eq-detail-cover__preview-hit" aria-label="Ampliar foto de ${Utils.escapeAttr(eq.nome)}"></button>`
+       <button type="button" class="eq-detail-cover__preview-hit" aria-label="Ampliar foto de ${Utils.escapeAttr(eq.nome)}"></button>
+       <!-- Pill "ampliar" (V7): sinaliza explicitamente que clicar abre
+            a foto em fullscreen. Antes só o cursor zoom-in dava a dica;
+            usuário mobile/touch nem via cursor, então a pill resolve. -->
+       <span class="eq-detail-cover__zoom-hint" aria-hidden="true">
+         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+           <circle cx="11" cy="11" r="7"/><path d="M11 8v6M8 11h6M20 20l-3.5-3.5"/>
+         </svg>
+         ampliar
+       </span>`
     : `${coverFallback}
        <button type="button" class="eq-detail-cover__cta eq-detail-cover__cta--center${photoCtaVariantCls}"
          data-action="${photoCtaAction}" data-id="${safeId}"${photoCtaExtra}
@@ -1583,19 +1665,36 @@ export async function viewEquip(id) {
 
       ${coverBlock}
 
-      <div class="modal__title" id="eq-det-title">${Utils.escapeHtml(eq.nome)}</div>
+      <!--
+        Title block consolidado (V7 refino UX): nome em h1 + subtítulo
+        muted "Local · TAG". Antes a TAG só aparecia dentro do accordion
+        e o local mostrava como info-row separado, exigindo scroll ou
+        expansão pra info que o técnico precisa de cara. Agora tudo
+        identificador essencial fica visível logo após a foto.
+      -->
+      <div class="eq-detail-title-block">
+        <div class="modal__title" id="eq-det-title">${Utils.escapeHtml(eq.nome)}</div>
+        <div class="eq-detail-title-block__sub">${_eqDetailSubtitle(eq)}</div>
+      </div>
 
-      <!-- ── Hero: score + status (V4: sem foto lateral). As fotos saíram
-           daqui e viraram o avatar no topo, abrindo o editor dedicado
-           (modal-eq-photos) via "Gerenciar fotos". -->
+      <!-- ── Hero: score + status. Ring usa linearGradient cyan→success
+           (V7) pra dar identidade visual ao score saudável. Tones --warn
+           e --danger continuam usando cor sólida via classe-modifier. -->
       <div class="eq-detail-hero eq-detail-hero--${cls}">
         <div class="eq-detail-hero__body">
           <div class="eq-hero-score">
             <div class="eq-score-ring-wrap">
               <svg class="eq-score-ring" viewBox="0 0 72 72" aria-hidden="true">
+                <defs>
+                  <linearGradient id="eq-score-grad-${safeId}" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stop-color="#00c8e8"/>
+                    <stop offset="100%" stop-color="#00c853"/>
+                  </linearGradient>
+                </defs>
                 <circle class="eq-score-ring__track" cx="36" cy="36" r="${ringR}"/>
                 <circle class="eq-score-ring__fill eq-score-ring__fill--${cls}" cx="36" cy="36" r="${ringR}"
-                  stroke-dasharray="${ringC}" stroke-dashoffset="${ringOffset}"/>
+                  stroke-dasharray="${ringC}" stroke-dashoffset="${ringOffset}"
+                  ${cls === 'ok' ? `stroke="url(#eq-score-grad-${safeId})"` : ''}/>
               </svg>
               <div class="eq-score-ring__num eq-score-ring__num--${cls}" aria-label="Score ${score}%">${score}%</div>
             </div>
@@ -1628,34 +1727,60 @@ export async function viewEquip(id) {
         </div>
         <div class="eq-risk-panel__factors">
           ${(risk.factors.length ? risk.factors : ['rotina estável'])
-            .map((f) => `<span class="eq-risk-panel__factor">${Utils.escapeHtml(f)}</span>`)
+            .map((f) => _riskFactorChipHtml(f, safeId))
             .join('')}
         </div>
       </div>
 
-      <!-- ── Ficha técnica ── -->
-      <div class="eq-tech-sheet">
-        <div class="eq-tech-sheet__section">
-          <div class="eq-tech-sheet__title">Identificação</div>
-          <div class="info-list info-list--spaced info-list--soft">
-            <div class="info-row"><span class="info-row__label">TAG</span><span class="info-row__value info-row__value--mono">${Utils.escapeHtml(eq.tag || '—')}</span></div>
-            <div class="info-row"><span class="info-row__label">Tipo</span><span class="info-row__value">${Utils.escapeHtml(eq.tipo)}</span></div>
-            <div class="info-row"><span class="info-row__label">Fluido</span><span class="info-row__value">${Utils.escapeHtml(eq.fluido || '—')}</span></div>
-            <div class="info-row"><span class="info-row__label">Modelo</span><span class="info-row__value">${Utils.escapeHtml(eq.modelo || '—')}</span></div>
-            <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq.local)}</span></div>
-            ${setorSelectHtml}
+      <!-- ── Ficha técnica (V6: accordion colapsável) ──
+           Todos os detalhes técnicos (Identificação, Operação, Dados da
+           etiqueta) ficam dentro de um único <details> fechado por default.
+           Reduz scroll do modal em ~60% — o técnico no campo quase sempre
+           quer só ver a foto + registrar serviço, não reler a ficha toda.
+           Summary mostra preview curto dos 2 campos mais essenciais
+           (Rotina + Próxima preventiva) pra não precisar expandir em 90% dos
+           casos. Click no summary expande tudo. -->
+      <details class="eq-tech-sheet-wrap" id="eq-tech-sheet-${safeId}">
+        <summary class="eq-tech-sheet-wrap__summary">
+          <div class="eq-tech-sheet-wrap__summary-head">
+            <span class="eq-tech-sheet-wrap__summary-title">Detalhes técnicos</span>
+            <svg class="eq-tech-sheet-wrap__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </div>
-        </div>
-        <div class="eq-tech-sheet__section">
-          <div class="eq-tech-sheet__title">Operação</div>
-          <div class="info-list info-list--spaced info-list--soft">
-            <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${Utils.escapeHtml(`${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias`)}</span></div>
-            <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
+          <div class="eq-tech-sheet-wrap__summary-preview">
+            <span class="eq-tech-sheet-wrap__summary-chip">
+              <b>${Utils.escapeHtml(`${context?.periodicidadeDias || eq.periodicidadePreventivaDias}`)}</b> dias
+            </span>
+            <span class="eq-tech-sheet-wrap__summary-chip">
+              Próx.: <b>${Utils.escapeHtml(proximaPreventiva)}</b>
+            </span>
+            <span class="eq-tech-sheet-wrap__summary-hint">toque pra ver tudo</span>
           </div>
+        </summary>
+        <div class="eq-tech-sheet">
+          <div class="eq-tech-sheet__section">
+            <div class="eq-tech-sheet__title">Identificação</div>
+            <div class="info-list info-list--spaced info-list--soft">
+              <div class="info-row"><span class="info-row__label">TAG</span>${_infoRowValueOrEmpty(eq.tag, 'Adicionar TAG', safeId, 'mono')}</div>
+              <div class="info-row"><span class="info-row__label">Tipo</span><span class="info-row__value">${Utils.escapeHtml(eq.tipo)}</span></div>
+              <div class="info-row"><span class="info-row__label">Fluido</span>${_infoRowValueOrEmpty(eq.fluido, 'Adicionar fluido', safeId)}</div>
+              <div class="info-row"><span class="info-row__label">Modelo</span>${_infoRowValueOrEmpty(eq.modelo, 'Adicionar modelo', safeId)}</div>
+              <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq.local)}</span></div>
+              ${setorSelectHtml}
+            </div>
+          </div>
+          <div class="eq-tech-sheet__section">
+            <div class="eq-tech-sheet__title">Operação</div>
+            <div class="info-list info-list--spaced info-list--soft">
+              <div class="info-row"><span class="info-row__label">Rotina preventiva</span><span class="info-row__value">${Utils.escapeHtml(`${context?.periodicidadeDias || eq.periodicidadePreventivaDias} dias`)}</span></div>
+              <div class="info-row"><span class="info-row__label">Próxima preventiva</span><span class="info-row__value">${Utils.escapeHtml(proximaPreventiva)}</span></div>
+            </div>
+          </div>
+          ${dadosPlacaSectionHtml}
+          ${dadosPlacaExtrasSectionHtml}
         </div>
-        ${dadosPlacaSectionHtml}
-        ${dadosPlacaExtrasSectionHtml}
-      </div>
+      </details>
 
       <!-- ── Histórico de serviços ── -->
       <div class="eq-svc-section">
@@ -1692,24 +1817,40 @@ export async function viewEquip(id) {
           </svg>
           Editar
         </button>
-        <button class="eq-modal-footer__delete" data-action="delete-equip" data-id="${safeId}"
-          aria-label="Excluir equipamento ${Utils.escapeAttr(eq.nome)}" title="Excluir equipamento">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-          </svg>
-        </button>
+        <!--
+          Kebab "Mais ações" substitui a lixeira vermelha que ficava direto
+          no footer. Risco de click acidental era real (botão destrutivo a 1
+          toque de distância da ação mais comum). Agora a exclusão fica
+          atrás de ⋯ → "Excluir" — padrão consistente com o setor-card V3.
+        -->
+        <div class="eq-modal-footer__more">
+          <button class="eq-modal-footer__more-btn" type="button"
+            data-action="toggle-eq-detail-menu" data-id="${safeId}"
+            aria-haspopup="menu" aria-expanded="false" aria-controls="eq-detail-menu-${safeId}"
+            aria-label="Mais ações para ${Utils.escapeAttr(eq.nome)}"
+            title="Mais ações">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            </svg>
+          </button>
+          <div class="eq-modal-footer__menu" id="eq-detail-menu-${safeId}" role="menu" hidden>
+            <button type="button" class="eq-modal-footer__menu-item eq-modal-footer__menu-item--danger"
+              role="menuitem" data-action="delete-equip" data-id="${safeId}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+              </svg>
+              <span>Excluir equipamento</span>
+            </button>
+          </div>
+        </div>
       </div>
 
     </div>`;
 
-  // Listener para troca de setor inline
-  const setorSel = document.getElementById(`eq-det-setor-${safeId}`);
-  if (setorSel) {
-    setorSel.addEventListener('change', (e) => {
-      assignEquipToSetor(id, e.target.value || null);
-    });
-  }
+  // Setor agora é readonly no detail view (listener inline removido).
+  // `assignEquipToSetor` continua exportada pra uso programático (drag-drop).
 
   // V4: listener das fotos do hero/gallery removido — o bloco foi substituído
   // pelo avatar CTA, que abre `modal-eq-photos`. Lightbox continua sendo

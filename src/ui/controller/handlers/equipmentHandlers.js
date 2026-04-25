@@ -120,6 +120,44 @@ export function bindEquipmentHandlers() {
     }
   });
 
+  // Toggle Lista ⇄ Grade da tela Equip. A lógica de aplicar a classe e
+  // persistir em localStorage vive em `themeInitHelpers.setEquipViewMode`
+  // (exposto via window.__setEquipViewMode pra ser único ponto de mudança).
+  // Aqui só roteamos o click: previne warning "Sem handler" do delegator
+  // global e padroniza o caminho data-action.
+  on('equip-set-view-mode', (el) => {
+    const mode = el.dataset.mode === 'grid' ? 'grid' : 'list';
+    if (typeof window.__setEquipViewMode === 'function') {
+      window.__setEquipViewMode(mode);
+    }
+  });
+
+  // Kebab do footer do modal-eq-det — toggle do menu "Mais ações" que
+  // esconde a ação destrutiva "Excluir" atrás de 1 clique extra. Tira a
+  // lixeira vermelha sempre-visível que convidava click acidental.
+  on('toggle-eq-detail-menu', (el) => {
+    const id = el.dataset.id;
+    if (!id) return;
+    const menu = document.getElementById(`eq-detail-menu-${id}`);
+    if (!menu) return;
+    const isOpen = !menu.hidden;
+    menu.hidden = isOpen;
+    el.setAttribute('aria-expanded', String(!isOpen));
+    if (!isOpen) {
+      // Fecha ao clicar fora — listener one-shot montado quando abre.
+      setTimeout(() => {
+        const closeOnOutside = (e) => {
+          if (!menu.contains(e.target) && !el.contains(e.target)) {
+            menu.hidden = true;
+            el.setAttribute('aria-expanded', 'false');
+            document.removeEventListener('click', closeOnOutside);
+          }
+        };
+        document.addEventListener('click', closeOnOutside);
+      }, 0);
+    }
+  });
+
   // Abre o editor dedicado de fotos (modal-eq-photos) a partir do detail view.
   on('open-eq-photos-editor', async (el) => {
     try {

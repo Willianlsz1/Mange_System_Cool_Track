@@ -198,12 +198,34 @@ export function _idleClusterHtml(idleCards, count) {
   </div>`;
 }
 
+/**
+ * Monta a linha meta do card da lista — TAG · Fluido · Prioridade.
+ * Antes era `${tag || '—'} · ${fluido || tipo} · ${prioridade}` com um
+ * travessão visível quando TAG estava vazia — ficava ruído. Agora, se TAG
+ * é falsy, ela é simplesmente OMITIDA, e a linha fica só com o que tem.
+ */
+function _equipCardMetaLine(eq, prioridadeLabel) {
+  const parts = [];
+  if (eq.tag && String(eq.tag).trim() !== '') {
+    parts.push(Utils.escapeHtml(String(eq.tag).trim()));
+  }
+  parts.push(Utils.escapeHtml(eq.fluido || eq.tipo));
+  parts.push(Utils.escapeHtml(prioridadeLabel));
+  return parts.join(' · ');
+}
+
 function equipCardIconBlock(eq) {
   const visual = getEquipmentVisualMeta(eq);
   const photoUrl = visual.photoUrl;
   const toneClass = `equip-card__type-icon--fallback-t${visual.tone}`;
-  const fallbackHtml = `<span class="equip-card__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
-    <span class="equip-card__fallback-glyph" aria-hidden="true">${visual.icon}</span>`;
+  const safeId = Utils.escapeAttr(eq.id);
+  // V7 (abr/2026): emoji glyph (floquinho/raio/etc) removido do avatar.
+  // Antes ficava no canto inferior direito do tile com `position:absolute`
+  // e sobrepunha as iniciais em cards mais apertados. Decisão UX: avatar
+  // mostra APENAS as iniciais — limpo, legível, consistente em qualquer
+  // tamanho. Identificação visual fina é responsabilidade da foto real
+  // (que o técnico é encorajado a tirar via CTA "+ tirar foto").
+  const fallbackHtml = `<span class="equip-card__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>`;
   if (photoUrl) {
     const safeUrl = Utils.escapeAttr(photoUrl);
     return `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--photo ${toneClass}" aria-hidden="true">
@@ -211,7 +233,21 @@ function equipCardIconBlock(eq) {
       ${fallbackHtml}
     </div>`;
   }
-  return `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--fallback ${toneClass}" aria-hidden="true">${fallbackHtml}</div>`;
+  // Sem foto: o avatar de iniciais vira um botão clicável que abre o editor
+  // de fotos direto da listagem (sem precisar abrir o detail view antes).
+  // O delegator global (events.js) usa `closest('[data-action]')` e pega o
+  // nó mais próximo — então o click no avatar dispara `open-eq-photos-editor`
+  // em vez do `view-equip` do card, sem precisar stopPropagation manual.
+  return `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--fallback equip-card__type-icon--empty ${toneClass}" role="button" tabindex="0"
+    data-action="open-eq-photos-editor" data-id="${safeId}"
+    aria-label="Adicionar foto ao equipamento ${Utils.escapeAttr(eq.nome)}">${fallbackHtml}
+    <span class="equip-card__type-icon-overlay" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+        <circle cx="12" cy="13" r="3.5"/>
+      </svg>
+    </span>
+  </div>`;
 }
 
 export function equipCardHtml(eq, { showLocal: _showLocal = true, evalCtx = null } = {}) {
@@ -324,7 +360,7 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true, evalCtx = null
         ${equipCardIconBlock(eq)}
         <div class="equip-card__meta">
           <div class="equip-card__name">${Utils.escapeHtml(eq.nome)}</div>
-          <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · ${Utils.escapeHtml(prioridadeLabel)}</div>
+          <div class="equip-card__tag">${_equipCardMetaLine(eq, prioridadeLabel)}</div>
           <div class="equip-card__subtitle">${Utils.escapeHtml(eq.local || 'Local não informado')}</div>
         </div>
         ${headerRightHtml}

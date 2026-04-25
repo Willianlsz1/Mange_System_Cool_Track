@@ -541,6 +541,16 @@ function applyFieldsToForm(fields) {
   // são serializadas em `dados_placa.camposExtras`.
   renderCamposExtrasReview(fields.camposExtras);
 
+  // Se a IA detectou qualquer valor nos "campos avançados" da etiqueta
+  // (tensão, pressão, IP, etc), auto-abre o progressive disclosure pro
+  // usuário ver o que foi preenchido. Sem isso, o bloco ficaria escondido
+  // e o usuário pensaria que a IA não achou nada além do Nº Série/capacidade.
+  try {
+    window.__expandEtiquetaMoreIfNeeded?.();
+  } catch {
+    /* defensive: toggle opcional; não bloqueia o apply */
+  }
+
   // Scroll suave até a subseção "Dados da etiqueta" pro user ver o resultado
   requestAnimationFrame(() => scrollToDetails());
 }
@@ -584,6 +594,9 @@ function ensureCamposExtrasContainer() {
   container.id = CAMPOS_EXTRAS_CONTAINER_ID;
   container.className = 'eq-campos-extras';
   container.setAttribute('aria-label', 'Outras informações encontradas');
+  // Cria já oculto — será revelado pelo renderCamposExtrasReview quando houver
+  // items na lista. Isso elimina o flash do cabeçalho vazio no primeiro paint.
+  container.hidden = true;
   container.innerHTML = `
     <div class="eq-campos-extras__head">
       <span class="eq-campos-extras__title">Outras informações encontradas</span>
@@ -655,15 +668,20 @@ function renderCamposExtrasReview(extras) {
   const container = ensureCamposExtrasContainer();
   if (!container) return;
 
-  // Hide quando vazio — mas mantém o container no DOM pra o "+ Campo" ficar
-  // sempre acessível? Decisão UX: mostrar o cabeçalho + botão mesmo vazio,
-  // assim o técnico sabe que pode adicionar algo manualmente. A lista some.
+  // Esconde o container inteiro quando a lista está vazia. O cabeçalho
+  // "Outras informações encontradas" + botão "+ Campo" sempre-visível gerava
+  // ruído pro técnico que NÃO usou a foto da IA — ele via um bloco vazio sem
+  // contexto e pensava "encontradas aonde?". Agora: a seção só aparece
+  // quando há algo pra mostrar (IA achou campos extras OU técnico adicionou
+  // manualmente — mas esse segundo fluxo é edge-case e tem outros caminhos).
   const ul = container.querySelector(`#${CAMPOS_EXTRAS_LIST_ID}`);
   if (!ul) return;
   if (!list.length) {
     ul.innerHTML = '';
+    container.hidden = true;
     return;
   }
+  container.hidden = false;
 
   ul.innerHTML = list
     .map((item, idx) => {

@@ -168,6 +168,29 @@ export const EquipmentPhotos = {
     this.render();
   },
 
+  /**
+   * Promove uma foto existente pra posição 0 (capa). A capa real do equip é
+   * `getAll()[0]` — então mover pra index 0 em `existing` (que vem antes de
+   * `pending`) efetivamente a define como capa.
+   *
+   * No modal-add-eq novo equipamento (sem `existing`), o botão capa
+   * reposiciona dentro de `pending` — o efeito é o mesmo pra a primeira foto
+   * final que for salva.
+   */
+  setCoverExisting(i) {
+    if (i <= 0 || i >= this.existing.length) return;
+    const [item] = this.existing.splice(i, 1);
+    this.existing.unshift(item);
+    this.render();
+  },
+
+  setCoverPending(i) {
+    if (i <= 0 || i >= this.pending.length) return;
+    const [item] = this.pending.splice(i, 1);
+    this.pending.unshift(item);
+    this.render();
+  },
+
   async openLightboxFromExisting(i) {
     const ref = this.existing[i];
     try {
@@ -205,12 +228,27 @@ export const EquipmentPhotos = {
 
     const fragment = document.createDocumentFragment();
 
+    // A capa real é a primeira do grupo que vier primeiro em getAll(). Se
+    // há existing, capa = existing[0]; senão, capa = pending[0]. Passamos
+    // `isCover` e `canBeCover` pra thumb só decorar / permitir reordenação
+    // (os handlers de setCover fazem o swap no array).
+    const hasExisting = this.existing.length > 0;
+
     // Existing primeiro (mantém ordem histórica)
     this.existing.forEach((ref, i) => {
       const card = this._buildThumb({
         alt: `Foto ${i + 1}`,
         onRemove: () => this.removeExisting(i),
         onOpen: () => this.openLightboxFromExisting(i),
+        onSetCover: i === 0 ? null : () => this.setCoverExisting(i),
+        isCover: i === 0,
+        caption: typeof ref?.caption === 'string' ? ref.caption : '',
+        onCaptionChange: (value) => {
+          // Mantém caption no objeto existing. Persistido no save.
+          if (this.existing[i] && typeof this.existing[i] === 'object') {
+            this.existing[i].caption = value;
+          }
+        },
       });
       // Preview: usa a url cacheada se existir; senão, resolve assincronamente
       const img = card.querySelector('img');
@@ -231,10 +269,13 @@ export const EquipmentPhotos = {
 
     // Pending (novas a subir)
     this.pending.forEach((src, i) => {
+      const isPendingCover = !hasExisting && i === 0;
       const card = this._buildThumb({
         alt: `Foto nova ${i + 1}`,
         onRemove: () => this.removePending(i),
         onOpen: () => this.openLightboxFromPending(i),
+        onSetCover: isPendingCover ? null : () => this.setCoverPending(i),
+        isCover: isPendingCover,
       });
       const img = card.querySelector('img');
       img.src = src;
@@ -247,11 +288,8 @@ export const EquipmentPhotos = {
 
     // Contador (hidden legacy element, mantido para compat)
     const counter = container.parentElement?.querySelector(_targets.counterSelector);
-    if (counter) {
-      counter.textContent = `${totalCount(this)}/${MAX_EQUIP_PHOTOS} fotos`;
-    }
+    if (counter) counter.textContent = `${totalCount(this)}/${MAX_EQUIP_PHOTOS} fotos`;
 
-    // Subline V2: "N de 3 · ajuda a identificar em campo" (só se o modal tiver)
     const sub = _targets.subId ? document.getElementById(_targets.subId) : null;
     if (sub) {
       sub.textContent = `${totalCount(this)} de ${MAX_EQUIP_PHOTOS} · ajuda a identificar em campo`;
@@ -264,9 +302,18 @@ export const EquipmentPhotos = {
     }
   },
 
-  _buildThumb({ alt, onRemove, onOpen }) {
+  _buildThumb({
+    alt,
+    onRemove,
+    onOpen,
+    onSetCover,
+    isCover = false,
+    caption = '',
+    onCaptionChange,
+  }) {
     const card = document.createElement('div');
     card.className = 'photo-thumb';
+    if (isCover) card.classList.add('photo-thumb--cover');
     card.setAttribute('role', 'listitem');
 
     const img = document.createElement('img');
@@ -284,6 +331,44 @@ export const EquipmentPhotos = {
     });
 
     card.append(img, btn);
+
+    if (isCover) {
+      const badge = document.createElement('span');
+      badge.className = 'photo-thumb__cover-badge';
+      badge.setAttribute('aria-label', 'Esta é a foto de capa do card');
+      badge.innerHTML =
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 21 12 16.5 5.8 21l2.4-7.1L2 9.4h7.6z"/></svg>Capa';
+      card.appendChild(badge);
+    } else if (typeof onSetCover === 'function') {
+      const cover = document.createElement('button');
+      cover.type = 'button';
+      cover.className = 'photo-thumb__set-cover';
+      cover.setAttribute('aria-label', `Definir ${alt.toLowerCase()} como capa`);
+      cover.title = 'Definir como capa do card';
+      cover.innerHTML =
+        '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l2.4 7.4H22l-6.2 4.5L18.2 21 12 16.5 5.8 21l2.4-7.1L2 9.4h7.6z"/></svg>Capa';
+      cover.addEventListener('click', (event) => {
+        event.stopPropagation();
+        onSetCover();
+      });
+      card.appendChild(cover);
+    }
+
+    if (typeof onCaptionChange === 'function') {
+      const captionInput = document.createElement('input');
+      captionInput.type = 'text';
+      captionInput.className = 'photo-thumb__caption';
+      captionInput.maxLength = 60;
+      captionInput.value = caption;
+      captionInput.placeholder = 'Legenda (opcional)';
+      captionInput.setAttribute('aria-label', `Legenda da ${alt.toLowerCase()}`);
+      captionInput.addEventListener('click', (event) => event.stopPropagation());
+      captionInput.addEventListener('input', () => {
+        onCaptionChange(captionInput.value);
+      });
+      card.appendChild(captionInput);
+    }
+
     return card;
   },
 };

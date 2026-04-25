@@ -349,6 +349,87 @@
   font-weight: 600;
 }
 
+/* ── Preview inline dos equipamentos do setor (#7) ───────────────────────────
+   Lista até 3 equipamentos mostrados inline como chips informativos abaixo
+   da meta strip. Acima do limite, um chip "+N" indica o excedente. Não é
+   clicável individualmente — o click no article inteiro (open-setor) é
+   preservado pra não brigar com o comportamento padrão do card. */
+.setor-card__equips-preview {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0 20px 12px 20px;
+  list-style: none;
+}
+
+.setor-card__equip-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-2, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.03);
+  font: 500 11.5px/1.2 var(--font-body);
+  color: var(--text-2);
+  min-width: 0;
+}
+
+.setor-card__equip-preview-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted, #888);
+}
+
+.setor-card__equip-preview-dot--ok {
+  background: var(--success, #2fd28a);
+}
+
+.setor-card__equip-preview-dot--warn {
+  background: var(--warning, #e8b94a);
+}
+
+.setor-card__equip-preview-dot--danger {
+  background: var(--danger, #ff5577);
+}
+
+.setor-card__equip-preview-dot--neutral {
+  background: var(--text-3, #aaa);
+}
+
+.setor-card__equip-preview-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 140px;
+}
+
+/* Chip "+N": estilo diferenciado pra sinalizar "tem mais aqui dentro". */
+.setor-card__equip-preview--more {
+  color: var(--text-3, #aaa);
+  font-weight: 600;
+  padding: 4px 10px;
+  border-style: dashed;
+}
+
+/* Mobile: nomes ficam um pouco menores pro card caber mais items sem quebra. */
+@media (max-width: 640px) {
+  .setor-card__equips-preview {
+    padding: 0 16px 10px 16px;
+    gap: 5px;
+  }
+
+  .setor-card__equip-preview-name {
+    max-width: 100px;
+  }
+}
+
 /* ── Footer (responsável + ações) ────────────────────────────────────────── */
 .setor-card__footer {
   position: relative;

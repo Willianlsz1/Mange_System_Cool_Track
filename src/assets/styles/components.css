@@ -1088,6 +1088,104 @@ textarea.form-control {
   background: var(--danger);
 }
 
+/* Badge "Capa" — sinaliza qual foto vira o ícone do card na listagem.
+   Um pedido recorrente dos técnicos é escolher qual foto representa melhor
+   o equipamento em campo. Na primeira (capa) aparece badge fixo. */
+.photo-thumb__cover-badge {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary, #00c8e8) 85%, #000);
+  color: #fff;
+  font: 700 10.5px/1 var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 3;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* Botão "Definir como capa" nas OUTRAS fotos — hover-only pra não poluir. */
+.photo-thumb__set-cover {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font: 600 10.5px/1 var(--font-body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease;
+  z-index: 3;
+}
+
+.photo-thumb:hover .photo-thumb__set-cover,
+.photo-thumb__set-cover:focus-visible {
+  opacity: 1;
+}
+
+.photo-thumb__set-cover:hover {
+  background: var(--color-primary, #00c8e8);
+  border-color: var(--color-primary, #00c8e8);
+}
+
+/* Em telas touch (sem hover real), mostrar o botão com opacidade parcial
+   permanente pro técnico descobrir a feature. */
+@media (hover: none) {
+  .photo-thumb__set-cover {
+    opacity: 0.75;
+  }
+}
+
+/* Border dourado/cyan sutil na thumb que É a capa, pra reforçar visualmente. */
+.photo-thumb--cover {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #00c8e8) 60%, transparent);
+}
+
+/* Input de legenda por foto (#3.B refino UX). Opcional, ajuda o técnico a
+   lembrar o contexto ("Vista da etiqueta", "Lado que afrouxa"). Aparece
+   como texto pequeno abaixo da thumb; salvo junto no payload. */
+.photo-thumb__caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 4px 8px;
+  border: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font: 400 11.5px/1.2 var(--font-body);
+  text-align: center;
+  z-index: 2;
+  outline: none;
+}
+
+.photo-thumb__caption::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+  font-style: italic;
+}
+
+.photo-thumb__caption:focus {
+  background: rgba(0, 0, 0, 0.75);
+  border-top-color: var(--color-primary, #00c8e8);
+}
+
 /* ─── Equipment photos (feature Plus+) ─────────────────────────────────────
    Bloco que aparece no modal de equipamento. Reusa .photo-thumb/.photo-preview
    mas isola o layout do drop-zone para não interferir no fluxo de fotos de
@@ -1205,8 +1303,9 @@ textarea.form-control {
   display: none;
 }
 
-/* Atalho pequeno pra capture="environment" (câmera direta). Fica discreto,
-   não compete com a drop zone principal. Só é relevante no mobile. */
+/* Atalho pra capture="environment" (câmera direta). Discreto no desktop,
+   promovido pra botão protagonista no mobile — técnico em campo quase sempre
+   quer câmera direto (não picker de galeria). */
 .equip-photo-shortcut {
   display: inline-flex;
   align-items: center;
@@ -1232,6 +1331,52 @@ textarea.form-control {
 .equip-photo-shortcut svg {
   flex-shrink: 0;
   opacity: 0.7;
+}
+
+/* Mobile: atalho de câmera direto VIRA O PRIMÁRIO. O dropzone genérico fica
+   menor, posicionado depois, secundário. Técnico mobile no campo quase sempre
+   quer câmera direto — reordenar foca o fluxo mais comum. */
+@media (hover: none) and (pointer: coarse) {
+  .equip-photo-shortcut {
+    order: -1;
+    width: 100%;
+    justify-self: stretch;
+    align-self: stretch;
+    justify-content: center;
+    padding: 14px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--color-primary, #00c8e8);
+    border-radius: 10px;
+  }
+
+  .equip-photo-shortcut svg {
+    width: 18px;
+    height: 18px;
+    opacity: 1;
+  }
+
+  .equip-photo-shortcut:hover,
+  .equip-photo-shortcut:focus-visible {
+    background: color-mix(in srgb, var(--color-primary, #00c8e8) 85%, #000);
+    color: #fff;
+  }
+
+  /* A dropzone vira secundária: menor, sem destaque visual. */
+  .equip-photo-dropzone {
+    font-size: 12px;
+    padding: 10px 14px;
+    min-height: 0;
+  }
+
+  .equip-photo-dropzone__title {
+    font-size: 12.5px;
+  }
+
+  .equip-photo-dropzone__sub {
+    display: none;
+  }
 }
 
 /* Desktop: a drop zone já abre file picker nativo (sem câmera).
@@ -1444,6 +1589,45 @@ textarea.form-control {
 .nameplate-cta[data-state='locked'] {
   background: color-mix(in srgb, var(--primary) 5%, var(--card));
   border-style: dashed;
+}
+
+/* Modo compacto (#8 do refino UX): ativado pelo bindNameplateHeroCollapse
+   quando o técnico começa a digitar no primeiro campo. Reduz o card pra só
+   título + botão, liberando espaço vertical. Transição suave via CSS pra
+   evitar "jump". Ortogonal aos data-states: combina com qualquer um. */
+.nameplate-cta--compact {
+  padding: 10px 14px;
+  gap: 10px;
+  align-items: center;
+}
+
+.nameplate-cta--compact .nameplate-cta__icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.nameplate-cta--compact .nameplate-cta__icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.nameplate-cta--compact .nameplate-cta__title {
+  font-size: 13.5px;
+  line-height: 1.25;
+}
+
+/* Oculta sub + hint em modo compact — reduz ~60% da altura do card. O user
+   já leu essas dicas antes de começar a digitar; se quiser revê-las, basta
+   apagar o campo "Nome" (o listener reexpande automaticamente). */
+.nameplate-cta--compact .nameplate-cta__sub,
+.nameplate-cta--compact .nameplate-cta__hint {
+  display: none;
+}
+
+.nameplate-cta--compact .nameplate-cta__btn {
+  padding: 6px 10px;
+  font-size: 12.5px;
 }
 
 /* Estado "trial" (Free com quota): reforço positivo sem gritar. Tom
@@ -4194,6 +4378,468 @@ mark,
   color: var(--text-2);
 }
 
+/* Variante acionável: factor clicável com CTA inline ("Agendar →", etc).
+   Antes os factors eram só texto informativo (preventiva sem agenda → e aí?).
+   Agora viram atalho pra ação apropriada (edit-equip ou go-register-equip). */
+.eq-risk-panel__factor--actionable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.eq-risk-panel__factor--actionable:hover,
+.eq-risk-panel__factor--actionable:focus-visible {
+  border-color: color-mix(in srgb, var(--color-primary, #00c8e8) 55%, var(--border-2));
+  background: color-mix(in srgb, var(--color-primary, #00c8e8) 8%, transparent);
+  color: var(--text);
+}
+
+.eq-risk-panel__factor--actionable:focus-visible {
+  outline: 2px solid var(--color-primary, #00c8e8);
+  outline-offset: 2px;
+}
+
+.eq-risk-panel__factor-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-primary, #00c8e8) 20%, transparent);
+  color: var(--color-primary, #00c8e8);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Valor "Adicionar X" — substitui o "—" vazio em info-row. Clicável, abre
+   o modal de editar. Visual de CTA discreto (cyan outline). */
+.info-row__value--add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px dashed color-mix(in srgb, var(--color-primary, #00c8e8) 40%, var(--border));
+  background: transparent;
+  color: color-mix(in srgb, var(--color-primary, #00c8e8) 75%, var(--text-3));
+  border-radius: 999px;
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.info-row__value--add:hover,
+.info-row__value--add:focus-visible {
+  border-color: var(--color-primary, #00c8e8);
+  background: color-mix(in srgb, var(--color-primary, #00c8e8) 10%, transparent);
+  color: var(--color-primary, #00c8e8);
+  outline: none;
+}
+
+/* Variante mudada — valor presente mas de baixa ênfase (ex: Setor "Sem setor"
+   quando readonly e vazio). */
+.info-row__value--muted {
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* ════════════════════════════════════════════════════════
+   Detail view — title block consolidado (V7 refino UX)
+   nome + sub muted "Local · TAG"
+   ════════════════════════════════════════════════════════ */
+.eq-detail-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 2px;
+  margin-bottom: var(--space-2);
+}
+
+.eq-detail-title-block__sub {
+  font: 400 12px/1.4 var(--font-body);
+  color: var(--text-2);
+  word-break: break-word;
+}
+
+/* TAG com tom mono pra reforçar que é código/identificador. */
+.eq-detail-title-block__tag {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text-3);
+}
+
+/* Pill "ampliar" sobre a foto cover (V7). Sinaliza interatividade pra
+   touch users — cursor zoom-in não funciona em mobile. */
+.eq-detail-cover__zoom-hint {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(10, 14, 20, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: #fff;
+  font: 600 10.5px/1 var(--font-body);
+  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  pointer-events: none;
+}
+
+.eq-detail-cover__zoom-hint svg {
+  flex-shrink: 0;
+}
+
+/* Sub-section title em cyan dentro do accordion "Detalhes técnicos" (V7).
+   Antes era cinza neutro; agora destaca a hierarquia visual entre as
+   sub-seções (Identificação / Operação / Etiqueta). */
+.eq-tech-sheet-wrap .eq-tech-sheet__title {
+  color: var(--color-primary, #00c8e8);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* ════════════════════════════════════════════════════════
+   Ficha técnica colapsável (V6 refino UX)
+   Unifica Identificação + Operação + Etiqueta num <details>
+   fechado por default. Reduz scroll do detail view em ~60%.
+   ════════════════════════════════════════════════════════ */
+.eq-tech-sheet-wrap {
+  margin-bottom: var(--space-3);
+  border-radius: 12px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  background: var(--card, rgba(255, 255, 255, 0.02));
+  overflow: hidden;
+}
+
+.eq-tech-sheet-wrap__summary {
+  list-style: none;
+  padding: 12px 14px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+/* Remove o triângulo default do <summary> em todos os browsers */
+.eq-tech-sheet-wrap__summary::-webkit-details-marker {
+  display: none;
+}
+
+.eq-tech-sheet-wrap__summary::marker {
+  display: none;
+  content: '';
+}
+
+.eq-tech-sheet-wrap__summary:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.eq-tech-sheet-wrap__summary:focus-visible {
+  outline: 2px solid var(--color-primary, #00c8e8);
+  outline-offset: -2px;
+}
+
+.eq-tech-sheet-wrap__summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eq-tech-sheet-wrap__summary-title {
+  font: 700 12px/1 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.eq-tech-sheet-wrap__chev {
+  color: var(--text-3);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.eq-tech-sheet-wrap[open] .eq-tech-sheet-wrap__chev {
+  transform: rotate(-180deg);
+  color: var(--color-primary, #00c8e8);
+}
+
+.eq-tech-sheet-wrap__summary-preview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.eq-tech-sheet-wrap__summary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-2);
+}
+
+.eq-tech-sheet-wrap__summary-chip b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.eq-tech-sheet-wrap__summary-hint {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* Quando aberto, esconde o hint ("toque pra ver tudo") porque já abriu. */
+.eq-tech-sheet-wrap[open] .eq-tech-sheet-wrap__summary-hint {
+  display: none;
+}
+
+/* Os .eq-tech-sheet__section dentro do wrap perdem os box-model antigos
+   (que criavam cards separados). Agora ficam agrupados sob o accordion
+   único, visualmente unificados. */
+.eq-tech-sheet-wrap .eq-tech-sheet {
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  padding: 4px 0;
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+}
+
+.eq-tech-sheet-wrap .eq-tech-sheet__section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-2, rgba(255, 255, 255, 0.04));
+}
+
+.eq-tech-sheet-wrap .eq-tech-sheet__section:last-child {
+  border-bottom: none;
+}
+
+/* Animação sutil ao abrir pra não ter "pop" abrupto. */
+.eq-tech-sheet-wrap[open] .eq-tech-sheet {
+  animation: eq-tech-sheet-in 0.2s ease-out;
+}
+
+@keyframes eq-tech-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   Toggle Lista ⇄ Grade (#3.A refino UX)
+   ════════════════════════════════════════════════════════ */
+
+/* V8: wrapper flex que coloca search bar + toggle inline. Mobile-first.
+   Antes o toggle ficava DENTRO da .search-bar (que é só position:relative,
+   sem flex), quebrava pra linha solta abaixo do input.
+   Agora wrapper externo controla a disposição:
+     [ search input flex:1 ] [ toggle flex-shrink:0 ]
+   Search bar mantém UI interna (input + ícone lupa) sem mudança. */
+.equip-search-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: var(--space-3);
+}
+
+.equip-search-row > .search-bar {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin-bottom: 0; /* o gap do wrapper substitui */
+}
+
+.equip-view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  background: var(--surface-2, rgba(255, 255, 255, 0.03));
+  flex-shrink: 0;
+  align-self: stretch; /* mesma altura do input ao lado */
+}
+
+.equip-view-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  /* V8: height auto + align-self stretch garante que cada botão preenche
+     a altura do toggle pill, que por sua vez stretch-iguala com o input
+     da busca ao lado. Resultado: altura uniforme em qualquer tamanho. */
+  height: auto;
+  align-self: stretch;
+  border: 0;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  border-radius: 8px;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.equip-view-toggle__btn:hover {
+  color: var(--text);
+}
+
+.equip-view-toggle__btn[aria-pressed='true'] {
+  background: var(
+    --primary-soft,
+    color-mix(in srgb, var(--color-primary, #00c8e8) 14%, transparent)
+  );
+  color: var(--color-primary, #00c8e8);
+}
+
+.equip-view-toggle__btn:focus-visible {
+  outline: 2px solid var(--color-primary, #00c8e8);
+  outline-offset: 1px;
+}
+
+/* Modo grade: cards ficam menores mas com foto grande protagonista.
+   Grid auto-fill entre 200-280px por card, conforme largura da tela.
+   O técnico varre visualmente procurando "aquele split do galpão". */
+.lista-equip--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.lista-equip--grid .equip-card {
+  /* V7 grid-mode: card vertical empilhado. Foto grande no topo,
+     nome + meta embaixo. Importante:
+     - display: flex pra column funcionar (era block)
+     - border-left tonal zera no grid (no modo lista a borda 4px sinaliza
+       tone, mas no grid quebra alinhamento horizontal — a tone-pill
+       sobre a foto já dá o sinal de status sem precisar da barra)
+     - margin: 0 (cancela qualquer margin-bottom acumulada do modo lista) */
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  border-left: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* Estados warn/danger no grid: borda topo 3px no lugar da lateral 5px.
+   Mantém o sinal tonal sem desalinhar a grade horizontalmente. */
+.lista-equip--grid .equip-card--warn,
+.lista-equip--grid .equip-card--danger {
+  border-left-width: 1px;
+  border-top: 3px solid var(--tone);
+}
+
+/* No grid-mode, o header (foto + nome + tone) vira layout vertical com
+   foto grande ocupando toda a largura. Thumbnail cresce pra 100% × 140px. */
+.lista-equip--grid .equip-card__header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+
+.lista-equip--grid .equip-card__type-icon--lg {
+  width: 100%;
+  height: 140px;
+  border-radius: 0;
+  aspect-ratio: auto;
+}
+
+.lista-equip--grid .equip-card__type-icon--photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lista-equip--grid .equip-card__type-icon--empty {
+  /* No grid mode, o avatar vazio fica centralizado numa área grande —
+     ótimo pra CTA "tirar foto" bem convidativo. */
+  font-size: 40px;
+}
+
+.lista-equip--grid .equip-card__meta {
+  padding: 10px 12px 0;
+  min-width: 0;
+}
+
+.lista-equip--grid .equip-card__name {
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.lista-equip--grid .equip-card__tag {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.lista-equip--grid .equip-card__subtitle {
+  font-size: 11px;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+
+/* Tone pill absoluto no canto da foto pro layout não empilhar vertical
+   demais. Sobre a foto em modo grade — alto contraste pra ficar legível. */
+.lista-equip--grid .equip-card__tone-pill {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.lista-equip--grid .equip-card__onboard {
+  margin: 8px 12px 10px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+/* Mobile: grid vira 1 coluna pra foto ser ainda maior */
+@media (max-width: 640px) {
+  .lista-equip--grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .lista-equip--grid .equip-card__type-icon--lg {
+    height: 120px;
+  }
+}
+
 .eq-risk-panel__analysis {
   border-top: 1px solid var(--border-2);
   padding-top: 10px;
@@ -5004,6 +5650,88 @@ mark,
   outline: none;
 }
 
+/* Kebab "Mais ações" no footer — substitui a lixeira vermelha direta. Esconde
+   ações destrutivas (como Excluir) atrás de 1 clique extra pra evitar click
+   acidental. Mesmo padrão do setor-card V3. */
+.eq-modal-footer__more {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.eq-modal-footer__more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.eq-modal-footer__more-btn:hover,
+.eq-modal-footer__more-btn:focus-visible,
+.eq-modal-footer__more-btn[aria-expanded='true'] {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--color-primary, #00c8e8) 40%, var(--border));
+  outline: none;
+}
+
+.eq-modal-footer__menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  min-width: 200px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.12));
+  background: var(--surface-2, #1a1f2e);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 6px;
+  z-index: 10;
+}
+
+.eq-modal-footer__menu[hidden] {
+  display: none;
+}
+
+.eq-modal-footer__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: 500 13px/1.2 var(--font-body);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.eq-modal-footer__menu-item:hover,
+.eq-modal-footer__menu-item:focus-visible {
+  background: rgba(255, 255, 255, 0.05);
+  outline: none;
+}
+
+.eq-modal-footer__menu-item--danger {
+  color: var(--danger, #ff5577);
+}
+
+.eq-modal-footer__menu-item--danger:hover,
+.eq-modal-footer__menu-item--danger:focus-visible {
+  background: color-mix(in srgb, var(--danger, #ff5577) 14%, transparent);
+}
+
 @media (max-width: 560px) {
   .eq-modal-footer {
     flex-direction: row; /* mantém lado a lado no mobile: primary cresce, delete fica 36x36 */
@@ -5270,11 +5998,14 @@ mark,
    EQUIP CARD REDESIGN v5.2 — Raycast/Arc style
    ════════════════════════════════════════════════════════ */
 
-/* Ícone maior e mais legível */
+/* Thumb do card da listagem — protagonismo maior da foto (pedido recorrente
+   dos técnicos: "lembram melhor por foto do que por nome"). Dobrado de 40×40
+   pra 64×64 pra o aparelho ser reconhecível de longe mesmo num corredor de
+   equipamentos iguais. Fallback com iniciais + emoji fica no mesmo box. */
 .equip-card__type-icon--lg {
-  width: 40px;
-  height: 40px;
-  font-size: 22px;
+  width: 64px;
+  height: 64px;
+  font-size: 28px;
   border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
@@ -5304,11 +6035,75 @@ mark,
   opacity: 1;
 }
 .equip-card__fallback-initials {
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.04em;
   font-family: var(--font-mono);
 }
+
+/* Avatar sem foto vira CTA clicável: "+ adicionar foto" (pedido recorrente
+   dos técnicos — a foto é o identificador principal no campo). Hover revela
+   o ícone de câmera e escurece o background pra indicar que é interativo.
+   Abre modal-eq-photos direto da listagem, sem precisar abrir o detail. */
+.equip-card__type-icon--empty {
+  cursor: pointer;
+  position: relative;
+  transition:
+    background 0.18s ease,
+    transform 0.15s ease;
+}
+
+.equip-card__type-icon--empty:hover,
+.equip-card__type-icon--empty:focus-visible {
+  background: color-mix(in srgb, var(--color-primary, #00c8e8) 18%, var(--surface-3));
+  transform: translateY(-1px);
+}
+
+.equip-card__type-icon--empty:focus-visible {
+  outline: 2px solid var(--color-primary, #00c8e8);
+  outline-offset: 2px;
+}
+
+/* V8 (abr/2026): overlay reformulado.
+   Antes: fundo escuro com SVG câmera centralizado SOBRE as iniciais — em
+   mobile ficava com opacity 0.35 permanente, sobrepondo as letras (efeito
+   relatado como "emoji vazando atrás do texto").
+   Agora: badge pequeno no canto inferior direito do avatar, fora da área
+   das iniciais. Hover em desktop intensifica; em mobile fica sempre visível
+   mas DISCRETO — não compete com a leitura das iniciais. */
+.equip-card__type-icon-overlay {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--color-primary, #00c8e8) 30%, rgba(0, 0, 0, 0.6));
+  color: #fff;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  opacity: 0.85;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+  pointer-events: none;
+}
+
+.equip-card__type-icon-overlay svg {
+  width: 11px;
+  height: 11px;
+}
+
+.equip-card__type-icon--empty:hover .equip-card__type-icon-overlay,
+.equip-card__type-icon--empty:focus-visible .equip-card__type-icon-overlay {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Mobile: badge mantém visibilidade default (0.85), sem opacity 0.35
+   permanente que sobrepunha o conteúdo das iniciais. */
 .equip-card__fallback-glyph {
   position: absolute;
   right: 3px;
@@ -5834,9 +6629,18 @@ mark,
 }
 
 .equip-card__tone-pill--ok {
-  background: rgba(0, 200, 83, 0.12);
-  color: #8ee8b2;
-  border-color: rgba(0, 200, 83, 0.3);
+  /* V6 (abr/2026): tom reduzido. O "ESTÁVEL" verde brilhante no canto
+     direito competia visualmente com o CTA primário cyan "Começar →" em
+     cards sem registro. Agora fica neutro com dot verde — sinaliza OK sem
+     gritar, deixa o CTA principal respirar. */
+  background: rgba(107, 129, 150, 0.1);
+  color: var(--text-2);
+  border-color: var(--border-2);
+}
+
+.equip-card__tone-pill--ok .equip-card__tone-pill-dot {
+  background: #4ade80;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #4ade80 25%, transparent);
 }
 
 .equip-card__tone-pill--warn {
@@ -6016,10 +6820,15 @@ mark,
   }
 }
 
-/* ── Idle: bloco de onboarding dashed cyan ── */
+/* ── Idle: bloco de onboarding dashed cyan ──
+   V6 (abr/2026): reduzido. Antes ocupava altura igual ao card principal e
+   empilhava feio em listas com vários equipamentos novos. Agora compacto:
+   menos padding, tipografia mais enxuta, uma linha só com o CTA pra economizar
+   vertical. O técnico ainda entende o convite sem ser bombardeado por 3
+   linhas de texto em cada equipamento novo. */
 .equip-card__onboard {
   margin: 0 var(--space-3) var(--space-3);
-  padding: 10px 12px;
+  padding: 7px 10px;
   background: color-mix(in srgb, var(--primary) 4%, transparent);
   border: 1px dashed color-mix(in srgb, var(--primary) 30%, var(--border));
   border-radius: 10px;
@@ -6033,28 +6842,31 @@ mark,
   min-width: 0;
 }
 
-/* Label small-caps — mesma espinha dorsal visual do .equip-card__primary-label
-   do card ativo. Cor usa --primary em vez de --tone-text porque no idle o
-   card é neutro (ok), então precisa do accent do sistema pra não sumir. */
+/* Label small-caps — compactada junto com o card. */
 .equip-card__onboard-label {
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--primary);
-  margin-bottom: 2px;
+  margin-bottom: 1px;
+  display: none; /* V6: label small-caps removido — economiza 1 linha.
+                    "Crie a linha de base" já é autoexplicativo pro 1º
+                    serviço. */
 }
 
 .equip-card__onboard-title {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text);
 }
 
 .equip-card__onboard-sub {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--text-3);
-  margin-top: 1px;
+  margin-top: 0;
+  display: none; /* V6: sub-hint removido pra compactar. A info redundante com
+                    o CTA "Começar →". */
 }
 
 .equip-card__onboard-cta {
@@ -6514,6 +7326,21 @@ mark,
   margin-top: 3px;
 }
 
+/* Variante --muted do subtítulo: menor e com peso de dica informativa.
+   Usado no modal de cadastro de equipamento (#11 refino UX) pra reforçar
+   upfront que só nome+local são obrigatórios. */
+.modal__subtitle--muted {
+  margin: 4px 0 2px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--text-2);
+}
+
+.modal__subtitle--muted b {
+  color: var(--text);
+  font-weight: 600;
+}
+
 /* Step dots */
 .modal-steps {
   display: flex;
@@ -6668,6 +7495,144 @@ mark,
   text-transform: none;
   font-size: 11px;
   color: var(--text-3);
+}
+
+/* Banner "Usou a foto? Pode pular" — reforço visual sobre o opcional dos
+   campos da etiqueta. Sem grito (não é amarelo/vermelho): só um card sutil
+   cyan-tinted informativo, com ícone info ao lado do texto. */
+.eq-etiqueta-skip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--primary, #00c8e8) 25%, transparent);
+  background: color-mix(in srgb, var(--primary, #00c8e8) 6%, transparent);
+  color: var(--text-2);
+  font: 400 12.5px/1.45 var(--font-body);
+}
+
+.eq-etiqueta-skip__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--primary, #00c8e8);
+}
+
+.eq-etiqueta-skip__text {
+  min-width: 0;
+}
+
+/* Progressive disclosure dos campos avançados da etiqueta (#7).
+   Visual discreto — não deve competir com os campos obrigatórios acima.
+   Quando expandido, o bloco #eq-etiqueta-more revela 8 campos extras. */
+.eq-etiqueta-more-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  margin: 6px 0 4px;
+  border-radius: 10px;
+  border: 1px dashed var(--border-2, rgba(255, 255, 255, 0.1));
+  background: transparent;
+  color: var(--text-2);
+  font: 500 12.5px/1.2 var(--font-body);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.eq-etiqueta-more-toggle:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--primary, #00c8e8) 45%, transparent);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.eq-etiqueta-more-toggle:focus-visible {
+  outline: 2px solid var(--primary, #00c8e8);
+  outline-offset: 2px;
+}
+
+.eq-etiqueta-more-toggle__chev {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: var(--text-3);
+}
+
+.eq-etiqueta-more-toggle[aria-expanded='true'] .eq-etiqueta-more-toggle__chev {
+  transform: rotate(-180deg);
+  color: var(--primary, #00c8e8);
+}
+
+.eq-etiqueta-more-toggle__label {
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.eq-etiqueta-more-toggle__hint {
+  color: var(--text-3);
+  font-size: 11.5px;
+  font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.eq-etiqueta-more[hidden] {
+  display: none;
+}
+
+.eq-etiqueta-more {
+  /* Sem margin-top: o toggle já tem margin-bottom curto. Anima suavemente
+     via animation keyframes — previne "pop" abrupto ao expandir. */
+  animation: eq-etiqueta-more-in 0.2s ease-out;
+}
+
+/* Badge "(opcional)" inline nos labels — menos agressivo que o asterisco
+   vermelho dos obrigatórios. Aplicado em prioridade operacional (#6) pra
+   reforçar que o técnico não precisa mexer. */
+.form-label__opt {
+  display: inline-block;
+  margin-left: 4px;
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-3);
+}
+
+/* form-hint "de dois campos" — fica embaixo de um form-row, esclarecendo
+   uma distinção entre os dois campos acima. Diferente do form-hint normal
+   (que fica embaixo de 1 campo só), este ocupa a largura total da row. */
+.form-hint--pair {
+  margin-top: -6px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-3);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.form-hint--pair b {
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+@keyframes eq-etiqueta-more-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Estado "não detectado" aplicado por applyFieldsToForm:
@@ -10825,6 +11790,16 @@ mark,
 .eq-expand-btn--pill[aria-expanded='true'] {
   border-color: color-mix(in srgb, var(--primary) 50%, var(--border-2));
   background: color-mix(in srgb, var(--primary) 5%, var(--card));
+}
+
+/* Chevron rotaciona ao abrir/fechar o accordion (V7). Single source of
+   truth visual — o label do botão fica estático, só o ícone indica estado. */
+.eq-expand-btn--pill .eq-expand-btn__title svg {
+  transition: transform 0.2s ease;
+}
+
+.eq-expand-btn--pill[aria-expanded='true'] .eq-expand-btn__title svg {
+  transform: rotate(180deg);
 }
 
 /* Mobile ajustes */

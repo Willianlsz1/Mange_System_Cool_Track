@@ -425,17 +425,17 @@ function _equipCardMini(eq) {
   if (!last && suggestedAction.actionCode === ACTION_CODE.NONE)
     ctaLabel = 'Primeiro registro &rarr;';
 
+  // V7: emoji glyph removido. Avatar mostra só iniciais — mesma decisão
+  // do equipmentCards.js. Identificação visual fina = foto real do equip.
   const cardIcon = visual.photoUrl
     ? `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--photo equip-card__type-icon--fallback-t${visual.tone}" aria-hidden="true">
         <img src="${Utils.escapeAttr(visual.photoUrl)}" alt="" loading="lazy"
           onload="this.parentElement.classList.add('equip-card__type-icon--loaded');"
           onerror="this.parentElement.classList.add('equip-card__type-icon--fallback');this.remove();" />
         <span class="equip-card__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
-        <span class="equip-card__fallback-glyph" aria-hidden="true">${visual.icon}</span>
       </div>`
     : `<div class="equip-card__type-icon equip-card__type-icon--lg equip-card__type-icon--fallback equip-card__type-icon--fallback-t${visual.tone}" aria-hidden="true">
         <span class="equip-card__fallback-initials">${Utils.escapeHtml(visual.initials)}</span>
-        <span class="equip-card__fallback-glyph" aria-hidden="true">${visual.icon}</span>
       </div>`;
 
   return `<div class="equip-card equip-card--${scls}" data-action="view-equip" data-id="${safeId}" role="listitem" tabindex="0" aria-label="${Utils.escapeHtml(eq?.nome ?? '—')} — ${STATUS_OPERACIONAL[scls]}">

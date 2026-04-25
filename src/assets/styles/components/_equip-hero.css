@@ -152,83 +152,18 @@
   border-color: color-mix(in srgb, var(--warning, #e8b94a) 60%, transparent);
 }
 
-/* ── KPIs grid ────────────────────────────────────────────── */
+/* ── KPIs grid ────────────────────────────────────────────────
+   Pós-simplificação UX: o slot #equip-hero-kpis virou apenas um placeholder
+   vazio (os 4 tiles foram unificados com os chips de filtro abaixo). Mantido
+   no HTML pra preservar a estrutura do shell; aqui só desativamos o grid
+   quando o slot está vazio pra não deixar padding fantasma. */
 .equip-hero__kpis {
   position: relative;
   z-index: 1;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
 }
 
-.equip-hero__kpi {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border-2, rgba(255, 255, 255, 0.06));
-  background: rgba(255, 255, 255, 0.025);
-  color: var(--text);
-  cursor: pointer;
-  text-align: left;
-  font: inherit;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.15s ease;
-  min-width: 0;
-}
-
-.equip-hero__kpi:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: color-mix(in srgb, var(--primary, #00c8e8) 35%, transparent);
-  transform: translateY(-1px);
-}
-
-.equip-hero__kpi:focus-visible {
-  outline: 2px solid var(--border-focus, var(--primary, #00c8e8));
-  outline-offset: 2px;
-}
-
-.equip-hero__kpi-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  color: var(--text-3);
-}
-
-.equip-hero__kpi-value {
-  font: 700 22px/1.05 var(--font-body);
-  color: var(--text);
-  letter-spacing: -0.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.equip-hero__kpi-label {
-  font: 500 11px/1.2 var(--font-body);
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-/* Tones: colorem o ícone + o valor pra dar sinal semântico sem exagerar */
-.equip-hero__kpi--cyan .equip-hero__kpi-icon,
-.equip-hero__kpi--cyan .equip-hero__kpi-value {
-  color: var(--primary, #00c8e8);
-}
-
-.equip-hero__kpi--warn .equip-hero__kpi-icon,
-.equip-hero__kpi--warn .equip-hero__kpi-value {
-  color: var(--warning, #e8b94a);
-}
-
-.equip-hero__kpi--danger .equip-hero__kpi-icon,
-.equip-hero__kpi--danger .equip-hero__kpi-value {
-  color: var(--danger, #ff5577);
+.equip-hero__kpis:empty {
+  display: none;
 }
 
 /* ── Quick filter chips ───────────────────────────────────── */
@@ -285,6 +220,64 @@
   background: var(--primary-soft, color-mix(in srgb, var(--primary, #00c8e8) 12%, transparent));
 }
 
+/* Contador dentro do chip — pílula interna com background sutil pro número
+   destacar do label. Usa tabular-nums pra alinhar visualmente múltiplos
+   chips em sequência quando os números têm dígitos diferentes. */
+.equip-filter__label {
+  display: inline-block;
+}
+
+.equip-filter__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font: 700 11px/1 var(--font-body);
+  color: var(--text-2);
+  background: rgba(255, 255, 255, 0.07);
+  font-variant-numeric: tabular-nums;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.equip-filter--active .equip-filter__count {
+  color: var(--primary, #00c8e8);
+  background: color-mix(in srgb, var(--primary, #00c8e8) 18%, transparent);
+}
+
+/* Tone chips (warn/danger/cyan) — só aplica cor ao contador quando count>0,
+   preservando o label neutro pra não gritar. Mantém o padrão "sinal no
+   número" que já existia no hero antigo. */
+.equip-filter--warn .equip-filter__count {
+  color: var(--warning, #e8b94a);
+  background: color-mix(in srgb, var(--warning, #e8b94a) 14%, transparent);
+}
+
+.equip-filter--danger .equip-filter__count {
+  color: var(--danger, #ff5577);
+  background: color-mix(in srgb, var(--danger, #ff5577) 14%, transparent);
+}
+
+.equip-filter--cyan .equip-filter__count {
+  color: var(--primary, #00c8e8);
+  background: color-mix(in srgb, var(--primary, #00c8e8) 12%, transparent);
+}
+
+/* Chip com count=0 (exceto "Todos"): esmaecido mas ainda clicável. Clicar
+   mostra o empty-state do filtro, que é útil (confirma que não há nada
+   pendente naquela categoria). */
+.equip-filter--empty {
+  opacity: 0.55;
+}
+
+.equip-filter--empty:hover {
+  opacity: 0.85;
+}
+
 /* ── Mobile ───────────────────────────────────────────────── */
 @media (max-width: 640px) {
   .equip-hero {
@@ -300,19 +293,6 @@
     font-size: 12.5px;
   }
 
-  .equip-hero__kpis {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  .equip-hero__kpi {
-    padding: 10px 12px;
-  }
-
-  .equip-hero__kpi-value {
-    font-size: 20px;
-  }
-
   .equip-hero__orb {
     width: 130px;
     height: 130px;
@@ -324,27 +304,7 @@
   }
 }
 
-/* ── Toolbar: CTA primário "Cadastrar com foto" ──────────────
-   Ícone + texto num botão primary. A classe .btn já faz o
-   inline-flex com gap, então só precisamos garantir que o
-   wrapper do SVG não cause salto vertical (line-height: 0). */
-.equip-toolbar__photo-cta-icon {
-  display: inline-flex;
-  line-height: 0;
-  color: currentColor;
-}
-
-.equip-toolbar__photo-cta-icon svg {
-  width: 14px;
-  height: 14px;
-  stroke: currentColor;
-}
-
-/* Em telas muito estreitas (<480px) escondemos o ícone pra
-   evitar overflow do par de botões. O label "Cadastrar com
-   foto" já comunica a intenção sem o pictograma. */
-@media (max-width: 480px) {
-  .equip-toolbar__photo-cta-icon {
-    display: none;
-  }
-}
+/* Toolbar do view-equipamentos: hoje tem só o CTA "+ Novo equipamento".
+   O antigo par de botões ("Cadastrar com foto" + "Novo equipamento") foi
+   unificado num único CTA — a feature de foto continua acessível via hero
+   CTA interno do modal-add-eq (#nameplate-cta). */

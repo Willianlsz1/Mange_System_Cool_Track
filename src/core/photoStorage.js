@@ -164,6 +164,13 @@ export function normalizePhotoEntry(photo) {
         ? photo.publicUrl.trim()
         : '';
 
+  // Caption opcional por foto (#3.B refino UX abr/2026): legenda que o
+  // técnico usa pra lembrar o contexto ("Vista da etiqueta", "Parafuso
+  // solto", "Lado direito"). Limite de 60 chars pra ficar enxuta em UI.
+  // Omitida do payload quando vazia pra não poluir jsonb.
+  const captionRaw = isString(photo.caption) ? photo.caption.trim() : '';
+  const caption = captionRaw ? captionRaw.slice(0, 60) : undefined;
+
   return {
     version: Number(photo.version) || PHOTO_REF_VERSION,
     provider: 'supabase-storage',
@@ -174,6 +181,7 @@ export function normalizePhotoEntry(photo) {
     mimeType: isString(photo.mimeType) ? photo.mimeType : undefined,
     size: Number(photo.size) || undefined,
     uploadedAt: isString(photo.uploadedAt) ? photo.uploadedAt : undefined,
+    caption,
   };
 }
 

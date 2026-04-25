@@ -223,14 +223,46 @@ export function renderShellViews() {
               <button class="btn btn--primary btn--sm" data-action="open-modal" data-id="modal-add-eq">+ Novo equipamento</button>
             </div>
           </div>
-          <div class="search-bar" id="equip-search-bar">
-            <span class="search-bar__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14"
-                fill="none">
-                <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" />
-                <path d="M9.5 9.5L12 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-              </svg></span>
-                <input class="form-control search-bar__input" id="equip-busca" type="text" placeholder="Buscar por nome, TAG ou local..."
-                  aria-label="Buscar equipamento" />
+          <!--
+            Wrapper flex que coloca search bar + toggle Lista/Grade na mesma
+            linha. Antes o toggle estava DENTRO da .search-bar (que é só
+            position:relative, sem flex) e quebrava pra linha solta abaixo
+            do input. Agora wrapper externo controla a disposição:
+              [ search input flex:1 ] [ toggle flex-shrink:0 ]
+            A .search-bar mantém a UI interna do input + ícone lupa
+            sem precisar de mudança estrutural.
+          -->
+          <div class="equip-search-row">
+            <div class="search-bar" id="equip-search-bar">
+              <span class="search-bar__icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 14 14"
+                  fill="none">
+                  <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2" />
+                  <path d="M9.5 9.5L12 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                </svg></span>
+              <input class="form-control search-bar__input" id="equip-busca" type="text" placeholder="Buscar por nome, TAG ou local..."
+                aria-label="Buscar equipamento" />
+            </div>
+            <div class="equip-view-toggle" role="group" aria-label="Modo de visualização">
+              <button type="button" class="equip-view-toggle__btn equip-view-toggle__btn--list"
+                data-action="equip-set-view-mode" data-mode="list"
+                aria-pressed="true" aria-label="Modo lista" title="Lista">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="3" y1="6" x2="21" y2="6"/>
+                  <line x1="3" y1="12" x2="21" y2="12"/>
+                  <line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+              </button>
+              <button type="button" class="equip-view-toggle__btn equip-view-toggle__btn--grid"
+                data-action="equip-set-view-mode" data-mode="grid"
+                aria-pressed="false" aria-label="Modo grade com foto grande" title="Grade">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+              </button>
+            </div>
           </div>
           <div id="lista-equip" role="list"></div>
         </div>
