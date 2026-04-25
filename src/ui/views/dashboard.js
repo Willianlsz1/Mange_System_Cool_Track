@@ -43,17 +43,11 @@ import { getActionPriorityScore } from '../../domain/actionPriority.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
 import { getEquipmentVisualMeta } from '../components/equipmentVisual.js';
 import { ALERT_SEVERITY_WEIGHT } from '../../domain/constants/alerts.js';
-
-// ═══════════════════════════════════════════════════════
-// Labels internos
-// ═══════════════════════════════════════════════════════
-const STATUS_OPERACIONAL = {
-  ok: 'OPERANDO NORMALMENTE',
-  warn: 'OPERANDO COM RESTRIÇÕES',
-  danger: 'FORA DE OPERAÇÃO',
-};
-const PRIORIDADE_LABEL = { baixa: 'Baixa', media: 'Média', alta: 'Alta', critica: 'Crítica' };
-const RISK_CLASS_LABEL = { baixo: 'Baixo risco', medio: 'Médio risco', alto: 'Alto risco' };
+import {
+  STATUS_OPERACIONAL,
+  PRIORIDADE_LABEL,
+  RISK_CLASS_LABEL,
+} from '../../domain/constants/statuses.js';
 
 // Ícones SVG inline (stroke 1.6–2, currentColor) pro hero + pills
 const DASH_SVG = {

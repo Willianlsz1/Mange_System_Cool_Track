@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = getRequiredEnv('SUPABASE_URL');
     const supabaseAnonKey = getRequiredEnv('SUPABASE_ANON_KEY');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? supabaseAnonKey;
+    const serviceRoleKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY');
 
     // ── 1. Valida autenticação REAL via Auth server ──────────────────────────
     const auth = await verifyUserToken(req, supabaseUrl, supabaseAnonKey);
@@ -67,16 +67,17 @@ Deno.serve(async (req) => {
     });
 
     // ── 3. Queries em paralelo ───────────────────────────────────────────────
-    const [
-      { data: profile },
-      { data: equipamentos },
-      { data: registros },
-      { data: tecnicos },
-      { data: setores },
-      { data: feedback },
-      { data: usageMonthly },
-      { data: aiUsageCost },
-    ] = await Promise.all([
+    const queryNames = [
+      'profiles',
+      'equipamentos',
+      'registros',
+      'tecnicos',
+      'setores',
+      'feedback',
+      'usage_monthly',
+      'ai_usage_cost',
+    ];
+    const queryResults = await Promise.all([
       supabaseAdmin.from('profiles').select('*').eq('id', userId).maybeSingle(),
       supabaseAdmin.from('equipamentos').select('*').eq('user_id', userId),
       supabaseAdmin.from('registros').select('*').eq('user_id', userId),
@@ -86,6 +87,24 @@ Deno.serve(async (req) => {
       supabaseAdmin.from('usage_monthly').select('*').eq('user_id', userId),
       supabaseAdmin.from('ai_usage_cost').select('*').eq('user_id', userId),
     ]);
+    const failedQueryIndex = queryResults.findIndex((result) => result.error);
+    if (failedQueryIndex !== -1) {
+      const failedQuery = queryNames[failedQueryIndex];
+      const message = queryResults[failedQueryIndex].error?.message ?? 'unknown query error';
+      console.error('[export-user-data] query failed', { userId, table: failedQuery, message });
+      return jsonResponse(req, { code: 'EXPORT_QUERY_FAILED', table: failedQuery, message }, 500);
+    }
+
+    const [
+      { data: profile },
+      { data: equipamentos },
+      { data: registros },
+      { data: tecnicos },
+      { data: setores },
+      { data: feedback },
+      { data: usageMonthly },
+      { data: aiUsageCost },
+    ] = queryResults;
 
     const exportedAt = new Date().toISOString();
     const payload = {
