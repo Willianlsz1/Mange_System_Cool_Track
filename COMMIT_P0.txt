@@ -1,0 +1,19 @@
+fix(analyze-nameplate) extract auth.accessToken before incrementMonthlyUsage
+
+P0 detectado em audit pre-beta: 'token' era usado em incrementMonthlyUsage
+sem ser declarado no escopo do handler. '@ts-nocheck' mascarava em compile
+time. Em runtime daria ReferenceError APOS gastar tokens da Anthropic
+(success path) e ANTES de incrementar o counter de quota - gate de plano
+cego em loop, custo da IA gasto sem cobranca/contagem.
+
+Fix:
+- Extrai 'const token = auth.accessToken' logo apos verifyUserToken
+- Adiciona logs estruturados AI_LABEL_START / AI_LABEL_SUCCESS /
+  AI_LABEL_ERROR pra correlacao em log_analytics e Sentry
+
+Validado em producao (smoke test 25 abr):
+- Valid JWT  -> 400 MISSING_IMAGE (auth OK, payload validation kicked in)
+- Missing JWT -> 401 AUTH_REQUIRED
+- Forged JWT  -> 401 INVALID_JWT (ES256 rejected by Auth server)
+
+Arquivo: supabase/functions/analyze-nameplate/index.ts

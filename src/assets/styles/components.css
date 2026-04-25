@@ -4454,6 +4454,48 @@ mark,
   font-style: italic;
 }
 
+/* Highlight temporário aplicado ao .form-group quando o modal de edição abre
+   focado num campo específico (via openEditEquip({ focusField })). Aparece
+   por ~2s e some via fade-out, dando ao olho do técnico um ponto de chegada
+   visual após o scroll smooth. Não interfere com o focus-visible nativo
+   (este vive no <input> dentro). */
+@keyframes is-focus-target-pulse {
+  0% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary, #00c8e8) 35%, transparent);
+    background: color-mix(in srgb, var(--color-primary, #00c8e8) 8%, transparent);
+  }
+  60% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primary, #00c8e8) 25%, transparent);
+    background: color-mix(in srgb, var(--color-primary, #00c8e8) 5%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    background: transparent;
+  }
+}
+
+.is-focus-target {
+  position: relative;
+  border-radius: 10px;
+  animation: is-focus-target-pulse 2.2s ease-out forwards;
+  /* Garante que mesmo durante a animação o conteúdo fica clicável e legível,
+     sem o pulse "comer" o input por dentro (a animation só aplica box-shadow
+     e background sutil — sem mudar opacity/transform). */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-focus-target {
+    /* Acessibilidade: usuário com motion reduzido vê só o highlight estático
+       1s, sem pulse animado. */
+    animation: none;
+    background: color-mix(in srgb, var(--color-primary, #00c8e8) 8%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary, #00c8e8) 40%, transparent);
+    transition:
+      background 1s ease 0.5s,
+      box-shadow 1s ease 0.5s;
+  }
+}
+
 /* ════════════════════════════════════════════════════════
    Detail view — title block consolidado (V7 refino UX)
    nome + sub muted "Local · TAG"

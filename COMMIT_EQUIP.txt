@@ -1,0 +1,82 @@
+feat(equip): redesign completo da aba de Equipamentos (5 ondas)
+
+Refino UX consolidado da tela Equipamentos, modal de detalhes e modal de
+cadastrar equipamento. Baseado em mockups do Claude Skills, portados pro
+codigo com ajustes pragmaticos. 16 arquivos, +2110/-408 linhas.
+
+== ONDA 1 - LISTAGEM ==
+- Chips contadorados unificam KPI tiles + filtros antigos
+- Hero "Organizar parque" condicional (so com semSetor>0)
+- Toggle Lista <-> Grade com persistencia localStorage
+- Thumb 64x64 (era 40x40); avatar sem foto vira CTA "+ tirar foto"
+- Tone-pill "Estavel" neutra (dot verde + texto cinza)
+- Setor card com preview inline de equipamentos (ate 3 + "+N")
+- TAG vazia omitida da meta line
+- Card "PRIMEIRO SERVICO" compactado (1 linha)
+- "<=30d" -> "Preventivas em 30 dias"
+- "Aguardando" -> "Vazio" no setor card
+- Empty states com copy contextual por filtro
+
+== ONDA 2 - MODAL DE CADASTRAR ==
+- Subtitulo "So precisa de nome e onde fica - o resto e opcional"
+- Hero nameplate colapsavel (compacta ao digitar nome)
+- Banner "Usou a foto? Pode pular" + dica criticidade vs prioridade
+- Progressive disclosure: 8 campos avancados atras de toggle
+- Smart defaults por tipo (Split->R-410A, Camara->R-404A)
+- Tooltips em TAG / MPa / IP / criticidade
+- Tech-toggle: label estatico + chevron rotativo
+- Botao unico "+ Novo equipamento" (removido "Cadastrar com foto")
+- Typo Sugestao -> Sugestao; "Confirmar" -> "Cadastrar equipamento"
+- Crumbs Essenciais / Contexto / Detalhes tecnicos
+
+== ONDA 3 - MODAL DE DETALHES ==
+- Cover 240px com pill "ampliar" + lightbox
+- Title-block consolidado (nome + sub "Local . TAG")
+- Score ring com linearGradient cyan->success quando ok
+- Fatores de risco viram CTAs acionaveis (Agendar/Ajustar)
+- Accordion "Detalhes tecnicos" fechado por default
+- Sub-section titles cyan dentro do accordion
+- Setor readonly; campos vazios -> CTA "Adicionar X" clicavel
+- Lixeira -> kebab menu
+- Typo Historico -> Historico
+- Removida duplicacao do detail view (renderizava 2x)
+
+== ONDA 4 - MODAL DE FOTOS ==
+- Botao "Capa" permanente na 1a foto + "Definir como capa" nas outras
+- Legenda opcional por foto (60 chars, persistida em jsonb)
+- Camera traseira protagonista no mobile (capture=environment)
+
+== ONDA 5 - PORTE MOCKUPS + FIXES ==
+- Avatar sem foto: APENAS iniciais (emoji glyph removido em
+  equipmentCards.js E dashboard.js)
+- Type-icon-overlay: badge cyan no canto inferior direito do avatar,
+  nao mais overlay full-cover (mobile nao sobrepoe iniciais)
+- Modo grade: border-left tonal zerado (warn/danger viram border-top 3px)
+- Toggle Lista/Grade: wrapper flex .equip-search-row inline com search
+- Handlers registrados: equip-set-view-mode; data-action obsoleto removido
+
+== QUALIDADE ==
+- 109/109 testes Vitest passando (5 suites)
+- ESLint zero warnings
+- Prettier OK
+- Vite build: 755 modules transformed
+- Mobile-first 360px validado
+- A11y: aria-pressed, aria-expanded, aria-controls, focus-visible
+
+== ARQUIVOS (16) ==
+- src/__tests__/equipamentosView.hero.test.js
+- src/assets/styles/components.css
+- src/assets/styles/components/_equip-hero.css
+- src/assets/styles/components/_setor-card.css
+- src/core/photoStorage.js
+- src/ui/components/equipmentPhotos.js
+- src/ui/components/nameplateCapture.js
+- src/ui/controller/handlers/equipmentHandlers.js
+- src/ui/controller/helpers/themeInitHelpers.js
+- src/ui/shell/templates/modals.js
+- src/ui/shell/templates/views.js
+- src/ui/views/dashboard.js
+- src/ui/views/equipamentos.js
+- src/ui/views/equipamentos/equipmentCards.js
+- src/ui/views/equipamentos/hero.js
+- src/ui/views/equipamentos/setores.js

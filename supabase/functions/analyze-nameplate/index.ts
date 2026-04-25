@@ -483,11 +483,31 @@ Deno.serve(async (req: Request) => {
     return errorResponse(req, 'SERVER_MISCONFIGURED', 'Server misconfigured', 500);
   }
 
+  // Validação de JWT via Auth server (verifyUserToken). Sem fallback pra
+  // decodificação manual — esse pattern foi removido após a auditoria
+  // externa de abr/2026 porque permitia forge de token (assinatura nunca
+  // verificada). Veja _shared/auth.ts pra detalhes do tradeoff.
+  console.log('[analyze-nameplate] AI_LABEL_START', {
+    method: req.method,
+    has_auth_header: Boolean(req.headers.get('Authorization') || req.headers.get('authorization')),
+  });
+
   const auth = await verifyUserToken(req, supabaseUrl, anonKey);
   if (!auth.ok) {
+    console.warn('[analyze-nameplate] AI_LABEL_ERROR auth', {
+      code: auth.code,
+      status: auth.status,
+    });
     return errorResponse(req, auth.code, auth.message, auth.status);
   }
   const userId = auth.user.id;
+  // P0 fix (abr/2026): extrai token AQUI, no escopo do handler. Antes ele
+  // era usado em `incrementMonthlyUsage(..., token, ...)` mais abaixo sem
+  // estar declarado — `// @ts-nocheck` mascarava o erro até runtime, onde
+  // viraria ReferenceError no momento crítico (após chamar Anthropic, ANTES
+  // de subir o quota counter — ou seja, custo gasto + quota não incrementada
+  // = bypass de plano em loop). Crítico.
+  const token = auth.accessToken;
 
   // ── Plan gate: Plus+ obrigatório ───────────────────────────────────────
   // Carrega plan_code do profile. Fallback pra 'free' se não achar (ou se a
@@ -727,6 +747,16 @@ Deno.serve(async (req: Request) => {
     remaining,
     ...(trackingFailed ? { tracking_failed: true, tracking_error: incrementError } : {}),
   };
+
+  console.log('[analyze-nameplate] AI_LABEL_SUCCESS', {
+    userId,
+    plan: planCode,
+    used: newUsed ?? usedBefore + 1,
+    remaining,
+    cost_usd: costUsd,
+    tracking_failed: trackingFailed,
+    model: CLAUDE_MODEL,
+  });
 
   return jsonResponse(req, {
     ok: true,

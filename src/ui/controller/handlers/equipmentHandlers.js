@@ -110,12 +110,20 @@ export function bindEquipmentHandlers() {
 
   on('edit-equip', async (el) => {
     try {
-      await openEditEquip(el.dataset.id);
+      // focusField (opcional): permite triggers como "Adicionar TAG" abrir
+      // o modal de edição já posicionados no input correspondente, com
+      // highlight visual de 2s. Veja _focusEditField em equipamentos.js.
+      const focusField = el.dataset.focusField || undefined;
+      await openEditEquip(el.dataset.id, focusField ? { focusField } : undefined);
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,
         message: 'Não foi possível abrir a edição do equipamento.',
-        context: { action: 'controller.edit-equip', id: el.dataset.id },
+        context: {
+          action: 'controller.edit-equip',
+          id: el.dataset.id,
+          focusField: el.dataset.focusField,
+        },
       });
     }
   });

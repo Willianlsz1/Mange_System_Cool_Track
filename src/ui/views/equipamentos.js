@@ -1060,11 +1060,80 @@ export async function assignEquipToSetor(equipId, setorId) {
 
 // Nameplate data helpers live in ./equipamentos/placaData.js.
 
-export async function openEditEquip(id) {
+/**
+ * Mapa: focusField slug → DOM id do input no modal-add-eq.
+ * Centraliza pra triggers passarem só o nome lógico, sem acoplar com IDs.
+ * Quando adicionar campo novo, basta estender aqui.
+ */
+const _EDIT_FOCUS_FIELD_MAP = {
+  nome: 'eq-nome',
+  local: 'eq-local',
+  setor: 'eq-setor',
+  tag: 'eq-tag',
+  tipo: 'eq-tipo',
+  fluido: 'eq-fluido',
+  modelo: 'eq-modelo',
+  serie: 'eq-numero-serie',
+  capacidade: 'eq-capacidade-btu',
+  tensao: 'eq-tensao',
+  frequencia: 'eq-frequencia',
+  fase: 'eq-fase',
+  potencia: 'eq-potencia',
+  'corrente-refrig': 'eq-corrente-refrig',
+  'corrente-aquec': 'eq-corrente-aquec',
+  'pressao-suc': 'eq-pressao-suc',
+  'pressao-desc': 'eq-pressao-desc',
+  'grau-protecao': 'eq-grau-protecao',
+  ano: 'eq-ano-fabricacao',
+  criticidade: 'eq-criticidade',
+  prioridade: 'eq-prioridade',
+  periodicidade: 'eq-periodicidade',
+};
+
+/**
+ * Lista de fieldKeys que vivem dentro de #eq-etiqueta-more (progressive
+ * disclosure dos campos avançados da etiqueta). Quando o foco for em um
+ * desses, o painel precisa ser aberto antes do scroll.
+ */
+const _EDIT_FOCUS_ETIQUETA_MORE = new Set([
+  'tensao',
+  'frequencia',
+  'fase',
+  'potencia',
+  'corrente-refrig',
+  'corrente-aquec',
+  'pressao-suc',
+  'pressao-desc',
+  'grau-protecao',
+  'ano',
+]);
+
+/**
+ * fieldKeys que vivem fora do accordion "Detalhes técnicos" (#eq-step-2):
+ * são os campos da seção Essenciais + Contexto, sempre visíveis.
+ * Os demais exigem expandir o accordion antes do scroll.
+ */
+const _EDIT_FOCUS_ESSENCIAIS = new Set(['nome', 'local', 'setor']);
+
+/**
+ * Abre o modal-add-eq em modo edição e, opcionalmente, foca um campo
+ * específico — expandindo accordions intermediários se necessário.
+ *
+ * Pedido UX (abr/2026): o técnico clica em "Adicionar TAG" no detail view
+ * e o modal abre já posicionado no campo correspondente, com highlight
+ * temporário pra ser fácil achar visualmente. Antes só abria o modal
+ * inteiro e o usuário tinha que rolar/expandir até achar o campo.
+ *
+ * @param {string} id - id do equipamento
+ * @param {object} [opts]
+ * @param {string} [opts.focusField] - slug do campo a focar (ex: 'tag')
+ */
+export async function openEditEquip(id, opts = {}) {
   const eq = findEquip(id);
   if (!eq) return;
 
   _editingEquipId = id;
+  const focusField = typeof opts?.focusField === 'string' ? opts.focusField : null;
 
   // Pre-popula os campos do modal com os dados do equipamento
   Utils.setVal('eq-nome', eq.nome || '');
@@ -1174,7 +1243,96 @@ export async function openEditEquip(id) {
       message: 'Não foi possível abrir o modal de edição.',
       context: { action: 'equipamentos.openEditEquip', id },
     });
+    return;
   }
+
+  // Foco em campo específico (focusField). Roda DEPOIS do M.open pra
+  // garantir que o DOM está visível e mensurável. requestAnimationFrame
+  // dá um tick pro browser pintar antes do scroll/focus — evita o
+  // scroll cair em (0,0) num modal que ainda não terminou a transição.
+  if (focusField) _focusEditField(focusField);
+}
+
+/**
+ * Encontra o campo no modal-add-eq pelo slug, expande accordions
+ * necessários, faz scroll suave até o centro do campo, foca o input
+ * e aplica a classe `is-focus-target` por 2s pra um ring visual.
+ *
+ * Tolerante: se o slug não existir no mapa ou se o input não for
+ * encontrado no DOM (ex: feature flag escondendo o accordion), apenas
+ * loga warning e segue — o modal já abriu e o usuário pode editar
+ * normalmente.
+ */
+function _focusEditField(fieldKey) {
+  const targetId = _EDIT_FOCUS_FIELD_MAP[fieldKey];
+  if (!targetId) {
+    console.warn(`[equipamentos] focusField desconhecido: "${fieldKey}"`);
+    return;
+  }
+
+  // Step 1: garante que a seção "Detalhes técnicos" (#eq-step-2) está aberta
+  // se o campo não é um dos Essenciais/Contexto. Isso porque o accordion
+  // fica fechado por default e o input nem está renderizado-visível antes.
+  const needsTechExpand = !_EDIT_FOCUS_ESSENCIAIS.has(fieldKey);
+  if (needsTechExpand) {
+    const expandBtn = document.getElementById('eq-expand-details');
+    const expandPanel = document.getElementById('eq-step-2');
+    if (expandBtn && expandPanel) {
+      expandBtn.setAttribute('aria-expanded', 'true');
+      expandPanel.classList.add('is-open');
+      expandPanel.setAttribute('aria-hidden', 'false');
+      expandPanel.style.display = 'block';
+    }
+  }
+
+  // Step 2: se for um campo avançado da etiqueta, expande o sub-painel
+  // #eq-etiqueta-more (progressive disclosure dentro de #eq-step-2).
+  if (_EDIT_FOCUS_ETIQUETA_MORE.has(fieldKey)) {
+    const moreToggle = document.getElementById('eq-etiqueta-more-toggle');
+    const morePanel = document.getElementById('eq-etiqueta-more');
+    if (moreToggle && morePanel) {
+      moreToggle.setAttribute('aria-expanded', 'true');
+      morePanel.hidden = false;
+      morePanel.setAttribute('aria-hidden', 'false');
+    }
+  }
+
+  // Step 3: aguarda paint, depois scroll + focus + highlight.
+  // 2 RAFs garantem que o reflow das expansões acima foi aplicado antes
+  // de medir position pro scrollIntoView. Em devices lentos 1 RAF basta;
+  // o segundo é blindagem barata contra "scroll caiu na posição errada".
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const target = document.getElementById(targetId);
+      if (!target) {
+        console.warn(`[equipamentos] focusField target #${targetId} não encontrado no DOM`);
+        return;
+      }
+
+      try {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch {
+        target.scrollIntoView();
+      }
+
+      // Pequeno delay no focus pra não competir com o scroll smooth
+      // (alguns browsers cancelam o scroll quando recebem focus durante).
+      setTimeout(() => {
+        try {
+          target.focus({ preventScroll: true });
+        } catch {
+          target.focus();
+        }
+      }, 280);
+
+      // Highlight temporário 2s. Aplica na FormGroup wrapper pra o ring
+      // englobar o label + input juntos (mais óbvio do que ring só no
+      // input). Fallback: aplica direto no input se o wrapper não existir.
+      const host = target.closest('.form-group') || target;
+      host.classList.add('is-focus-target');
+      setTimeout(() => host.classList.remove('is-focus-target'), 2200);
+    });
+  });
 }
 
 export async function saveEquip() {
@@ -1385,15 +1543,23 @@ function _eqDetailSubtitle(eq) {
  * "Adicionar X" clicável (abre o modal de editar) se vazio. Antes, campos
  * vazios mostravam só "—" — desperdício de atenção do técnico. Agora o "—"
  * vira convite a preencher no momento em que ele está lendo a ficha.
+ *
+ * @param {string} value
+ * @param {string} addLabel
+ * @param {string} safeId
+ * @param {string} [variant] - 'mono' aplica info-row__value--mono
+ * @param {string} [fieldKey] - slug pra openEditEquip focar o campo após
+ *   abrir o modal (ex: 'tag', 'modelo'). Sem fieldKey, modal abre sem foco.
  */
-function _infoRowValueOrEmpty(value, addLabel, safeId, variant = '') {
+function _infoRowValueOrEmpty(value, addLabel, safeId, variant = '', fieldKey = '') {
   const clean = value && String(value).trim() !== '' ? String(value).trim() : null;
   if (clean) {
     const variantCls = variant === 'mono' ? ' info-row__value--mono' : '';
     return `<span class="info-row__value${variantCls}">${Utils.escapeHtml(clean)}</span>`;
   }
+  const focusAttr = fieldKey ? ` data-focus-field="${Utils.escapeAttr(fieldKey)}"` : '';
   return `<button type="button" class="info-row__value info-row__value--add"
-    data-action="edit-equip" data-id="${safeId}"
+    data-action="edit-equip" data-id="${safeId}"${focusAttr}
     aria-label="${Utils.escapeAttr(addLabel)}">
     ${Utils.escapeHtml(addLabel)}
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
@@ -1419,12 +1585,15 @@ function _riskFactorChipHtml(factor, safeId) {
   const lower = factorStr.toLowerCase();
   const escaped = Utils.escapeHtml(factorStr);
 
-  // Detecta intenção a partir do texto do factor.
+  // Detecta intenção a partir do texto do factor + qual campo focar
+  // quando o action é edit-equip (focusField propaga via data attribute).
   let action = null;
   let actionLabel = null;
+  let focusField = null;
   if (lower.includes('sem agenda') || lower.includes('não agendada')) {
     action = 'edit-equip';
     actionLabel = 'Agendar';
+    focusField = 'periodicidade';
   } else if (lower.includes('vencida') || lower.includes('atrasada')) {
     action = 'go-register-equip';
     actionLabel = 'Registrar';
@@ -1434,14 +1603,16 @@ function _riskFactorChipHtml(factor, safeId) {
   ) {
     action = 'edit-equip';
     actionLabel = 'Ajustar';
+    focusField = 'criticidade';
   }
 
   if (!action) {
     return `<span class="eq-risk-panel__factor">${escaped}</span>`;
   }
+  const focusAttr = focusField ? ` data-focus-field="${focusField}"` : '';
   return `<button type="button"
       class="eq-risk-panel__factor eq-risk-panel__factor--actionable"
-      data-action="${action}" data-id="${safeId}"
+      data-action="${action}" data-id="${safeId}"${focusAttr}
       aria-label="${escaped} — ${actionLabel}">
       <span class="eq-risk-panel__factor-text">${escaped}</span>
       <span class="eq-risk-panel__factor-cta">${actionLabel} <span aria-hidden="true">→</span></span>
@@ -1762,10 +1933,10 @@ export async function viewEquip(id) {
           <div class="eq-tech-sheet__section">
             <div class="eq-tech-sheet__title">Identificação</div>
             <div class="info-list info-list--spaced info-list--soft">
-              <div class="info-row"><span class="info-row__label">TAG</span>${_infoRowValueOrEmpty(eq.tag, 'Adicionar TAG', safeId, 'mono')}</div>
+              <div class="info-row"><span class="info-row__label">TAG</span>${_infoRowValueOrEmpty(eq.tag, 'Adicionar TAG', safeId, 'mono', 'tag')}</div>
               <div class="info-row"><span class="info-row__label">Tipo</span><span class="info-row__value">${Utils.escapeHtml(eq.tipo)}</span></div>
-              <div class="info-row"><span class="info-row__label">Fluido</span>${_infoRowValueOrEmpty(eq.fluido, 'Adicionar fluido', safeId)}</div>
-              <div class="info-row"><span class="info-row__label">Modelo</span>${_infoRowValueOrEmpty(eq.modelo, 'Adicionar modelo', safeId)}</div>
+              <div class="info-row"><span class="info-row__label">Fluido</span>${_infoRowValueOrEmpty(eq.fluido, 'Adicionar fluido', safeId, '', 'fluido')}</div>
+              <div class="info-row"><span class="info-row__label">Modelo</span>${_infoRowValueOrEmpty(eq.modelo, 'Adicionar modelo', safeId, '', 'modelo')}</div>
               <div class="info-row"><span class="info-row__label">Local</span><span class="info-row__value">${Utils.escapeHtml(eq.local)}</span></div>
               ${setorSelectHtml}
             </div>
