@@ -8,14 +8,25 @@
  * Isso evita mismatch entre o JS rodando no tab e os chunks no cache.
  */
 
-const CACHE_NAME = 'cooltrack-pro-v8';
+const CACHE_NAME = 'cooltrack-pro-v9';
 const OFFLINE_PAGE = '/offline.html';
 
 // Assets que sempre ficam em cache
-const PRECACHE_ASSETS = ['/', '/index.html', OFFLINE_PAGE];
+const PRECACHE_ASSETS = [OFFLINE_PAGE];
 
 // Origens que nunca devem ser cacheadas (Supabase, fontes externas etc.)
 const NETWORK_ONLY_ORIGINS = ['supabase.co', 'fonts.googleapis.com', 'fonts.gstatic.com'];
+
+// Detecta respostas de SPA fallback servindo HTML para URLs de asset/script —
+// sintoma típico de hash inválido + rewrite catch-all do Cloudflare/Netlify.
+// Cachear isso seria envenenar permanentemente o cache (até bumpar CACHE_NAME).
+function isHtmlMasqueradingAsAsset(response, request) {
+  if (!response) return false;
+  const ct = response.headers.get('content-type') || '';
+  if (!ct.includes('text/html')) return false;
+  const dest = request.destination;
+  return dest === 'script' || dest === 'style' || dest === 'font' || dest === 'image';
+}
 
 // ──────────────────────────────────────────────
 // Install: pré-carrega assets essenciais
@@ -72,16 +83,12 @@ self.addEventListener('fetch', (event) => {
   // Ignora extensões de browser
   if (url.protocol === 'chrome-extension:') return;
 
-  // Navegação (HTML): Network-first, fallback para offline
+  // Navegação (HTML): Network-only com fallback offline.
+  // Não cacheamos o index.html — se o HTML antigo ficar cacheado, o usuário
+  // fica preso pedindo bundles com hash que não existem mais no deploy atual.
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match(OFFLINE_PAGE))),
+      fetch(request).catch(() => caches.match(OFFLINE_PAGE)),
     );
     return;
   }
@@ -100,10 +107,13 @@ self.addEventListener('fetch', (event) => {
       caches.open(CACHE_NAME).then((cache) =>
         cache.match(request).then((cached) => {
           const networkFetch = fetch(request).then((response) => {
-            if (response.ok) cache.put(request, response.clone());
+            // Não cacheia HTML em URL de asset (sintoma de SPA fallback servindo
+            // index.html para hash que não existe — envenenaria o cache).
+            if (response.ok && !isHtmlMasqueradingAsAsset(response, request)) {
+              cache.put(request, response.clone());
+            }
             return response;
           });
-          // Retorna cache imediatamente se existir, senão aguarda rede
           return cached || networkFetch;
         }),
       ),

@@ -416,6 +416,9 @@ function openDeleteConfirmDialog(accountOverlay) {
   dialog.addEventListener('click', (event) => {
     if (event.target.closest?.('[data-action="close-delete"]')) {
       event.preventDefault();
+      // O delegator global em src/core/events.js também escuta data-action.
+      // Sem stopPropagation ele dispara warn "Sem handler para action=close-delete".
+      event.stopPropagation();
       closeDialog();
     }
   });

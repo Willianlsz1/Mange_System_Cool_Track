@@ -4,6 +4,13 @@
 # explícito aqui — no Cloudflare Pages ele colide com o auto-strip-html
 # e gera ERR_TOO_MANY_REDIRECTS em /legal/privacidade, /legal/termos, etc.
 
+# Asset com hash ausente NUNCA pode cair no SPA fallback — devolveria
+# index.html (text/html) e o browser falha com "Failed to load module
+# script: MIME type ... text/html" + Service Worker envenena o cache.
+# Esta regra força 404 explícito antes do catch-all. Arquivos que existem
+# em /assets/ continuam sendo servidos pela precedência estática.
+/assets/*    /404.html    404
+
 # SPA fallback — todas as rotas não-arquivo entregam index.html.
 # Arquivos estáticos (incluindo /legal/*.html) são resolvidos antes desta
 # regra, então as páginas legais continuam funcionando.
