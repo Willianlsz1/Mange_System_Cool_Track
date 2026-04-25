@@ -1,0 +1,525 @@
+/* ============================================================
+   _pmoc.css — PMOC Fase 5 (abr/2026)
+
+   Estilos do botão "PMOC formal" no toolbar do relatório e do
+   modal de configuração (ano-base + cliente). Identidade visual
+   alinhada com a do PDF formal: tons sóbrios, sem cores berrantes.
+   ============================================================ */
+
+/* ─── Toolbar button ─── */
+
+.rel-toolbar__btn--pmoc {
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.rel-toolbar__btn--pmoc:hover,
+.rel-toolbar__btn--pmoc:focus-visible {
+  background: var(--surface-3, rgba(0, 0, 0, 0.07));
+  border-color: var(--text-3);
+}
+
+.rel-toolbar__btn--pmoc[data-tier='free'] .rel-toolbar__btn-pro,
+.rel-toolbar__btn--pmoc[data-tier='plus'] .rel-toolbar__btn-pro {
+  display: inline-flex;
+}
+
+.rel-toolbar__btn--pmoc[data-tier='free'] svg,
+.rel-toolbar__btn--pmoc[data-tier='plus'] svg {
+  opacity: 0.6;
+}
+
+/* ─── Modal ─── */
+
+.pmoc-modal {
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pmoc-modal__head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--surface-2, rgba(0, 0, 0, 0.03));
+}
+
+.pmoc-modal__head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pmoc-modal__title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pmoc-modal__sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.pmoc-modal__close {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.pmoc-modal__close:hover,
+.pmoc-modal__close:focus-visible {
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.pmoc-modal__body {
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pmoc-modal__lock {
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(255, 173, 51, 0.08);
+  border: 1px solid rgba(255, 173, 51, 0.3);
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.pmoc-modal__lock strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.pmoc-modal__lock p {
+  margin: 4px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.pmoc-modal__lock-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.pmoc-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pmoc-modal__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.pmoc-modal__hint {
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+.pmoc-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.pmoc-modal__btn {
+  min-width: 110px;
+}
+
+@media (max-width: 480px) {
+  .pmoc-modal {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .pmoc-modal__head {
+    padding: 14px 16px;
+  }
+
+  .pmoc-modal__body {
+    padding: 14px 16px 18px;
+  }
+
+  .pmoc-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .pmoc-modal__btn {
+    width: 100%;
+  }
+}
+
+/* ─── PMOC Fase 6: Dropdown "Exportar PDF ▾" ─── */
+
+.rel-export-dd {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.rel-export-dd__main {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.rel-export-dd__caret {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+  padding-left: 8px;
+  padding-right: 8px;
+  min-width: 28px;
+}
+
+.rel-export-dd__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 280px;
+  max-width: 340px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rel-export-dd__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font: inherit;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.rel-export-dd__item:hover,
+.rel-export-dd__item:focus-visible {
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  outline: none;
+}
+
+.rel-export-dd__item svg {
+  flex-shrink: 0;
+  color: var(--text-2);
+  margin-top: 2px;
+}
+
+.rel-export-dd__item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rel-export-dd__item-text strong {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.rel-export-dd__item-text span {
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.35;
+}
+
+.rel-export-dd__item--meta {
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  margin-top: 4px;
+  padding-top: 10px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.rel-export-dd__item--meta:hover,
+.rel-export-dd__item--meta:focus-visible {
+  color: var(--text);
+}
+
+@media (max-width: 480px) {
+  .rel-export-dd__menu {
+    right: auto;
+    left: 0;
+    width: calc(100vw - 32px);
+    max-width: 100%;
+  }
+}
+
+/* ─── PMOC Fase 6: CTA "Gerar PMOC" no card cliente ─── */
+
+.cliente-card__foot-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cliente-card__pmoc-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(20, 20, 20, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.cliente-card__pmoc-cta:hover,
+.cliente-card__pmoc-cta:focus-visible {
+  background: rgba(20, 20, 20, 0.08);
+  border-color: var(--text-3);
+  outline: none;
+}
+
+.cliente-card__pmoc-cta svg {
+  color: var(--text-2);
+}
+
+/* ─── PMOC Fase 6: Info modal ─── */
+
+.pmoc-info-modal {
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pmoc-info-modal__head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--surface-2, rgba(0, 0, 0, 0.03));
+}
+
+.pmoc-info-modal__head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.pmoc-info-modal__title {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.pmoc-info-modal__sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.pmoc-info-modal__close {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.pmoc-info-modal__close:hover,
+.pmoc-info-modal__close:focus-visible {
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.pmoc-info-modal__body {
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pmoc-info-modal__section h3 {
+  margin: 0 0 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.pmoc-info-modal__section p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.pmoc-info-modal__section ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.55;
+}
+
+.pmoc-info-modal__section ul li {
+  margin-bottom: 4px;
+}
+
+.pmoc-info-modal__compare {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+@media (min-width: 540px) {
+  .pmoc-info-modal__compare {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.pmoc-info-modal__compare-col {
+  background: var(--surface-2, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.pmoc-info-modal__compare-col--pro {
+  border-color: rgba(255, 173, 51, 0.4);
+  background: rgba(255, 173, 51, 0.05);
+}
+
+.pmoc-info-modal__compare-tag {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.pmoc-info-modal__compare-col ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.pmoc-info-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.pmoc-info-modal__btn {
+  min-width: 110px;
+}
+
+@media (max-width: 480px) {
+  .pmoc-info-modal {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .pmoc-info-modal__actions {
+    flex-direction: column-reverse;
+  }
+  .pmoc-info-modal__btn {
+    width: 100%;
+  }
+}

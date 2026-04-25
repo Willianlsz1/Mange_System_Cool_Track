@@ -584,6 +584,40 @@ export function renderShellViews() {
               </div>
             </details>
 
+            <!--
+              PMOC Fase 3: Checklist NBR 13971 (recomendado em preventiva).
+              O body é renderizado dinamicamente por registro.js#renderChecklist
+              baseado no tipo do equipamento selecionado. Quando o tipo de
+              serviço NÃO é preventiva, o accordion fica colapsado e discreto;
+              quando É preventiva, ganha um pill 'Recomendado para PMOC' em
+              destaque.
+            -->
+            <details class="registro-details registro-details--checklist" id="r-checklist-details" hidden>
+              <summary class="registro-details__summary">
+                <span class="registro-details__icon" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 11l3 3L22 4"/>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                  </svg>
+                </span>
+                <div class="registro-details__titles">
+                  <div class="registro-details__title">
+                    Checklist NBR 13971
+                    <span class="registro-details__pri" id="r-checklist-pri" hidden>Recomendado p/ PMOC</span>
+                  </div>
+                  <div class="registro-details__subtitle" id="r-checklist-summary">selecione o equipamento primeiro</div>
+                </div>
+                <span class="registro-details__add" aria-hidden="true">
+                  <svg><use href="#ri-plus"/></svg>
+                  <span class="registro-details__add-label"> Preencher</span>
+                </span>
+              </summary>
+              <div class="registro-details__body">
+                <div id="r-checklist-body" class="r-checklist__body" aria-live="polite"></div>
+              </div>
+            </details>
+
             <!-- ============== Rodapé de ação ============== -->
             <div class="registro-actions" id="tour-signature-anchor">
               <button class="btn btn--ghost registro-actions__ghost" data-action="clear-registro"
@@ -683,6 +717,38 @@ export function renderShellViews() {
           <div id="lista-alertas" role="list"></div>
         </div>
 
+        <!-- CLIENTES (PMOC Fase 2) -->
+        <div class="view" id="view-clientes">
+          <div class="page-toolbar">
+            <div class="section-title">Meus clientes</div>
+            <div class="page-toolbar__actions" style="display:flex;gap:8px;align-items:center">
+              <button class="btn btn--primary btn--sm"
+                data-action="open-cliente-modal" data-mode="create">
+                + Novo cliente
+              </button>
+            </div>
+          </div>
+
+          <p class="clientes-intro">
+            Cadastre os clientes pra organizar equipamentos por carteira, gerar
+            relatórios PMOC formais e ter o cabeçalho oficial nos PDFs.
+          </p>
+
+          <div class="search-bar clientes-search">
+            <span class="search-bar__icon" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M9.5 9.5L12 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <input class="form-control search-bar__input" id="clientes-busca" type="search"
+              placeholder="Buscar por nome, CNPJ, endereço..."
+              aria-label="Buscar cliente" />
+          </div>
+
+          <div id="lista-clientes" role="list"></div>
+        </div>
+
         <!-- RELATÓRIO -->
         <div class="view" id="view-relatorio">
           <div class="rel-toolbar">
@@ -700,8 +766,18 @@ export function renderShellViews() {
                 </svg>
                 WhatsApp
               </button>
-              <div class="rel-toolbar__primary-group">
-                <button class="rel-toolbar__btn rel-toolbar__btn--primary" id="btn-export-pdf" data-action="export-pdf" type="button">
+              <!--
+                PMOC Fase 6: dropdown unificado pra reduzir clutter visual.
+                Botão primário abre menu com 2 opções:
+                  - Relatório técnico (export-pdf, disponível free+)
+                  - PMOC formal (open-pmoc-modal, Pro-gated)
+                O click direto no botão continua funcionando (export-pdf
+                como default — comportamento legado preservado pra muscle memory).
+              -->
+              <div class="rel-toolbar__primary-group rel-export-dd" id="rel-export-dd">
+                <button class="rel-toolbar__btn rel-toolbar__btn--primary rel-export-dd__main"
+                  id="btn-export-pdf" data-action="export-pdf" type="button"
+                  title="Exportar relatório técnico em PDF">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M12 4v12" />
@@ -710,6 +786,54 @@ export function renderShellViews() {
                   </svg>
                   Exportar PDF
                 </button>
+                <button class="rel-toolbar__btn rel-toolbar__btn--primary rel-export-dd__caret"
+                  id="btn-export-dd-toggle" data-action="toggle-export-dd" type="button"
+                  aria-haspopup="menu" aria-expanded="false" aria-controls="rel-export-dd-menu"
+                  aria-label="Mais opções de exportação" title="Mais opções">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                <div class="rel-export-dd__menu" id="rel-export-dd-menu" role="menu" hidden>
+                  <button type="button" class="rel-export-dd__item" role="menuitem"
+                    data-action="export-pdf"
+                    title="Relatório simples dos serviços do período — ideal pra envio rápido ao cliente.">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    <div class="rel-export-dd__item-text">
+                      <strong>Relatório técnico</strong>
+                      <span>rápido, capa + serviços do filtro</span>
+                    </div>
+                  </button>
+                  <button type="button" class="rel-export-dd__item rel-export-dd__item--pmoc"
+                    role="menuitem" data-action="open-pmoc-modal" data-tier="unknown"
+                    title="Documento PMOC formal anual conforme NBR 13971 — Pro.">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14 2 14 8 20 8"/>
+                      <line x1="9" y1="15" x2="15" y2="15"/>
+                      <line x1="9" y1="11" x2="15" y2="11"/>
+                    </svg>
+                    <div class="rel-export-dd__item-text">
+                      <strong>PMOC formal <span class="pro-badge pro-badge--inline" aria-hidden="true">PRO</span></strong>
+                      <span>anual, NBR 13971, com termo de RT</span>
+                    </div>
+                  </button>
+                  <button type="button" class="rel-export-dd__item rel-export-dd__item--meta"
+                    role="menuitem" data-action="open-pmoc-info"
+                    title="Saiba quando usar cada um.">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>
+                    </svg>
+                    <span>Sobre o PMOC</span>
+                  </button>
+                </div>
                 <div id="pdf-quota-slot" class="rel-toolbar__quota-slot"></div>
               </div>
             </div>

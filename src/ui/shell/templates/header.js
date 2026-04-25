@@ -87,6 +87,16 @@ export function renderShellHeader() {
               <button type="button" class="header-help-menu__item" data-action="toggle-theme">
                 <span id="header-theme-label">Alternar tema</span>
               </button>
+              <button type="button" class="header-help-menu__item" data-nav="clientes">
+                Meus clientes
+              </button>
+              <!-- PMOC Fase 6: atalho global pra abrir o gerador PMOC + doc -->
+              <button type="button" class="header-help-menu__item" data-action="open-pmoc-modal">
+                📜 Gerar documento PMOC
+              </button>
+              <button type="button" class="header-help-menu__item" data-action="open-pmoc-info">
+                ℹ️ Sobre o PMOC
+              </button>
               <button type="button" class="header-help-menu__item" data-action="help-support">
                 💬 Suporte
               </button>

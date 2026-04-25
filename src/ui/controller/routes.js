@@ -6,6 +6,7 @@ import { renderAlertas } from '../views/alertas.js';
 import { renderRelatorio, populateRelatorioSelects } from '../views/relatorio.js';
 import { initRegistro, loadRegistroForEdit } from '../views/registro.js';
 import { renderPricing } from '../views/pricing.js';
+import { renderClientes, setClientesSearch } from '../views/clientes.js';
 
 export function registerAppRoutes() {
   registerRoute('inicio', () => {
@@ -53,5 +54,18 @@ export function registerAppRoutes() {
   registerRoute('pricing', (params = {}) => {
     renderPricing(params);
     updateHeader();
+  });
+
+  registerRoute('clientes', () => {
+    renderClientes();
+    updateHeader();
+    // Liga search input (idempotente — sempre o mesmo input do shell)
+    const search = document.getElementById('clientes-busca');
+    if (search && !search.dataset.bound) {
+      search.dataset.bound = '1';
+      search.addEventListener('input', (e) => {
+        setClientesSearch(e.target.value || '');
+      });
+    }
   });
 }

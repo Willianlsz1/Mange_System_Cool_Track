@@ -4,6 +4,7 @@ import { PDF_COLORS as C, PDF_TYPO as T, STATUS_CLIENTE } from '../constants.js'
 import { formatStatusConclusion, sanitizePublicText } from '../sanitizers.js';
 import { accentLine, fillPage, fillRect, roundRect, txt } from '../primitives.js';
 import { formatDadosPlacaRows } from '../../dadosPlacaDisplay.js';
+import { drawChecklist } from './checklist.js';
 
 // -------------------------------- helpers --------------------------------
 
@@ -122,14 +123,34 @@ function drawTitleBlock(doc, pageWidth, margin, startY, context = {}) {
 function drawInfoBlocks(doc, pageWidth, margin, startY, profile, cliente) {
   const colGap = 6;
   const blockW = (pageWidth - margin * 2 - colGap) / 2;
-  const blockH = 30;
+  // V2 (abr/2026): altura dinâmica. Quando profile/cliente têm dados PMOC
+  // (CNPJ, IE, IM), usa 42mm pra acomodar até 5 linhas. Sem dados PMOC,
+  // mantém 30mm — não vaza espaço inutilmente em PDFs de técnico residencial.
+  const hasPmocData =
+    !!(profile?.cnpj || profile?.inscricao_estadual || profile?.inscricao_municipal) ||
+    !!(cliente?.cnpj || cliente?.ie || cliente?.im);
+  const blockH = hasPmocData ? 42 : 30;
   const leftX = margin;
   const rightX = margin + blockW + colGap;
 
-  // Caixa técnico (esquerda)
+  // Caixa técnico (esquerda) — expandida com dados legais PMOC quando
+  // preenchidos. Linha vazia é filtrada em drawLabeledBlock.
+  const cnpjLine = profile?.cnpj?.trim();
+  const ieLine = profile?.inscricao_estadual?.trim();
+  const imLine = profile?.inscricao_municipal?.trim();
+  const inscricoes = [ieLine && `IE ${ieLine}`, imLine && `IM ${imLine}`]
+    .filter(Boolean)
+    .join('  ·  ');
+
   drawLabeledBlock(doc, leftX, startY, blockW, blockH, 'TÉCNICO RESPONSÁVEL', [
     { value: profile?.nome?.trim() || 'Técnico', bold: true, size: 11 },
-    { value: profile?.empresa?.trim() || '', size: 8.5, color: C.text2 },
+    {
+      value: profile?.razao_social?.trim() || profile?.empresa?.trim() || '',
+      size: 8.5,
+      color: C.text2,
+    },
+    { value: cnpjLine ? `CNPJ ${cnpjLine}` : '', size: 8, color: C.text3 },
+    { value: inscricoes, size: 7.5, color: C.text3 },
     { value: profile?.telefone?.trim() || '', size: 8, color: C.text3 },
   ]);
 
@@ -541,5 +562,8 @@ export function drawCover(
   y = drawEquipamentosTable(doc, pageWidth, margin, y, filtered, equipamentos);
   y = drawConclusao(doc, pageWidth, margin, y, filtered);
   y = drawFichaTecnica(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
+  // PMOC Fase 3: checklist NBR 13971 dos registros que tiveram preenchimento.
+  // Pula silenciosamente quando não há nenhum (PDFs FREE / não-PMOC).
+  y = drawChecklist(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
   drawPendencias(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
 }

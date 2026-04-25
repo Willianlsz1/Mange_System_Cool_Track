@@ -11,6 +11,9 @@
 @import './components/_pricing.css';
 @import './components/_equip-hero.css';
 @import './components/_setor-modal.css';
+@import './components/_clientes.css';
+@import './components/_checklist.css';
+@import './components/_pmoc.css';
 
 /* ─── SECTION TITLE ─── */
 .section-title {
@@ -10117,8 +10120,18 @@ mark,
    o account-modal no mesmo tema escuro. */
 .profile-modal__hero {
   position: relative;
-  padding: 24px 22px 20px;
-  overflow: hidden;
+  /* V3 (abr/2026): refator pra evitar corte de texto.
+     - padding 16px+ confirmado (24/22/28)
+     - min-height auto (NÃO height fixo) — hero cresce conforme conteúdo
+     - overflow: visible — texto não é mais clipado se subtítulo quebrar
+       em 2 linhas. As orbs decorativas continuam contidas via clip-path
+       individual (não dependem mais do overflow:hidden do pai).
+     - isolation: isolate cria stacking context próprio, mantendo z-order
+       previsível dos orbs vs título. */
+  padding: 24px 22px 28px;
+  min-height: 0;
+  overflow: visible;
+  isolation: isolate;
   border-radius: var(--premier-radius, 12px) var(--premier-radius, 12px) 0 0;
   border-bottom: 1px solid color-mix(in srgb, var(--primary, #00c8e8) 14%, transparent);
   background:
@@ -10143,6 +10156,12 @@ mark,
   position: absolute;
   border-radius: 999px;
   pointer-events: none;
+  /* V3: z-index negativo coloca as orbs ATRÁS do conteúdo do hero
+     (sem precisar de overflow:hidden no parent). Isso libera o overflow
+     do hero pra o subtítulo crescer livremente. O `isolation: isolate`
+     do .profile-modal__hero garante que esse z-index negativo não
+     afeta elementos fora do hero. */
+  z-index: -1;
 }
 
 .profile-modal__hero-orb--a {
@@ -10172,7 +10191,11 @@ mark,
 .profile-modal__hero-top {
   position: relative;
   display: flex;
-  align-items: center;
+  /* V3: flex-start ao invés de center pra acomodar título de 1 linha +
+     subtítulo de 1-2 linhas sem deslocar avatar/close pro meio do bloco.
+     Avatar e close ficam ancorados no topo, info text alinha à esquerda
+     e cresce pra baixo conforme necessário. */
+  align-items: flex-start;
   gap: 14px;
 }
 
@@ -10210,13 +10233,38 @@ mark,
   color: var(--text);
   margin: 0;
   line-height: 1.15;
+  /* V3: text wrapping garantido — título longo NÃO estoura horizontal. */
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .profile-modal__sub {
   font-size: 12.5px;
-  color: var(--text-3);
+  /* V2: text-2 (era text-3) pra ficar legível sobre o gradient cyan do hero. */
+  color: var(--text-2);
   margin: 4px 0 0;
   line-height: 1.4;
+  position: relative;
+  z-index: 1;
+  /* V3: text wrapping — subtítulo quebra em múltiplas linhas se precisar,
+     em vez de ser cortado horizontalmente. Display block + max-width
+     bloqueia ele de ir além do hero-info container. */
+  display: block;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+
+/* Garante que título + sub ficam acima das orbs blur decorativas. Sem
+   z-index explícito, dependendo do stacking context, as orbs cobriam
+   parcialmente o texto. */
+.profile-modal__title,
+.profile-modal__hero-info,
+.profile-modal__hero-top {
+  position: relative;
+  z-index: 1;
 }
 
 .profile-modal__close {
@@ -10264,6 +10312,44 @@ mark,
   text-transform: uppercase;
   color: var(--text-3);
   margin-bottom: 10px;
+}
+
+/* Hint inline da seção (V2 PMOC, abr/2026): fica EMBAIXO do label em
+   caps, mas com tom normal — frase informativa, não título. Sem isso o
+   `<span class="profile-modal__section-hint">` herdava o `text-transform:
+   uppercase` do label e virava "DADOS LEGAIS (OPCIONAL) NECESSÁRIO PRA
+   EMITIR RELATÓRIOS PMOC FORMAIS" tudo numa linha — ilegível. */
+.profile-modal__section-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* V3 mobile (≤480px): hero compacta padding e texto sem perder legibilidade.
+   Avatar fica menor, gap reduzido, mas alinhamento e wrap continuam OK. */
+@media (max-width: 480px) {
+  .profile-modal__hero {
+    padding: 18px 16px 22px;
+  }
+  .profile-modal__hero-top {
+    gap: 12px;
+  }
+  .profile-modal__avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 17px;
+  }
+  .profile-modal__title {
+    font-size: 17px;
+  }
+  .profile-modal__sub {
+    font-size: 12px;
+  }
 }
 
 .profile-modal__field {

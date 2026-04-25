@@ -9,6 +9,7 @@ import { bindEquipmentHandlers } from './controller/handlers/equipmentHandlers.j
 import { bindRegistroHandlers } from './controller/handlers/registroHandlers.js';
 import { bindProfileAccountHandlers } from './controller/handlers/profileAccountHandlers.js';
 import { bindReportExportHandlers } from './controller/handlers/reportExportHandlers.js';
+import { bindClienteHandlers } from './controller/handlers/clienteHandlers.js';
 import { initControllerHelpers } from './controller/helpers/themeInitHelpers.js';
 
 export function initController() {
@@ -19,6 +20,7 @@ export function initController() {
   bindRegistroHandlers();
   bindProfileAccountHandlers();
   bindReportExportHandlers();
+  bindClienteHandlers();
 
   initControllerHelpers();
 }

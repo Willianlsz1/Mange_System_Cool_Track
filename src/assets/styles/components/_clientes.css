@@ -1,0 +1,493 @@
+/* ============================================================
+   _clientes.css — PMOC Fase 2 (abr/2026)
+
+   Estilos da tela "Meus clientes": cards de cliente, modal de
+   cadastro/edição, empty state. Padrão visual alinhado com
+   _setor-card.css (mesmo radius, sombras, tipografia) mas mais
+   informativo — cards mostram CNPJ + endereço + contagem de
+   equipamentos vinculados.
+
+   Tokens herdados de design-system: --card, --border, --text,
+   --text-2, --text-3, --primary, --danger, --radius, --space-*.
+   ============================================================ */
+
+/* ═══════════════════════ Tela ═══════════════════════ */
+
+.clientes-intro {
+  margin: 0 0 var(--space-3);
+  color: var(--text-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+  max-width: 600px;
+}
+
+.clientes-search {
+  margin-bottom: var(--space-3);
+}
+
+#lista-clientes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 4px 0 24px;
+}
+
+@media (min-width: 600px) {
+  #lista-clientes {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 960px) {
+  #lista-clientes {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ═══════════════════════ Card ═══════════════════════ */
+
+.cliente-card {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.04));
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+  cursor: default;
+}
+
+.cliente-card:hover,
+.cliente-card:focus-within {
+  border-color: var(--primary, #0aa8d2);
+  box-shadow: 0 2px 8px rgba(10, 168, 210, 0.12);
+}
+
+.cliente-card:focus-visible {
+  outline: 2px solid var(--primary, #0aa8d2);
+  outline-offset: 2px;
+}
+
+.cliente-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.cliente-card__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.cliente-card__name {
+  margin: 0 0 2px;
+  font-size: 15.5px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text);
+  word-break: break-word;
+}
+
+.cliente-card__sub {
+  font-size: 12px;
+  color: var(--text-3);
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.cliente-card__menu-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  color: var(--text-3);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.cliente-card__menu-btn:hover,
+.cliente-card__menu-btn:focus-visible {
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.cliente-card__menu-btn[aria-expanded='true'] {
+  background: var(--surface-2, rgba(0, 0, 0, 0.06));
+  color: var(--text);
+}
+
+.cliente-card__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.cliente-card__row svg {
+  flex-shrink: 0;
+  color: var(--text-3);
+}
+
+.cliente-card__row span {
+  word-break: break-word;
+}
+
+.cliente-card__foot {
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.cliente-card__equips-count {
+  font-size: 11.5px;
+  color: var(--text-3);
+  letter-spacing: 0.01em;
+}
+
+.cliente-card__edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--primary, #0aa8d2);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.cliente-card__edit:hover,
+.cliente-card__edit:focus-visible {
+  background: rgba(10, 168, 210, 0.08);
+  border-color: rgba(10, 168, 210, 0.25);
+}
+
+/* ── Popover do kebab ───────────────────────────────────── */
+
+.cliente-card__popover {
+  position: absolute;
+  top: 42px;
+  right: 12px;
+  z-index: 10;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cliente-card__popover-item {
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.12s ease;
+}
+
+.cliente-card__popover-item:hover,
+.cliente-card__popover-item:focus-visible {
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  outline: none;
+}
+
+.cliente-card__popover-item--danger {
+  color: var(--danger, #d72b3f);
+}
+
+.cliente-card__popover-item--danger:hover,
+.cliente-card__popover-item--danger:focus-visible {
+  background: rgba(215, 43, 63, 0.08);
+}
+
+/* ═══════════════════════ Empty state ═══════════════════════ */
+
+.clientes-empty {
+  background: var(--card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 32px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.clientes-empty--filter {
+  padding: 24px 20px;
+}
+
+.clientes-empty__art {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(10, 168, 210, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary, #0aa8d2);
+}
+
+.clientes-empty__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.clientes-empty__sub {
+  margin: 0;
+  max-width: 380px;
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+
+.clientes-empty__cta {
+  margin-top: 4px;
+}
+
+/* ═══════════════════════ Modal de cadastro/edição ═══════════════════════ */
+
+.cliente-modal-overlay {
+  /* Herda .modal-overlay (display:flex, fixed, etc) — só sobreescrevo z-index
+     se necessário. Fica por padrão acima de demais modais. */
+}
+
+.cliente-modal {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cliente-modal__head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--surface-2, rgba(10, 168, 210, 0.04));
+}
+
+.cliente-modal__head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.cliente-modal__title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.cliente-modal__sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-2);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.cliente-modal__close {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.cliente-modal__close:hover,
+.cliente-modal__close:focus-visible {
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.cliente-modal__body {
+  padding: 16px 20px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.cliente-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cliente-modal__section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+
+.cliente-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cliente-modal__label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cliente-modal__required {
+  color: var(--danger, #d72b3f);
+  margin-left: 2px;
+}
+
+.cliente-modal__input {
+  /* Herda .form-control. Reforça padding consistente entre input e textarea. */
+  width: 100%;
+}
+
+.cliente-modal__textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+.cliente-modal__hint {
+  font-size: 11.5px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
+.cliente-modal__warn {
+  font-size: 11.5px;
+  color: #b06b00; /* warning amber, mais escuro pra contraste em cards claros */
+  background: rgba(255, 173, 51, 0.1);
+  border: 1px solid rgba(255, 173, 51, 0.3);
+  border-radius: 4px;
+  padding: 4px 8px;
+  line-height: 1.4;
+}
+
+.cliente-modal__input--warn {
+  border-color: rgba(255, 173, 51, 0.6);
+  background: rgba(255, 173, 51, 0.04);
+}
+
+.cliente-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.cliente-modal__btn {
+  min-width: 110px;
+}
+
+/* Form row (2 inputs lado a lado em desktop) — herda padrão do projeto se
+   .form-row já existe, fallback aqui pra garantir o layout no modal cliente. */
+.cliente-modal .form-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 480px) {
+  .cliente-modal .form-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ═══════════════════════ Mobile refinements ═══════════════════════ */
+
+@media (max-width: 480px) {
+  .cliente-modal {
+    width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .cliente-modal__head {
+    padding: 14px 16px;
+  }
+
+  .cliente-modal__body {
+    padding: 14px 16px 18px;
+  }
+
+  .cliente-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .cliente-modal__btn {
+    width: 100%;
+  }
+
+  .cliente-card {
+    padding: 12px;
+  }
+
+  .cliente-card__name {
+    font-size: 14.5px;
+  }
+}

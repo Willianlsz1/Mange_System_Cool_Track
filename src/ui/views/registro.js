@@ -20,6 +20,12 @@ import { validateRegistroPayload } from '../../core/inputValidation.js';
 import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
 import { PostSaveRegistroToast } from '../components/postSaveRegistroToast.js';
 import { exportPdfFlow, shareWhatsAppFlow } from '../controller/handlers/reportExportHandlers.js';
+import {
+  getChecklistTemplate,
+  buildEmptyChecklist,
+  validateChecklist,
+  summarizeChecklist,
+} from '../../domain/pmoc/checklistTemplates.js';
 
 // O meter de progresso vive estático dentro do hero do template.
 // Apontamos pro hero + o contador numérico ao invés de injetar markup na hora.
@@ -304,6 +310,241 @@ function _bindEquipChangeWarning() {
   });
 }
 
+// ── Checklist NBR 13971 (Fase 3 PMOC) ─────────────────────────
+// State local: snapshot do checklist em edição. Reset quando equip muda
+// (template é por tipo) ou quando o registro é salvo/limpo.
+let _currentChecklist = null;
+
+function _isPreventivaTipo(tipoValue) {
+  return String(tipoValue || '')
+    .toLowerCase()
+    .includes('preventiva');
+}
+
+function _renderChecklistGroupHtml(groupName, items, snapshotMap) {
+  const rows = items
+    .map((item) => {
+      const snap = snapshotMap.get(item.id) || { status: null, obs: '', measure: null };
+      const safeId = Utils.escapeAttr(item.id);
+      const safeLabel = Utils.escapeHtml(item.label);
+      const safeObs = Utils.escapeHtml(snap.obs || '');
+      const required = item.mandatory
+        ? '<span class="r-checklist__req" title="Obrigatório p/ PMOC formal">*</span>'
+        : '';
+      const statusBtn = (status, label, title) => {
+        const active = snap.status === status ? ' is-active' : '';
+        return `<button type="button" class="r-checklist__status r-checklist__status--${status}${active}"
+          data-action="r-checklist-set" data-item="${safeId}" data-status="${status}"
+          aria-pressed="${snap.status === status}" title="${title}">${label}</button>`;
+      };
+      // PMOC Fase 4: input numérico inline pra items measurable.
+      // Mostra unit como suffix; salva no state via 'r-checklist-measure'.
+      const measureHtml = item.measurable
+        ? (() => {
+            const safeUnit = Utils.escapeAttr(item.unit || '');
+            const safeUnitDisplay = Utils.escapeHtml(item.unit || '');
+            const currentValue =
+              snap.measure && snap.measure.value != null ? String(snap.measure.value) : '';
+            return `<label class="r-checklist__measure">
+              <input type="number" step="any" inputmode="decimal"
+                class="r-checklist__measure-input"
+                data-action="r-checklist-measure" data-item="${safeId}"
+                data-unit="${safeUnit}"
+                value="${Utils.escapeAttr(currentValue)}"
+                placeholder="valor" aria-label="Medição em ${safeUnitDisplay}" />
+              <span class="r-checklist__measure-unit" aria-hidden="true">${safeUnitDisplay}</span>
+            </label>`;
+          })()
+        : '';
+      return `
+        <div class="r-checklist__row${item.measurable ? ' r-checklist__row--measurable' : ''}" data-item-id="${safeId}">
+          <div class="r-checklist__label">${safeLabel}${required}</div>
+          <div class="r-checklist__statuses" role="group" aria-label="Status: ${safeLabel}">
+            ${statusBtn('ok', '✓', 'Conforme')}
+            ${statusBtn('fail', '✗', 'Não conforme')}
+            ${statusBtn('na', '⊘', 'Não aplicável')}
+          </div>
+          ${measureHtml}
+          <textarea class="r-checklist__obs"
+            data-action="r-checklist-obs" data-item="${safeId}"
+            rows="1" maxlength="200" placeholder="Observação (opcional)">${safeObs}</textarea>
+        </div>`;
+    })
+    .join('');
+  return `
+    <div class="r-checklist__group">
+      <div class="r-checklist__group-label">${Utils.escapeHtml(groupName)}</div>
+      ${rows}
+    </div>`;
+}
+
+function _updateChecklistSummary() {
+  const summaryEl = document.getElementById('r-checklist-summary');
+  if (!summaryEl) return;
+  if (!_currentChecklist) {
+    summaryEl.textContent = 'selecione o equipamento primeiro';
+    return;
+  }
+  const s = summarizeChecklist(_currentChecklist);
+  if (!s.total) {
+    summaryEl.textContent = 'sem template para esse tipo';
+    return;
+  }
+  const filled = s.ok + s.fail + s.na;
+  summaryEl.textContent = `${filled}/${s.total} itens · ${s.ok} OK · ${s.fail} falha · ${s.na} N/A`;
+}
+
+function _refreshChecklistPriBadge() {
+  const pri = document.getElementById('r-checklist-pri');
+  if (!pri) return;
+  const isPreventiva = _isPreventivaTipo(Utils.getVal('r-tipo'));
+  pri.hidden = !isPreventiva;
+}
+
+/**
+ * Renderiza o checklist baseado no equip selecionado. Chamado quando
+ * r-equip muda OU quando o accordion é aberto pela primeira vez.
+ *
+ * Estratégia: usa o snapshot existente em _currentChecklist se o
+ * tipo_template corresponde — preserva marcações do user mesmo se
+ * ele trocar de equip e voltar. Senão, reseta para checklist vazio.
+ */
+export function renderChecklist() {
+  const wrapper = document.getElementById('r-checklist-details');
+  const body = document.getElementById('r-checklist-body');
+  if (!wrapper || !body) return;
+
+  const equipId = Utils.getVal('r-equip');
+  if (!equipId) {
+    wrapper.hidden = true;
+    _currentChecklist = null;
+    _updateChecklistSummary();
+    return;
+  }
+  const equip = findEquip(equipId);
+  if (!equip) {
+    wrapper.hidden = true;
+    return;
+  }
+
+  const tpl = getChecklistTemplate(equip.tipo);
+  // Preserva marcações se template é o mesmo (user trocou de equip do mesmo tipo)
+  const sameTemplate = _currentChecklist && _currentChecklist.tipo_template === tpl.tipo_template;
+  if (!sameTemplate) {
+    _currentChecklist = buildEmptyChecklist(equip.tipo);
+  }
+
+  wrapper.hidden = false;
+  _refreshChecklistPriBadge();
+
+  const snapshotMap = new Map((_currentChecklist.items || []).map((i) => [i.id, i]));
+  // Agrupa por `group` preservando ordem natural do template
+  const groupsOrder = [];
+  const groupBuckets = new Map();
+  tpl.items.forEach((item) => {
+    if (!groupBuckets.has(item.group)) {
+      groupsOrder.push(item.group);
+      groupBuckets.set(item.group, []);
+    }
+    groupBuckets.get(item.group).push(item);
+  });
+
+  body.innerHTML = `
+    <div class="r-checklist__intro">
+      <strong>${Utils.escapeHtml(tpl.label)}</strong>
+      <span class="r-checklist__legend">
+        <span class="r-checklist__legend-item">✓ conforme</span>
+        <span class="r-checklist__legend-item">✗ não-conforme</span>
+        <span class="r-checklist__legend-item">⊘ N/A</span>
+      </span>
+    </div>
+    ${groupsOrder
+      .map((g) => _renderChecklistGroupHtml(g, groupBuckets.get(g), snapshotMap))
+      .join('')}
+  `;
+
+  _updateChecklistSummary();
+}
+
+/** Atualiza status de um item — chamado pelo handler de click. */
+export function setChecklistItemStatus(itemId, status) {
+  if (!_currentChecklist) return;
+  const item = _currentChecklist.items.find((i) => i.id === itemId);
+  if (!item) return;
+  // Toggle: clicar no mesmo status volta pra null
+  item.status = item.status === status ? null : status;
+  // Update DOM in place — não re-renderiza pra preservar foco em textarea
+  const row = document.querySelector(`[data-item-id="${CSS.escape(itemId)}"]`);
+  if (row) {
+    row.querySelectorAll('.r-checklist__status').forEach((btn) => {
+      const btnStatus = btn.dataset.status;
+      const isActive = item.status === btnStatus;
+      btn.classList.toggle('is-active', isActive);
+      btn.setAttribute('aria-pressed', String(isActive));
+    });
+  }
+  _updateChecklistSummary();
+}
+
+/** Atualiza obs de um item — chamado pelo handler de input do textarea. */
+export function setChecklistItemObs(itemId, obs) {
+  if (!_currentChecklist) return;
+  const item = _currentChecklist.items.find((i) => i.id === itemId);
+  if (item) item.obs = String(obs || '');
+}
+
+/**
+ * PMOC Fase 4: atualiza medição numérica de um item measurable.
+ * Vazio limpa o measure (vira null); valor numérico salva como
+ * { value, unit }. Não-numéricos são ignorados (input number já
+ * filtra mas defensivo aqui também).
+ */
+export function setChecklistItemMeasure(itemId, rawValue, unit) {
+  if (!_currentChecklist) return;
+  const item = _currentChecklist.items.find((i) => i.id === itemId);
+  if (!item) return;
+  const trimmed = String(rawValue ?? '').trim();
+  if (trimmed === '') {
+    item.measure = null;
+    return;
+  }
+  // Aceita vírgula ou ponto como separador decimal (pt-BR).
+  const num = Number(trimmed.replace(',', '.'));
+  if (!Number.isFinite(num)) {
+    item.measure = null;
+    return;
+  }
+  item.measure = { value: num, unit: String(unit || '') };
+}
+
+/** Snapshot atual do checklist — chamado por saveRegistro. */
+export function getCurrentChecklist() {
+  if (!_currentChecklist) return null;
+  // Só retorna se pelo menos 1 item foi marcado — checklist 100% vazio = null.
+  const hasMarks = (_currentChecklist.items || []).some((i) => i.status != null);
+  return hasMarks ? _currentChecklist : null;
+}
+
+/** Reset — chamado por clearRegistro. */
+export function resetChecklist() {
+  _currentChecklist = null;
+  const body = document.getElementById('r-checklist-body');
+  if (body) body.innerHTML = '';
+  const wrapper = document.getElementById('r-checklist-details');
+  if (wrapper) wrapper.hidden = true;
+  _updateChecklistSummary();
+}
+
+/** Carrega checklist do registro existente em modo edição. */
+export function loadChecklistForEdit(checklist) {
+  if (!checklist || typeof checklist !== 'object') {
+    _currentChecklist = null;
+    return;
+  }
+  _currentChecklist = JSON.parse(JSON.stringify(checklist));
+  renderChecklist();
+}
+
 // ═══════════════════════════════════════════════════════
 // API PÚBLICA
 // ═══════════════════════════════════════════════════════
@@ -323,6 +564,13 @@ export function initRegistro(params = {}) {
         }
       });
       _bindEquipChangeWarning();
+      // PMOC Fase 3: re-renderiza checklist quando equip muda (template
+      // depende do tipo do equip). Hook adicional ao change handler do
+      // r-equip que já existe em _bindEquipChangeWarning.
+      const equipSelForChecklist = Utils.getEl('r-equip');
+      if (equipSelForChecklist) {
+        equipSelForChecklist.addEventListener('change', () => renderChecklist());
+      }
 
       // Toggle do campo custom quando tipo muda. Rebind só uma vez (bound flag),
       // por isso fica dentro do guard. Também aproveita pra pré-preencher
@@ -335,6 +583,7 @@ export function initRegistro(params = {}) {
           _syncTipoCustomVisibility({ focusOnShow: true });
           _prefillObsFromTipo(tipoSel.value);
           _updateProgressBar();
+          _refreshChecklistPriBadge();
         });
       }
       // Atualiza a barra conforme o usuário digita o custom label — a validação
@@ -558,6 +807,29 @@ export async function saveRegistro() {
     return false;
   }
 
+  // PMOC Fase 3.E: warning soft-required quando preventiva sem checklist.
+  // Não bloqueia o save (técnico pode estar em campo, sem tempo); apenas avisa
+  // pra ele saber que esse registro NÃO entra no PMOC formal completo.
+  if (_isPreventivaTipo(tipo)) {
+    const cl = getCurrentChecklist();
+    if (!cl) {
+      Toast.warning(
+        'Sem checklist NBR. Recomendado para PMOC formal — você pode preencher antes de salvar.',
+      );
+    } else {
+      const validationCl = validateChecklist(cl);
+      if (!validationCl.complete && validationCl.missing?.length) {
+        const first = validationCl.missing[0];
+        const rest = validationCl.missing.length - 1;
+        const msg =
+          rest > 0
+            ? `${validationCl.missing.length} itens obrigatórios pendentes (ex: "${first}"). Salvando mesmo assim.`
+            : `1 item obrigatório pendente: "${first}". Salvando mesmo assim.`;
+        Toast.warning(msg);
+      }
+    }
+  }
+
   Profile.saveLastTecnico(tecnico);
 
   // Modo edição — atualiza registro existente
@@ -584,6 +856,8 @@ export async function saveRegistro() {
               clienteDocumento,
               localAtendimento,
               clienteContato,
+              // PMOC Fase 3: preserva checklist; null se user limpou tudo.
+              checklist: getCurrentChecklist() || r.checklist || null,
             }
           : r,
       );
@@ -734,6 +1008,8 @@ export async function saveRegistro() {
           // ficou só no localStorage, grava `true` pra indicar "tem
           // assinatura" — queue reconcile troca pelo reference depois.
           assinatura: signatureReference || (assinatura ? true : false),
+          // PMOC Fase 3: checklist NBR (null se não preenchido).
+          checklist: getCurrentChecklist(),
         },
       ],
       equipamentos: prev.equipamentos.map((e) => {
@@ -827,6 +1103,10 @@ export function clearRegistro(preserveEquip = false) {
       chip.setAttribute('aria-pressed', 'false');
     });
 
+  // PMOC Fase 3: reset do state do checklist (impede vazar marcações
+  // de um registro pra outro quando o user clica "Recomeçar").
+  resetChecklist();
+
   const rTecnico = Utils.getEl('r-tecnico');
   if (rTecnico) rTecnico.value = Profile.getDefaultTecnico();
 
@@ -896,6 +1176,14 @@ export function loadRegistroForEdit(id) {
   Utils.setVal('r-cliente-documento', r.clienteDocumento || '');
   Utils.setVal('r-local-atendimento', r.localAtendimento || '');
   Utils.setVal('r-cliente-contato', r.clienteContato || '');
+
+  // PMOC Fase 3: carrega checklist se existe; senão renderiza vazio
+  // baseado no tipo do equip.
+  if (r.checklist && typeof r.checklist === 'object') {
+    loadChecklistForEdit(r.checklist);
+  } else {
+    renderChecklist();
+  }
 
   const btn = document.querySelector('[data-action="save-registro"]');
   if (btn) {

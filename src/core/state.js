@@ -5,7 +5,16 @@
 
 import { Storage } from './storage.js';
 
-const INITIAL_STATE = { equipamentos: [], registros: [], tecnicos: [], setores: [] };
+const INITIAL_STATE = {
+  equipamentos: [],
+  registros: [],
+  tecnicos: [],
+  setores: [],
+  // V2 PMOC (abr/2026): clientes (carteira do técnico). Hidratado on-demand
+  // via core/clientes.js#loadClientes — não persiste em localStorage porque
+  // clientes vivem só no Supabase (sem queue offline na fase 2).
+  clientes: [],
+};
 
 const listeners = new Set();
 let state = Storage.load(INITIAL_STATE);
@@ -31,6 +40,7 @@ export function getState() {
     registros: [...state.registros],
     tecnicos: [...(state.tecnicos || [])],
     setores: [...(state.setores || [])],
+    clientes: [...(state.clientes || [])],
   };
 }
 

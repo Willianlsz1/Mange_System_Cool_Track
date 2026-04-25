@@ -52,6 +52,10 @@ function normalizeEquip(e) {
 
   const setorIdRaw = e.setorId ?? e.setor_id ?? null;
   const setorId = setorIdRaw ? String(setorIdRaw) : null;
+  // PMOC Fase 2: vínculo opcional ao cliente. Aceita ambos os shapes
+  // (camelCase do app, snake_case do Supabase). Null = sem cliente.
+  const clienteIdRaw = e.clienteId ?? e.cliente_id ?? null;
+  const clienteId = clienteIdRaw ? String(clienteIdRaw) : null;
 
   return {
     id: String(e.id),
@@ -70,6 +74,7 @@ function normalizeEquip(e) {
       e.criticidade,
     ),
     setorId,
+    clienteId,
     // Feature Plus+: foto real do equipamento. Mesmo shape de `registros.fotos`.
     fotos: normalizePhotoList(e.fotos),
   };
@@ -112,7 +117,19 @@ function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
     // Mesma semântica de `registros.fotos` (jsonb). Fallback pra legacy acima
     // se a coluna ainda não existir no schema (isLegacyEquipmentSchemaError).
     fotos: normalizePhotoList(equipamento.fotos),
+    // PMOC Fase 2: cliente_id opcional. Quando a migration 20260425120000
+    // já rodou, o campo é populado; caso contrário, retry pode acontecer
+    // via isMissingClienteSchemaError abaixo (defensivo, sem bloquear save).
+    cliente_id: equipamento.clienteId ?? null,
   };
+}
+
+function isMissingClienteSchemaError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    (message.includes('column') || message.includes('schema cache')) &&
+    message.includes('cliente_id')
+  );
 }
 
 function isMissingSetorSchemaError(error) {
@@ -171,6 +188,8 @@ function normalizeRegistro(r, equipamentoIds) {
     custoPecas: sanitized.custoPecas,
     custoMaoObra: sanitized.custoMaoObra,
     assinatura: Boolean(r.assinatura),
+    // PMOC Fase 3: checklist NBR 13971 (objeto JSON ou null).
+    checklist: r.checklist && typeof r.checklist === 'object' ? r.checklist : null,
   };
 }
 
@@ -327,6 +346,15 @@ async function pushEquipamentos(equipamentos, userId) {
   try {
     const rows = equipamentos.map((equipamento) => mapEquipamentoRow(equipamento, userId));
     let { error } = await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
+    if (error && isMissingClienteSchemaError(error)) {
+      // Schema antigo (pré-migration PMOC Fase 2): retira cliente_id e tenta de novo.
+      // Mantém todos os outros campos novos (criticidade etc) — só faz fallback no campo
+      // que faltou. Se o campo legado também estiver faltando, o catch de baixo cobre.
+      const rowsWithoutCliente = rows.map(({ cliente_id: _omit, ...rest }) => rest);
+      ({ error } = await supabase
+        .from('equipamentos')
+        .upsert(rowsWithoutCliente, { onConflict: 'id' }));
+    }
     if (error && isLegacyEquipmentSchemaError(error)) {
       const legacyRows = equipamentos.map((equipamento) =>
         mapEquipamentoRow(equipamento, userId, { legacy: true }),
@@ -342,6 +370,14 @@ async function pushEquipamentos(equipamentos, userId) {
       cause: error?.message,
     });
   }
+}
+
+function isMissingChecklistSchemaError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    (message.includes('column') || message.includes('schema cache')) &&
+    message.includes('checklist')
+  );
 }
 
 async function pushRegistros(registros, userId) {
@@ -362,8 +398,17 @@ async function pushRegistros(registros, userId) {
       custo_mao_obra: r.custoMaoObra,
       assinatura: r.assinatura,
       fotos: normalizePhotoList(r.fotos),
+      // PMOC Fase 3: checklist NBR (objeto ou null). Schema antigo (pré-migration
+      // 20260425130000) cai no fallback abaixo e re-tenta sem o campo.
+      checklist: r.checklist && typeof r.checklist === 'object' ? r.checklist : null,
     }));
-    const { error } = await supabase.from('registros').upsert(rows, { onConflict: 'id' });
+    let { error } = await supabase.from('registros').upsert(rows, { onConflict: 'id' });
+    if (error && isMissingChecklistSchemaError(error)) {
+      const rowsWithoutChecklist = rows.map(({ checklist: _omit, ...rest }) => rest);
+      ({ error } = await supabase
+        .from('registros')
+        .upsert(rowsWithoutChecklist, { onConflict: 'id' }));
+    }
     if (error) throw error;
   } catch (error) {
     throw new AppError('Falha ao sincronizar registros.', ErrorCodes.SYNC_FAILED, 'warning', {
@@ -562,6 +607,8 @@ async function pullFromSupabase(userId) {
       e.criticidade,
     ),
     setorId: e.setor_id ? String(e.setor_id) : null,
+    // PMOC Fase 2: cliente_id pode vir null em schema antigo (pré-migration).
+    clienteId: e.cliente_id ? String(e.cliente_id) : null,
     // Feature Plus+: pode vir null de schema antigo ou array vazio.
     fotos: normalizePhotoList(e.fotos),
   }));
@@ -583,6 +630,8 @@ async function pullFromSupabase(userId) {
       custoMaoObra: parseFloat(r.custo_mao_obra || 0),
       assinatura: Boolean(r.assinatura),
       fotos: normalizePhotoList(r.fotos),
+      // PMOC Fase 3: checklist pode vir null em schema antigo.
+      checklist: r.checklist && typeof r.checklist === 'object' ? r.checklist : null,
     }))
     .filter((r) => equipIds.has(r.equipId));
 

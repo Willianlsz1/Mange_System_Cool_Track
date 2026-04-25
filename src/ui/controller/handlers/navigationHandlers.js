@@ -53,6 +53,14 @@ export function bindNavigationHandlers() {
     // Ao abrir o modal de equipamento via "+ Novo", garante que não estamos em modo edição
     if (id === 'modal-add-eq') {
       clearEquipEditingState();
+      // PMOC Fase 2: popula select de clientes (lazy hydrate). Fire-and-forget;
+      // se falhar, o wrapper fica hidden (default) e o campo simplesmente
+      // não aparece — não quebra o cadastro.
+      import('../../views/clientes.js')
+        .then((m) => m.populateClienteSelect?.())
+        .catch(() => {
+          /* no-op: campo cliente é opcional */
+        });
       // V4: o bloco de fotos saiu desse modal. O único gate síncrono que
       // resta aqui é o do hero CTA de análise de placa (Plus+).
       const isPlusOrPro = isCachedPlanPlusOrHigher();

@@ -315,7 +315,156 @@ export async function shareWhatsAppFlow({ filters, triggerEl = null } = {}) {
   return executeWhatsAppShare(safeFilters);
 }
 
+/**
+ * Detecta cliente pré-selecionado a partir de:
+ *   1. data-cliente-id no elemento que disparou (CTA do card cliente)
+ *   2. filtro do relatório (rel-equip) quando aponta pra equip único
+ *      cuja clienteId é definida
+ */
+function detectPreselectClienteId(el, equipamentos) {
+  // Prioridade 1: explicito no data-cliente-id
+  const explicit = el?.dataset?.clienteId;
+  if (explicit) return String(explicit);
+  // Prioridade 2: filtro do relatório aponta pra equip específico
+  const relEquipSelect = document.getElementById('rel-equip');
+  const equipId = relEquipSelect?.value;
+  if (!equipId) return null;
+  const eq = equipamentos.find((e) => e.id === equipId);
+  return eq?.clienteId || null;
+}
+
+function bindPmocFormal() {
+  on('open-pmoc-modal', async (el) => {
+    try {
+      // Lazy-load do modal e do gerador (chunk Pro-only).
+      const [
+        { PmocModal },
+        { generatePmocPdf },
+        { Profile },
+        { getState },
+        { Auth },
+        { isCachedPlanPlusOrHigher },
+        { hasProAccess },
+      ] = await Promise.all([
+        import('../../components/pmocModal.js'),
+        import('../../../domain/pdf/pmoc/pmocReport.js'),
+        import('../../../features/profile.js'),
+        import('../../../core/state.js'),
+        import('../../../core/auth.js'),
+        import('../../../core/plans/planCache.js'),
+        import('../../../core/plans/subscriptionPlans.js'),
+      ]);
+
+      // Pro-gate: tenta cache primeiro, depois confirma com fetch real
+      // pra evitar mostrar variante errada por TTL stale.
+      let isPro = isCachedPlanPlusOrHigher();
+      // Refinar: cache Plus+ é mais permissivo do que Pro estrito.
+      // Faz fetch defensivo do profile real.
+      try {
+        const { fetchMyProfileBilling } = await import('../../../core/plans/monetization.js');
+        const { profile } = await fetchMyProfileBilling();
+        isPro = hasProAccess(profile);
+      } catch (_) {
+        /* offline: mantém cache (over-permissive nessa edge case é OK pro PMOC) */
+      }
+
+      const user = await Auth.getUser();
+      const profile = Profile.get();
+      const { clientes = [], equipamentos = [], registros = [] } = getState();
+
+      // PMOC Fase 6: smart preselect do cliente
+      const preselectClienteId = detectPreselectClienteId(el, equipamentos);
+
+      PmocModal.open({
+        clientes,
+        isPro,
+        preselectClienteId,
+        onConfirm: async ({ ano, cliente }) => {
+          trackEvent('pmoc_pdf_generated', {
+            ano,
+            cliente_vinculado: Boolean(cliente),
+            equipamentos_count: equipamentos.length,
+            from_preselect: Boolean(preselectClienteId),
+          });
+          const fileName = await generatePmocPdf({
+            ano,
+            cliente,
+            equipamentos,
+            registros,
+            profile,
+            userId: user?.id || null,
+          });
+          if (fileName) {
+            Toast.success(`PMOC gerado: ${fileName}`);
+          }
+        },
+      });
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: 'Não foi possível abrir o gerador PMOC.',
+        context: { action: 'controller.open-pmoc-modal' },
+      });
+    }
+  });
+
+  // PMOC Fase 6: dropdown unificado "Exportar PDF ▾"
+  if (typeof document !== 'undefined' && !document.body.dataset.exportDdBound) {
+    document.body.dataset.exportDdBound = '1';
+    // Click fora fecha o menu
+    document.addEventListener('click', (event) => {
+      const dd = document.getElementById('rel-export-dd');
+      const menu = document.getElementById('rel-export-dd-menu');
+      const toggle = document.getElementById('btn-export-dd-toggle');
+      if (!dd || !menu || menu.hidden) return;
+      if (dd.contains(event.target)) return;
+      menu.hidden = true;
+      toggle?.setAttribute('aria-expanded', 'false');
+    });
+    // Esc fecha
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      const menu = document.getElementById('rel-export-dd-menu');
+      const toggle = document.getElementById('btn-export-dd-toggle');
+      if (!menu || menu.hidden) return;
+      menu.hidden = true;
+      toggle?.setAttribute('aria-expanded', 'false');
+    });
+    // Fechar ao clicar em qualquer item do menu (handlers individuais já rodam via delegate global)
+    document.addEventListener('click', (event) => {
+      const item = event.target.closest('.rel-export-dd__item');
+      if (!item) return;
+      const menu = document.getElementById('rel-export-dd-menu');
+      const toggle = document.getElementById('btn-export-dd-toggle');
+      if (menu) menu.hidden = true;
+      toggle?.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  on('toggle-export-dd', (el) => {
+    const menu = document.getElementById('rel-export-dd-menu');
+    if (!menu) return;
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    el?.setAttribute('aria-expanded', String(willOpen));
+  });
+
+  on('open-pmoc-info', async () => {
+    try {
+      const { PmocInfoModal } = await import('../../components/pmocInfoModal.js');
+      PmocInfoModal.open();
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.NETWORK_ERROR,
+        message: 'Não foi possível abrir a documentação do PMOC.',
+        context: { action: 'controller.open-pmoc-info' },
+      });
+    }
+  });
+}
+
 export function bindReportExportHandlers() {
   bindPdfExport();
   bindWhatsAppExport();
+  bindPmocFormal();
 }

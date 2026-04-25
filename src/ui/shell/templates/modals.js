@@ -243,6 +243,32 @@ export function renderShellModals() {
               </label>
 
               <!--
+                PMOC Fase 2: vínculo equipamento ↔ cliente. Só aparece quando
+                o user já tem ao menos 1 cliente cadastrado (populateClienteSelect
+                em views/clientes.js controla a visibilidade). Vínculo é opcional;
+                deixa "Sem cliente" pra equipamentos próprios ou demos.
+              -->
+              <label class="eq-context-row eq-context-row--cliente" id="eq-cliente-wrapper" for="eq-cliente" style="display:none">
+                <span class="eq-context-row__icon" aria-hidden="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
+                    <circle cx="10" cy="7" r="4"/>
+                  </svg>
+                </span>
+                <span class="eq-context-row__body">
+                  <span class="eq-context-row__title">Cliente</span>
+                  <span class="eq-context-row__sub" id="eq-cliente-sub">Sem cliente vinculado</span>
+                </span>
+                <select id="eq-cliente" class="eq-context-row__select" aria-label="Cliente">
+                  <option value="">Sem cliente</option>
+                </select>
+                <svg class="eq-context-row__chev" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </label>
+
+              <!--
                 V4: O bloco de fotos foi MOVIDO pra fora do modal de cadastro.
                 Agora as fotos são gerenciadas via avatar + CTA "Gerenciar
                 fotos" no detail view do equipamento (modal-eq-photos). A

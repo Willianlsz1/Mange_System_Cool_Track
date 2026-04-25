@@ -1225,6 +1225,15 @@ export async function openEditEquip(id, opts = {}) {
     }
   }
   if (eq.setorId) Utils.setVal('eq-setor', eq.setorId);
+  // PMOC Fase 2: pre-popula select de cliente no edit. populateClienteSelect()
+  // é chamado em open-modal handler, mas aqui setamos o value após o populate.
+  // Como populate é async, usamos requestAnimationFrame pra esperar o render.
+  if (eq.clienteId) {
+    requestAnimationFrame(() => {
+      const select = document.getElementById('eq-cliente');
+      if (select) Utils.setVal('eq-cliente', eq.clienteId);
+    });
+  }
 
   // Atualiza textos do modal
   const titleEl = Utils.getEl('modal-add-eq-title');
@@ -1384,6 +1393,8 @@ export async function saveEquip() {
   );
 
   const setorId = Utils.getVal('eq-setor') || null;
+  // PMOC Fase 2: vínculo opcional. Vazio → null (equipamento próprio/demo).
+  const clienteId = Utils.getVal('eq-cliente') || null;
 
   // Dados da etiqueta (13 campos opcionais). Coletados em JSONB pra persistência
   // em equipamentos.dados_placa. Se nenhum foi preenchido, mantém object vazio
@@ -1441,6 +1452,7 @@ export async function saveEquip() {
               prioridadeOperacional,
               periodicidadePreventivaDias,
               setorId,
+              clienteId,
               fotos: fotosPayload,
               dadosPlaca,
             }
@@ -1466,6 +1478,7 @@ export async function saveEquip() {
           prioridadeOperacional,
           periodicidadePreventivaDias,
           setorId,
+          clienteId,
           fotos: fotosPayload,
           dadosPlaca,
         },

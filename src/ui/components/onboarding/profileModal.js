@@ -55,8 +55,9 @@ const ICON_PHONE = `
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
   </svg>`;
 
-// Snapshot dos valores do form — usado pelo dirty-check. Compara os 4 campos
-// pós-trim. Retornamos um objeto plano pra facilitar shallow equal.
+// Snapshot dos valores do form — usado pelo dirty-check. Compara os 8 campos
+// pós-trim (4 originais + 4 PMOC adicionados em abr/2026). Retornamos um
+// objeto plano pra facilitar shallow equal.
 function captureFormSnapshot(overlay) {
   const get = (id) => overlay.querySelector(`#${id}`)?.value.trim() || '';
   return {
@@ -64,6 +65,10 @@ function captureFormSnapshot(overlay) {
     crea: get('prof-crea'),
     empresa: get('prof-empresa'),
     telefone: get('prof-telefone'),
+    razao_social: get('prof-razao-social'),
+    cnpj: get('prof-cnpj'),
+    inscricao_estadual: get('prof-ie'),
+    inscricao_municipal: get('prof-im'),
   };
 }
 
@@ -72,7 +77,11 @@ function isDirty(initial, current) {
     initial.nome !== current.nome ||
     initial.crea !== current.crea ||
     initial.empresa !== current.empresa ||
-    initial.telefone !== current.telefone
+    initial.telefone !== current.telefone ||
+    initial.razao_social !== current.razao_social ||
+    initial.cnpj !== current.cnpj ||
+    initial.inscricao_estadual !== current.inscricao_estadual ||
+    initial.inscricao_municipal !== current.inscricao_municipal
   );
 }
 
@@ -148,7 +157,7 @@ export const ProfileModal = {
 
             <div class="profile-modal__field">
               <label class="profile-modal__label" for="prof-empresa">
-                Empresa / CNPJ
+                Nome / Razão fantasia
               </label>
               <input id="prof-empresa" class="form-control profile-modal__input" type="text"
                 value="${Utils.escapeAttr(profile.empresa || '')}"
@@ -169,6 +178,63 @@ export const ProfileModal = {
                   placeholder="(31) 99999-0000"
                   autocomplete="tel" />
               </div>
+            </div>
+          </div>
+
+          <!--
+            Seção PMOC: dados legais da empresa pra constar em relatórios
+            formais (PMOC — Lei 13.589/2018, NBR 13971). Todos opcionais —
+            técnico que faz só serviço pontual residencial pode pular.
+            Pra Pro com clientes corporativos, esses campos viram
+            obrigatórios no PDF PMOC quando ele for gerado.
+          -->
+          <div class="profile-modal__section">
+            <div class="profile-modal__section-label">
+              Dados legais (opcional)
+              <span class="profile-modal__section-hint">
+                Necessário pra emitir relatórios PMOC formais.
+              </span>
+            </div>
+
+            <div class="profile-modal__field">
+              <label class="profile-modal__label" for="prof-razao-social">
+                Razão social completa
+              </label>
+              <input id="prof-razao-social" class="form-control profile-modal__input" type="text"
+                value="${Utils.escapeAttr(profile.razao_social || '')}"
+                placeholder="Ex: Frio Total Refrigeração Ltda"
+                autocomplete="organization" />
+            </div>
+
+            <div class="profile-modal__field">
+              <label class="profile-modal__label" for="prof-cnpj">
+                CNPJ / CPF
+              </label>
+              <input id="prof-cnpj" class="form-control profile-modal__input" type="text"
+                value="${Utils.escapeAttr(profile.cnpj || '')}"
+                placeholder="00.000.000/0001-00"
+                inputmode="numeric"
+                autocomplete="off" />
+            </div>
+
+            <div class="profile-modal__field">
+              <label class="profile-modal__label" for="prof-ie">
+                Inscrição estadual
+              </label>
+              <input id="prof-ie" class="form-control profile-modal__input" type="text"
+                value="${Utils.escapeAttr(profile.inscricao_estadual || '')}"
+                placeholder="Isento ou número"
+                autocomplete="off" />
+            </div>
+
+            <div class="profile-modal__field">
+              <label class="profile-modal__label" for="prof-im">
+                Inscrição municipal
+              </label>
+              <input id="prof-im" class="form-control profile-modal__input" type="text"
+                value="${Utils.escapeAttr(profile.inscricao_municipal || '')}"
+                placeholder="Número conforme prefeitura"
+                autocomplete="off" />
             </div>
           </div>
 
