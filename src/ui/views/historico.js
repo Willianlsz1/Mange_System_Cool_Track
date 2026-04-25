@@ -999,21 +999,36 @@ function renderTimelineItem(
       ${verTudoLink}
     </div>
     <div class="hist-item-actions">
-      <button type="button" data-action="edit-reg" data-id="${Utils.escapeAttr(r.id)}"
-        aria-label="Editar registro">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>
+      <button type="button" class="hist-item-actions__kebab"
+        data-action="toggle-card-menu" data-id="${Utils.escapeAttr(r.id)}"
+        aria-label="Acoes do registro" aria-haspopup="menu" aria-expanded="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="5" r="1.5"/>
+          <circle cx="12" cy="12" r="1.5"/>
+          <circle cx="12" cy="19" r="1.5"/>
         </svg>
       </button>
-      <button type="button" class="is-danger" data-action="delete-reg"
-        data-id="${Utils.escapeAttr(r.id)}"
-        aria-label="Excluir registro de ${Utils.escapeAttr(r.tipo)}">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>
-        </svg>
-      </button>
+      <div class="hist-item-actions__menu" role="menu" hidden>
+        <button type="button" role="menuitem"
+          class="hist-item-actions__menuitem"
+          data-action="edit-reg" data-id="${Utils.escapeAttr(r.id)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>
+          </svg>
+          Editar
+        </button>
+        <button type="button" role="menuitem"
+          class="hist-item-actions__menuitem hist-item-actions__menuitem--danger"
+          data-action="delete-reg" data-id="${Utils.escapeAttr(r.id)}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>
+          </svg>
+          Excluir
+        </button>
+      </div>
     </div>
   </article>`;
 }
@@ -1246,6 +1261,50 @@ function attachFilterHandlers(container) {
       filtersTrigger.classList.remove('is-active');
     }
   }
+
+  // Toggle do kebab menu nos cards. Click no kebab abre/fecha esse card.
+  // Click fora ou em outro kebab fecha o anterior. ESC fecha tambem.
+  container.addEventListener('click', (e) => {
+    const kebab = e.target.closest('[data-action="toggle-card-menu"]');
+    if (kebab) {
+      e.preventDefault();
+      const menu = kebab.parentElement?.querySelector('.hist-item-actions__menu');
+      const isOpen = menu && !menu.hidden;
+      container.querySelectorAll('.hist-item-actions__menu').forEach((m) => {
+        m.hidden = true;
+      });
+      container.querySelectorAll('[data-action="toggle-card-menu"]').forEach((k) => {
+        k.setAttribute('aria-expanded', 'false');
+      });
+      if (!isOpen && menu) {
+        menu.hidden = false;
+        kebab.setAttribute('aria-expanded', 'true');
+      }
+      return;
+    }
+    if (!e.target.closest('.hist-item-actions__menu')) {
+      container.querySelectorAll('.hist-item-actions__menu').forEach((m) => {
+        m.hidden = true;
+      });
+      container.querySelectorAll('[data-action="toggle-card-menu"]').forEach((k) => {
+        k.setAttribute('aria-expanded', 'false');
+      });
+    }
+  });
+
+  container.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const open = container.querySelector('.hist-item-actions__menu:not([hidden])');
+      if (open) {
+        open.hidden = true;
+        const kebab = open.parentElement?.querySelector('[data-action="toggle-card-menu"]');
+        if (kebab) {
+          kebab.setAttribute('aria-expanded', 'false');
+          kebab.focus();
+        }
+      }
+    }
+  });
 
   // Handler do botao Filtros: abre o bottom sheet com os filtros secundarios.
   if (filtersTrigger) {

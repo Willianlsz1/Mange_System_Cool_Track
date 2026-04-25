@@ -14353,6 +14353,83 @@ select option {
   gap: 4px;
   align-self: flex-start;
 }
+
+/* Kebab menu nos cards do historico - substitui os 2 botoes edit/delete
+   soltos por um menu de 3 pontinhos com dropdown. */
+.hist-item-actions__kebab {
+  width: 32px; height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+.hist-item-actions__kebab:hover {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+}
+.hist-item-actions__kebab[aria-expanded="true"] {
+  background: var(--surface);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.hist-item-actions__kebab:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.hist-item-actions {
+  position: relative;
+}
+.hist-item-actions__menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 140px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  padding: 4px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+.hist-item-actions__menuitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+.hist-item-actions__menuitem:hover {
+  background: var(--surface);
+}
+.hist-item-actions__menuitem:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+.hist-item-actions__menuitem--danger {
+  color: #ef6b6b;
+}
+.hist-item-actions__menuitem--danger:hover {
+  background: rgba(239, 107, 107, 0.1);
+}
+.hist-item-actions__menuitem svg {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
 #view-historico .hist-item-actions button {
   width: 28px;
   height: 28px;
@@ -15507,6 +15584,4 @@ select option {
 .account-delete-dialog__confirm:disabled {
   background: rgba(220, 38, 38, 0.32);
   border-color: rgba(220, 38, 38, 0.32);
-  cursor: not-allowed;
-  opacity: 0.7;
-}
+ 
