@@ -13450,6 +13450,276 @@ select option {
   /* Orbes ficam exagerados num card minusculo - reduz opacidade. */
   opacity: 0.4;
 }
+
+/* Headers de agrupamento por data na timeline (Hoje, Ontem, etc).
+   Visual minimalista: pill com icone + label + count. */
+#view-historico .hist-day-group {
+  margin: 16px 0 8px;
+  padding: 0;
+}
+#view-historico .hist-day-group:first-of-type {
+  margin-top: 8px;
+}
+#view-historico .hist-day-group__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+#view-historico .hist-day-group__label svg {
+  opacity: 0.6;
+  color: var(--primary);
+}
+#view-historico .hist-day-group__count {
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+}
+
+/* Botao "Filtros" no header do historico (mobile only).
+   No desktop os dropdowns continuam inline. No mobile o botao abre o
+   bottom sheet com setor + equipamento + tipo. */
+#view-historico .hist-filters-trigger {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+  flex-shrink: 0;
+}
+#view-historico .hist-filters-trigger:hover {
+  border-color: var(--primary-dim);
+}
+#view-historico .hist-filters-trigger:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+#view-historico .hist-filters-trigger__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--primary);
+  color: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+@media (max-width: 720px) {
+  #view-historico .hist-filters-trigger {
+    display: inline-flex;
+  }
+  /* No mobile, esconde os WRAPPERS dos dropdowns inline (incluindo o div
+     pai .hist-select que tem padding/border). Os <select> continuam no DOM
+     com value preservado - o bottom sheet os usa como source-of-truth. */
+  #view-historico .hist-search-row .hist-select {
+    display: none !important;
+  }
+}
+
+/* Bottom sheet de filtros do historico.
+   Mobile: slide up do bottom. Desktop: modal centered. */
+.hist-filters-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 1100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+.hist-filters-sheet-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.hist-filters-sheet {
+  width: 100%;
+  max-width: 560px;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  transform: translateY(100%);
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.hist-filters-sheet-overlay.is-open .hist-filters-sheet {
+  transform: translateY(0);
+}
+@media (min-width: 721px) {
+  .hist-filters-sheet-overlay {
+    align-items: center;
+  }
+  .hist-filters-sheet {
+    border-radius: 16px;
+    transform: translateY(20px) scale(0.97);
+    max-width: 480px;
+    max-height: 80vh;
+  }
+  .hist-filters-sheet-overlay.is-open .hist-filters-sheet {
+    transform: translateY(0) scale(1);
+  }
+}
+.hist-filters-sheet__head {
+  padding: 8px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.hist-filters-sheet__handle {
+  width: 36px;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 10px;
+}
+@media (min-width: 721px) {
+  .hist-filters-sheet__handle {
+    display: none;
+  }
+}
+.hist-filters-sheet__head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.hist-filters-sheet__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+.hist-filters-sheet__close {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+.hist-filters-sheet__close:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+.hist-filters-sheet__close:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.hist-filters-sheet__body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.hist-filters-sheet__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hist-filters-sheet__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.hist-filters-sheet__select {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2399a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+.hist-filters-sheet__select:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-dim);
+}
+.hist-filters-sheet__tipo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hist-filters-sheet__tipo-chip {
+  padding: 7px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+.hist-filters-sheet__tipo-chip:hover {
+  border-color: var(--primary-dim);
+}
+.hist-filters-sheet__tipo-chip.is-active {
+  background: var(--primary-soft);
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+.hist-filters-sheet__foot {
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+}
+.hist-filters-sheet__reset {
+  flex: 0 0 auto;
+}
+.hist-filters-sheet__apply {
+  flex: 1;
+}
 #view-historico .hist-summary-card__kpis {
   margin-top: 16px;
   display: grid;

@@ -24,6 +24,7 @@ import {
 } from '../components/signature.js';
 import { Photos } from '../components/photos.js';
 import { withSkeleton } from '../components/skeleton.js';
+import { HistoricoFiltersSheet } from '../components/historicoFiltersSheet.js';
 import { updateHeader } from './dashboard.js';
 import { getOperationalStatus } from '../../core/equipmentRules.js';
 
@@ -67,6 +68,84 @@ function setSummaryCollapsed(value) {
     sessionStorage.setItem(HIST_SUMMARY_COLLAPSED_KEY, value ? '1' : '0');
   } catch {
     /* sessionStorage indisponivel: ignora */
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// URL persistence dos filtros
+// ──────────────────────────────────────────────────────────────────────
+
+// Mapa de query param -> id do select/input no DOM. Usamos URLSearchParams
+// como source-of-truth on-load (deep linking) e replaceState on-change
+// (mantem URL atualizada sem inflar o history).
+const URL_PARAM_KEYS = {
+  busca: 'q',
+  setor: 'setor',
+  equip: 'equip',
+  periodo: 'periodo',
+  tipo: 'tipo',
+};
+
+let _urlFiltersHydrated = false;
+
+function readUrlFilters() {
+  if (typeof window === 'undefined') return {};
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    return {
+      busca: sp.get(URL_PARAM_KEYS.busca) || '',
+      setor: sp.get(URL_PARAM_KEYS.setor) || '',
+      equip: sp.get(URL_PARAM_KEYS.equip) || '',
+      periodo: sp.get(URL_PARAM_KEYS.periodo) || '',
+      tipo: sp.get(URL_PARAM_KEYS.tipo) || '',
+    };
+  } catch {
+    return {};
+  }
+}
+
+// Aplica filtros vindos da URL nos inputs/selects/sessionStorage. So roda
+// uma vez por sessao do view (flag _urlFiltersHydrated). Apos hydrate,
+// sessionStorage e DOM viram source-of-truth e a URL eh atualizada por write.
+function hydrateFiltersFromUrl() {
+  if (_urlFiltersHydrated) return;
+  _urlFiltersHydrated = true;
+  const f = readUrlFilters();
+  if (!Object.values(f).some(Boolean)) return;
+
+  const buscaEl = document.getElementById('hist-busca');
+  if (buscaEl && f.busca) buscaEl.value = f.busca;
+
+  const setorEl = document.getElementById('hist-setor');
+  if (setorEl && f.setor) setorEl.value = f.setor;
+
+  const equipEl = document.getElementById('hist-equip');
+  if (equipEl && f.equip) equipEl.value = f.equip;
+
+  if (f.periodo) setExtraFilter(HIST_PERIOD_KEY, f.periodo === 'tudo' ? '' : f.periodo);
+  if (f.tipo) setExtraFilter(HIST_TIPO_KEY, f.tipo);
+}
+
+function writeFiltersToUrl({ busca, setor, equip, periodo, tipo }) {
+  if (typeof window === 'undefined') return;
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    const setOrDelete = (key, value) => {
+      if (value) sp.set(key, value);
+      else sp.delete(key);
+    };
+    setOrDelete(URL_PARAM_KEYS.busca, busca);
+    setOrDelete(URL_PARAM_KEYS.setor, setor);
+    setOrDelete(URL_PARAM_KEYS.equip, equip);
+    setOrDelete(URL_PARAM_KEYS.periodo, periodo === 'tudo' ? '' : periodo);
+    setOrDelete(URL_PARAM_KEYS.tipo, tipo);
+    const qs = sp.toString();
+    const newUrl = window.location.pathname + (qs ? '?' + qs : '') + (window.location.hash || '');
+    if (newUrl !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(null, '', newUrl);
+    }
+  } catch {
+    /* nao crucial: se replaceState falhar, app segue funcionando sem deep link */
   }
 }
 
@@ -129,27 +208,6 @@ function getPhotoUrl(photo) {
 /**
  * Tempo relativo curto pra contexto de lista. "há 2h", "ontem", "há 3 dias".
  */
-function formatRelativeTime(iso) {
-  if (!iso) return '';
-  const target = new Date(iso);
-  if (Number.isNaN(target.getTime())) return '';
-  const diffMs = Date.now() - target.getTime();
-  if (diffMs < 0) return '';
-
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return 'agora há pouco';
-  if (minutes < 60) return `há ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `há ${hours} h`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return 'ontem';
-  if (days < 30) return `há ${days} dias`;
-  const months = Math.floor(days / 30);
-  if (months < 12) return `há ${months} ${months === 1 ? 'mês' : 'meses'}`;
-  const years = Math.floor(days / 365);
-  return `há ${years} ${years === 1 ? 'ano' : 'anos'}`;
-}
-
 /**
  * Normaliza o `tipo` free-form pra uma das categorias coloridas + label.
  */
@@ -784,7 +842,10 @@ function renderSignatureBlock(registro) {
     </button>`;
 }
 
-function renderTimelineItem(r, { isFirst, equipamentos, setoresById, currentFilterEquipId = '' }) {
+function renderTimelineItem(
+  r,
+  { isFirst, equipamentos, setoresById, currentFilterEquipId = '', groupId = '' },
+) {
   const eq = equipamentos.find((e) => e.id === r.equipId) || findEquip(r.equipId);
   const setorNome = eq?.setorId ? setoresById.get(eq.setorId)?.nome || '' : '';
   const safeStatus = Utils.safeStatus(r.status);
@@ -796,7 +857,20 @@ function renderTimelineItem(r, { isFirst, equipamentos, setoresById, currentFilt
   const custoTotal = custoPecas + custoMao;
   const isToday = r.data.slice(0, 10) === Utils.localDateString();
   const typePill = getTypePillInfo(r.tipo);
-  const relTime = formatRelativeTime(r.data);
+  // Quando o card esta dentro de um grupo de data (Hoje/Ontem/Esta semana/Este mes),
+  // mostra so a hora pq o header do grupo ja comunica o dia. Em "Anteriores"
+  // (sem contexto de grupo) mostra data + hora completa pra ficar inequivoco.
+  const dateInGroupCtx = groupId && groupId !== 'antigos';
+  let headerDateLabel;
+  if (dateInGroupCtx) {
+    const d = r.data ? new Date(r.data) : null;
+    headerDateLabel =
+      d && !Number.isNaN(d.getTime())
+        ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        : Utils.formatDatetime(r.data);
+  } else {
+    headerDateLabel = Utils.formatDatetime(r.data);
+  }
   const prioridade = (r.prioridade || '').toLowerCase();
   const showPrioridadePill = prioridade === 'alta' || prioridade === 'baixa';
   const prioridadeColor = prioridade === 'alta' ? 'red' : 'cyan';
@@ -902,10 +976,8 @@ function renderTimelineItem(r, { isFirst, equipamentos, setoresById, currentFilt
       role="listitem" data-reg-id="${Utils.escapeAttr(r.id)}">
     <span class="timeline__dot${dotMod}" aria-hidden="true"></span>
     <div class="timeline__item__main">
-      ${isFirst ? '<span class="timeline__item__latest-pill">• Mais recente</span>' : ''}
       <div class="timeline__item__header">
-        <span class="timeline__item__date">${Utils.escapeHtml(Utils.formatDatetime(r.data))}</span>
-        ${relTime ? `<span class="timeline__item__rel">(${Utils.escapeHtml(relTime)})</span>` : ''}
+        <span class="timeline__item__date">${Utils.escapeHtml(headerDateLabel)}</span>
         <div class="timeline__item__header-spacer"></div>
         ${headPills}
       </div>
@@ -978,6 +1050,10 @@ function syncSetorSelect(currentSetorId) {
 // ──────────────────────────────────────────────────────────────────────
 
 export function renderHist() {
+  // Le filtros da URL na primeira vez que o view eh renderizado por sessao.
+  // Suporta deep linking: ?periodo=7d&setor=xyz aplica filtros direto.
+  hydrateFiltersFromUrl();
+
   const { registros, equipamentos, setores } = getState();
   cleanupOrphanSignatures(registros.map((r) => r.id));
 
@@ -1031,6 +1107,10 @@ export function renderHist() {
     setorLabel: filtSetor ? setores.find((s) => s.id === filtSetor)?.nome || '' : '',
     equipLabel: filtEq ? equipamentos.find((e) => e.id === filtEq)?.nome || '' : '',
   };
+
+  // Sincroniza URL apos cada render. URLSearchParams omite chaves vazias,
+  // entao ?busca=foo&periodo=7d nunca vira ?busca=&periodo=&setor=&equip=&tipo=.
+  writeFiltersToUrl({ busca, setor: filtSetor, equip: filtEq, periodo: period, tipo });
   const activeFilterCount = [
     activeFilters.setorLabel,
     activeFilters.equipLabel,
@@ -1100,6 +1180,7 @@ export function renderHist() {
               equipamentos,
               setoresById,
               currentFilterEquipId: filtEq || '',
+              groupId: group.id,
             });
             globalIdx += 1;
             return html;
@@ -1143,6 +1224,71 @@ function attachFilterHandlers(container) {
       const next = !isSummaryCollapsed();
       setSummaryCollapsed(next);
       renderHist();
+    });
+  }
+
+  // Atualiza badge de contagem de filtros ativos no botao Filtros (mobile).
+  // Conta apenas filtros que ficam dentro do sheet: setor, equipamento, tipo.
+  // Quick-filters (periodo) nao contam aqui pq tem chips visiveis no header.
+  const filtersTrigger = document.getElementById('hist-filters-trigger');
+  const filtersCount = document.getElementById('hist-filters-count');
+  if (filtersTrigger && filtersCount) {
+    const setor = Utils.getVal('hist-setor');
+    const equip = Utils.getVal('hist-equip');
+    const { tipo } = getExtraFilters();
+    const count = [setor, equip, tipo].filter(Boolean).length;
+    if (count > 0) {
+      filtersCount.textContent = String(count);
+      filtersCount.hidden = false;
+      filtersTrigger.classList.add('is-active');
+    } else {
+      filtersCount.hidden = true;
+      filtersTrigger.classList.remove('is-active');
+    }
+  }
+
+  // Handler do botao Filtros: abre o bottom sheet com os filtros secundarios.
+  if (filtersTrigger) {
+    filtersTrigger.addEventListener('click', () => {
+      const { setores, equipamentos } = getState();
+      const { tipo } = getExtraFilters();
+      HistoricoFiltersSheet.open({
+        setores,
+        equipamentos: equipamentos.map((e) => ({
+          id: e.id,
+          nome: e.nome,
+          setorId: e.setorId,
+        })),
+        tipoOptions: TIPO_OPTIONS,
+        initial: {
+          setor: Utils.getVal('hist-setor'),
+          equip: Utils.getVal('hist-equip'),
+          tipo,
+        },
+        onApply: ({ setor, equip, tipo: newTipo }) => {
+          // Aplica os valores nos selects ocultos (a logica existente os le).
+          const setorEl = document.getElementById('hist-setor');
+          const equipEl = document.getElementById('hist-equip');
+          if (setorEl) {
+            setorEl.value = setor;
+            // Re-sincroniza opcoes de equipamento se setor mudou
+            syncSetorSelect(setor);
+            if (equipEl) equipEl.value = equip;
+          } else if (equipEl) {
+            equipEl.value = equip;
+          }
+          setExtraFilter(HIST_TIPO_KEY, newTipo);
+          renderHist();
+        },
+        onReset: () => {
+          const setorEl = document.getElementById('hist-setor');
+          const equipEl = document.getElementById('hist-equip');
+          if (setorEl) setorEl.value = '';
+          if (equipEl) equipEl.value = '';
+          setExtraFilter(HIST_TIPO_KEY, '');
+          renderHist();
+        },
+      });
     });
   }
 

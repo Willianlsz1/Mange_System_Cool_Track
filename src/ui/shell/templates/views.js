@@ -682,6 +682,18 @@ export function renderShellViews() {
                   <input id="hist-busca" type="search"
                     placeholder="Buscar equipamento, tipo, técnico…" aria-label="Buscar no histórico" />
                 </label>
+                <button type="button" class="hist-filters-trigger" id="hist-filters-trigger"
+                  data-hist-action="open-filters-sheet"
+                  aria-label="Abrir filtros avancados">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="4" y1="6" x2="20" y2="6"/>
+                    <line x1="7" y1="12" x2="17" y2="12"/>
+                    <line x1="10" y1="18" x2="14" y2="18"/>
+                  </svg>
+                  Filtros
+                  <span class="hist-filters-trigger__count" id="hist-filters-count" hidden>0</span>
+                </button>
                 <div class="hist-select">
                   <select id="hist-setor" aria-label="Filtrar por setor" style="display:none">
                     <option value="">Todos os setores</option>
