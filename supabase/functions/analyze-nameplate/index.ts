@@ -325,15 +325,21 @@ function firstDayOfMonthUtc(): string {
 /**
  * Carrega o used_count do resource pra este mês. Usa service_role — bypass
  * de RLS intencional (gate de quota é lógica de servidor, não de client).
- * Retorna 0 em qualquer erro pra não bloquear o feature por infra quebrada.
+ * Falha aqui bloqueia a análise: retornar 0 em erro deixaria o gate cego.
  */
+type QuotaLookupErrorKind =
+  | 'lookup_rejected'
+  | 'lookup_server_error'
+  | 'lookup_network_error'
+  | 'lookup_parse_error';
+
 async function loadMonthlyUsed(
   supabaseUrl: string,
   serviceRoleKey: string,
   userId: string,
   resource: string,
   monthStart: string,
-): Promise<number> {
+): Promise<{ used: number | null; error: QuotaLookupErrorKind | null }> {
   try {
     const res = await fetch(
       `${supabaseUrl}/rest/v1/usage_monthly?user_id=eq.${userId}&month_start=eq.${monthStart}&resource=eq.${resource}&select=used_count`,
@@ -347,28 +353,50 @@ async function loadMonthlyUsed(
     );
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
-      // Mesmo risco do increment: lookup retornando 0 em erro = gate libera
-      // indevidamente. Sinaliza alto.
-      console.error('[ALERT][analyze-nameplate] quota lookup failed — gate pode estar cego', {
+      const kind: QuotaLookupErrorKind =
+        res.status >= 500 ? 'lookup_server_error' : 'lookup_rejected';
+      console.error('[ALERT][analyze-nameplate] quota lookup failed — gate blocked', {
+        kind,
         userId,
         resource,
         monthStart,
         status: res.status,
         body: txt.slice(0, 400),
       });
-      return 0;
+      return { used: null, error: kind };
     }
-    const rows = (await res.json()) as Array<{ used_count?: number | string }>;
-    const parsed = Number.parseInt(String(rows?.[0]?.used_count ?? 0), 10);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    let rows: Array<{ used_count?: number | string }>;
+    try {
+      rows = (await res.json()) as Array<{ used_count?: number | string }>;
+    } catch (err) {
+      console.error('[ALERT][analyze-nameplate] quota lookup returned invalid JSON', {
+        userId,
+        resource,
+        monthStart,
+        err: err instanceof Error ? { name: err.name, message: err.message } : String(err),
+      });
+      return { used: null, error: 'lookup_parse_error' };
+    }
+    const rawUsed = rows?.[0]?.used_count;
+    if (rawUsed !== undefined && !Number.isFinite(Number(rawUsed))) {
+      console.error('[ALERT][analyze-nameplate] quota lookup returned non-numeric used_count', {
+        userId,
+        resource,
+        monthStart,
+        rawUsed,
+      });
+      return { used: null, error: 'lookup_parse_error' };
+    }
+    const parsed = Number.parseInt(String(rawUsed ?? 0), 10);
+    return { used: Number.isFinite(parsed) && parsed > 0 ? parsed : 0, error: null };
   } catch (err) {
-    console.error('[ALERT][analyze-nameplate] quota lookup threw — gate pode estar cego', {
+    console.error('[ALERT][analyze-nameplate] quota lookup threw — gate blocked', {
       userId,
       resource,
       monthStart,
       err: err instanceof Error ? { name: err.name, message: err.message } : String(err),
     });
-    return 0;
+    return { used: null, error: 'lookup_network_error' };
   }
 }
 
@@ -379,7 +407,7 @@ type IncrementErrorKind =
   | 'rpc_parse_error'; // 2xx mas payload não é número
 
 /**
- * Incrementa (ou cria) o contador mensal do usuário pra este resource.
+ * Reserva uma análise incrementando atomicamente o contador mensal antes da IA.
  * Chama a RPC via user JWT — a RPC exige auth.uid() == p_user_id, então
  * precisa ser a sessão do user, não service_role.
  *
@@ -387,14 +415,10 @@ type IncrementErrorKind =
  *  - `used` = novo used_count se sucesso, `null` se falhou.
  *  - `error` = código da falha (ver IncrementErrorKind) ou `null` em sucesso.
  *
- * IMPORTANTE: toda falha aqui é CRÍTICA pro gate — se o counter não sobe, o
- * `loadMonthlyUsed` da próxima chamada lê 0 e o gate libera indefinidamente
- * (= bypass de plano). Por isso logamos com prefixo `[ALERT]` e level `error`
- * pra ser trivial alertar via `log_analytics` no Supabase. Não propagamos
- * exceção porque o user já recebeu o valor da IA — melhor sinalizar no payload
- * (`quota.tracking_failed=true`) do que quebrar a resposta.
+ * IMPORTANTE: toda falha aqui é CRÍTICA pro gate. O handler bloqueia antes
+ * de chamar Anthropic para não gastar token sem conseguir rastrear quota.
  */
-async function incrementMonthlyUsage(
+async function reserveMonthlyUsage(
   supabaseUrl: string,
   serviceRoleKey: string,
   userJwt: string,
@@ -421,7 +445,7 @@ async function incrementMonthlyUsage(
     if (!res.ok) {
       const txt = await res.text().catch(() => '');
       const kind: IncrementErrorKind = res.status >= 500 ? 'rpc_server_error' : 'rpc_rejected';
-      console.error('[ALERT][analyze-nameplate] quota increment failed — gate está cego', {
+      console.error('[ALERT][analyze-nameplate] quota reservation failed — gate blocked', {
         kind,
         userId,
         resource,
@@ -434,7 +458,7 @@ async function incrementMonthlyUsage(
     const payload = await res.json();
     const used = typeof payload === 'number' ? payload : Number(payload);
     if (!Number.isFinite(used)) {
-      console.error('[ALERT][analyze-nameplate] quota increment returned non-numeric payload', {
+      console.error('[ALERT][analyze-nameplate] quota reservation returned non-numeric payload', {
         userId,
         resource,
         monthStart,
@@ -444,7 +468,7 @@ async function incrementMonthlyUsage(
     }
     return { used, error: null };
   } catch (err) {
-    console.error('[ALERT][analyze-nameplate] quota increment threw — gate está cego', {
+    console.error('[ALERT][analyze-nameplate] quota reservation threw — gate blocked', {
       userId,
       resource,
       monthStart,
@@ -530,7 +554,11 @@ Deno.serve(async (req: Request) => {
         plan?: string;
         subscription_status?: string;
       }>;
-      const profile = rows[0] ?? {};
+      const profile = rows[0] ?? null;
+      if (!profile) {
+        console.error('[ALERT][analyze-nameplate] profile missing - gate blocked', { userId });
+        return errorResponse(req, 'PROFILE_NOT_READY', 'Perfil ainda nao esta pronto', 409);
+      }
       const raw = String(profile.plan_code || profile.plan || 'free').toLowerCase();
       // Só respeita plano pago se status for active/trialing. Canceled/past_due
       // volta pra free — alinha com getEffectivePlan() do cliente.
@@ -542,24 +570,35 @@ Deno.serve(async (req: Request) => {
         userId,
         status: profileRes.status,
       });
+      return errorResponse(req, 'PROFILE_UNAVAILABLE', 'Nao foi possivel validar sua conta', 503);
     }
   } catch (err) {
-    console.error('[analyze-nameplate] profile fetch threw', err);
+    console.error('[ALERT][analyze-nameplate] profile fetch threw - gate blocked', {
+      userId,
+      err: err instanceof Error ? { name: err.name, message: err.message } : String(err),
+    });
+    return errorResponse(req, 'PROFILE_UNAVAILABLE', 'Nao foi possivel validar sua conta', 503);
   }
 
   // ── Quota mensal por plano ─────────────────────────────────────────────
-  // Cada tier tem seu próprio limite (Free=1, Plus=30, Pro=200). O gate é
-  // aplicado ANTES da chamada à IA (pra não gastar token à toa) e o
-  // incremento é feito DEPOIS do sucesso (pra não cobrar em caso de falha).
+  // Cada tier tem seu proprio limite (Free=1, Plus=30, Pro=200). O gate le
+  // o contador antes e reserva quota atomicamente depois que o payload foi
+  // validado, mas antes de chamar a IA.
   const monthStart = firstDayOfMonthUtc();
   const monthlyLimit = monthlyLimitForPlan(planCode);
-  const usedBefore = await loadMonthlyUsed(
+  const quotaLookup = await loadMonthlyUsed(
     supabaseUrl,
     serviceRoleKey,
     userId,
     USAGE_RESOURCE,
     monthStart,
   );
+
+  if (quotaLookup.error || quotaLookup.used === null) {
+    return errorResponse(req, 'QUOTA_UNAVAILABLE', 'Nao foi possivel validar sua cota', 503);
+  }
+
+  const usedBefore = quotaLookup.used;
 
   if (usedBefore >= monthlyLimit) {
     return jsonResponse(
@@ -580,8 +619,6 @@ Deno.serve(async (req: Request) => {
       403,
     );
   }
-
-  const quotaRemainingBefore = Math.max(0, monthlyLimit - usedBefore - 1);
 
   let body: { image_base64?: string; media_type?: string };
   try {
@@ -614,9 +651,55 @@ Deno.serve(async (req: Request) => {
     );
   }
 
-  // Chamada à Claude API. O tool_choice "any" força o modelo a chamar
-  // a tool — ele não pode "só responder em texto". Isso simplifica o
-  // parsing do lado cliente (sempre esperamos tool_use no response).
+  const reservation = await reserveMonthlyUsage(
+    supabaseUrl,
+    serviceRoleKey,
+    token,
+    userId,
+    USAGE_RESOURCE,
+    monthStart,
+  );
+
+  if (reservation.error || reservation.used === null) {
+    return errorResponse(
+      req,
+      'QUOTA_RESERVATION_FAILED',
+      'Nao foi possivel reservar sua cota',
+      503,
+    );
+  }
+
+  const reservedUsed = reservation.used;
+  if (reservedUsed > monthlyLimit) {
+    console.warn('[analyze-nameplate] AI_LABEL_QUOTA_RACE_BLOCKED', {
+      userId,
+      plan: planCode,
+      usedBefore,
+      reservedUsed,
+      monthlyLimit,
+    });
+    return jsonResponse(
+      req,
+      {
+        ok: false,
+        code: planGateCode(planCode),
+        error: planGateMessage(planCode, monthlyLimit),
+        current_plan: planCode,
+        quota_exhausted: true,
+        monthly_limit: monthlyLimit,
+        used: reservedUsed,
+        trial_exhausted: planCode === 'free',
+        trial_limit: planCode === 'free' ? monthlyLimit : undefined,
+        trial_used: planCode === 'free' ? reservedUsed : undefined,
+      },
+      403,
+    );
+  }
+
+  const remainingAfterReservation = Math.max(0, monthlyLimit - reservedUsed);
+
+  // Chamada a Claude API. O tool_choice forca o modelo a chamar a tool;
+  // ele nao pode responder somente em texto.
   const claudeRequest = {
     model: CLAUDE_MODEL,
     max_tokens: 1024,
@@ -721,40 +804,25 @@ Deno.serve(async (req: Request) => {
     success: true,
   });
 
-  // Incrementa o contador DEPOIS do sucesso — vale pra Free/Plus/Pro. Falha
-  // aqui é CRÍTICA pro gate (counter travado em 0 = gate cego = bypass de
-  // plano). O incrementMonthlyUsage loga com `[ALERT]` em error level; aqui
-  // expomos `tracking_failed=true` no payload pro client surfaçar um toast
-  // discreto e pra logs do app terem o sinal também. Não fail-closed porque
-  // o token da Anthropic já foi gasto; derrubar a resposta seria pior UX
-  // sem impedir o dano (custo).
-  const { used: newUsed, error: incrementError } = await incrementMonthlyUsage(
-    supabaseUrl,
-    serviceRoleKey,
-    token,
-    userId,
-    USAGE_RESOURCE,
-    monthStart,
-  );
-  const trackingFailed = incrementError !== null;
-  const remaining = newUsed !== null ? Math.max(0, monthlyLimit - newUsed) : quotaRemainingBefore;
+  // A quota ja foi reservada antes da chamada a Anthropic. A resposta apenas
+  // reporta o contador atomico retornado pela RPC.
+  const remaining = remainingAfterReservation;
 
   const quotaPayload = {
     consumed: true,
     plan: planCode,
     limit: monthlyLimit,
-    used: newUsed ?? usedBefore + 1,
+    used: reservedUsed,
     remaining,
-    ...(trackingFailed ? { tracking_failed: true, tracking_error: incrementError } : {}),
   };
 
   console.log('[analyze-nameplate] AI_LABEL_SUCCESS', {
     userId,
     plan: planCode,
-    used: newUsed ?? usedBefore + 1,
+    used: reservedUsed,
     remaining,
     cost_usd: costUsd,
-    tracking_failed: trackingFailed,
+    reserved_before_upstream: true,
     model: CLAUDE_MODEL,
   });
 

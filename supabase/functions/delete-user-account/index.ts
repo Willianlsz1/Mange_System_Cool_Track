@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = getRequiredEnv('SUPABASE_URL');
     const supabaseAnonKey = getRequiredEnv('SUPABASE_ANON_KEY');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? supabaseAnonKey;
+    const serviceRoleKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY');
 
     // ── 1. Valida autenticação REAL via Auth server ──────────────────────────
     // CRITICAL: este endpoint é destrutivo. Auth forjada = conta alheia

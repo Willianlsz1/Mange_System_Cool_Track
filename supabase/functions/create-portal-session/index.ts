@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const appUrl = getRequiredEnv('APP_URL');
     const supabaseUrl = getRequiredEnv('SUPABASE_URL');
     const supabaseAnonKey = getRequiredEnv('SUPABASE_ANON_KEY');
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? supabaseAnonKey;
+    const serviceRoleKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY');
 
     const stripe = new Stripe(stripeSecretKey);
 
@@ -46,7 +46,6 @@ Deno.serve(async (req) => {
       return jsonResponse(req, { code: auth.code, message: auth.message }, auth.status);
     }
     const userId = auth.user.id;
-    const userEmail = (auth.user.email ?? '') as string;
 
     console.log('[create-portal-session] usuário verificado', { userId });
 
@@ -64,18 +63,14 @@ Deno.serve(async (req) => {
 
     if (profileError) {
       console.error('[create-portal-session] profile error', profileError?.message);
+      return jsonResponse(
+        req,
+        { code: 'PROFILE_LOOKUP_FAILED', message: 'Nao foi possivel carregar sua assinatura.' },
+        500,
+      );
     }
 
-    let customerId: string | null = profile?.stripe_customer_id ?? null;
-
-    // ── 5. Fallback: busca pelo e-mail no Stripe ─────────────────────────────
-    if (!customerId && userEmail) {
-      const customers = await stripe.customers.list({ email: userEmail, limit: 1 });
-      if (customers.data.length > 0) {
-        customerId = customers.data[0].id;
-        console.log('[create-portal-session] customer encontrado por email fallback');
-      }
-    }
+    const customerId: string | null = profile?.stripe_customer_id ?? null;
 
     if (!customerId) {
       return jsonResponse(

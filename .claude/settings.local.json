@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell($src = \"C:\\\\Users\\\\KABUM\\\\Desktop\\\\Cool_Track_Pro\"; $dst = \"C:\\\\Users\\\\KABUM\\\\Desktop\\\\Cool_Track_Pro_fix-mime\"; Copy-Item \"$src\\\\public\\\\sw.js\" \"$dst\\\\public\\\\sw.js\" -Force; Copy-Item \"$src\\\\public\\\\_redirects\" \"$dst\\\\public\\\\_redirects\" -Force; Copy-Item \"$src\\\\public\\\\manifest.json\" \"$dst\\\\public\\\\manifest.json\" -Force; Copy-Item \"$src\\\\public\\\\404.html\" \"$dst\\\\public\\\\404.html\" -Force; Copy-Item \"$src\\\\src\\\\ui\\\\components\\\\accountModal.js\" \"$dst\\\\src\\\\ui\\\\components\\\\accountModal.js\" -Force; Write-Output \"copied\")"
+    ]
+  }
+}

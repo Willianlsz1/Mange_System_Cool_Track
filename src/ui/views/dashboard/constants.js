@@ -1,28 +1,19 @@
 /**
  * CoolTrack Pro - Dashboard / constants
- * Rótulos e pesos usados pelos módulos de dashboard.
  *
- * Nota: ALERT_SEVERITY_WEIGHT vive em `domain/constants/alerts.js` e é
- * apenas re-exportado aqui para preservar a API pública deste módulo.
+ * Re-exporta constantes canônicas do domain. Antes da consolidação (Phase 1
+ * do refactor), STATUS_OPERACIONAL, PRIORIDADE_LABEL e RISK_CLASS_LABEL
+ * viviam duplicados aqui e em equipamentos/constants.js. Source of truth
+ * agora é `domain/constants/statuses.js`.
+ *
+ * ALERT_SEVERITY_WEIGHT continua em `domain/constants/alerts.js`, re-exportado
+ * aqui para preservar a API pública deste módulo.
  */
 
 export { ALERT_SEVERITY_WEIGHT } from '../../../domain/constants/alerts.js';
 
-export const STATUS_OPERACIONAL = {
-  ok: 'OPERANDO NORMALMENTE',
-  warn: 'OPERANDO COM RESTRIÇÕES',
-  danger: 'FORA DE OPERAÇÃO',
-};
-
-export const PRIORIDADE_LABEL = {
-  baixa: 'Baixa',
-  media: 'Média',
-  alta: 'Alta',
-  critica: 'Crítica',
-};
-
-export const RISK_CLASS_LABEL = {
-  baixo: 'Baixo risco',
-  medio: 'Médio risco',
-  alto: 'Alto risco',
-};
+export {
+  STATUS_OPERACIONAL,
+  PRIORIDADE_LABEL,
+  RISK_CLASS_LABEL,
+} from '../../../domain/constants/statuses.js';
