@@ -1,6 +1,7 @@
 // @ts-nocheck
 import Stripe from 'https://esm.sh/stripe@14?target=denonext';
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { isClaimStuck, STUCK_THRESHOLD_MS } from './idempotency.ts';
 
 function getRequiredEnv(name: string) {
   const value = Deno.env.get(name);
@@ -166,16 +167,17 @@ type EventLedgerMeta = {
 };
 
 type EventClaimResult =
-  | { status: 'fresh'; error: null }
-  | { status: 'processed_duplicate'; error: null }
-  | { status: 'in_progress'; error: null }
-  | { status: 'retry_failed'; error: null }
+  | { status: 'fresh'; error: null; claimedAt: string | null }
+  | { status: 'processed_duplicate'; error: null; claimedAt: string | null }
+  | { status: 'in_progress'; error: null; claimedAt: string | null }
+  | { status: 'retry_failed'; error: null; claimedAt: string | null }
   | { status: 'error'; error: string };
 
 /**
- * Tenta "reivindicar" o evento inserindo-o no ledger. Retorna fresh=true se
- * o INSERT passou (deve processar), fresh=false se já existia (retry).
- * error != null sinaliza erro real de DB (diferente de duplicate) e exige
+ * Tenta "reivindicar" o evento inserindo-o no ledger. Retorna `fresh` se
+ * o INSERT passou (deve processar), ou um dos demais status se já existia
+ * (retry). `claimedAt` vem da coluna pra alimentar a detecção de stuck.
+ * `error != null` sinaliza erro real de DB (diferente de duplicate) e exige
  * 500 pro Stripe reagendar o retry.
  */
 async function tryClaimEvent(supabase: any, event: Stripe.Event): Promise<EventClaimResult> {
@@ -185,7 +187,7 @@ async function tryClaimEvent(supabase: any, event: Stripe.Event): Promise<EventC
       event_id: event.id,
       event_type: event.type,
     })
-    .select('event_id')
+    .select('event_id,claimed_at')
     .maybeSingle();
 
   if (error) {
@@ -194,7 +196,7 @@ async function tryClaimEvent(supabase: any, event: Stripe.Event): Promise<EventC
     if (error.code === '23505') {
       const existing = await supabase
         .from('stripe_webhook_events')
-        .select('event_id,processed_at,error_message')
+        .select('event_id,processed_at,error_message,claimed_at')
         .eq('event_id', event.id)
         .maybeSingle();
 
@@ -204,20 +206,43 @@ async function tryClaimEvent(supabase: any, event: Stripe.Event): Promise<EventC
       if (!existing.data) {
         return { status: 'error', error: 'ledger_conflict_without_row' };
       }
+      const claimedAt = existing.data.claimed_at ?? null;
       if (existing.data.processed_at) {
-        return { status: 'processed_duplicate', error: null };
+        return { status: 'processed_duplicate', error: null, claimedAt };
       }
       if (existing.data.error_message) {
-        return { status: 'retry_failed', error: null };
+        return { status: 'retry_failed', error: null, claimedAt };
       }
-      return { status: 'in_progress', error: null };
+      return { status: 'in_progress', error: null, claimedAt };
     }
     return { status: 'error', error: error.message || 'unknown_db_error' };
   }
 
   return data
-    ? { status: 'fresh', error: null }
+    ? { status: 'fresh', error: null, claimedAt: data.claimed_at ?? null }
     : { status: 'error', error: 'ledger_insert_empty' };
+}
+
+/**
+ * Re-reivindica uma reserva considerada stuck. UPDATE reseta `claimed_at`
+ * para o agora e limpa qualquer `error_message`, voltando a linha pro estado
+ * pristine de "in_progress recém-aberto" — o handler então segue como se
+ * fosse `fresh`. Usa filtro idempotente: só atualiza se ainda não foi
+ * marcada como processed (evita race com outra instância que pegou primeiro).
+ */
+async function reclaimStuckEvent(supabase: any, eventId: string): Promise<void> {
+  const { error } = await supabase
+    .from('stripe_webhook_events')
+    .update({
+      claimed_at: new Date().toISOString(),
+      error_message: null,
+    })
+    .eq('event_id', eventId)
+    .is('processed_at', null);
+
+  if (error) {
+    throw new Error(`LEDGER_RECLAIM_FAILED:${eventId}:${error.message}`);
+  }
 }
 
 async function markEventProcessed(supabase: any, eventId: string, meta: EventLedgerMeta) {
@@ -334,11 +359,29 @@ Deno.serve(async (req) => {
       });
     }
     if (claim.status === 'in_progress') {
-      logWebhook('duplicate_event_in_progress', {
-        eventId: event.id,
-        eventType: event.type,
-      });
-      return new Response('Event already processing', { status: 500 });
+      // Reserva sem progresso (sem processed_at e sem error_message) pode
+      // significar duas coisas: (a) outra instância está processando agora,
+      // OR (b) a reserva ficou abandonada por crash sem catch (OOM, edge
+      // runtime kill, redeploy mid-execution). Diferenciamos por idade:
+      // se claimed_at está há mais de STUCK_THRESHOLD_MS, presumimos (b)
+      // e re-reivindicamos. Senão, comportamento antigo (500 → Stripe retry).
+      if (isClaimStuck(claim.claimedAt, new Date())) {
+        logWebhook('stuck_event_reclaimed', {
+          eventId: event.id,
+          eventType: event.type,
+          claimedAt: claim.claimedAt,
+          stuckThresholdMs: STUCK_THRESHOLD_MS,
+        });
+        await reclaimStuckEvent(supabase, event.id);
+        // Cai pro fluxo normal: claimedEventId recebe o ID e o switch processa.
+      } else {
+        logWebhook('duplicate_event_in_progress', {
+          eventId: event.id,
+          eventType: event.type,
+          claimedAt: claim.claimedAt,
+        });
+        return new Response('Event already processing', { status: 500 });
+      }
     }
     if (claim.status === 'retry_failed') {
       logWebhook('failed_event_retrying', {
