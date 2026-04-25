@@ -4,6 +4,7 @@ import {
   getCriticidadeMultiplier,
   getRiskClassLabel,
 } from './riskScore.js';
+import { ALERT_SEVERITY_WEIGHT } from './constants/alerts.js';
 
 export const CRITICIDADE_LABEL = {
   baixa: 'Baixa',
@@ -62,7 +63,6 @@ const CRITICIDADE_FACTOR = { baixa: 1.15, media: 1, alta: 0.85, critica: 0.7 };
 const CRITICIDADE_HEALTH_WEIGHT = { baixa: 0, media: 4, alta: 8, critica: 12 };
 const ALERT_PRIORITY_WEIGHT = { baixa: 4, media: 10, alta: 18, critica: 28 };
 const OPERACIONAL_WEIGHT = { baixa: 0, normal: 6, alta: 14 };
-const ALERT_SEVERITY_WEIGHT = { danger: 3, warn: 2, info: 1 };
 
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
