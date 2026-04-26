@@ -116,20 +116,64 @@ export async function initObservability(config = {}) {
       // então `npm install` em fork sem Sentry continua funcionando.
       // Pra forks que não querem Sentry basta não setar VITE_SENTRY_DSN
       // — o código nem chega aqui.
-      const mod = await import('@sentry/browser');
-      sentry = mod;
+      // Imports nominais (não `import *`) pra que o Rollup tree-shake os
+      // submódulos que NÃO usamos: replay, feedback, browserTracing,
+      // replay-canvas. Sem isso, o barrel '@sentry/browser' arrasta ~700 KB
+      // brutos (~250 KB gzipped) de código que só roda se as integrations
+      // estivessem ativas — e elas não estão.
+      // Aliases evitam colisão com os `export function addBreadcrumb` e
+      // `export function setUser` no escopo do módulo.
+      const {
+        init: sentryInit,
+        captureException: sentryCaptureException,
+        captureMessage: sentryCaptureMessage,
+        addBreadcrumb: sentryAddBreadcrumb,
+        setUser: sentrySetUser,
+        dedupeIntegration,
+        functionToStringIntegration,
+        inboundFiltersIntegration,
+        breadcrumbsIntegration,
+        globalHandlersIntegration,
+        linkedErrorsIntegration,
+        httpContextIntegration,
+      } = await import('@sentry/browser');
+      sentry = {
+        init: sentryInit,
+        captureException: sentryCaptureException,
+        captureMessage: sentryCaptureMessage,
+        addBreadcrumb: sentryAddBreadcrumb,
+        setUser: sentrySetUser,
+      };
 
       sentry.init({
         dsn,
         environment: config.environment || getEnvName(),
         release: config.release || getRelease(),
+        // defaultIntegrations: false desabilita TODAS as integrations padrão
+        // (incluindo Replay, Feedback, BrowserTracing). Em seguida adicionamos
+        // só as essenciais — economia em runtime + reforça o tree-shaking,
+        // já que o bundler vê que nem `replayIntegration` nem
+        // `feedbackIntegration` foram importadas.
+        defaultIntegrations: false,
+        integrations: [
+          dedupeIntegration(),
+          functionToStringIntegration(),
+          inboundFiltersIntegration(),
+          breadcrumbsIntegration({
+            console: false,
+            dom: true,
+            fetch: true,
+            history: true,
+            xhr: true,
+          }),
+          globalHandlersIntegration(),
+          linkedErrorsIntegration(),
+          httpContextIntegration(),
+        ],
         // Nunca manda IP / headers / cookies / body das requests.
         sendDefaultPii: false,
         // Sem performance monitoring por enquanto (tracesSampleRate=0).
         tracesSampleRate: 0,
-        // Replay session desligado (também requer configuração extra).
-        replaysSessionSampleRate: 0,
-        replaysOnErrorSampleRate: 0,
         // Limita profundidade de breadcrumbs pra não vazar muito payload.
         maxBreadcrumbs: 50,
         // Scrub de PII via beforeSend (defensivo, sobre o sendDefaultPii).

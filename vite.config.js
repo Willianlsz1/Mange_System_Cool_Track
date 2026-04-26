@@ -41,8 +41,34 @@ async function buildPlugins() {
   }
 }
 
+// manualChunks: separa vendors em chunks dedicados pra (a) cache de longa
+// duração — quando você mudar 1 linha do seu código, o usuário não re-baixa
+// Supabase nem Sentry; (b) paralelização do download — o browser baixa
+// vários chunks em paralelo em vez de um monolito sequencial.
+//
+// Importante: esses chunks só são baixados quando ALGUM código os referencia.
+// Se você usa lazy import em algum lugar (ex.: import('@sentry/browser')
+// dentro de observability.js), o chunk vira "lazy" automaticamente.
+function manualChunks(id) {
+  if (!id.includes('node_modules')) return undefined;
+  if (id.includes('@sentry')) return 'vendor-sentry';
+  if (id.includes('@supabase') || id.includes('phoenix')) return 'vendor-supabase';
+  if (
+    id.includes('jspdf') ||
+    id.includes('html2canvas') ||
+    id.includes('canvg') ||
+    id.includes('svg-pathdata') ||
+    id.includes('stackblur') ||
+    id.includes('rgbcolor')
+  ) {
+    return 'vendor-pdf';
+  }
+  if (id.includes('chart.js') || id.includes('@kurkle/color')) return 'vendor-charts';
+  return undefined;
+}
+
 const buildOutput = {
-  manualChunks: undefined,
+  manualChunks,
   entryFileNames: 'assets/[name].[hash].js',
   chunkFileNames: 'assets/[name].[hash].js',
   assetFileNames: 'assets/[name].[hash].[ext]',
