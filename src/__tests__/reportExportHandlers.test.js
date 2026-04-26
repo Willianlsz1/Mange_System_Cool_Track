@@ -93,8 +93,10 @@ vi.mock('../core/usageLimits.js', () => ({
   incrementMonthlyUsage,
 }));
 
+const customConfirmShow = vi.fn();
 vi.mock('../core/modal.js', () => ({
   Modal: { open: vi.fn(), close: vi.fn() },
+  CustomConfirm: { show: customConfirmShow },
 }));
 
 const goTo = vi.fn();
@@ -109,7 +111,32 @@ describe('reportExportHandlers', () => {
   beforeEach(async () => {
     handlers.clear();
     vi.clearAllMocks();
+    // mockResolvedValueOnce queues nao sao limpos por clearAllMocks. Reseta
+    // as implementations dos spies que usam mockResolvedValueOnce per-test
+    // pra evitar leak (ex: queued value de um teste anterior vazar quando
+    // o handler nao consumiu por algum motivo).
+    generateMaintenanceReport.mockReset();
+    shareReportPdf.mockReset();
+    getUser.mockReset();
+    getEffectivePlan.mockReset();
+    fetchMyProfileBilling.mockReset();
+    customConfirmShow.mockReset();
     localStorage.clear();
+    // Default: usuario sempre CONFIRMA o modal de PDF preview/export.
+    // Tests que querem testar cancelamento podem sobrescrever.
+    customConfirmShow.mockResolvedValue(true);
+    // JSDOM nao implementa URL.createObjectURL/revokeObjectURL. Stub global
+    // pra triggerBlobDownload nao explodir no flow de export-pdf.
+    if (typeof URL.createObjectURL !== 'function') {
+      URL.createObjectURL = vi.fn(() => 'blob:mock-url');
+    } else {
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+    }
+    if (typeof URL.revokeObjectURL !== 'function') {
+      URL.revokeObjectURL = vi.fn();
+    } else {
+      vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    }
 
     getPlanCodeForUserId.mockResolvedValue('free');
     getEffectivePlan.mockReturnValue('free');
@@ -179,7 +206,12 @@ describe('reportExportHandlers', () => {
 
   it('allows Free users under the monthly PDF quota and passes planCode to generator', async () => {
     getUser.mockResolvedValueOnce({ id: 'u1' });
-    generateMaintenanceReport.mockResolvedValueOnce('relatorio.pdf');
+    // Handler agora gera PDF como Blob primeiro, mostra preview, e so depois
+    // faz download. Mock retorna {fileName, blob} no novo shape.
+    generateMaintenanceReport.mockResolvedValueOnce({
+      fileName: 'relatorio.pdf',
+      blob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
 
     await handlers.get('export-pdf')({});
 
@@ -216,7 +248,10 @@ describe('reportExportHandlers', () => {
     fetchMyProfileBilling.mockResolvedValueOnce({
       profile: { id: 'u1', plan: 'pro', subscription_status: 'active', is_dev: false },
     });
-    generateMaintenanceReport.mockResolvedValueOnce('relatorio.pdf');
+    generateMaintenanceReport.mockResolvedValueOnce({
+      fileName: 'relatorio.pdf',
+      blob: new Blob(['pdf'], { type: 'application/pdf' }),
+    });
 
     await handlers.get('export-pdf')({});
 
