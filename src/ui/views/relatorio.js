@@ -649,7 +649,7 @@ function renderRecordCard({ r, eq, expanded, singleEquipFilter }) {
       </div>
 
       <button type="button" class="rel-record__toggle"
-        data-action="rel-toggle-card" data-id="${Utils.escapeAttr(r.id)}"
+        data-rel-action="rel-toggle-card" data-id="${Utils.escapeAttr(r.id)}"
         aria-expanded="${expanded}" aria-controls="rec-${Utils.escapeAttr(r.id)}-details">
         <span>${expanded ? 'Ocultar detalhes' : 'Ver detalhes'}</span>
         <span class="rel-record__toggle-chev" aria-hidden="true">${icon('chevronDown', 12)}</span>
@@ -812,7 +812,7 @@ function wireHandlers({ registros, equipamentos, expandedIds, viewMode, rerender
   });
 
   // Disclosure per card
-  view.querySelectorAll('[data-action="rel-toggle-card"]').forEach((btn) => {
+  view.querySelectorAll('[data-rel-action="rel-toggle-card"]').forEach((btn) => {
     btn.addEventListener(
       'click',
       () => {

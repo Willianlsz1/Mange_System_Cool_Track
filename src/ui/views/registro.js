@@ -6,7 +6,8 @@
 import { Utils } from '../../core/utils.js';
 import { getState, findEquip, setState, lastRegForEquip } from '../../core/state.js';
 import { Toast } from '../../core/toast.js';
-import { goTo } from '../../core/router.js';
+import { goTo, setRouteGuard, clearRouteGuard } from '../../core/router.js';
+import { CustomConfirm } from '../../core/modal.js';
 import { Photos } from '../components/photos.js';
 import { SavedHighlight } from '../components/onboarding.js';
 import { Profile } from '../../features/profile.js';
@@ -147,6 +148,31 @@ function resetEditingState() {
   sessionStorage.removeItem(EDITING_KEY);
   const formView = Utils.getEl('view-registro');
   if (formView) formView.dataset.editMode = '0';
+  // Edicao terminou (save / clear / discard) — libera o guard de navegacao.
+  clearRouteGuard();
+}
+
+// Guard de saida em modo edicao. Bloqueia navegacao pra outra rota e mostra
+// modal pedindo confirmacao. Se usuario "Descartar", faz reset COMPLETO do
+// form (clearRegistro) — incluindo label do botao "Finalizar servico" — e
+// libera a navegacao. Se "Continuar editando", cancela.
+async function _confirmLeaveEditingGuard(_nextRoute, _nextParams) {
+  const ok = await CustomConfirm.show(
+    'Sair sem salvar as alterações?',
+    'Você está editando um registro. Se sair agora, as alterações serão descartadas.',
+    {
+      confirmLabel: 'Descartar e sair',
+      cancelLabel: 'Continuar editando',
+      tone: 'danger',
+    },
+  );
+  if (ok) {
+    // Reset completo: limpa campos do form, foto, checklist, label do botao
+    // ("Salvar alteracoes" -> "Finalizar servico"), classes, EDITING_KEY,
+    // dataset e o proprio guard (resetEditingState e chamado dentro).
+    clearRegistro();
+  }
+  return ok;
 }
 
 // Prefixo usado quando o usuário escolhe "Outro" e descreve o serviço num campo
@@ -1149,6 +1175,10 @@ export function loadRegistroForEdit(id) {
   const formViewEdit = Utils.getEl('view-registro');
   if (formViewEdit) formViewEdit.dataset.editMode = '1';
 
+  // Instala guard que bloqueia navegacao pra outra aba sem confirmar
+  // descarte. Limpado em resetEditingState (save / clear / descarte aprovado).
+  setRouteGuard(_confirmLeaveEditingGuard);
+
   Utils.setVal('r-equip', r.equipId);
   Utils.setVal('r-data', r.data);
 
@@ -1200,4 +1230,17 @@ export function loadRegistroForEdit(id) {
   if (heroPill) heroPill.textContent = 'Editando serviço';
   const title = document.querySelector('#view-registro .section-title');
   if (title) title.textContent = 'Editar serviço';
+}
+
+// Garante que estado de edicao nao persista entre sessoes do app.
+// pagehide cobre tanto fechamento de aba quanto navegacao pra outro
+// site (mais robusto que beforeunload em mobile / Safari).
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    try {
+      sessionStorage.removeItem(EDITING_KEY);
+    } catch (_err) {
+      /* sessionStorage indisponivel — ignora */
+    }
+  });
 }

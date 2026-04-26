@@ -64,6 +64,16 @@ function clientLines(cliente) {
   }
   if (cliente.endereco) lines.push(infoLine('Endereço', cliente.endereco));
   if (cliente.contato) lines.push(infoLine('Contato', cliente.contato));
+  // PMOC NBR 13971 §6.2: deve constar o canal de comunicacao para abertura
+  // de chamados/manutencao corretiva. Quando informado pelo cliente, vai
+  // aqui na capa pra ficar imediatamente visivel ao leitor.
+  if (cliente.urlChamados) {
+    lines.push({
+      label: 'Abertura de chamados:',
+      value: String(cliente.urlChamados),
+      isLink: true,
+    });
+  }
   return lines;
 }
 
@@ -89,18 +99,31 @@ function providerLines(profile) {
 
 function drawInfoBlock(doc, x, y, width, lines) {
   // Tabela 2 colunas: label (35mm) + value (auto). Sem borders pra ficar
-  // limpo no documento formal.
+  // limpo no documento formal. Suporta isLink no item — quando true, cria
+  // area clicavel via doc.link() sobre o valor renderizado.
   const labelW = 38;
   const valueX = x + labelW;
   const lineH = 5.4;
   let ly = y;
-  for (const { label, value } of lines) {
+  for (const { label, value, isLink } of lines) {
     txt(doc, label, x, ly, { typo: PT.bodyBold, color: PC.text2 });
+    // Pinta o valor — links em cor mais "ativa" (azul) e sublinhado pra
+    // afford clicavel mesmo em PDFs impressos (sublinhado e o sinal universal).
     txt(doc, value, valueX, ly, {
       typo: PT.body,
-      color: PC.text,
+      color: isLink ? PC.primary : PC.text,
       maxWidth: width - labelW,
     });
+    if (isLink) {
+      // Calcula altura da linha (jsPDF: getTextWidth + lineHeight) e cria
+      // area clicavel. Em PDFs digitais, click abre URL em browser.
+      const textW = Math.min(doc.getTextWidth(value), width - labelW);
+      try {
+        doc.link(valueX, ly - 4, textW, 5, { url: value });
+      } catch (_e) {
+        /* alguns ambientes (jsPDF mockado em test) podem nao ter doc.link */
+      }
+    }
     ly += lineH;
   }
   return ly;

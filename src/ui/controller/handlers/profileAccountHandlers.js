@@ -1,36 +1,26 @@
 import { on } from '../../../core/events.js';
 import { Auth } from '../../../core/auth.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
-import { fetchMyProfileBilling } from '../../../core/plans/monetization.js';
+import { goTo } from '../../../core/router.js';
 import { ProfileModal } from '../../components/onboarding.js';
-import { openAccountModal } from '../../components/accountModal.js';
 
-async function resolveBillingProfile() {
-  try {
-    const { profile } = await fetchMyProfileBilling();
-    return profile;
-  } catch {
-    // Falha no fetch (offline, erro de rede) — modal usa fallback local.
-    // Não bloqueia abertura do menu.
-    return null;
-  }
-}
-
-function openAccountOrProfile() {
+/**
+ * "open-profile" agora navega pra /conta (full page) em vez de abrir o
+ * popover accountModal. Mantemos o nome da action por compatibilidade
+ * com data-action="open-profile" no header e no sidebar user-chip.
+ *
+ * Se o usuário ainda não tem perfil preenchido (Auth.getUser sem retorno),
+ * abrimos o ProfileModal direto — fluxo de onboarding inicial.
+ */
+function openAccountPage() {
   Auth.getUser()
-    .then(async (user) => {
+    .then((user) => {
       if (!user) {
+        // Sem sessão real — onboarding modal cobre o gap.
         ProfileModal.open();
         return;
       }
-
-      const billingProfile = await resolveBillingProfile();
-
-      openAccountModal(user, {
-        billingProfile,
-        onEditProfile: () => ProfileModal.open(),
-        onSignOut: () => Auth.signOut(),
-      });
+      goTo('conta');
     })
     .catch((error) => {
       handleError(error, {
@@ -38,10 +28,15 @@ function openAccountOrProfile() {
         message: 'Nao foi possivel carregar o perfil da conta.',
         context: { action: 'controller.open-profile' },
       });
+      // Fallback: pelo menos abre o modal de perfil pra não travar o usuário.
       ProfileModal.open();
     });
 }
 
 export function bindProfileAccountHandlers() {
-  on('open-profile', () => openAccountOrProfile());
+  // Header avatar: data-action="open-profile" → vai pra /conta
+  on('open-profile', () => openAccountPage());
+  // Sidebar user-chip: data-action="open-profile-modal" → mesmo destino,
+  // mantido como alias pra não quebrar quem ainda usar o nome antigo.
+  on('open-profile-modal', () => openAccountPage());
 }

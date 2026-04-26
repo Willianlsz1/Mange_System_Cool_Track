@@ -656,19 +656,34 @@ export function renderShellViews() {
 
         <!-- HISTÓRICO -->
         <div class="view" id="view-historico">
+          <div class="servicos-toggle" role="tablist" aria-label="Modo de visualização">
+            <button type="button" class="servicos-toggle__btn servicos-toggle__btn--lista"
+              data-nav="historico" role="tab" aria-label="Lista de serviços">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>
+              </svg>
+              <span>Lista</span>
+            </button>
+            <button type="button" class="servicos-toggle__btn servicos-toggle__btn--relatorio"
+              data-nav="relatorio" role="tab" aria-label="Relatório com KPIs e PDF">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/>
+              </svg>
+              <span>Relatório</span>
+            </button>
+          </div>
           <div class="hist-sticky-header" id="hist-sticky-header">
             <div class="hist-sticky-header__row">
               <div class="hist-title">Histórico de Serviços</div>
               <span class="hist-count" id="hist-count" aria-live="polite"></span>
               <div class="hist-sticky-header__spacer"></div>
-              <button class="btn-ghost btn-ghost--report desktop-only" data-nav="relatorio">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/>
-                  <path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/>
-                </svg>
-                Gerar Relatório
-              </button>
+<!-- Botão "Relatório" removido — o toggle [Lista | Relatório] no topo
+                   da view ja faz a navegação pra view de Relatório, então o botão
+                   no header virou redundante. -->
             </div>
             <div class="hist-sticky-header__row">
               <div class="hist-search-row">
@@ -729,102 +744,91 @@ export function renderShellViews() {
           <div id="lista-alertas" role="list"></div>
         </div>
 
-        <!-- CLIENTES (PMOC Fase 2) -->
+        <!-- CLIENTES (full redesign abr/2026: KPIs + alert + filtros + cards + paginacao).
+             Conteudo todo construido por renderClientes() em ui/views/clientes.js. -->
         <div class="view" id="view-clientes">
-          <div class="page-toolbar">
-            <div class="section-title">Meus clientes</div>
-            <div class="page-toolbar__actions" style="display:flex;gap:8px;align-items:center">
-              <button class="btn btn--primary btn--sm"
-                data-action="open-cliente-modal" data-mode="create">
-                + Novo cliente
-              </button>
-            </div>
-          </div>
-
-          <p class="clientes-intro">
-            Cadastre os clientes pra organizar equipamentos por carteira, gerar
-            relatórios PMOC formais e ter o cabeçalho oficial nos PDFs.
-          </p>
-
-          <div class="search-bar clientes-search">
-            <span class="search-bar__icon" aria-hidden="true">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/>
-                <path d="M9.5 9.5L12 12" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-              </svg>
-            </span>
-            <input class="form-control search-bar__input" id="clientes-busca" type="search"
-              placeholder="Buscar por nome, CNPJ, endereço..."
-              aria-label="Buscar cliente" />
-          </div>
-
-          <div id="lista-clientes" role="list"></div>
+          <div id="clientes-root"></div>
         </div>
 
         <!-- RELATÓRIO -->
         <div class="view" id="view-relatorio">
-          <div class="rel-toolbar">
-            <button class="rel-toolbar__back" data-nav="historico" type="button" aria-label="Voltar">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M15 18l-6-6 6-6" />
+          <div class="servicos-toggle" role="tablist" aria-label="Modo de visualização">
+            <button type="button" class="servicos-toggle__btn servicos-toggle__btn--lista"
+              data-nav="historico" role="tab" aria-label="Lista de serviços">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/>
+                <circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>
               </svg>
-              Voltar
+              <span>Lista</span>
             </button>
+            <button type="button" class="servicos-toggle__btn servicos-toggle__btn--relatorio"
+              data-nav="relatorio" role="tab" aria-label="Relatório com KPIs e PDF">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-5"/>
+              </svg>
+              <span>Relatório</span>
+            </button>
+          </div>
+          <!--
+            Toolbar unificada (refactor): um único botão primário "Compartilhar
+            relatório" abre dropdown com TODAS as opções de export. Antes tinha
+            WhatsApp standalone (verde) + Exportar PDF (cyan) + chevron — visual
+            confuso, especialmente em mobile onde os botões empilhavam mal.
+            Agora: 1 botão, 1 menu, hierarquia clara.
+          -->
+          <div class="rel-toolbar">
             <div class="rel-toolbar__actions">
-              <button class="rel-toolbar__btn rel-toolbar__btn--whatsapp" id="btn-whatsapp" data-action="whatsapp-export" type="button">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347" />
-                </svg>
-                WhatsApp
-              </button>
-              <!--
-                PMOC Fase 6: dropdown unificado pra reduzir clutter visual.
-                Botão primário abre menu com 2 opções:
-                  - Relatório técnico (export-pdf, disponível free+)
-                  - PMOC formal (open-pmoc-modal, Pro-gated)
-                O click direto no botão continua funcionando (export-pdf
-                como default — comportamento legado preservado pra muscle memory).
-              -->
               <div class="rel-toolbar__primary-group rel-export-dd" id="rel-export-dd">
                 <button class="rel-toolbar__btn rel-toolbar__btn--primary rel-export-dd__main"
-                  id="btn-export-pdf" data-action="export-pdf" type="button"
-                  title="Exportar relatório técnico em PDF">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 4v12" />
-                    <path d="M7 11l5 5 5-5" />
-                    <path d="M4 20h16" />
-                  </svg>
-                  Exportar PDF
-                </button>
-                <button class="rel-toolbar__btn rel-toolbar__btn--primary rel-export-dd__caret"
                   id="btn-export-dd-toggle" data-action="toggle-export-dd" type="button"
                   aria-haspopup="menu" aria-expanded="false" aria-controls="rel-export-dd-menu"
-                  aria-label="Mais opções de exportação" title="Mais opções">
+                  title="Compartilhar este relatório">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                  </svg>
+                  <span>Compartilhar</span>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <polyline points="6 9 12 15 18 9"/>
                   </svg>
                 </button>
                 <div class="rel-export-dd__menu" id="rel-export-dd-menu" role="menu" hidden>
+                  <!-- Acao primaria: gerar PDF (com preview antes do download) -->
                   <button type="button" class="rel-export-dd__item" role="menuitem"
-                    data-action="export-pdf"
-                    title="Relatório simples dos serviços do período — ideal pra envio rápido ao cliente.">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    id="btn-export-pdf" data-action="export-pdf"
+                    title="Gera o PDF do relatorio com pre-visualizacao antes de baixar.">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                       stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
+                      <path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/>
                     </svg>
                     <div class="rel-export-dd__item-text">
-                      <strong>Relatório técnico</strong>
-                      <span>rápido, capa + serviços do filtro</span>
+                      <strong>Baixar PDF</strong>
+                      <span>relatório técnico — capa + serviços do filtro</span>
                     </div>
                   </button>
+                  <!-- Acao secundaria: enviar via WhatsApp (preview tambem) -->
+                  <button type="button" class="rel-export-dd__item" role="menuitem"
+                    id="btn-whatsapp" data-action="whatsapp-export"
+                    title="Compartilha o PDF via WhatsApp (consome quota mensal).">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
+                    </svg>
+                    <div class="rel-export-dd__item-text">
+                      <strong>Enviar via WhatsApp</strong>
+                      <span>compartilha o PDF direto no app</span>
+                    </div>
+                  </button>
+                  <!-- PMOC formal (gated por Pro) -->
                   <button type="button" class="rel-export-dd__item rel-export-dd__item--pmoc"
                     role="menuitem" data-action="open-pmoc-modal" data-tier="unknown"
                     title="Documento PMOC formal anual conforme NBR 13971 — Pro.">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                       stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                       <polyline points="14 2 14 8 20 8"/>
@@ -836,6 +840,7 @@ export function renderShellViews() {
                       <span>anual, NBR 13971, com termo de RT</span>
                     </div>
                   </button>
+                  <!-- Item informativo, sem acao destrutiva -->
                   <button type="button" class="rel-export-dd__item rel-export-dd__item--meta"
                     role="menuitem" data-action="open-pmoc-info"
                     title="Saiba quando usar cada um.">
@@ -882,5 +887,11 @@ export function renderShellViews() {
 
         <!-- PLANOS -->
         <div class="view" id="view-pricing"></div>
+
+        <!-- CONTA (full-page Minha Conta) -->
+        <div class="view" id="view-conta"></div>
+
+        <!-- PRIVACIDADE (Politica LGPD) -->
+        <div class="view" id="view-privacidade"></div>
 `;
 }

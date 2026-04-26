@@ -13,7 +13,12 @@
 
 import { Utils } from '../../core/utils.js';
 import { Toast } from '../../core/toast.js';
-import { upsertCliente, validateCnpjOrCpf, formatCnpjOrCpf } from '../../core/clientes.js';
+import {
+  upsertCliente,
+  validateCnpjOrCpf,
+  formatCnpjOrCpf,
+  maskCnpjOrCpfInput,
+} from '../../core/clientes.js';
 import { attachDialogA11y, CustomConfirm } from '../../core/modal.js';
 
 const OVERLAY_ID = 'cliente-modal-overlay';
@@ -134,12 +139,16 @@ function buildOverlayHtml(cliente) {
           </div>
 
           <div class="cliente-modal__field">
-            <label class="cliente-modal__label" for="cli-url-chamados">URL para abertura de chamados</label>
+            <label class="cliente-modal__label" for="cli-url-chamados">Canal de chamados do cliente</label>
             <input id="cli-url-chamados" class="form-control cliente-modal__input" type="url"
               value="${Utils.escapeAttr(c.urlChamados || '')}"
-              placeholder="https://..."
+              placeholder="https://wa.me/5511999999999 ou portal do cliente"
               maxlength="240" autocomplete="off" />
-            <div class="cliente-modal__hint">Aparece no relatório PMOC pra cliente abrir chamado.</div>
+            <div class="cliente-modal__hint">
+              Link onde o cliente abre chamado quando algo quebra — WhatsApp,
+              portal próprio, Google Form, e-mail (mailto:). Aparece clicável
+              na capa do PMOC. Exigido pela NBR 13971.
+            </div>
           </div>
         </section>
 
@@ -187,15 +196,31 @@ function bindCnpjValidation(overlay) {
     input.classList.add('cliente-modal__input--warn');
   };
 
+  // Mascara em tempo real: a cada digitacao reformata pra X.X.X-X (CPF) ate 11
+  // digitos OU XX.X.X/X-X (CNPJ) de 12-14. Cap automatico em 14 digitos.
+  // Cursor vai pro final apos reformat — pattern simples e funcional pro 99%
+  // dos casos onde usuario digita lineamente.
+  input.addEventListener('input', () => {
+    const masked = maskCnpjOrCpfInput(input.value);
+    if (masked !== input.value) {
+      input.value = masked;
+      // Posiciona cursor no fim — usuario tipico digita linearmente.
+      try {
+        input.setSelectionRange(masked.length, masked.length);
+      } catch (_e) {
+        /* alguns input types nao suportam setSelectionRange — ignora */
+      }
+    }
+    validate();
+  });
   input.addEventListener('blur', () => {
     validate();
-    // Auto-format ao sair do campo se válido
+    // Auto-format final ao sair se valido (mantido como salvaguarda).
     const result = validateCnpjOrCpf(input.value);
     if (result.ok && input.value.trim()) {
       input.value = formatCnpjOrCpf(input.value);
     }
   });
-  input.addEventListener('input', validate);
 }
 
 async function handleSave(overlay, cliente, onSaved, hardClose) {

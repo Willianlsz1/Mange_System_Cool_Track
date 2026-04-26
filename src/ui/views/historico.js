@@ -87,6 +87,10 @@ const URL_PARAM_KEYS = {
 };
 
 let _urlFiltersHydrated = false;
+// Filtro "Cliente: X" vindo da view /clientes -> "Ver servicos". Reset toda
+// vez que o user limpa via chip, ou navega pra historico sem clienteId nos
+// query params. Persistente apenas dentro da sessao (nao na URL).
+let _clienteFilter = { id: null, nome: null };
 
 function readUrlFilters() {
   if (typeof window === 'undefined') return {};
@@ -801,19 +805,11 @@ function renderSignatureBlock(registro) {
 
   const hasLocal = Boolean(getSignatureForRecord(registro.id));
 
-  if (!hasLocal) {
-    return `<div class="hist-signature-unavailable"
-        title="Assinatura armazenada localmente no aparelho em que foi coletada — não disponível neste dispositivo"
-        role="status">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="m12 19 7-7 3 3-7 7-3-3Z"/>
-          <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18Z"/>
-          <path d="m2 2 7.5 7.5"/><circle cx="11" cy="11" r="2"/>
-        </svg>
-        Assinatura não disponível neste dispositivo
-      </div>`;
-  }
+  // Assinatura existe no registro mas não está local neste dispositivo —
+  // não renderiza nada (o placeholder anterior poluía visualmente sem
+  // adicionar info acionável). Se o usuário precisar, pode abrir o registro
+  // em outro device onde a assinatura foi coletada.
+  if (!hasLocal) return '';
 
   const dataUrl = getSignatureForRecord(registro.id);
   const clienteNome = registro.clienteNome?.trim() || '';
@@ -999,9 +995,29 @@ function renderTimelineItem(
       ${verTudoLink}
     </div>
     <div class="hist-item-actions">
+      <div class="hist-item-actions__menu" role="menu" hidden>
+        <button type="button" role="menuitem"
+          class="hist-item-actions__menuitem"
+          data-action="edit-reg" data-id="${Utils.escapeAttr(r.id)}"
+          title="Editar" aria-label="Editar registro">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>
+          </svg>
+        </button>
+        <button type="button" role="menuitem"
+          class="hist-item-actions__menuitem hist-item-actions__menuitem--danger"
+          data-action="delete-reg" data-id="${Utils.escapeAttr(r.id)}"
+          title="Excluir" aria-label="Excluir registro">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>
+          </svg>
+        </button>
+      </div>
       <button type="button" class="hist-item-actions__kebab"
-        data-action="toggle-card-menu" data-id="${Utils.escapeAttr(r.id)}"
-        aria-label="Acoes do registro" aria-haspopup="menu" aria-expanded="false">
+        data-hist-action="toggle-card-menu" data-id="${Utils.escapeAttr(r.id)}"
+        aria-label="Ações do registro" aria-haspopup="menu" aria-expanded="false">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="12" cy="5" r="1.5"/>
@@ -1009,26 +1025,6 @@ function renderTimelineItem(
           <circle cx="12" cy="19" r="1.5"/>
         </svg>
       </button>
-      <div class="hist-item-actions__menu" role="menu" hidden>
-        <button type="button" role="menuitem"
-          class="hist-item-actions__menuitem"
-          data-action="edit-reg" data-id="${Utils.escapeAttr(r.id)}">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/>
-          </svg>
-          Editar
-        </button>
-        <button type="button" role="menuitem"
-          class="hist-item-actions__menuitem hist-item-actions__menuitem--danger"
-          data-action="delete-reg" data-id="${Utils.escapeAttr(r.id)}">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M6 6l1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>
-          </svg>
-          Excluir
-        </button>
-      </div>
     </div>
   </article>`;
 }
@@ -1064,6 +1060,19 @@ function syncSetorSelect(currentSetorId) {
 // Public: renderHist
 // ──────────────────────────────────────────────────────────────────────
 
+/**
+ * Setter publico chamado pela rota historico quando o usuario chega via
+ * /clientes -> "Ver servicos" (params.clienteId presente). Limpa quando
+ * chamado sem args.
+ */
+export function setHistClienteFilter({ id = null, nome = null } = {}) {
+  _clienteFilter = { id, nome };
+}
+
+export function clearHistClienteFilter() {
+  _clienteFilter = { id: null, nome: null };
+}
+
 export function renderHist() {
   // Le filtros da URL na primeira vez que o view eh renderizado por sessao.
   // Suporta deep linking: ?periodo=7d&setor=xyz aplica filtros direto.
@@ -1089,6 +1098,15 @@ export function renderHist() {
 
   if (filtSetor) list = list.filter((r) => equipIdsNoSetor.has(r.equipId));
   if (filtEq) list = list.filter((r) => r.equipId === filtEq);
+  // Filtro por cliente vindo de /clientes -> "Ver servicos". Restringe aos
+  // registros de equipamentos vinculados ao cliente. Se o cliente nao tem
+  // equipamentos, a lista vai pra zero (visual: empty state contextual).
+  if (_clienteFilter.id) {
+    const equipIdsForClient = new Set(
+      equipamentos.filter((e) => e.clienteId === _clienteFilter.id).map((e) => e.id),
+    );
+    list = list.filter((r) => equipIdsForClient.has(r.equipId));
+  }
   list = applyPeriodFilter(list, period);
   list = applyTipoFilter(list, tipo);
   if (busca)
@@ -1110,6 +1128,26 @@ export function renderHist() {
     countEl.textContent = list.length
       ? `${list.length} registro${list.length !== 1 ? 's' : ''}`
       : 'Sem registros';
+  }
+  // Chip de filtro de cliente: aparece quando vier de /clientes -> Ver servicos.
+  // Renderiza no slot de active-chips ja existente.
+  const activeChipsSlot = document.getElementById('hist-active-chips-slot');
+  if (activeChipsSlot) {
+    if (_clienteFilter.id && _clienteFilter.nome) {
+      activeChipsSlot.innerHTML = `
+        <div class="hist-active-chips" role="status">
+          <span class="hist-active-chips__chip">
+            Cliente: <strong>${Utils.escapeHtml(_clienteFilter.nome)}</strong>
+            <button type="button" class="hist-active-chips__close"
+              data-hist-action="clear-cliente-filter"
+              aria-label="Limpar filtro de cliente">x</button>
+          </span>
+        </div>`;
+    } else if (activeChipsSlot.querySelector('.hist-active-chips')) {
+      // Nao remove se ja foi populado por outro filtro.
+      const ourChip = activeChipsSlot.querySelector('[data-hist-action="clear-cliente-filter"]');
+      if (ourChip) activeChipsSlot.innerHTML = '';
+    }
   }
 
   const scrollRoot = document.scrollingElement || document.documentElement;
@@ -1146,16 +1184,11 @@ export function renderHist() {
   const recurring = getRecurringEquips(list);
 
   const renderTimeline = () => {
-    const summaryCard = renderSummaryCard(list, {
-      filtered: activeFilterCount > 0,
-      activeFilterCount,
-      equipamentos,
-      recurring,
-    });
-
-    // Banner de limite temporal foi removido — histórico é completo em
-    // todos os planos. preList fica só com o summaryCard.
-    const preList = `${summaryCard}`;
+    // Card gigante de resumo removido — usuário reportou que ocupava espaço
+    // demais e duplicava o CTA "Gerar Relatório" do header. Insights numéricos
+    // continuam disponíveis no Painel.
+    const preList = '';
+    void recurring; // ainda calculado pra eventual reuso (alerta de recorrência)
 
     if (!list.length) {
       el.innerHTML =
@@ -1264,50 +1297,57 @@ function attachFilterHandlers(container) {
 
   // Toggle do kebab menu nos cards. Click no kebab abre/fecha esse card.
   // Click fora ou em outro kebab fecha o anterior. ESC fecha tambem.
-  container.addEventListener('click', (e) => {
-    const kebab = e.target.closest('[data-action="toggle-card-menu"]');
-    if (kebab) {
-      e.preventDefault();
-      const menu = kebab.parentElement?.querySelector('.hist-item-actions__menu');
-      const isOpen = menu && !menu.hidden;
-      container.querySelectorAll('.hist-item-actions__menu').forEach((m) => {
-        m.hidden = true;
-      });
-      container.querySelectorAll('[data-action="toggle-card-menu"]').forEach((k) => {
-        k.setAttribute('aria-expanded', 'false');
-      });
-      if (!isOpen && menu) {
-        menu.hidden = false;
-        kebab.setAttribute('aria-expanded', 'true');
+  // Gate dataset.histBound: container (#timeline) persiste entre renders;
+  // sem o gate, addEventListener seria chamado N vezes apos N renders e
+  // geraria cascata de cliques (=> congelamento ao clicar em algo).
+  if (!container.dataset.histBound) {
+    container.dataset.histBound = '1';
+    container.addEventListener('click', (e) => {
+      const kebab = e.target.closest('[data-hist-action="toggle-card-menu"]');
+      if (kebab) {
+        e.preventDefault();
+        const menu = kebab.parentElement?.querySelector('.hist-item-actions__menu');
+        const isOpen = menu && !menu.hidden;
+        container.querySelectorAll('.hist-item-actions__menu').forEach((m) => {
+          m.hidden = true;
+        });
+        container.querySelectorAll('[data-hist-action="toggle-card-menu"]').forEach((k) => {
+          k.setAttribute('aria-expanded', 'false');
+        });
+        if (!isOpen && menu) {
+          menu.hidden = false;
+          kebab.setAttribute('aria-expanded', 'true');
+        }
+        return;
       }
-      return;
-    }
-    if (!e.target.closest('.hist-item-actions__menu')) {
-      container.querySelectorAll('.hist-item-actions__menu').forEach((m) => {
-        m.hidden = true;
-      });
-      container.querySelectorAll('[data-action="toggle-card-menu"]').forEach((k) => {
-        k.setAttribute('aria-expanded', 'false');
-      });
-    }
-  });
+      if (!e.target.closest('.hist-item-actions__menu')) {
+        container.querySelectorAll('.hist-item-actions__menu').forEach((m) => {
+          m.hidden = true;
+        });
+        container.querySelectorAll('[data-hist-action="toggle-card-menu"]').forEach((k) => {
+          k.setAttribute('aria-expanded', 'false');
+        });
+      }
+    });
 
-  container.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const open = container.querySelector('.hist-item-actions__menu:not([hidden])');
-      if (open) {
-        open.hidden = true;
-        const kebab = open.parentElement?.querySelector('[data-action="toggle-card-menu"]');
-        if (kebab) {
-          kebab.setAttribute('aria-expanded', 'false');
-          kebab.focus();
+    container.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const open = container.querySelector('.hist-item-actions__menu:not([hidden])');
+        if (open) {
+          open.hidden = true;
+          const kebab = open.parentElement?.querySelector('[data-hist-action="toggle-card-menu"]');
+          if (kebab) {
+            kebab.setAttribute('aria-expanded', 'false');
+            kebab.focus();
+          }
         }
       }
-    }
-  });
+    });
+  }
 
-  // Handler do botao Filtros: abre o bottom sheet com os filtros secundarios.
-  if (filtersTrigger) {
+  // Handler do botao Filtros — mesmo gate (filtersTrigger persiste no DOM).
+  if (filtersTrigger && !filtersTrigger.dataset.histBound) {
+    filtersTrigger.dataset.histBound = '1';
     filtersTrigger.addEventListener('click', () => {
       const { setores, equipamentos } = getState();
       const { tipo } = getExtraFilters();
@@ -1405,16 +1445,30 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  // "Ver tudo deste equipamento" (link no rodapé do item) e "Ver serviços"
-  // (CTA do alerta de recorrência no summary) caem no mesmo handler — ambos
-  // aplicam o filtro de equipamento e re-renderizam.
+  // "Ver tudo deste equipamento" — navega pra aba Equipamentos focando o
+  // setor correto E abre o modal de detalhes do equipamento (#modal-eq-det).
+  // Sequência:
+  //   1. goTo('equipamentos', { equipCtx: { sectorId } }) — troca a rota,
+  //      renderEquip executa e popula o setor correto;
+  //   2. requestAnimationFrame + import dinâmico pra chamar viewEquip(id),
+  //      que monta o HTML do modal-eq-det e abre via Modal.open.
+  // Sem o requestAnimationFrame o modal seria construído antes do renderEquip
+  // terminar, podendo abrir sobre uma tela "intermediária".
   each('[data-hist-action="hist-filter-equip"]', (btn) =>
     btn.addEventListener('click', () => {
       const equipId = btn.dataset.equipId || '';
       if (!equipId) return;
-      const sel = Utils.getEl('hist-equip');
-      if (sel) sel.value = equipId;
-      renderHist();
+      const eq = equipamentos.find((it) => it.id === equipId);
+      const sectorId = eq?.setorId || null;
+      goTo('equipamentos', sectorId ? { equipCtx: { sectorId } } : {});
+      requestAnimationFrame(() => {
+        import('./equipamentos.js')
+          .then((mod) => mod.viewEquip && mod.viewEquip(equipId))
+          .catch(() => {
+            /* falha no import nao deve travar a navegacao — o usuario
+               pelo menos ja esta na aba certa, focado no setor */
+          });
+      });
     }),
   );
 
@@ -1438,6 +1492,15 @@ function attachFilterHandlers(container) {
     btn.addEventListener('click', () => {
       const input = Utils.getEl('hist-busca');
       if (input) input.value = '';
+      renderHist();
+    }),
+  );
+
+  // Limpa o filtro "Cliente: X" injetado por /clientes -> Ver servicos.
+  // Reseta o state e re-renderiza pra remover o chip.
+  each('[data-hist-action="clear-cliente-filter"]', (btn) =>
+    btn.addEventListener('click', () => {
+      _clienteFilter = { id: null, nome: null };
       renderHist();
     }),
   );
@@ -1508,5 +1571,5 @@ export function deleteReg(id) {
   localStorage.removeItem(`cooltrack-sig-${id}`);
   renderHist();
   updateHeader();
-  Toast.warning('Registro removido do histórico.');
+  Toast.warning('Registro removido do historico.');
 }

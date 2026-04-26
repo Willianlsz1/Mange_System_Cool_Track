@@ -29,7 +29,27 @@ function mountRouterDom() {
 
 async function loadRouterModule() {
   vi.resetModules();
-  return import('../core/router.js');
+  const mod = await import('../core/router.js');
+  // Refactor pos-PR: router nao importa mais de ui/* — quem registra os
+  // blocking layers e o controller. Nos testes, simulamos isso aqui pra
+  // manter cobertura do comportamento (popstate fechar signature modals).
+  mod.registerBlockingLayer({
+    id: 'signature-capture',
+    isOpen: () =>
+      Boolean(document.getElementById('modal-signature-overlay')?.classList.contains('is-open')),
+    close: () => closeSignatureCaptureIfOpen(),
+    getElement: () => document.getElementById('modal-signature-overlay'),
+  });
+  mod.registerBlockingLayer({
+    id: 'signature-viewer',
+    isOpen: () =>
+      Boolean(
+        document.getElementById('modal-signature-viewer-overlay')?.classList.contains('is-open'),
+      ),
+    close: () => closeSignatureViewerIfOpen(),
+    getElement: () => document.getElementById('modal-signature-viewer-overlay'),
+  });
+  return mod;
 }
 
 describe('router', () => {

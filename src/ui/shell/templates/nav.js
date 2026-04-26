@@ -34,7 +34,7 @@ export function renderShellNav() {
           </span>
           <span class="nav-btn__label nav-btn__label--compact">Registrar</span>
         </button>
-        <button class="nav-btn" id="nav-historico" data-nav="historico" aria-label="Histórico">
+        <button class="nav-btn" id="nav-historico" data-nav="historico" aria-label="Serviços">
           <span class="nav-btn__icon" aria-hidden="true">
             <svg class="nav-btn__svg nav-btn__svg--outline" width="24" height="24" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/>
@@ -44,7 +44,7 @@ export function renderShellNav() {
               <path d="M12 2.25a9.75 9.75 0 1 0 9.75 9.75A9.76 9.76 0 0 0 12 2.25Zm3.97 12.72a.9.9 0 0 1-1.27 0l-3.33-3.33a.9.9 0 0 1-.27-.64V7a.9.9 0 1 1 1.8 0v3.63l3.07 3.07a.9.9 0 0 1 0 1.27Z"/>
             </svg>
           </span>
-          Histórico
+          Serviços
         </button>
         <button class="nav-btn" id="nav-alertas" data-nav="alertas" aria-label="Alertas">
           <span class="nav-btn__icon" aria-hidden="true">

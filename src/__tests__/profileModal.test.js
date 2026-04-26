@@ -88,10 +88,11 @@ describe('ProfileModal', () => {
     ProfileModal.open();
     const overlay = getOverlay();
     expect(overlay.querySelector('.profile-modal')).toBeTruthy();
-    expect(overlay.querySelector('.profile-modal__hero')).toBeTruthy();
-    expect(overlay.querySelector('.profile-modal__avatar')).toBeTruthy();
-    expect(overlay.querySelector('.profile-modal__close')).toBeTruthy();
+    // V10: hero, avatar e close removidos do top — usuario fecha pelo
+    // botao Cancelar no footer (que tambem dispara dirty-check) ou ESC.
+    expect(overlay.querySelector('.profile-modal__body')).toBeTruthy();
     expect(overlay.querySelector('.profile-modal__actions')).toBeTruthy();
+    expect(overlay.querySelector('#prof-cancel')).toBeTruthy();
     // garante que resíduos do .pm-* block não voltaram acidentalmente
     expect(overlay.querySelector('.pm-modal')).toBeNull();
     expect(overlay.querySelector('.pm-header')).toBeNull();
@@ -148,10 +149,12 @@ describe('ProfileModal', () => {
       expect(getOverlay()).toBeTruthy();
     });
 
-    it('X (close button) usa mesmo gate de dirty-check', async () => {
+    it('Cancelar (footer) usa mesmo gate de dirty-check', async () => {
+      // V10: o X close foi removido do hero. Quem fecha agora e o botao
+      // Cancelar do footer. Mesmo dirty-check deve disparar.
       ProfileModal.open();
       setInputValue('prof-telefone', '(31) 98888-7777');
-      getOverlay().querySelector('#prof-close').click();
+      getOverlay().querySelector('#prof-cancel').click();
       await Promise.resolve();
       await Promise.resolve();
       expect(mocks.customConfirmShow).toHaveBeenCalledTimes(1);

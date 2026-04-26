@@ -54,6 +54,59 @@ const ICON_PHONE = `
     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
   </svg>`;
+const ICON_USER = `
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>`;
+const ICON_BUILDING = `
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="4" y="2" width="16" height="20" rx="2"/>
+    <path d="M9 22v-4h6v4"/>
+    <path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/>
+  </svg>`;
+const ICON_SHIELD = `
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    <polyline points="9 12 11 14 15 10"/>
+  </svg>`;
+const ICON_LOCK = `
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="3" y="11" width="18" height="11" rx="2"/>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+  </svg>`;
+const ICON_INFO = `
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="16" x2="12" y2="12"/>
+    <line x1="12" y1="8" x2="12.01" y2="8"/>
+  </svg>`;
+const ICON_ID = `
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="3" y="5" width="18" height="14" rx="2"/>
+    <circle cx="9" cy="12" r="2"/>
+    <line x1="14" y1="10" x2="18" y2="10"/>
+    <line x1="14" y1="14" x2="18" y2="14"/>
+  </svg>`;
+const ICON_DOC = `
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+  </svg>`;
+const ICON_SAVE = `
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+    <polyline points="17 21 17 13 7 13 7 21"/>
+    <polyline points="7 3 7 8 15 8"/>
+  </svg>`;
 
 // Snapshot dos valores do form — usado pelo dirty-check. Compara os 8 campos
 // pós-trim (4 originais + 4 PMOC adicionados em abr/2026). Retornamos um
@@ -103,38 +156,32 @@ export const ProfileModal = {
     overlay.innerHTML = `
       <div class="modal profile-modal">
 
-        <!-- Hero header: avatar + título + subtítulo + close. Mesmo padrão
-             visual do account-modal (orbs radial + gradient sutil). -->
-        <section class="profile-modal__hero">
-          <span class="profile-modal__hero-orb profile-modal__hero-orb--a" aria-hidden="true"></span>
-          <span class="profile-modal__hero-orb profile-modal__hero-orb--b" aria-hidden="true"></span>
+        <!-- V10: hero removido inteiramente — usuario reportou que o hero
+             (avatar + close) era redundante porque o footer ja tem botoes
+             "Cancelar" e "Salvar perfil" + ESC tambem fecha. Mantemos apenas
+             o h2 sr-only pra screen readers e preservar aria-labelledby. -->
+        <h2 class="profile-modal__title--sr-only" id="profile-title">Meu Perfil</h2>
 
-          <div class="profile-modal__hero-top">
-            <div class="profile-modal__avatar"
-              style="color:${color};background:${bg};border-color:${color}40">
-              ${Utils.escapeHtml(initials)}
-            </div>
-            <div class="profile-modal__hero-info">
-              <h2 class="profile-modal__title" id="profile-title">Meu Perfil</h2>
-              <p class="profile-modal__sub">Seus dados aparecem no cabeçalho dos relatórios PDF</p>
-            </div>
-            <button type="button" class="profile-modal__close" id="prof-close"
-              aria-label="Fechar">
-              ${ICON_CLOSE}
-            </button>
-          </div>
-        </section>
-
-        <!-- Body com as duas seções de campos -->
+        <!-- Body V6: cards de secao com icone + header + hints sob labels.
+             Hierarquia visual: hero -> 3 cards (Identificacao / Empresa /
+             Dados legais) -> footer com seguranca e Salvar. -->
         <div class="profile-modal__body">
 
-          <div class="profile-modal__section">
-            <div class="profile-modal__section-label">Identificação</div>
+          <!-- ── Card 1: Identificação ── -->
+          <div class="profile-modal__section profile-modal__section--card">
+            <header class="profile-modal__section-head">
+              <span class="profile-modal__section-icon" aria-hidden="true">${ICON_USER}</span>
+              <div class="profile-modal__section-text">
+                <h3 class="profile-modal__section-title">Identificação</h3>
+                <p class="profile-modal__section-sub">Como você será identificado nos relatórios</p>
+              </div>
+            </header>
 
             <div class="profile-modal__field">
               <label class="profile-modal__label" for="prof-nome">
                 Nome completo <span class="profile-modal__required" aria-hidden="true">*</span>
               </label>
+              <span class="profile-modal__field-hint">Aparece no cabeçalho dos PDFs</span>
               <input id="prof-nome" class="form-control profile-modal__input" type="text"
                 value="${Utils.escapeAttr(profile.nome || '')}"
                 placeholder="Ex: Carlos Figueiredo"
@@ -142,33 +189,47 @@ export const ProfileModal = {
             </div>
 
             <div class="profile-modal__field">
-              <label class="profile-modal__label" for="prof-crea">
-                CREA / Registro profissional
-              </label>
-              <input id="prof-crea" class="form-control profile-modal__input" type="text"
-                value="${Utils.escapeAttr(profile.crea || '')}"
-                placeholder="Ex: CREA-MG 123456/D"
-                autocomplete="off" />
+              <label class="profile-modal__label" for="prof-crea">CREA / Registro profissional</label>
+              <span class="profile-modal__field-hint">Seu registro no conselho profissional</span>
+              <div class="profile-modal__input-wrap">
+                <input id="prof-crea"
+                  class="form-control profile-modal__input profile-modal__input--has-trailing-icon"
+                  type="text"
+                  value="${Utils.escapeAttr(profile.crea || '')}"
+                  placeholder="Ex: CREA-MG 123456/D"
+                  autocomplete="off" />
+                <span class="profile-modal__input-trailing-icon" aria-hidden="true">${ICON_ID}</span>
+              </div>
             </div>
           </div>
 
-          <div class="profile-modal__section">
-            <div class="profile-modal__section-label">Empresa</div>
+          <!-- ── Card 2: Empresa ── -->
+          <div class="profile-modal__section profile-modal__section--card">
+            <header class="profile-modal__section-head">
+              <span class="profile-modal__section-icon" aria-hidden="true">${ICON_BUILDING}</span>
+              <div class="profile-modal__section-text">
+                <h3 class="profile-modal__section-title">Empresa</h3>
+                <p class="profile-modal__section-sub">Dados da sua empresa</p>
+              </div>
+            </header>
 
             <div class="profile-modal__field">
-              <label class="profile-modal__label" for="prof-empresa">
-                Nome / Razão fantasia
-              </label>
-              <input id="prof-empresa" class="form-control profile-modal__input" type="text"
-                value="${Utils.escapeAttr(profile.empresa || '')}"
-                placeholder="Ex: Frio Total Refrigeração"
-                autocomplete="organization" />
+              <label class="profile-modal__label" for="prof-empresa">Nome / Razão fantasia</label>
+              <span class="profile-modal__field-hint">Aparece nos relatórios</span>
+              <div class="profile-modal__input-wrap">
+                <input id="prof-empresa"
+                  class="form-control profile-modal__input profile-modal__input--has-trailing-icon"
+                  type="text"
+                  value="${Utils.escapeAttr(profile.empresa || '')}"
+                  placeholder="Ex: Frio Total Refrigeração"
+                  autocomplete="organization" />
+                <span class="profile-modal__input-trailing-icon" aria-hidden="true">${ICON_BUILDING}</span>
+              </div>
             </div>
 
             <div class="profile-modal__field">
-              <label class="profile-modal__label" for="prof-telefone">
-                Telefone / WhatsApp
-              </label>
+              <label class="profile-modal__label" for="prof-telefone">Telefone / WhatsApp</label>
+              <span class="profile-modal__field-hint">Para contato rápido</span>
               <div class="profile-modal__input-wrap">
                 <span class="profile-modal__input-icon" aria-hidden="true">${ICON_PHONE}</span>
                 <input id="prof-telefone"
@@ -181,72 +242,102 @@ export const ProfileModal = {
             </div>
           </div>
 
-          <!--
-            Seção PMOC: dados legais da empresa pra constar em relatórios
-            formais (PMOC — Lei 13.589/2018, NBR 13971). Todos opcionais —
-            técnico que faz só serviço pontual residencial pode pular.
-            Pra Pro com clientes corporativos, esses campos viram
-            obrigatórios no PDF PMOC quando ele for gerado.
-          -->
-          <div class="profile-modal__section">
-            <div class="profile-modal__section-label">
-              Dados legais (opcional)
-              <span class="profile-modal__section-hint">
-                Necessário pra emitir relatórios PMOC formais.
-              </span>
-            </div>
+          <!-- ── Card 3: Dados legais (opcional) ── -->
+          <div class="profile-modal__section profile-modal__section--card">
+            <header class="profile-modal__section-head">
+              <span class="profile-modal__section-icon" aria-hidden="true">${ICON_SHIELD}</span>
+              <div class="profile-modal__section-text">
+                <h3 class="profile-modal__section-title">
+                  Dados legais <span class="profile-modal__section-tag">(opcional)</span>
+                </h3>
+                <p class="profile-modal__section-sub">Necessário para emitir relatórios PMOC formais</p>
+              </div>
+            </header>
 
             <div class="profile-modal__field">
-              <label class="profile-modal__label" for="prof-razao-social">
-                Razão social completa
-              </label>
-              <input id="prof-razao-social" class="form-control profile-modal__input" type="text"
-                value="${Utils.escapeAttr(profile.razao_social || '')}"
-                placeholder="Ex: Frio Total Refrigeração Ltda"
-                autocomplete="organization" />
+              <label class="profile-modal__label" for="prof-razao-social">Razão social completa</label>
+              <span class="profile-modal__field-hint">Conforme contrato social</span>
+              <div class="profile-modal__input-wrap">
+                <input id="prof-razao-social"
+                  class="form-control profile-modal__input profile-modal__input--has-trailing-icon"
+                  type="text"
+                  value="${Utils.escapeAttr(profile.razao_social || '')}"
+                  placeholder="Ex: Frio Total Refrigeração Ltda"
+                  autocomplete="organization" />
+                <span class="profile-modal__input-trailing-icon" aria-hidden="true">${ICON_DOC}</span>
+              </div>
             </div>
 
-            <div class="profile-modal__field">
-              <label class="profile-modal__label" for="prof-cnpj">
-                CNPJ / CPF
-              </label>
-              <input id="prof-cnpj" class="form-control profile-modal__input" type="text"
-                value="${Utils.escapeAttr(profile.cnpj || '')}"
-                placeholder="00.000.000/0001-00"
-                inputmode="numeric"
-                autocomplete="off" />
+            <!-- Linha CNPJ + Inscricao estadual em 2 colunas (mobile cai pra 1) -->
+            <div class="profile-modal__row-2col">
+              <div class="profile-modal__field">
+                <label class="profile-modal__label" for="prof-cnpj">CNPJ / CPF</label>
+                <span class="profile-modal__field-hint">Somente números</span>
+                <div class="profile-modal__input-wrap">
+                  <input id="prof-cnpj"
+                    class="form-control profile-modal__input profile-modal__input--has-trailing-icon"
+                    type="text"
+                    value="${Utils.escapeAttr(profile.cnpj || '')}"
+                    placeholder="00.000.000/0001-00"
+                    inputmode="numeric"
+                    autocomplete="off" />
+                  <span class="profile-modal__input-trailing-icon" aria-hidden="true">${ICON_ID}</span>
+                </div>
+              </div>
+
+              <div class="profile-modal__field">
+                <label class="profile-modal__label" for="prof-ie">Inscrição estadual</label>
+                <span class="profile-modal__field-hint">Isento ou número</span>
+                <div class="profile-modal__input-wrap">
+                  <input id="prof-ie"
+                    class="form-control profile-modal__input profile-modal__input--has-trailing-icon"
+                    type="text"
+                    value="${Utils.escapeAttr(profile.inscricao_estadual || '')}"
+                    placeholder="Isento ou número"
+                    autocomplete="off" />
+                  <span class="profile-modal__input-trailing-icon" aria-hidden="true">${ICON_ID}</span>
+                </div>
+              </div>
             </div>
 
+            <!-- Inscricao municipal pode ficar abaixo (linha unica) -->
             <div class="profile-modal__field">
-              <label class="profile-modal__label" for="prof-ie">
-                Inscrição estadual
-              </label>
-              <input id="prof-ie" class="form-control profile-modal__input" type="text"
-                value="${Utils.escapeAttr(profile.inscricao_estadual || '')}"
-                placeholder="Isento ou número"
-                autocomplete="off" />
-            </div>
-
-            <div class="profile-modal__field">
-              <label class="profile-modal__label" for="prof-im">
-                Inscrição municipal
-              </label>
+              <label class="profile-modal__label" for="prof-im">Inscrição municipal</label>
+              <span class="profile-modal__field-hint">Número conforme prefeitura</span>
               <input id="prof-im" class="form-control profile-modal__input" type="text"
                 value="${Utils.escapeAttr(profile.inscricao_municipal || '')}"
                 placeholder="Número conforme prefeitura"
                 autocomplete="off" />
             </div>
+
+            <!-- Info banner explicando o opcional -->
+            <div class="profile-modal__info-banner" role="note">
+              <span class="profile-modal__info-banner-icon" aria-hidden="true">${ICON_INFO}</span>
+              <span>Essas informações são opcionais, mas recomendadas para relatórios formais e notas técnicas.</span>
+            </div>
           </div>
 
-          <!-- Ações -->
-          <div class="profile-modal__actions">
-            <button class="btn btn--outline profile-modal__btn" id="prof-cancel" type="button">
-              Cancelar
-            </button>
-            <button class="btn btn--primary profile-modal__btn" id="prof-save" type="button">
-              ${ICON_CHECK}
-              Salvar perfil
-            </button>
+          <!-- ── Footer: seguranca + autosave + salvar ── -->
+          <div class="profile-modal__footer">
+            <div class="profile-modal__footer-meta">
+              <span class="profile-modal__footer-secure" title="Dados criptografados">
+                ${ICON_LOCK} Seus dados são salvos com segurança
+              </span>
+              <span class="profile-modal__footer-autosave" id="prof-autosave-pill">
+                <span class="profile-modal__footer-autosave-text">Salvo automaticamente</span>
+                ${ICON_CHECK}
+              </span>
+            </div>
+            <div class="profile-modal__actions">
+              <button class="btn btn--outline profile-modal__btn" id="prof-cancel" type="button">
+                Cancelar
+              </button>
+              <button class="btn btn--primary profile-modal__btn profile-modal__btn--save"
+                id="prof-save" type="button">
+                ${ICON_SAVE}
+                Salvar perfil
+              </button>
+            </div>
           </div>
         </div>
 
@@ -260,7 +351,10 @@ export const ProfileModal = {
     const telInput = overlay.querySelector('#prof-telefone');
 
     // Auto-update avatar preview ao digitar o nome.
+    // V10: avatarEl pode ser null (avatar foi removido do hero). Guard com
+    // optional chaining + early return pra nao quebrar.
     nomeInput?.addEventListener('input', () => {
+      if (!avatarEl) return;
       const v = nomeInput.value.trim();
       avatarEl.textContent = getInitials(v);
       const [c, b] = getAvatarColor(v);

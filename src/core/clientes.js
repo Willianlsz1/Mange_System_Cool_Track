@@ -287,3 +287,42 @@ export function formatCnpjOrCpf(raw) {
   }
   return raw || '';
 }
+
+/**
+ * Máscara progressiva pra input em tempo real (CPF -> CNPJ).
+ * Aceita qualquer entrada (com ou sem pontuação), retorna formatado conforme o
+ * número de dígitos digitados. Cap em 14 dígitos (CNPJ máximo) — qualquer
+ * dígito extra é descartado, evitando que o usuário digite "demais".
+ *
+ * Tabela de formatos aplicados:
+ *   1–3 dígitos  ->  X / XX / XXX
+ *   4–6          ->  XXX.X / XXX.XX / XXX.XXX
+ *   7–9          ->  XXX.XXX.X / .XX / .XXX
+ *   10–11        ->  XXX.XXX.XXX-X / -XX     (formato CPF)
+ *   12–14        ->  XX.XXX.XXX/XXXX-X / -XX (formato CNPJ — re-segmenta)
+ *
+ * No 12o digito o formato troca de CPF -> CNPJ — comportamento esperado pra
+ * usuario que digita CNPJ (passa pelo "CPF look" no meio do caminho).
+ */
+export function maskCnpjOrCpfInput(raw) {
+  const digits = String(raw || '')
+    .replace(/\D/g, '')
+    .slice(0, 14);
+  const len = digits.length;
+  if (len === 0) return '';
+  // CPF: 11 ou menos digitos
+  if (len <= 11) {
+    let out = digits.slice(0, 3);
+    if (len > 3) out += '.' + digits.slice(3, 6);
+    if (len > 6) out += '.' + digits.slice(6, 9);
+    if (len > 9) out += '-' + digits.slice(9, 11);
+    return out;
+  }
+  // CNPJ: 12-14 digitos — re-segmenta tudo no formato XX.XXX.XXX/XXXX-XX
+  let out = digits.slice(0, 2);
+  out += '.' + digits.slice(2, 5);
+  out += '.' + digits.slice(5, 8);
+  out += '/' + digits.slice(8, 12);
+  if (len > 12) out += '-' + digits.slice(12, 14);
+  return out;
+}

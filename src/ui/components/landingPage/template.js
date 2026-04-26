@@ -99,7 +99,7 @@ export function buildLandingHtml() {
       foot: 'Sem fidelidade · Cancele quando quiser',
       features: [
         'Até <strong>15 equipamentos</strong> cadastrados',
-        "<strong>Relatórios profissionais</strong> sem marca d'água",
+        "<strong>Relatórios PDF profissionais</strong> sem marca d'água, ilimitados",
         '<strong>60 envios</strong> via WhatsApp/mês',
         '<strong>Cadastro por foto (IA)</strong> — até 30 análises/mês',
         '<strong>Assinatura digital</strong> do cliente no PDF',
@@ -122,6 +122,7 @@ export function buildLandingHtml() {
       foot: 'Sem fidelidade · Cancele quando quiser',
       features: [
         '<strong>Equipamentos ilimitados</strong>',
+        '<strong>PMOC formal anual</strong> (NBR 13971) com termo de RT',
         '<strong>PDFs ilimitados</strong>',
         '<strong>WhatsApp ilimitado</strong>',
         '<strong>Cadastro por foto (IA)</strong> — até 200 análises/mês',

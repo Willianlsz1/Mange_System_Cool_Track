@@ -6,9 +6,13 @@
  *
  * Comportamento por plano:
  *  - Guest: não mostra (faz prompt de login ao clicar no botão)
- *  - Free:  escondido (PDF com marca d'água sem cota rígida)
- *  - Plus:  "12/120 PDFs este mês"
- *  - Pro:   esconde (ilimitado)
+ *  - Free:  escondido (PDF ilimitado, sai com marca d'água)
+ *  - Plus:  escondido (PDF ilimitado sem marca d'água)
+ *  - Pro:   escondido (PDF ilimitado sem marca d'água)
+ *
+ * Como todos os planos têm PDF ilimitado, o badge fica permanentemente
+ * escondido por enquanto. Mantido como infraestrutura caso voltemos a
+ * impor cota num plano específico no futuro.
  *
  * O fetch é lazy — só dispara quando o usuário entra na view de relatório.
  * Falhas de rede são silenciosas (o badge simplesmente não aparece) pra não

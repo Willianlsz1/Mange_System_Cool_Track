@@ -11,6 +11,12 @@ function buildCtaHtml(cta, { variant = 'default' } = {}) {
   const extraClass = variant === 'engaging' ? ' engaging-empty-state__cta' : '';
 
   const actionAttr = cta.action ? ` data-action="${Utils.escapeAttr(cta.action)}"` : '';
+  // histAction é específico do view de Histórico (event delegation própria,
+  // separada do controller global). Permite que CTAs de empty-state da
+  // Histórico (ex: "Limpar filtros") sejam capturadas pelo attachFilterHandlers.
+  const histActionAttr = cta.histAction
+    ? ` data-hist-action="${Utils.escapeAttr(cta.histAction)}"`
+    : '';
   const idAttr = cta.id ? ` data-id="${Utils.escapeAttr(cta.id)}"` : '';
   const navAttr = cta.nav ? ` data-nav="${Utils.escapeAttr(cta.nav)}"` : '';
   // `testid` permite que callers exponham um hook estável pra E2E sem
@@ -18,27 +24,15 @@ function buildCtaHtml(cta, { variant = 'default' } = {}) {
   // em contextos diferentes — ex.: empty state vs toolbar).
   const testIdAttr = cta.testid ? ` data-testid="${Utils.escapeAttr(cta.testid)}"` : '';
 
-  return `<button type="button" class="btn ${toneClass}${sizeClass}${autoClass}${centeredClass}${extraClass}"${actionAttr}${idAttr}${navAttr}${testIdAttr}>${label}</button>`;
+  return `<button type="button" class="btn ${toneClass}${sizeClass}${autoClass}${centeredClass}${extraClass}"${actionAttr}${histActionAttr}${idAttr}${navAttr}${testIdAttr}>${label}</button>`;
 }
 
 /**
  * Renderiza um empty-state padronizado em duas variantes:
  *
- * - `default`: versão compacta. Usada para "sem resultado pra esse filtro",
- *   listas vazias secundárias, etc.
+ * - `default`: versão compacta. Usada para "sem resultado pra esse filtro".
  * - `engaging`: versão emotiva/conversão. Usada para o primeiro uso de uma
- *   feature (histórico vazio, sem alertas, sem relatórios), com microcopy
- *   opcional abaixo do CTA.
- *
- * @param {{
- *   icon?: string,
- *   title: string,
- *   description?: string,
- *   cta?: { label: string, action?: string, id?: string, nav?: string, tone?: 'primary'|'outline', size?: 'sm', autoWidth?: boolean, centered?: boolean } | null,
- *   variant?: 'default' | 'engaging',
- *   microcopy?: string,
- *   ariaLabel?: string,
- * }} opts
+ *   feature, com microcopy opcional abaixo do CTA.
  */
 export function emptyStateHtml({
   icon = '-',

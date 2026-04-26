@@ -60,7 +60,7 @@ const PLUS_DELTA_FEATURES = [
   'Até <strong>15 equipamentos</strong> cadastrados',
   '<strong>Registros de serviço ilimitados</strong> para rotina em campo',
   '<strong>Todo o histórico</strong> de manutenções',
-  "<strong>Relatórios profissionais</strong> sem marca d'água",
+  "<strong>Relatórios PDF profissionais</strong> sem marca d'água, ilimitados",
   '60 envios via WhatsApp/mês',
   '<strong>Cadastro por foto (IA)</strong> — até 30 análises/mês',
   '<strong>Assinatura digital</strong> do cliente no PDF',
@@ -69,6 +69,7 @@ const PLUS_DELTA_FEATURES = [
 
 const PRO_DELTA_FEATURES = [
   '<strong>Equipamentos ilimitados</strong>',
+  '<strong>PMOC formal anual</strong> (NBR 13971) com termo de RT',
   '<strong>PDFs ilimitados</strong>',
   '<strong>WhatsApp ilimitado</strong>',
   '<strong>Cadastro por foto (IA)</strong> — até 200 análises/mês',
@@ -404,7 +405,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
               <tr>
                 <th scope="row">Relatórios PDF</th>
                 <td>Com marca d'água</td>
-                <td>Sem marca d'água <small>(120 / mês)</small></td>
+                <td>Sem marca d'água</td>
                 <td>Ilimitado</td>
               </tr>
               <tr>
@@ -438,6 +439,12 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
                 <td>${ICON_CHECK}</td>
               </tr>
               <tr>
+                <th scope="row">PMOC formal anual (NBR 13971)</th>
+                <td>${ICON_X}</td>
+                <td>${ICON_X}</td>
+                <td>${ICON_CHECK}</td>
+              </tr>
+              <tr>
                 <th scope="row">Agrupamento por setores</th>
                 <td>${ICON_X}</td>
                 <td>${ICON_X}</td>
@@ -467,7 +474,7 @@ function getPricingMarkup(planCode, { highlightPlan = null, reason = null } = {}
         <details class="pricing-faq__item">
           <summary>Qual a diferença entre Plus e Pro?</summary>
           <p>
-            <strong>Plus</strong> é pensado pra <strong>técnico autônomo</strong>: até 15 equipamentos, relatórios sem marca d'água (120/mês), assinatura digital do cliente, 60 envios de WhatsApp/mês e <strong>30 cadastros por foto (IA) por mês</strong>.
+            <strong>Plus</strong> é pensado pra <strong>técnico autônomo</strong>: até 15 equipamentos, relatórios PDF sem marca d'água ilimitados, assinatura digital do cliente, 60 envios de WhatsApp/mês e <strong>30 cadastros por foto (IA) por mês</strong>.
             <strong>Pro</strong> é pra <strong>equipe ou operação maior</strong>: equipamentos, PDFs e WhatsApp ilimitados, <strong>200 cadastros por foto (IA) por mês</strong>, agrupamento por setores e suporte prioritário.
           </p>
         </details>

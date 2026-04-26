@@ -1,5 +1,6 @@
 import { on } from '../../../core/events.js';
 import { Toast } from '../../../core/toast.js';
+import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
 // PDFGenerator é dynamic-imported dentro do handler pra evitar bundlar
 // jspdf + jspdf-autotable + pako (~150 KB gz) no chunk principal. Só baixa
@@ -62,7 +63,7 @@ async function resolvePlanAndUsage(userId) {
 
 function buildPdfLimitMessage(planCode, pdfLimit) {
   if (planCode === PLAN_CODE_FREE) {
-    return "No plano Free os relatórios saem com marca d'água. Faça upgrade para Plus (120/mês, sem marca d'água) ou Pro (ilimitado).";
+    return "No plano Free os relatórios saem com marca d'água. Faça upgrade para Plus ou Pro pra PDFs sem marca d'água ilimitados.";
   }
   if (planCode === PLAN_CODE_PLUS) {
     return `Você atingiu ${pdfLimit} PDFs este mês no plano Plus. O plano Pro tem PDFs ilimitados.`;
@@ -98,7 +99,7 @@ async function ensureReportBudget({ attemptedEvent, blockedEvent }) {
   const planCode = getEffectivePlan(profile);
   trackEvent(attemptedEvent, { plan: planCode });
 
-  // ── Quota mensal: Free=ilimitado (com marca d'água), Plus=120, Pro=ilimitado ─
+  // ── Quota mensal: Free=ilimitado (com marca d'água), Plus=ilimitado (sem marca), Pro=ilimitado (sem marca) ─
   const usageSnapshot = await getMonthlyUsageSnapshot(user.id);
   const pdfUsed = usageSnapshot[USAGE_RESOURCE_PDF_EXPORT];
   const pdfLimit = getMonthlyLimitForPlan(planCode, USAGE_RESOURCE_PDF_EXPORT);
@@ -131,6 +132,153 @@ async function ensureReportBudget({ attemptedEvent, blockedEvent }) {
   };
 }
 
+/**
+ * Mostra modal de confirmacao antes de compartilhar via WhatsApp.
+ * Dispara apenas quando o plano tem quota finita (Free=5/mes, Plus=60/mes) —
+ * Pro (Infinity) pula o prompt. PDF nao usa este helper porque e ilimitado
+ * em todos os planos com quota mensal (so Pro tem a marca d'agua removida).
+ *
+ * @returns {Promise<boolean>} true se usuario confirmou; false se cancelou
+ */
+/**
+ * Confirmação antes de gerar PDF — mesmo com quota infinita (Free/Plus/Pro)
+ * o usuário pode clicar por engano e gastar tempo de geração + arquivo no
+ * downloads. Modal simples sem info de quota (não há limite a comunicar).
+ */
+async function confirmPdfExport() {
+  return CustomConfirm.show(
+    'Gerar PDF do relatório?',
+    'O PDF será gerado e baixado em seguida. Confirme para prosseguir.',
+    {
+      confirmLabel: 'Gerar PDF',
+      cancelLabel: 'Cancelar',
+      tone: 'primary',
+    },
+  );
+}
+
+/**
+ * Mostra modal de pré-visualização do PDF antes do download/share.
+ * Recebe um Blob + fileName e exibe num iframe. Retorna 'confirm' se o
+ * usuário clicou "Baixar/Enviar" ou 'cancel' se descartou. Sempre revoga
+ * a Object URL ao fechar pra liberar memória.
+ *
+ * @param {{blob: Blob, fileName: string, primaryLabel?: string, subtitle?: string}} opts
+ * @returns {Promise<'confirm'|'cancel'>}
+ */
+function showPdfPreview({
+  blob,
+  fileName,
+  primaryLabel = 'Baixar PDF',
+  subtitle = 'Confira antes de baixar',
+}) {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('modal-pdf-preview');
+    const frame = document.getElementById('pdf-preview-frame');
+    const fallbackLink = document.getElementById('pdf-preview-fallback-link');
+    const subtitleEl = document.getElementById('pdf-preview-subtitle');
+    const actionBtn = document.getElementById('pdf-preview-action-btn');
+
+    if (!modal || !frame || !actionBtn) {
+      console.warn('[PDF Preview] Modal nao encontrado no DOM.');
+      resolve('confirm');
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    // <object> usa data=, nao src=. O fallback nativo do <object> aparece
+    // sozinho se o browser nao souber renderizar application/pdf.
+    frame.setAttribute('data', url);
+    if (fallbackLink) {
+      // Sem download attribute — queremos que o link ABRA em nova aba pra
+      // visualizacao, nao force download. O usuario pode baixar pelo botao
+      // primario do modal.
+      fallbackLink.href = url;
+      fallbackLink.removeAttribute('download');
+    }
+    if (subtitleEl) subtitleEl.textContent = subtitle;
+    actionBtn.textContent = primaryLabel;
+
+    let resolved = false;
+    const cleanup = (decision) => {
+      if (resolved) return;
+      resolved = true;
+      try {
+        frame.setAttribute('data', '');
+        URL.revokeObjectURL(url);
+      } catch (_e) {
+        /* ignore */
+      }
+      modal.removeEventListener('click', onModalClick, true);
+      document.removeEventListener('keydown', onKey, true);
+      import('../../../core/modal.js').then((m) => m.Modal.close('modal-pdf-preview'));
+      resolve(decision);
+    };
+
+    function onModalClick(e) {
+      const cancelHit = e.target.closest('[data-action="pdf-preview-cancel"]');
+      const confirmHit = e.target.closest('[data-action="pdf-preview-confirm"]');
+      if (cancelHit) {
+        e.preventDefault();
+        e.stopPropagation();
+        cleanup('cancel');
+        return;
+      }
+      if (confirmHit) {
+        e.preventDefault();
+        e.stopPropagation();
+        cleanup('confirm');
+        return;
+      }
+      // Click no overlay (fora do .modal) tambem cancela.
+      if (e.target === modal) cleanup('cancel');
+    }
+
+    function onKey(e) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cleanup('cancel');
+      }
+    }
+
+    modal.addEventListener('click', onModalClick, true);
+    document.addEventListener('keydown', onKey, true);
+
+    // Abre o modal — fallback eventual e tratado nativamente pelo <object>.
+    import('../../../core/modal.js').then((m) => m.Modal.open('modal-pdf-preview'));
+  });
+}
+
+/**
+ * Dispara o download de um Blob como arquivo via <a download>.
+ */
+function triggerBlobDownload(blob, fileName) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 100);
+}
+
+async function confirmWhatsAppConsumption({ used, limit }) {
+  if (!Number.isFinite(limit)) return true; // Pro: sem confirmacao
+  const remaining = Math.max(0, limit - used);
+  return CustomConfirm.show(
+    'Compartilhar via WhatsApp?',
+    `Você já usou ${used} de ${limit} este mês. Restam ${remaining}. Esta ação consome 1 compartilhamento do seu limite mensal.`,
+    {
+      confirmLabel: 'Compartilhar',
+      cancelLabel: 'Cancelar',
+      tone: 'primary',
+    },
+  );
+}
+
 function bindPdfExport() {
   on('export-pdf', async (el) => {
     try {
@@ -157,24 +305,46 @@ async function executePdfExport(filters) {
 
   const { planCode, pdfLimit } = budget;
 
-  // ── Gera o PDF (planCode controla marca d'água "CoolTrack Free") ──
+  // Confirmação inicial — protege contra cliques acidentais.
+  const confirmed = await confirmPdfExport();
+  if (!confirmed) {
+    trackEvent('pdf_export_cancelled', { plan: planCode, stage: 'confirm' });
+    return false;
+  }
+
+  // Gera o PDF como Blob (sem disparar download). O download só rola se o
+  // usuário aprovar o preview. Fluxo: gerar -> preview -> download + commit.
   const { PDFGenerator } = await import('../../../domain/pdf.js');
-  const fileName = await PDFGenerator.generateMaintenanceReport(filters, { planCode });
-  if (!fileName) {
+  const result = await PDFGenerator.generateMaintenanceReport(
+    { ...filters, asBlob: true },
+    { planCode },
+  );
+  if (!result || !result.blob) {
     Toast.error('Erro ao gerar PDF.');
     return false;
   }
 
+  // Mostra preview e aguarda decisão (confirm/cancel).
+  const decision = await showPdfPreview({
+    blob: result.blob,
+    fileName: result.fileName,
+    primaryLabel: 'Baixar PDF',
+    subtitle: 'Confira antes de baixar',
+  });
+  if (decision !== 'confirm') {
+    trackEvent('pdf_export_cancelled', { plan: planCode, stage: 'preview' });
+    return false;
+  }
+
+  // Confirmado — dispara o download e commita o uso.
+  triggerBlobDownload(result.blob, result.fileName);
   const newUsedCount = await budget.commit();
 
-  // Toast enriquecido com contador "X/Y · restam Z" para Free/Plus.
-  // Pro (limit=Infinity) fica com o subtítulo default ("Pronto para enviar").
   PdfSuccessToast.show(
-    Number.isFinite(pdfLimit) ? { used: newUsedCount, limit: pdfLimit, fileName } : { fileName },
+    Number.isFinite(pdfLimit)
+      ? { used: newUsedCount, limit: pdfLimit, fileName: result.fileName }
+      : { fileName: result.fileName },
   );
-
-  // Atualiza o badge inline na toolbar do relatório — assim o contador
-  // já reflete o novo uso sem precisar o usuário sair e voltar da view.
   PdfQuotaBadge.refresh();
   return true;
 }
@@ -240,6 +410,10 @@ async function executeWhatsAppShare(filters) {
     return false;
   }
 
+  // Sem modal de confirmacao inicial — preview do PDF antes do share funciona
+  // como confirmacao visual. Para Free/Plus, info de quota aparece no subtitle
+  // do preview ("Restam X compartilhamentos este mes").
+
   // Gera o PDF como Blob (sem disparar download) e deixa o shareReport
   // decidir o canal: Web Share API (mobile) ou upload+wa.me (desktop/fallback).
   Toast.info?.('Gerando relatório...');
@@ -257,6 +431,24 @@ async function executeWhatsAppShare(filters) {
   // Texto curto pro share — usa o prefixo canônico do WhatsAppExport quando
   // houver registros; fallback pra mensagem padrão do shareReport senão.
   const prefixText = WhatsAppExport.generateText(filters) || null;
+
+  // Preview antes de enviar — usuário confirma o conteúdo do PDF antes do
+  // share sheet abrir. Cancela tudo se descartar.
+  // Subtitle inclui info de quota quando aplicavel — usuario ve restante antes
+  // de confirmar o envio.
+  const wasSubtitle = Number.isFinite(whatsappLimit)
+    ? `Restam ${Math.max(0, whatsappLimit - whatsappUsed)} de ${whatsappLimit} compartilhamentos este mes · confira antes de enviar`
+    : 'Confira antes de compartilhar';
+  const previewDecision = await showPdfPreview({
+    blob: pdfResult.blob,
+    fileName: pdfResult.fileName,
+    primaryLabel: 'Enviar via WhatsApp',
+    subtitle: wasSubtitle,
+  });
+  if (previewDecision !== 'confirm') {
+    trackEvent('whatsapp_share_cancelled', { plan: planCode, stage: 'preview' });
+    return false;
+  }
 
   Toast.info?.('Preparando compartilhamento...');
   const { shareReportPdf } = await import('../../../domain/pdf/shareReport.js');

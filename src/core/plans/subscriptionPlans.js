@@ -94,7 +94,7 @@ export const PLAN_CATALOG = {
       'Cadastro por foto da etiqueta (IA) — até 30 análises/mês',
     ],
     accountTagline: 'Plano profissional para técnico autônomo: sem limitações chatas no dia a dia.',
-    accountChips: ['Até 15 equipamentos', 'PDF profissional', 'Assinatura digital'],
+    accountChips: ['Até 15 equipamentos', 'PDF profissional', 'PMOC formal (Pro)'],
   },
   [PLAN_CODE_PRO]: {
     key: PLAN_CODE_PRO,
@@ -108,14 +108,15 @@ export const PLAN_CATALOG = {
       'Registros de serviço ilimitados',
       'Todo o histórico de manutenções',
       'Relatórios PDF e WhatsApp ilimitados',
+      'PMOC formal anual (NBR 13971) com termo de RT',
       'Cadastro por foto da etiqueta (IA) — até 200 análises/mês',
       'Agrupamento por setores',
       'Assinatura digital do cliente no PDF',
       'Fotos dos equipamentos (até 3 por equipamento)',
       'Suporte prioritário',
     ],
-    accountTagline: 'Equipamentos ilimitados, agrupamento por setores e suporte prioritário.',
-    accountChips: ['Ilimitado em tudo', 'Agrupamento por setores', 'Suporte prioritário'],
+    accountTagline: 'Equipamentos ilimitados, PMOC formal NBR 13971 e suporte prioritário.',
+    accountChips: ['Ilimitado em tudo', 'PMOC formal NBR 13971', 'Suporte prioritário'],
   },
 };
 

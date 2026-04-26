@@ -240,6 +240,14 @@
   flex-direction: column;
   gap: 2px;
 }
+/* Forca display: none quando o atributo HTML hidden esta presente.
+   O default do browser ([hidden] { display: none }) tem especificidade
+   menor que a regra acima (.rel-export-dd__menu { display: flex }), entao
+   o menu ficava sempre visivel ignorando o atributo hidden controlado
+   por JS no toggle-export-dd. */
+.rel-export-dd__menu[hidden] {
+  display: none;
+}
 
 .rel-export-dd__item {
   display: flex;

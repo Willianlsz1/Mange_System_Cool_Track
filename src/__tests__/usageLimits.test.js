@@ -34,7 +34,9 @@ describe('usageLimits', () => {
     expect(getMonthlyLimitForPlan('free', USAGE_RESOURCE_PDF_EXPORT)).toBe(
       Number.POSITIVE_INFINITY,
     );
-    expect(getMonthlyLimitForPlan('plus', USAGE_RESOURCE_PDF_EXPORT)).toBe(120);
+    expect(getMonthlyLimitForPlan('plus', USAGE_RESOURCE_PDF_EXPORT)).toBe(
+      Number.POSITIVE_INFINITY,
+    );
     expect(getMonthlyLimitForPlan('pro', USAGE_RESOURCE_PDF_EXPORT)).toBe(Number.POSITIVE_INFINITY);
     expect(
       hasReachedMonthlyLimit({

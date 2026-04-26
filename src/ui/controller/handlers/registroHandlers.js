@@ -66,10 +66,10 @@ export function bindRegistroHandlers() {
   on('delete-reg', async (el) => {
     try {
       const ok = await CustomConfirm.show(
-        'Excluir Registro',
-        'Este registro sera removido do historico e pode alterar o status atual do equipamento.',
+        'Excluir este registro?',
+        'Essa ação não pode ser desfeita.',
         {
-          confirmLabel: 'Excluir registro',
+          confirmLabel: 'Excluir',
           cancelLabel: 'Cancelar',
           tone: 'danger',
         },

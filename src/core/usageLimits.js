@@ -25,8 +25,12 @@ const VALID_RESOURCES = new Set([
 //       Análise de placa: 30/mês cobre com folga o uso típico (1 cadastro novo
 //       a cada 1-2 dias úteis). Limite existe pra proteger margem — o custo
 //       da análise é em USD, então "ilimitado" virava risco de cauda longa.
-// Pro:  equipe pequena ou operação com 15+ equipamentos. PDFs/WhatsApp
-//       ilimitados (são baratos — papel/mensagem). Análise de placa: 200/mês
+// Plus tambem tem PDF ilimitado agora — diferenciacao do Free e a marca
+//       d'agua (Free leva, Plus nao leva). Quota de 120 PDFs foi removida pois
+//       PDF e barato (so processamento) e a friccao da quota mensal afastava
+//       usuarios. Pro:  equipe pequena ou operação com 15+ equipamentos.
+//       PDFs/WhatsApp ilimitados (sao baratos — papel/mensagem). Analise de
+//       placa: 200/mes
 //       cobre rollout inicial de uma equipe média sem abrir mão da margem.
 const MONTHLY_LIMITS = {
   [PLAN_CODE_FREE]: {
@@ -35,7 +39,7 @@ const MONTHLY_LIMITS = {
     [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 1,
   },
   [PLAN_CODE_PLUS]: {
-    [USAGE_RESOURCE_PDF_EXPORT]: 120,
+    [USAGE_RESOURCE_PDF_EXPORT]: Number.POSITIVE_INFINITY,
     [USAGE_RESOURCE_WHATSAPP_SHARE]: 60,
     [USAGE_RESOURCE_NAMEPLATE_ANALYSIS]: 30,
   },

@@ -642,16 +642,71 @@ export function renderShellModals() {
     </div>
   </div>
 
-  <!-- MODAL: Confirmação -->
+  <!-- MODAL: Confirmacao (estilo v6 — alert-triangle em circulo + texto centralizado) -->
   <div class="modal-overlay" id="modal-confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
     aria-describedby="confirm-msg">
-    <div class="modal modal--sm">
-      <div class="modal__title" id="confirm-title">Confirmar Ação</div>
-      <div class="modal__text" id="confirm-msg">Tem certeza?</div>
-      <div class="btn-group btn-group--tight">
+    <div class="modal modal--sm modal--confirm-v6">
+      <div class="modal-confirm__icon" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="modal__title modal-confirm__title" id="confirm-title">Confirmar Ação</div>
+      <div class="modal__text modal-confirm__text" id="confirm-msg">Tem certeza?</div>
+      <div class="btn-group btn-group--tight modal-confirm__actions">
         <button class="btn btn--outline" id="confirm-no">Cancelar</button>
         <button class="btn btn--danger" id="confirm-yes">Confirmar</button>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Pré-visualização do PDF — abre antes do download/share pra
+       o usuário conferir se o conteúdo está correto. Embed via iframe com
+       blob URL gerado em runtime; revogado ao fechar pra liberar memória. -->
+  <div class="modal-overlay" id="modal-pdf-preview" role="dialog" aria-modal="true"
+    aria-labelledby="pdf-preview-title">
+    <div class="modal modal--pdf-preview">
+      <header class="pdf-preview__header">
+        <div class="pdf-preview__title-wrap">
+          <h2 id="pdf-preview-title" class="pdf-preview__title">Pré-visualização do relatório</h2>
+          <p id="pdf-preview-subtitle" class="pdf-preview__subtitle">Confira antes de baixar</p>
+        </div>
+        <button type="button" class="pdf-preview__close"
+          data-action="pdf-preview-cancel" aria-label="Fechar pré-visualização">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </header>
+      <div class="pdf-preview__body">
+        <!-- <object> renderiza PDFs nativamente em mais browsers que <iframe>
+             (Chrome, Firefox, Edge desktop). type="application/pdf" deixa o
+             browser saber o handler certo. data="" inicial e setado via JS
+             em runtime quando o blob URL fica disponivel. -->
+        <object id="pdf-preview-frame" type="application/pdf" data=""
+          aria-label="Pré-visualização do relatório PDF">
+          <!-- Fallback nativo do <object>: aparece SO quando o browser nao
+               consegue renderizar o tipo. Mais confiavel que timeout JS. -->
+          <div class="pdf-preview__fallback">
+            <p>Seu navegador nao consegue exibir PDFs aqui.</p>
+            <a id="pdf-preview-fallback-link" href="#" target="_blank" rel="noopener"
+              class="btn btn--outline btn--sm">Abrir em nova aba</a>
+          </div>
+        </object>
+      </div>
+      <footer class="pdf-preview__footer">
+        <button type="button" class="btn btn--outline" data-action="pdf-preview-cancel">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn--primary" id="pdf-preview-action-btn"
+          data-action="pdf-preview-confirm">
+          Baixar PDF
+        </button>
+      </footer>
     </div>
   </div>
 

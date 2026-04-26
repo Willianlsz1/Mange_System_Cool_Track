@@ -357,6 +357,41 @@ function bindSyncStatusUpdates() {
   });
 }
 
+/**
+ * Atalhos globais de teclado.
+ *   - "R" (sem modificadores) -> navega pra /registro
+ *
+ * Ignora quando o foco esta em input/textarea/select/contenteditable, ou
+ * quando ha modificador (Ctrl/Cmd/Alt/Meta) pra nao colidir com atalhos
+ * do browser.
+ */
+function bindGlobalKeyboardShortcuts() {
+  if (typeof document === 'undefined') return;
+  if (document.body.dataset.kbdShortcutsBound === '1') return;
+  document.body.dataset.kbdShortcutsBound = '1';
+
+  document.addEventListener('keydown', async (event) => {
+    // Ignora modificadores
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+    // Ignora se foco em input/textarea/select/contenteditable
+    const t = event.target;
+    if (t && t.tagName) {
+      const tag = t.tagName.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      if (t.isContentEditable) return;
+    }
+    // Ignora se ha modal aberto (foca atalhos do modal)
+    if (document.querySelector('.modal-overlay.is-open, .modal.is-open')) return;
+
+    const key = String(event.key || '').toLowerCase();
+    if (key === 'r') {
+      event.preventDefault();
+      const { goTo } = await import('../../../core/router.js');
+      goTo('registro');
+    }
+  });
+}
+
 export function initControllerHelpers() {
   resetRegistroEditingState();
   bindEquipDetailsToggle();
@@ -373,4 +408,5 @@ export function initControllerHelpers() {
   bindSyncStatusUpdates();
   initOnlineStatus();
   OfflineBanner.mount();
+  bindGlobalKeyboardShortcuts();
 }

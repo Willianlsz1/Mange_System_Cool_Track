@@ -230,6 +230,13 @@ export function bindEquipmentHandlers() {
     setActiveQuickFilter(id === 'todos' ? null : id);
   });
 
+  // Limpa o filtro "Cliente: X" aplicado quando o user vem de
+  // /clientes → "Ver equipamentos". Volta pra view default sem filtro.
+  on('equip-clear-cliente-filter', async () => {
+    const { goTo } = await import('../../../core/router.js');
+    goTo('equipamentos');
+  });
+
   on('save-setor', async (el) => {
     try {
       await runAsyncAction(el, { loadingLabel: 'Salvando...' }, async () => {
@@ -308,7 +315,7 @@ export function bindEquipmentHandlers() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,
-        message: 'Não foi possível abrir o modal de setor.',
+        message: 'Nao foi possivel abrir o modal de setor.',
         context: { action: 'controller.open-setor-modal' },
       });
     }

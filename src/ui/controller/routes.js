@@ -1,12 +1,14 @@
 import { registerRoute } from '../../core/router.js';
 import { renderDashboard, updateHeader } from '../views/dashboard.js';
 import { renderEquip, populateEquipSelects } from '../views/equipamentos.js';
-import { renderHist } from '../views/historico.js';
+import { renderHist, setHistClienteFilter, clearHistClienteFilter } from '../views/historico.js';
 import { renderAlertas } from '../views/alertas.js';
 import { renderRelatorio, populateRelatorioSelects } from '../views/relatorio.js';
 import { initRegistro, loadRegistroForEdit } from '../views/registro.js';
 import { renderPricing } from '../views/pricing.js';
 import { renderClientes, setClientesSearch } from '../views/clientes.js';
+import { renderConta } from '../views/conta.js';
+import { renderPrivacidade } from '../views/privacidade.js';
 
 export function registerAppRoutes() {
   registerRoute('inicio', () => {
@@ -27,8 +29,15 @@ export function registerAppRoutes() {
     updateHeader();
   });
 
-  registerRoute('historico', () => {
+  registerRoute('historico', (params = {}) => {
     populateEquipSelects();
+    // Filtro por cliente vindo de /clientes -> "Ver servicos". Se nao tiver
+    // clienteId nos params, limpa o filtro existente.
+    if (params.clienteId) {
+      setHistClienteFilter({ id: params.clienteId, nome: params.clienteNome || '' });
+    } else {
+      clearHistClienteFilter();
+    }
     renderHist();
     updateHeader();
   });
@@ -40,9 +49,6 @@ export function registerAppRoutes() {
 
   registerRoute('relatorio', (params = {}) => {
     populateRelatorioSelects();
-    // Pré-filtro por equipamento (usado pelo PostSaveRegistroToast: usuário
-    // acabou de salvar um serviço e clicou em "Gerar PDF do relatório" →
-    // cai aqui com o select já apontando pro equipamento certo).
     if (params.equipId) {
       const select = document.getElementById('rel-equip');
       if (select) select.value = String(params.equipId);
@@ -59,7 +65,6 @@ export function registerAppRoutes() {
   registerRoute('clientes', () => {
     renderClientes();
     updateHeader();
-    // Liga search input (idempotente — sempre o mesmo input do shell)
     const search = document.getElementById('clientes-busca');
     if (search && !search.dataset.bound) {
       search.dataset.bound = '1';
@@ -67,5 +72,15 @@ export function registerAppRoutes() {
         setClientesSearch(e.target.value || '');
       });
     }
+  });
+
+  registerRoute('conta', () => {
+    renderConta();
+    updateHeader();
+  });
+
+  registerRoute('privacidade', () => {
+    renderPrivacidade();
+    updateHeader();
   });
 }

@@ -366,6 +366,10 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
     );
   }
 
+  // Filtro por cliente vindo da view /clientes ("Ver equipamentos"). Se
+  // setado em options.clienteId, restringe a lista a equipamentos vinculados.
+  const filterClienteId = options.clienteId || null;
+
   let list = equipamentos.filter((e) => {
     // Filtra por setor se estiver em drill-down
     if (setorId === '__sem_setor__') {
@@ -373,6 +377,8 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
     } else if (setorId) {
       if (e.setorId !== setorId) return false;
     }
+    // Filtra por cliente se vier do "Ver equipamentos" da view Clientes.
+    if (filterClienteId && e.clienteId !== filterClienteId) return false;
     const matchesStatus = !allowedIds || allowedIds.has(e.id);
     const matchesSearch =
       !q ||
@@ -534,6 +540,12 @@ export async function renderEquip(filtro = '', options = {}) {
   const equipCtx = _resolveEquipCtx(renderOptions);
   const activeSectorId = equipCtx.sectorId;
   const activeQuickFilter = equipCtx.quickFilter;
+  const activeClienteId = equipCtx.clienteId;
+  const activeClienteNome = equipCtx.clienteNome;
+  // Spread opcional pra propagar o filtro de cliente nas renderFlatList calls.
+  const renderOptionsWithClient = activeClienteId
+    ? { ...renderOptions, clienteId: activeClienteId }
+    : renderOptions;
 
   // Renderiza imediatamente com snapshot local do plano (não bloqueia a tela).
   // O refresh assíncrono corrige drift e evita fetch repetido em cada render.
@@ -571,9 +583,9 @@ export async function renderEquip(filtro = '', options = {}) {
     });
 
     if (activeQuickFilter === 'sem-setor') {
-      renderFlatList(filtro, renderOptions, '__sem_setor__');
+      renderFlatList(filtro, renderOptionsWithClient, '__sem_setor__');
     } else {
-      renderFlatList(filtro, { ...renderOptions, statusFilter: activeQuickFilter }, null);
+      renderFlatList(filtro, { ...renderOptionsWithClient, statusFilter: activeQuickFilter }, null);
     }
     return;
   }
@@ -596,7 +608,7 @@ export async function renderEquip(filtro = '', options = {}) {
       title: 'Parque de Equipamentos',
       extraBtn: `<button class="btn btn--outline btn--sm" data-action="open-setor-modal">+ Novo setor</button>`,
     });
-    renderFlatList(filtro, renderOptions, null);
+    renderFlatList(filtro, renderOptionsWithClient, null);
     return;
   }
 
@@ -621,7 +633,17 @@ export async function renderEquip(filtro = '', options = {}) {
     });
   }
 
-  renderFlatList(filtro, renderOptions, activeSectorId);
+  // Quando vier filtrado por cliente (via /clientes → "Ver equipamentos"),
+  // sobrescreve o titulo do toolbar pra mostrar quem estamos vendo + atalho
+  // de "Limpar filtro" (volta pra view sem filtro de cliente).
+  if (activeClienteId && activeClienteNome) {
+    _setToolbar({
+      title: `Equipamentos de ${activeClienteNome}`,
+      extraBtn: `<button class="btn btn--outline btn--sm" data-action="equip-clear-cliente-filter">x Limpar cliente</button>`,
+    });
+  }
+
+  renderFlatList(filtro, renderOptionsWithClient, activeSectorId);
 }
 
 // ─── Setor CRUD ───────────────────────────────────────────────────────────────

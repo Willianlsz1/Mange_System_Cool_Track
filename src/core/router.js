@@ -7,8 +7,25 @@
 import { Toast } from './toast.js';
 import { handleError, ErrorCodes } from './errors.js';
 import { Modal } from './modal.js';
-import { SignatureModal } from '../ui/components/signature/signature-modal.js';
-import { SignatureViewerModal } from '../ui/components/signature/signature-viewer-modal.js';
+
+// ──────────────────────────────────────────────────────────────────────
+// Registry de "blocking layers" — modais ou overlays que precisam ser
+// fechados pelo botao voltar do browser. UI camadas se REGISTRAM aqui em
+// vez do core importar de ui/* (o que viola a regra core ↛ ui).
+//
+// Cada entry: { id: string, isOpen: () => boolean, close: () => void, getElement?: () => Element|null }
+// O id e usado pra dedupe (mesma camada nao registra duas vezes).
+// ──────────────────────────────────────────────────────────────────────
+const _blockingLayerRegistry = new Map();
+
+export function registerBlockingLayer({ id, isOpen, close, getElement }) {
+  if (!id || typeof isOpen !== 'function' || typeof close !== 'function') return;
+  _blockingLayerRegistry.set(id, { isOpen, close, getElement });
+}
+
+export function unregisterBlockingLayer(id) {
+  _blockingLayerRegistry.delete(id);
+}
 
 const _routes = new Map(); // name → { onEnter, onLeave }
 let _current = null;
@@ -103,22 +120,13 @@ function closeTopBlockingLayer() {
     });
   }
 
-  // Modais de assinatura (capture/viewer) — PR3 cobertura mínima.
-  const signatureCapture = document.getElementById('modal-signature-overlay');
-  if (signatureCapture?.classList.contains('is-open')) {
-    candidates.push({
-      element: signatureCapture,
-      close: () => SignatureModal.closeIfOpen(),
-    });
-  }
-
-  const signatureViewer = document.getElementById('modal-signature-viewer-overlay');
-  if (signatureViewer?.classList.contains('is-open')) {
-    candidates.push({
-      element: signatureViewer,
-      close: () => SignatureViewerModal.closeIfOpen(),
-    });
-  }
+  // Camadas registradas via registerBlockingLayer (signature modals etc.).
+  // Inversao de dependencia — core nao importa de ui/* mais.
+  _blockingLayerRegistry.forEach((entry) => {
+    if (!entry.isOpen()) return;
+    const element = entry.getElement?.() || null;
+    candidates.push({ element, close: entry.close });
+  });
 
   // Lightbox de fotos (não usa .modal-overlay).
   const lightbox = document.getElementById('lightbox');
@@ -237,18 +245,60 @@ export function registerRoute(name, onEnter, onLeave = null) {
   _routes.set(name, { onEnter, onLeave });
 }
 
+// ──────────────────────────────────────────────────────────────────────
+// Guard de navegação — uma view pode bloquear sair em estados sujos
+// (ex.: edição não salva). O guard recebe (nextRoute, nextParams) e
+// retorna boolean OU Promise<boolean>. Se false, navegação é cancelada.
+// O guard é AUTOMATICAMENTE limpo após a primeira navegação confirmada
+// (sucesso) — quem instala precisa re-instalar se quiser persistir.
+// ──────────────────────────────────────────────────────────────────────
+let _navGuard = null;
+
+export function setRouteGuard(guardFn) {
+  _navGuard = typeof guardFn === 'function' ? guardFn : null;
+}
+
+export function clearRouteGuard() {
+  _navGuard = null;
+}
+
 /**
  * Navega para uma rota.
  * @param {string} name
  * @param {object} [params] — dados extras passados ao onEnter
  */
 export function goTo(name, params = {}, options = {}) {
-  const { fromHistory = false, replaceHistory = false } = options;
+  const { fromHistory = false, replaceHistory = false, bypassGuard = false } = options;
   const safeParams = normalizeRouteParams(params);
   if (_transitioning) return;
   if (!_routes.has(name)) {
     console.warn(`[Router] Rota desconhecida: "${name}"`);
     return;
+  }
+
+  // Guard check — só dispara se ha guard E rota destino diferente da atual
+  // E nao e fromHistory (back/forward do browser tem fluxo proprio) E nao
+  // explicitamente bypassed. Resultado pode ser sync (boolean) ou async.
+  if (_navGuard && _current !== name && !fromHistory && !bypassGuard) {
+    const guardResult = _navGuard(name, safeParams);
+    if (guardResult && typeof guardResult.then === 'function') {
+      // Async: aguarda a promise e re-chama com bypass se aprovado
+      guardResult
+        .then((allowed) => {
+          if (allowed) {
+            _navGuard = null;
+            goTo(name, safeParams, { ...options, bypassGuard: true });
+          }
+        })
+        .catch(() => {
+          /* erro no guard nao deve bloquear permanente — log e libera */
+          console.warn('[Router] Guard rejeitou com erro; navegacao cancelada');
+        });
+      return;
+    }
+    if (!guardResult) return;
+    // Sync allowed — limpa o guard e prossegue
+    _navGuard = null;
   }
 
   const hasParams = params && Object.keys(params).length > 0;
@@ -361,9 +411,13 @@ function _activateRoute(name, el, params, options = {}) {
 
   const previousRoute = _current;
 
-  // Atualizar nav
+  // Atualizar nav (bottom nav mobile + sidebar desktop espelham mesmo state)
   document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('is-active'));
   document.getElementById(`nav-${name}`)?.classList.add('is-active');
+  document
+    .querySelectorAll('.app-sidebar__nav-item')
+    .forEach((b) => b.classList.remove('is-active'));
+  document.getElementById(`sidenav-${name}`)?.classList.add('is-active');
 
   // Expor rota atual para CSS (ex.: hide de header-stats-bar no painel)
   if (typeof document !== 'undefined' && document.body) {
