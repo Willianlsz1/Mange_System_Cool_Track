@@ -1,0 +1,189 @@
+/*
+ * Onboarding Checklist Card — "Primeiros passos" no Painel.
+ * ─────────────────────────────────────────────────────────────────
+ * Aparece no topo do painel até o usuário completar 5/5 ou dispensar.
+ * Visual sóbrio com tokens do redesign 2026 (azul-marca + dark surfaces).
+ */
+
+.onb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--ct-surface);
+  border: 1px solid var(--ct-brand-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+/* Header: título + descrição + close */
+.onb-card__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.onb-card__head-text {
+  flex: 1;
+  min-width: 0;
+}
+.onb-card__title {
+  margin: 0 0 2px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ct-text);
+  letter-spacing: -0.01em;
+}
+.onb-card__sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ct-text-muted);
+  line-height: 1.4;
+}
+.onb-card__close {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--ct-text-faint);
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+.onb-card__close:hover {
+  background: var(--ct-hover-soft);
+  color: var(--ct-text);
+}
+
+/* Progress bar */
+.onb-card__progress {
+  height: 4px;
+  background: var(--ct-surface-elev);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.onb-card__progress-fill {
+  height: 100%;
+  background: var(--ct-brand);
+  border-radius: 999px;
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Steps */
+.onb-card__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.onb-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 150ms ease;
+  outline: none;
+}
+.onb-step:not(.is-done):hover {
+  background: var(--ct-hover-soft);
+}
+.onb-step:not(.is-done):focus-visible {
+  background: var(--ct-hover-soft);
+  box-shadow: 0 0 0 2px var(--ct-brand);
+}
+
+.onb-step.is-done {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Numbered badge / check icon */
+.onb-step__check {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ct-border-strong);
+  background: var(--ct-surface-elev);
+  color: var(--ct-text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 200ms ease;
+}
+.onb-step.is-done .onb-step__check {
+  background: var(--ct-brand-soft);
+  border-color: var(--ct-brand-border);
+  color: var(--ct-brand-text);
+}
+
+.onb-step__num {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* Body: label + sublabel */
+.onb-step__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.onb-step__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ct-text);
+  letter-spacing: -0.005em;
+}
+.onb-step.is-done .onb-step__label {
+  text-decoration: line-through;
+  text-decoration-color: var(--ct-text-faint);
+  color: var(--ct-text-muted);
+}
+.onb-step__sub {
+  font-size: 11.5px;
+  color: var(--ct-text-faint);
+  line-height: 1.3;
+}
+.onb-step.is-done .onb-step__sub {
+  display: none;
+}
+
+/* Chevron — só nos steps pendentes */
+.onb-step__chev {
+  flex-shrink: 0;
+  color: var(--ct-text-faint);
+  transition:
+    transform 150ms ease,
+    color 150ms ease;
+}
+.onb-step:not(.is-done):hover .onb-step__chev {
+  color: var(--ct-brand-text);
+  transform: translateX(2px);
+}
+
+/* Mobile: padding mais apertado, fonte do sub um pouco menor */
+@media (max-width: 600px) {
+  .onb-card {
+    padding: 14px 14px;
+    margin-bottom: 12px;
+  }
+  .onb-step {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  .onb-step__sub {
+    font-size: 11px;
+  }
+}

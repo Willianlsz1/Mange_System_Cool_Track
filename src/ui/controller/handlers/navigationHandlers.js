@@ -6,6 +6,7 @@ import { Photos } from '../../components/photos.js';
 import { SupportFeedbackModal } from '../../components/supportFeedbackModal.js';
 import { Toast } from '../../../core/toast.js';
 import { Tour } from '../../components/tour.js';
+import { OnboardingChecklist } from '../../components/onboarding/onboardingChecklist.js';
 import { AuthScreen } from '../../components/authscreen.js';
 import {
   clearEditingState as clearEquipEditingState,
@@ -18,6 +19,8 @@ import {
 } from '../../components/nameplateCapture.js';
 import { isCachedPlanPlusOrHigher } from '../../../core/plans/planCache.js';
 import { toggleTheme } from '../helpers/themeInitHelpers.js';
+import { PushOptInCard } from '../../components/pushOptInCard.js';
+import { InstallAppPrompt } from '../../components/installAppPrompt.js';
 
 let isHelpOpen = false;
 
@@ -417,5 +420,36 @@ export function bindNavigationHandlers() {
           'Não foi possível abrir o portal. Tente novamente ou entre em contato com o suporte.',
       );
     }
+  });
+
+  // Onboarding checklist — dispensar permanentemente o card de "Primeiros passos"
+  on('onboarding-dismiss', () => {
+    OnboardingChecklist.dismiss();
+    const host = document.getElementById('dash-onboarding');
+    if (host) {
+      const card = host.querySelector('.onb-card');
+      if (card) card.remove();
+    }
+  });
+
+  // Push: ativar/desativar notificações na tela de Conta
+  on('push-enable', async () => {
+    await PushOptInCard.enable();
+    const host = document.querySelector('.conta-sections');
+    if (host) await PushOptInCard.render(host);
+  });
+  on('push-disable', async () => {
+    await PushOptInCard.disable();
+    const host = document.querySelector('.conta-sections');
+    if (host) await PushOptInCard.render(host);
+  });
+
+  // PWA install — dispara prompt nativo do navegador (Chrome/Edge)
+  on('install-app-prompt', async () => {
+    await InstallAppPrompt.prompt();
+    // appinstalled listener limpa o card automático em caso de sucesso.
+  });
+  on('install-app-dismiss', () => {
+    InstallAppPrompt.dismiss();
   });
 }

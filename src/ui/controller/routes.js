@@ -12,6 +12,7 @@ import { getCachedPlan } from '../../core/plans/planCache.js';
 import { PLAN_CODE_PRO } from '../../core/plans/subscriptionPlans.js';
 import { renderConta } from '../views/conta.js';
 import { renderPrivacidade } from '../views/privacidade.js';
+import { OnboardingChecklist } from '../components/onboarding/onboardingChecklist.js';
 
 export function registerAppRoutes() {
   registerRoute('inicio', () => {
@@ -63,6 +64,7 @@ export function registerAppRoutes() {
     }
     renderRelatorio();
     updateHeader();
+    OnboardingChecklist.markStep('relatorio');
   });
 
   registerRoute('pricing', (params = {}) => {

@@ -20,12 +20,23 @@ const sentryMockFactory = () => {
   const captureMessage = vi.fn();
   const addBreadcrumb = vi.fn();
   const setUser = vi.fn();
+  // Integrations que o módulo destrutura no init pós-refactor (defaultIntegrations: false).
+  // Cada uma é uma factory que retorna um objeto integration descritor — o SDK real
+  // chama-as e empilha no array. Mockamos como factories vazias só pra existirem.
+  const makeIntegration = (name) => vi.fn(() => ({ name }));
   return {
     init,
     captureException,
     captureMessage,
     addBreadcrumb,
     setUser,
+    dedupeIntegration: makeIntegration('Dedupe'),
+    functionToStringIntegration: makeIntegration('FunctionToString'),
+    inboundFiltersIntegration: makeIntegration('InboundFilters'),
+    breadcrumbsIntegration: makeIntegration('Breadcrumbs'),
+    globalHandlersIntegration: makeIntegration('GlobalHandlers'),
+    linkedErrorsIntegration: makeIntegration('LinkedErrors'),
+    httpContextIntegration: makeIntegration('HttpContext'),
   };
 };
 

@@ -657,3 +657,23 @@ body {
   border-radius: 50% !important;
   margin-right: 3px !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+ * Item 3.4 — Status pill nunca quebra em 2 linhas
+ * "Aguardando assinatura" (21 chars + uppercase + letter-spacing)
+ * estourava em mobile dentro do card de orçamento.
+ * ═══════════════════════════════════════════════════════════════ */
+.orc-status-pill {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 480px) {
+  .orc-status-pill {
+    /* Reduz letter-spacing e padding em telas estreitas pra
+       absorver labels longas sem quebrar visualmente. */
+    letter-spacing: 0.02em !important;
+    padding: 3px 7px !important;
+    font-size: 10px !important;
+  }
+}

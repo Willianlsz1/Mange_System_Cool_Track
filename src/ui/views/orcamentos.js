@@ -33,7 +33,6 @@ const STATUS_META = {
   aprovado: { label: 'Aprovado', color: '#10b981', bg: 'rgba(16,185,129,0.14)' },
   recusado: { label: 'Recusado', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' },
   expirado: { label: 'Expirado', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  convertido: { label: 'Convertido', color: '#a855f7', bg: 'rgba(168,85,247,0.14)' },
 };
 
 function brl(n) {

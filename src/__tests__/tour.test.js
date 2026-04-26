@@ -52,7 +52,7 @@ describe('Tour', () => {
     document.getElementById('tour-next')?.click();
 
     const titleAfterTwoNexts = document.getElementById('tour-title')?.textContent;
-    expect(titleAfterTwoNexts).toContain('Organize os equipamentos');
+    expect(titleAfterTwoNexts).toContain('Equipamentos com histórico');
 
     document.getElementById('tour-prev')?.click();
     const titleAfterBack = document.getElementById('tour-title')?.textContent;
@@ -112,32 +112,11 @@ describe('Tour', () => {
     expect(document.getElementById('tour-modal')).toBeNull();
   });
 
-  it('includes a dedicated slide explaining the Score de Risco', async () => {
-    const { Tour } = await import('../ui/components/tour.js');
-
-    Tour.start();
-    // Step 4 of 6 (index 3): Score de Risco
-    for (let i = 0; i < 3; i++) {
-      document.getElementById('tour-next')?.click();
-    }
-
-    const title = document.getElementById('tour-title')?.textContent;
-    expect(title).toContain('Score de Risco');
-
-    const descEl = document.getElementById('tour-desc');
-    const desc = descEl?.textContent || '';
-    // Must explain factors, the track-record bonus and the 30-day trend
-    expect(desc).toMatch(/0 a 100/);
-    expect(desc).toMatch(/bônus/i);
-    // Trend arrows rendered via Unicode
-    expect(desc).toMatch(/[↓→↑]/);
-    // Description allows only controlled emphasis markup (<strong>)
-    const tags = Array.from(descEl?.querySelectorAll('*') || []).map((el) =>
-      el.tagName.toLowerCase(),
-    );
-    expect(tags).toEqual(expect.arrayContaining(['strong']));
-    expect(tags.every((tag) => tag === 'strong')).toBe(true);
-  });
+  // Removido: slide "Score de Risco" foi cortado na refatoração de
+  // 2026-04 (Tour modernizado de 6 → 4 slides). Score técnico demais
+  // pro primeiro contato — pertence a uma página de ajuda dedicada,
+  // não ao onboarding inicial. Ver redesign.css/_tour.css.
+  it.skip('includes a dedicated slide explaining the Score de Risco', () => {});
 
   it('fails if inline event handlers appear in hardened files', () => {
     const files = ['src/ui/views/equipamentos.js', 'src/ui/components/tour.js'];

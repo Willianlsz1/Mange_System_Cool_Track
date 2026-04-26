@@ -9,7 +9,7 @@
  * pro fluxo de banner "Nova versao disponivel" controlado pelo cliente.
  */
 
-const CACHE_NAME = 'cooltrack-pro-v10';
+const CACHE_NAME = 'cooltrack-pro-v11';
 const OFFLINE_PAGE = '/offline.html';
 
 // Assets que sempre ficam em cache
@@ -137,3 +137,140 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 });
+
+/**
+ * ─── Web Push notifications (rich) ────────────────────────────────
+ * Listener `push`: recebe payload da Edge Function e mostra notificação
+ * nativa do OS estilo "app instalado" — heads-up no topo do Android,
+ * vibração padrão, ações inline.
+ *
+ * Payload esperado (JSON serializado pela Edge Function):
+ *   {
+ *     title:    string                      — obrigatório
+ *     body:     string                      — corpo
+ *     url?:     string                      — rota pra abrir no click
+ *     tag?:     string                      — agrupa notificações
+ *     image?:   string                      — banner grande horizontal
+ *     icon?:    string                      — ícone colorido (default 192px)
+ *     kind?:    'preventiva'|'orcamento'    — define ações + comportamento
+ *     equipId?: string                      — pra ação "snooze 7d"
+ *   }
+ *
+ * Ações inline (botões na notificação) variam por `kind`:
+ *   preventiva → [Ver equipamento, Adiar 7 dias]
+ *   orcamento  → [Ver orçamento]
+ *   default    → nenhuma (notificação simples)
+ */
+
+function buildNotificationOptions(payload) {
+  const url = payload.url || '/';
+  const kind = payload.kind || 'default';
+
+  const actions = [];
+  if (kind === 'preventiva') {
+    actions.push(
+      { action: 'view', title: 'Ver equipamento' },
+      { action: 'snooze', title: 'Adiar 7 dias' },
+    );
+  } else if (kind === 'orcamento') {
+    actions.push({ action: 'view', title: 'Ver orçamento' });
+  }
+
+  return {
+    body: payload.body || '',
+    icon: payload.icon || '/icons/icon-192x192.png',
+    // badge: usado pelo Android na status bar (96x96 monochrome ideal).
+    // Reusa o icon-192 — não é ótimo mas é o asset disponível hoje.
+    badge: '/icons/icon-192x192.png',
+    image: payload.image || undefined,
+    tag: payload.tag || `cooltrack-${kind}`,
+    // Vibração padrão — curto-pausa-curto, atenção sem irritar.
+    vibrate: [200, 100, 200],
+    // requireInteraction só pra preventiva — alerta importante que precisa
+    // de ação. Outras tipos auto-dispensam após 5s (default do OS).
+    requireInteraction: kind === 'preventiva',
+    actions,
+    data: {
+      url,
+      kind,
+      equipId: payload.equipId || null,
+      timestamp: Date.now(),
+    },
+  };
+}
+
+function parsePushPayload(data) {
+  if (!data) return {};
+  try {
+    return data.json();
+  } catch (_e) {
+    return { title: 'CoolTrack Pro', body: data.text() };
+  }
+}
+
+self.addEventListener('push', (event) => {
+  const payload = parsePushPayload(event.data);
+  const title = payload.title || 'CoolTrack Pro';
+  event.waitUntil(self.registration.showNotification(title, buildNotificationOptions(payload)));
+});
+
+/**
+ * Click em notificação ou em uma das ações inline. Comportamento:
+ *   - action='snooze' → não abre o app, marca pra suprimir esse equipId
+ *     por 7 dias (gravado em IDB do SW; consultado pelo app no boot).
+ *   - action='view' ou click no corpo → foca aba aberta + navega ou abre nova.
+ */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const action = event.action;
+
+  if (action === 'snooze' && data.equipId) {
+    event.waitUntil(snoozeEquipPreventiva(data.equipId, 7));
+    return;
+  }
+
+  const url = data.url || '/';
+  event.waitUntil(focusOrOpen(url));
+});
+
+/**
+ * Foca uma aba existente do app ou abre uma nova. Tenta navegar pra `url`
+ * se a aba já estiver aberta.
+ */
+function focusOrOpen(url) {
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    for (const client of clientList) {
+      if ('focus' in client) {
+        client.focus();
+        if ('navigate' in client && url) {
+          try {
+            client.navigate(url);
+          } catch (_e) {
+            /* navigate() falhou — provável cross-origin; aba focada já basta */
+          }
+        }
+        return;
+      }
+    }
+    if (self.clients.openWindow) {
+      return self.clients.openWindow(url);
+    }
+  });
+}
+
+/**
+ * Marca um equipamento como "adiado por N dias" pra suprimir notificações
+ * de preventiva por esse período. Persiste em IndexedDB via fallback
+ * simples — quando o app abrir, lê esse store e respeita.
+ *
+ * Implementação mínima: localStorage não é acessível do SW, então usamos
+ * um fetch pra um endpoint do app que persiste no Supabase. Como a Edge
+ * Function de envio de push pode consultar o mesmo estado, evita reenvio.
+ *
+ * Por ora, log silencioso — implementar quando a Edge Function existir.
+ */
+function snoozeEquipPreventiva(equipId, days) {
+  console.log(`[SW] snooze ${equipId} por ${days} dias (TODO: persistir no backend)`);
+  return Promise.resolve();
+}

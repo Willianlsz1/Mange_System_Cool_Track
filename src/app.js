@@ -5,6 +5,13 @@ import { goTo, initHistory } from './core/router.js';
 import { initController } from './ui/controller.js';
 import { initAppShell } from './ui/shell.js';
 import { FirstTimeExperience } from './ui/components/onboarding.js';
+import { OnboardingChecklist } from './ui/components/onboarding/onboardingChecklist.js';
+import { PushOptInCard } from './ui/components/pushOptInCard.js';
+import { setupPushNotifications } from './core/pushNotifications.js';
+import { InstallAppPrompt, captureInstallEvent } from './ui/components/installAppPrompt.js';
+
+// Capture beforeinstallprompt cedo — antes do user interagir.
+captureInstallEvent();
 import { Auth } from './core/auth.js';
 import { setCurrentUser, migrateLegacyKey } from './core/userStorage.js';
 import { AuthScreen } from './ui/components/authscreen.js';
@@ -219,12 +226,31 @@ async function bootstrap() {
       }
     }
 
-    requestAnimationFrame(() => {
-      const { equipamentos } = getState();
-      FirstTimeExperience.show(equipamentos, { userId: user?.id || null });
-    });
+    OnboardingChecklist.init(user?.id || null);
+    PushOptInCard.init(user?.id || null);
 
-    Tour.initIfFirstVisit({ userId: user?.id || null });
+    // Push: se o user já concedeu permissão antes, re-registra a subscription
+    // no boot. Idempotente — se já existe, atualiza updated_at no Supabase.
+    // Silencioso: erro não bloqueia o boot.
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && user?.id) {
+      setupPushNotifications(user.id).catch((err) => {
+        console.warn('[boot] setupPushNotifications falhou:', err);
+      });
+    }
+
+    // FirstTimeExperience (overlay 2-passos focado em equipamento) e Tour
+    // (slide-modal walkthrough) ficam DESATIVADOS pra novos usuários — o
+    // OnboardingChecklist cobre a função deles de forma menos intrusiva.
+    // Tour continua disponível sob demanda via menu Ajuda.
+    //
+    // Reativar no futuro só se o checklist se mostrar insuficiente nos
+    // dados de telemetria (onboarding_step_completed por etapa).
+    //
+    // requestAnimationFrame(() => {
+    //   const { equipamentos } = getState();
+    //   FirstTimeExperience.show(equipamentos, { userId: user?.id || null });
+    // });
+    // Tour.initIfFirstVisit({ userId: user?.id || null });
   } catch (error) {
     handleError(error, {
       code: ErrorCodes.NETWORK_ERROR,

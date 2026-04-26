@@ -37,7 +37,7 @@
   /* Text */
   --ct-text: #e8eaf0;
   --ct-text-muted: #9ba1b0;
-  --ct-text-faint: #5a6173;
+  --ct-text-faint: #838aa0; /* WCAG AA Body 4.79+:1 em todos os surfaces */
   --ct-text-ghost: #3f4554;
 
   /* Status (dessaturados) */
@@ -148,7 +148,7 @@
   --ct-border-strong: #c7cdd8;
   --ct-text: #1a1d26;
   --ct-text-muted: #5a6173;
-  --ct-text-faint: #8089a0;
+  --ct-text-faint: #5b6478; /* WCAG AA Body em fundo claro */
   --ct-text-ghost: #b5bac8;
   --ct-brand: #2d5dd0;
   --ct-brand-text: #2d5dd0;

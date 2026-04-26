@@ -1,0 +1,111 @@
+/*
+ * Install App banner — convida o user a instalar o PWA.
+ * ─────────────────────────────────────────────────────────────────
+ * Aparece no topo do painel quando:
+ *   - Chrome/Edge dispararam beforeinstallprompt (não instalado ainda)
+ *   - OU iOS Safari (mostra instrução manual via Compartilhar)
+ *
+ * Some quando: app já instalado, user dispensou (~7 dias), ou aceitou
+ * o prompt nativo (evento appinstalled).
+ *
+ * Visual: banner sutil em azul-marca, alinhado com o resto do redesign.
+ */
+
+.install-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--ct-surface);
+  border: 1px solid var(--ct-brand-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.install-card__icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ct-brand-soft);
+  color: var(--ct-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.install-card__body {
+  flex: 1;
+  min-width: 0;
+}
+.install-card__title {
+  margin: 0 0 2px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ct-text);
+  letter-spacing: -0.005em;
+}
+.install-card__sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ct-text-muted);
+  line-height: 1.4;
+}
+.install-card__sub strong {
+  color: var(--ct-text);
+  font-weight: 500;
+}
+
+.install-card__cta {
+  flex-shrink: 0;
+}
+
+.install-card__close {
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  color: var(--ct-text-faint);
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+.install-card__close:hover {
+  background: var(--ct-hover-soft);
+  color: var(--ct-text);
+}
+
+/* Variante iOS (instrução manual, sem CTA) */
+.install-card--ios .install-card__icon {
+  background: var(--ct-warn-soft);
+  color: var(--ct-warn);
+}
+.install-card--ios {
+  border-color: var(--ct-warn-soft);
+}
+
+/* Mobile */
+@media (max-width: 480px) {
+  .install-card {
+    flex-wrap: wrap;
+    padding: 12px;
+  }
+  .install-card__cta {
+    width: 100%;
+    justify-content: center;
+    order: 3;
+    margin-top: 8px;
+  }
+  .install-card__close {
+    order: 4;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+  .install-card__sub {
+    padding-right: 24px;
+  }
+}

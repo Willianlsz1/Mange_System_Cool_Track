@@ -20,6 +20,7 @@
 
 import { supabase } from '../../core/supabase.js';
 import { AppError, ErrorCodes, handleError } from '../../core/errors.js';
+import { OnboardingChecklist } from '../../ui/components/onboarding/onboardingChecklist.js';
 
 const DEFAULT_REPORTS_BUCKET = import.meta.env?.VITE_SUPABASE_REPORTS_BUCKET || 'relatorios';
 
@@ -225,6 +226,13 @@ export function downloadPdfLocally({ pdfBlob, fileName } = {}) {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }, 100);
+    // Onboarding: marca passo "PDF gerado" — efeito colateral safe
+    // (no-op se OnboardingChecklist.init() ainda não foi chamado).
+    try {
+      OnboardingChecklist.markStep('pdf');
+    } catch {
+      /* nunca quebra o download por falha de telemetria */
+    }
     return true;
   } catch {
     return false;

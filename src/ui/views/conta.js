@@ -32,6 +32,7 @@ import { getState } from '../../core/state.js';
 import { Toast } from '../../core/toast.js';
 import { exportUserData, deleteUserAccount } from '../../features/userData.js';
 import { ProfileModal } from '../components/onboarding.js';
+import { PushOptInCard } from '../components/pushOptInCard.js';
 
 const VIEW_ID = 'view-conta';
 
@@ -402,6 +403,15 @@ function _renderShell(html) {
   const view = document.getElementById(VIEW_ID);
   if (!view) return;
   view.innerHTML = html;
+
+  // Push opt-in card: renderiza no fim das seções (assíncrono — depende
+  // de Notification.permission + getSubscription()).
+  const pushHost = view.querySelector('.conta-sections');
+  if (pushHost) {
+    PushOptInCard.render(pushHost).catch((err) => {
+      console.warn('[conta] PushOptInCard render falhou:', err);
+    });
+  }
 }
 
 function _renderLoading() {

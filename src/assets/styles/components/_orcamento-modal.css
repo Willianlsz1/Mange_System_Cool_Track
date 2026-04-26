@@ -1,0 +1,301 @@
+/*
+ * Orçamento Modal — refatorado pra usar tokens do redesign 2026.
+ * ─────────────────────────────────────────────────────────────────
+ * Migração do bloco antigo do components.css (linhas 22066-22264)
+ * pra arquivo modular. Usa --ct-* tokens diretamente.
+ *
+ * Bugs corrigidos no caminho:
+ *  A) Mobile: descrição sumia porque grid-template-columns reservava
+ *     ~270px fixos pra qty/valor/total/remove e o "1fr" da descrição
+ *     não tinha espaço. Em < 540px, layout passa a empilhar:
+ *     descrição em linha cheia + qty/valor/total/remove embaixo.
+ *  B) Mobile: footer ".__actions" ficava por cima da bottom-nav
+ *     fixa do app. Adicionado padding-bottom com safe-area-inset
+ *     + margem de respeito à bottom-nav.
+ *
+ * Refator visual também elimina gradientes cyan no header (legacy)
+ * em favor de superfície neutra com toque azul-marca translúcido.
+ */
+
+/* ─── Container ─────────────────────────────────────────────── */
+.orcamento-modal {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  background: var(--ct-surface);
+  border: 1px solid var(--ct-border);
+  border-radius: 14px;
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── Head ─────────────────────────────────────────────────── */
+.orcamento-modal__head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--ct-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--ct-surface-elev);
+}
+.orcamento-modal__head-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ct-brand-soft);
+  color: var(--ct-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.orcamento-modal__head-text {
+  flex: 1;
+  min-width: 0;
+}
+.orcamento-modal__title {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ct-text);
+  letter-spacing: -0.01em;
+}
+.orcamento-modal__sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ct-text-muted);
+  line-height: 1.4;
+}
+.orcamento-modal__close {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ct-text-faint);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+.orcamento-modal__close:hover {
+  background: var(--ct-hover-soft);
+  color: var(--ct-text);
+}
+
+/* ─── Body ─────────────────────────────────────────────────── */
+.orcamento-modal__body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.orcamento-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.orcamento-modal__section h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ct-text);
+  letter-spacing: -0.005em;
+}
+.orcamento-modal__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.orcamento-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.orcamento-modal__field label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ct-text-muted);
+}
+.orcamento-modal__field .req {
+  color: var(--ct-error);
+  margin-left: 2px;
+}
+.orcamento-modal__row--two {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+@media (min-width: 540px) {
+  .orcamento-modal__row--two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ─── Itens (header + linhas) ──────────────────────────────── */
+/* Desktop: 5 colunas em linha (descrição maior, qty/valor/total/remove pequenos) */
+.orc-items-header,
+.orc-item-row {
+  display: grid;
+  grid-template-columns: 1fr 60px 100px 80px 30px;
+  gap: 8px;
+  align-items: center;
+}
+.orc-items-header {
+  padding: 0 4px 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ct-text-faint);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.orc-item-row {
+  margin-bottom: 6px;
+}
+.orc-item-row .form-control {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.orc-item__total {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--ct-text);
+  text-align: right;
+  padding: 0 4px;
+}
+.orc-item__remove {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--ct-text-faint);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+.orc-item__remove:hover {
+  color: var(--ct-error);
+  background: var(--ct-error-soft);
+}
+
+/* Mobile (< 600px): empilha em 2 linhas — descrição cheia em cima,
+   qty/valor/total/remove embaixo num grid 4-col. Resolve Bug A. */
+@media (max-width: 600px) {
+  .orc-items-header {
+    /* No mobile, header fica oculto — labels viram visíveis pelo placeholder
+       dos inputs. Reduz ruído visual em telas pequenas. */
+    display: none;
+  }
+  .orc-item-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 10px;
+    border: 1px solid var(--ct-border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--ct-card-tint);
+  }
+  .orc-item-row .orc-item__descricao {
+    grid-column: 1 / -1;
+  }
+  .orc-item-row .orc-item__qty,
+  .orc-item-row .orc-item__valor,
+  .orc-item-row .orc-item__total,
+  .orc-item-row .orc-item__remove {
+    grid-column: auto;
+  }
+  /* Subgrid pra qty/valor/total/remove na 2ª "linha" do card mobile */
+  .orc-item-row::after {
+    content: '';
+    display: none;
+  }
+  .orc-item-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'descricao'
+      'controles';
+  }
+  .orc-item__descricao {
+    grid-area: descricao;
+  }
+  /* Empilha qty/valor numa linha de controles via flex */
+  .orc-item-row > .orc-item__qty {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1.4fr) auto;
+    gap: 6px;
+    align-items: center;
+  }
+}
+
+/* ─── Totais ───────────────────────────────────────────────── */
+.orc-totals {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--ct-card-tint);
+  border: 1px solid var(--ct-border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.orc-totals__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--ct-text-muted);
+}
+.orc-totals__input {
+  width: 100px;
+  text-align: right;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+.orc-totals__row--total {
+  padding-top: 8px;
+  border-top: 1px solid var(--ct-border);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ct-text);
+}
+.orc-totals__row--total strong {
+  color: var(--ct-brand-text);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* ─── Footer (actions) ─────────────────────────────────────── */
+/* Desktop: footer fixo no fim do modal, alinhado à direita.
+   Mobile: respeita safe-area-inset (notch / home indicator) +
+   stica acima da bottom-nav fixa do app. Resolve Bug B. */
+.orcamento-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid var(--ct-border);
+  background: var(--ct-surface-elev);
+  /* Mobile-first: respeita home indicator (env() resolve em iOS/Safari).
+     Em desktop o env() vira 0, então não quebra. */
+  padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 600px) {
+  .orcamento-modal__actions {
+    flex-wrap: wrap;
+    /* Botões ocupam linha cheia em mobile, hierarquia vertical clara. */
+    flex-direction: column-reverse;
+  }
+  .orcamento-modal__actions > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

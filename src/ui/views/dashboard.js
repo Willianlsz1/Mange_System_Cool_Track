@@ -19,6 +19,8 @@ import { Alerts } from '../../domain/alerts.js';
 // vai desenhar os gráficos.
 import { emptyStateHtml } from '../components/emptyState.js';
 import { OnboardingBanner, Profile } from '../components/onboarding.js';
+import { OnboardingChecklist } from '../components/onboarding/onboardingChecklist.js';
+import { InstallAppPrompt } from '../components/installAppPrompt.js';
 import { UpgradeNudge } from '../components/upgradeNudge.js';
 import { OverflowBanner } from '../components/overflowBanner.js';
 import { withSkeleton } from '../components/skeleton.js';
@@ -1217,6 +1219,13 @@ export async function renderDashboard() {
     // Se ha rascunho de registro em sessionStorage, mostra card sticky no
     // topo "Continuar registro de [Equipamento]" pra resgatar o flow.
     _renderContinueDraftCard(equipamentos);
+
+    // Onboarding checklist: card "Primeiros passos" aparece no topo do
+    // painel até o usuário completar 5/5 ou dispensar. Auto-detecta cliente,
+    // equipamento e serviço via getState(). Relatório e PDF requerem hooks
+    // explícitos (já plugados em routes.js + shareReport.js).
+    InstallAppPrompt.render('dash-onboarding');
+    OnboardingChecklist.render('dash-onboarding');
 
     // Empty state curto quando sem equipamentos — mantém hero + KPIs desligados
     const emptyHost = document.getElementById('dash-empty');
