@@ -15,6 +15,7 @@ import {
 } from '../../views/orcamentos.js';
 import { OrcamentoModal } from '../../components/orcamentoModal.js';
 import { CustomConfirm } from '../../../core/modal.js';
+import { OnboardingChecklist } from '../../components/onboarding/onboardingChecklist.js';
 
 /**
  * Fase 2 — Envia o orçamento pra assinatura digital.
@@ -93,6 +94,11 @@ export async function downloadOrcamentoPdf(orcamento) {
     const profile = Profile.get() || {};
     // asBlob:false faz doc.save() direto — browser baixa.
     const fileName = generateOrcamentoPdf({ orcamento, profile, asBlob: false });
+    try {
+      OnboardingChecklist.markStep('pdf');
+    } catch (_) {
+      /* no-op */
+    }
     Toast.success(`PDF "${fileName}" baixado.`);
   } catch (error) {
     handleError(error, {
@@ -117,6 +123,11 @@ export async function shareOrcamentoWhatsApp(orcamento) {
       profile,
       asBlob: true,
     });
+    try {
+      OnboardingChecklist.markStep('pdf');
+    } catch (_) {
+      /* no-op */
+    }
     const file = new File([blob], fileName, { type: 'application/pdf' });
     const message =
       `Olá ${orcamento.clienteNome}! 👋\n\n` +

@@ -20,6 +20,7 @@ import {
   PLAN_CODE_PLUS,
 } from '../../../core/plans/subscriptionPlans.js';
 import { fetchMyProfileBilling } from '../../../core/plans/monetization.js';
+import { OnboardingChecklist } from '../../components/onboarding/onboardingChecklist.js';
 import {
   getMonthlyLimitForPlan,
   getMonthlyUsageSnapshot,
@@ -356,6 +357,12 @@ async function executePdfExport(filters) {
       : { fileName: result.fileName },
   );
   PdfQuotaBadge.refresh();
+  // Onboarding: marca passo "PDF gerado" — caminho do relatório (Baixar PDF).
+  try {
+    OnboardingChecklist.markStep('pdf');
+  } catch (_) {
+    /* nunca quebra o flow */
+  }
   return true;
 }
 
@@ -472,6 +479,15 @@ async function executeWhatsAppShare(filters) {
   // Cancelamento do share sheet não conta como erro nem consome quota.
   if (!shareResult.ok && shareResult.cancelled) {
     return false;
+  }
+  // Onboarding: marca passo "PDF gerado" — caminho WhatsApp share também
+  // dispara, mesmo que o user não tenha feito download direto.
+  if (shareResult.ok) {
+    try {
+      OnboardingChecklist.markStep('pdf');
+    } catch (_) {
+      /* no-op */
+    }
   }
 
   if (!shareResult.ok) {
@@ -609,6 +625,12 @@ function bindPmocFormal() {
             profile,
             userId: user?.id || null,
           });
+          // Onboarding: marca passo PDF (caminho PMOC)
+          try {
+            OnboardingChecklist.markStep('pdf');
+          } catch (_) {
+            /* no-op */
+          }
           if (fileName) {
             Toast.success(`PMOC gerado: ${fileName}`);
           }

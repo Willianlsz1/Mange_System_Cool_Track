@@ -953,11 +953,12 @@ export async function renderEquip(filtro = '', options = {}) {
       hideDefaultCta: true,
     });
   } else {
-    // Vista FREE/Plus: toolbar padrão + "+ Novo setor" em modo locked, pra
-    // sinalizar que a feature existe mas pede upgrade pro Pro.
+    // Vista FREE/Plus: toolbar SEM "+ Novo setor". Setores depende de
+    // Clientes (Pro-only) — sem clientes cadastrados, o botão vira ruído.
+    // O upgrade aparece naturalmente no hero/empty state quando o user
+    // já tem 5+ equipamentos sem setor (ver hero.js).
     _setToolbar({
       title: 'Parque de Equipamentos',
-      extraBtn: _lockedSetorBtnHtml(),
     });
   }
 

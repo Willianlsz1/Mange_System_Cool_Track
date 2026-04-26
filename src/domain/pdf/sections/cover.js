@@ -420,7 +420,7 @@ function drawEquipamentosTable(doc, pageWidth, margin, startY, filtered, equipam
     // Mantive a coluna texto "Status" no fim porque cliente formal precisa do
     // label escrito ("Funcionando normalmente"), nao so cor.
     head: [['', 'Tag', 'Equipamento', 'Localização', 'Último', 'Próximo', 'Status']],
-    body: rows.map((r) => ['●', r.tag, r.nome, r.local, r.ultimo, r.proxima, r.statusLabel]),
+    body: rows.map((r) => ['', r.tag, r.nome, r.local, r.ultimo, r.proxima, r.statusLabel]),
     theme: 'plain',
     margin: { left: margin, right: margin },
     styles: {
@@ -455,14 +455,24 @@ function drawEquipamentosTable(doc, pageWidth, margin, startY, filtered, equipam
       if (data.section !== 'body') return;
       const row = rows[data.row.index];
       if (!row) return;
-      // Bullet (col 0) recebe a cor do status
-      if (data.column.index === 0) {
-        data.cell.styles.textColor = row.statusColor;
-      }
-      // Label de status (ultima coluna) tambem na cor
+      // Label de status (ultima coluna) recebe a cor
       if (data.column.index === 6) {
         data.cell.styles.textColor = row.statusColor;
       }
+    },
+    // V4: desenha círculo de status nativamente em vez de char '●'.
+    // A fonte helvetica padrão do jsPDF não tem o glyph U+25CF e renderiza
+    // como '%lt' (artefato visual). doc.circle() é portátil pra qualquer fonte.
+    didDrawCell(data) {
+      if (data.section !== 'body' || data.column.index !== 0) return;
+      const row = rows[data.row.index];
+      if (!row) return;
+      const { x, y, width, height } = data.cell;
+      const cx = x + width / 2;
+      const cy = y + height / 2;
+      const [r, g, b] = row.statusColor;
+      data.doc.setFillColor(r, g, b);
+      data.doc.circle(cx, cy, 1.3, 'F');
     },
   });
 
