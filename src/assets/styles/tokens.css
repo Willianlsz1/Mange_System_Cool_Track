@@ -1,0 +1,158 @@
+/*
+ * Cool Track Pro — Design Tokens (Redesign 2026)
+ * ─────────────────────────────────────────────────────────────────
+ * Paleta minimalista azul-sóbrio inspirada em Linear / Stripe.
+ *
+ * Estratégia: este arquivo SOBRESCREVE as variáveis existentes
+ * (--primary, --bg, --surface, etc.) que já são usadas em
+ * components.css, layout.css e demais — assim a paleta nova é
+ * adotada automaticamente sem reescrever 22 mil linhas de CSS.
+ *
+ * Importar ANTES dos outros estilos (1ª referência em index.html).
+ *
+ * Fonte de verdade: tokens (1).js do redesign React.
+ */
+
+:root {
+  /* ─── Tokens novos (prefixo --ct-) ───────────────────────────── */
+
+  /* Brand */
+  --ct-brand: #3d6fe3;
+  --ct-brand-hover: #5589f0;
+  --ct-brand-text: #7da3ff;
+  --ct-brand-soft: rgba(61, 111, 227, 0.12);
+  --ct-brand-soft-hover: rgba(61, 111, 227, 0.18);
+  --ct-brand-soft-strong: rgba(61, 111, 227, 0.22);
+  --ct-brand-border: rgba(61, 111, 227, 0.22);
+  --ct-brand-border-hover: rgba(61, 111, 227, 0.35);
+
+  /* Surfaces — dark com leve tom azulado */
+  --ct-bg: #0b0d12;
+  --ct-surface: #14171f;
+  --ct-surface-elev: #1b1f2a;
+  --ct-surface-hover: #1f2330;
+  --ct-border: #222632;
+  --ct-border-strong: #2d3344;
+
+  /* Text */
+  --ct-text: #e8eaf0;
+  --ct-text-muted: #9ba1b0;
+  --ct-text-faint: #5a6173;
+  --ct-text-ghost: #3f4554;
+
+  /* Status (dessaturados) */
+  --ct-success: #3fb68b;
+  --ct-success-soft: rgba(63, 182, 139, 0.12);
+  --ct-warn: #d49447;
+  --ct-warn-soft: rgba(212, 148, 71, 0.12);
+  --ct-error: #d9544d;
+  --ct-error-soft: rgba(217, 84, 77, 0.12);
+  --ct-whatsapp: #4fa779;
+  --ct-whatsapp-soft: rgba(79, 167, 121, 0.12);
+  /* Premium tier (Pro) — gold dessaturado */
+  --ct-gold: #c9a663;
+  --ct-gold-soft: rgba(201, 166, 99, 0.12);
+  --ct-gold-soft-hover: rgba(201, 166, 99, 0.18);
+  --ct-gold-border: rgba(201, 166, 99, 0.28);
+  --ct-gold-border-hover: rgba(201, 166, 99, 0.42);
+
+  /* Subtle hovers e backgrounds neutros */
+  --ct-hover-soft: rgba(255, 255, 255, 0.04);
+  --ct-hover-softer: rgba(255, 255, 255, 0.025);
+  --ct-card-tint: rgba(255, 255, 255, 0.015);
+
+  /* ─── Override das variáveis legadas ──────────────────────────
+   * Mantém compatibilidade com components.css (22k linhas) sem
+   * tocar uma única regra. Toda regra que usa var(--primary)
+   * automaticamente recebe o azul novo.
+   */
+
+  /* Brand → primary */
+  --primary: var(--ct-brand);
+  --primary-strong: var(--ct-brand-hover);
+  --primary-soft: var(--ct-brand-soft);
+  --primary-dim: rgba(61, 111, 227, 0.06);
+
+  /* Surfaces */
+  --bg: var(--ct-bg);
+  --bg-soft: var(--ct-surface);
+  --surface: var(--ct-surface);
+  --surface-2: var(--ct-surface-elev);
+  --surface-3: var(--ct-surface-hover);
+  --surface-strong: var(--ct-surface-elev);
+  --card: var(--ct-surface);
+  --card-hover: var(--ct-surface-elev);
+
+  /* Borders */
+  --border: var(--ct-border);
+  --border-2: var(--ct-border-strong);
+  --border-strong: var(--ct-border-strong);
+  --border-focus: rgba(61, 111, 227, 0.45);
+
+  /* Text */
+  --text: var(--ct-text);
+  --text-2: var(--ct-text-muted);
+  --text-3: var(--ct-text-faint);
+  --text-muted: var(--ct-text-muted);
+  --muted: var(--ct-text-faint);
+  --muted-light: var(--ct-text-ghost);
+  --white: var(--ct-text);
+
+  /* Status */
+  --success: var(--ct-success);
+  --success-soft: var(--ct-success-soft);
+  --success-dim: rgba(63, 182, 139, 0.06);
+  --warning: var(--ct-warn);
+  --warning-soft: var(--ct-warn-soft);
+  --warning-dim: rgba(212, 148, 71, 0.06);
+  --danger: var(--ct-error);
+  --danger-soft: var(--ct-error-soft);
+  --danger-dim: rgba(217, 84, 77, 0.06);
+
+  /* Neon → versão sóbria (mata o "neon" cyan/verde/vermelho) */
+  --neon-cyan: var(--ct-brand);
+  --neon-cyan-soft: var(--ct-brand-soft);
+  --neon-cyan-glow: var(--ct-brand-soft-hover);
+  --neon-cyan-faint: rgba(61, 111, 227, 0.06);
+  --neon-green: var(--ct-success);
+  --neon-green-soft: var(--ct-success-soft);
+  --neon-green-glow: rgba(63, 182, 139, 0.18);
+  --neon-red: var(--ct-error);
+  --neon-red-soft: var(--ct-error-soft);
+  --neon-red-glow: rgba(217, 84, 77, 0.18);
+  --neon-amber: var(--ct-warn);
+  --neon-amber-soft: var(--ct-warn-soft);
+
+  /* Surfaces premium → mapeamento direto */
+  --surface-premium: var(--ct-bg);
+  --surface-card: var(--ct-surface);
+  --surface-card-hover: var(--ct-surface-elev);
+  --surface-elevated: var(--ct-surface-elev);
+  --border-premium: var(--ct-border);
+  --border-premium-hover: var(--ct-border-strong);
+
+  /* Secondary (deixar mais sóbrio) */
+  --secondary: var(--ct-text-faint);
+}
+
+/*
+ * Hook pro tema light futuro. Não ativo agora — só documentado.
+ * Quando habilitar: <html data-theme="light">.
+ */
+[data-theme='light'] {
+  --ct-bg: #f7f8fb;
+  --ct-surface: #ffffff;
+  --ct-surface-elev: #f1f3f8;
+  --ct-surface-hover: #e9edf3;
+  --ct-border: #e4e7ee;
+  --ct-border-strong: #c7cdd8;
+  --ct-text: #1a1d26;
+  --ct-text-muted: #5a6173;
+  --ct-text-faint: #8089a0;
+  --ct-text-ghost: #b5bac8;
+  --ct-brand: #2d5dd0;
+  --ct-brand-text: #2d5dd0;
+  --ct-hover-soft: rgba(0, 0, 0, 0.04);
+  --ct-hover-softer: rgba(0, 0, 0, 0.02);
+  --ct-card-tint: rgba(0, 0, 0, 0.015);
+}

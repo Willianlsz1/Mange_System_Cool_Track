@@ -1,0 +1,659 @@
+/*
+ * Cool Track Pro — Redesign Components (2026)
+ * ─────────────────────────────────────────────────────────────────
+ * Ajustes finos pros componentes que tinham cores HARDCODED no CSS
+ * antigo (cyan, amarelo do Plano Pro, etc.) e que precisam migrar
+ * pro novo sistema azul-sóbrio.
+ *
+ * Importado por último em index.html — vence cascata.
+ *
+ * Usa tokens.css como fonte de cores (var(--ct-*)).
+ */
+
+/* ═══════════════════════════════════════════════════════════════
+ * SIDEBAR
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Item ativo: barra lateral azul fina + texto azul, sem fundo cyan */
+.app-sidebar__nav-item.is-active {
+  background: transparent !important;
+  color: var(--ct-brand-text) !important;
+}
+.app-sidebar__nav-item.is-active::before {
+  background: var(--ct-brand) !important;
+  width: 2px !important;
+  border-radius: 0 2px 2px 0 !important;
+}
+.app-sidebar__nav-item.is-active svg {
+  color: var(--ct-brand) !important;
+}
+
+/* Hover sutil em itens não-ativos */
+.app-sidebar__nav-item:not(.is-active):hover {
+  background: var(--ct-hover-soft);
+}
+
+/* Badge de contador (alertas): bolinha pequena azul em vez de pill vermelha */
+.app-sidebar__nav-badge {
+  min-width: 6px !important;
+  width: 6px !important;
+  height: 6px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: var(--ct-brand) !important;
+  font-size: 0 !important;
+  color: transparent !important;
+  text-indent: -9999px;
+}
+/* Esconde badge quando valor é 0 (apenas via atributo data-count="0") */
+.app-sidebar__nav-badge[data-count='0'] {
+  display: none !important;
+}
+
+/* Plan card: discreto. Sobrescreve o amarelo/laranja do PRO atual e
+   o azul gritante do Plus. Mantém um leve tint dependendo do plano. */
+.app-sidebar__plan-card,
+.app-sidebar__plan-card[data-plan='pro'],
+.app-sidebar__plan-card[data-plan='plus'],
+.app-sidebar__plan-card[data-plan='free'] {
+  background: var(--ct-surface) !important;
+  border: 1px solid var(--ct-border) !important;
+}
+.app-sidebar__plan-card-head {
+  color: var(--ct-text-muted) !important;
+}
+.app-sidebar__plan-card[data-plan='pro'] .app-sidebar__plan-card-head,
+.app-sidebar__plan-card[data-plan='plus'] .app-sidebar__plan-card-head {
+  color: var(--ct-brand-text) !important;
+}
+.app-sidebar__plan-card-cta {
+  background: var(--ct-brand-soft) !important;
+  color: var(--ct-brand-text) !important;
+  border: 1px solid var(--ct-brand-border) !important;
+}
+.app-sidebar__plan-card-cta:hover {
+  background: var(--ct-brand-soft-hover) !important;
+  border-color: var(--ct-brand-border-hover) !important;
+}
+
+/* Brand (logo) no topo: cor azul sóbria */
+.app-sidebar__brand-icon {
+  color: var(--ct-brand) !important;
+}
+
+/* Atalho de teclado (ex.: "Atalho: R") - menor e mais sutil */
+.app-sidebar__nav-item--register .app-sidebar__nav-lock,
+.app-sidebar__nav-lock {
+  background: var(--ct-surface-elev) !important;
+  color: var(--ct-text-faint) !important;
+  border: 1px solid var(--ct-border) !important;
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  font-size: 10px !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  font-weight: 500 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ORÇAMENTOS — KPIs
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* KPI card flat: fundo levíssimo, sem borda colorida.
+   Indicador é um dot pequeno colorido no header do card. */
+.orc-kpi {
+  background: var(--ct-card-tint) !important;
+  border: 1px solid var(--ct-border) !important;
+  color: var(--ct-text) !important;
+}
+.orc-kpi__label {
+  color: var(--ct-text-muted) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  font-weight: 500 !important;
+}
+.orc-kpi__value {
+  color: var(--ct-text) !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Adiciona dot colorido antes do label se o KPI tiver data-kind */
+.orc-kpi[data-kind]::before {
+  content: '';
+  display: block;
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ct-text-muted);
+}
+.orc-kpi {
+  position: relative;
+  padding-left: 32px !important;
+}
+.orc-kpi[data-kind='aberto']::before {
+  background: var(--ct-warn);
+}
+.orc-kpi[data-kind='aprovado']::before {
+  background: var(--ct-success);
+}
+.orc-kpi[data-kind='pipeline']::before {
+  background: var(--ct-brand);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ORÇAMENTOS — Status Pills (Enviado, Aprovado, etc.)
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Pill base: tinted ~10% opacidade + dot colorido pequeno antes do texto */
+.orc-status-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 3px 9px !important;
+  border-radius: 5px !important;
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  border: none !important;
+}
+.orc-status-pill::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Variantes (a view atual usa --status="enviado/aprovado/etc" via classe ou atributo) */
+.orc-status-pill--enviado,
+[data-status='enviado'] .orc-status-pill {
+  background: var(--ct-brand-soft) !important;
+  color: var(--ct-brand-text) !important;
+}
+.orc-status-pill--aprovado,
+[data-status='aprovado'] .orc-status-pill {
+  background: var(--ct-success-soft) !important;
+  color: var(--ct-success) !important;
+}
+.orc-status-pill--rascunho,
+[data-status='rascunho'] .orc-status-pill {
+  background: rgba(155, 161, 176, 0.1) !important;
+  color: var(--ct-text-muted) !important;
+}
+.orc-status-pill--recusado,
+[data-status='recusado'] .orc-status-pill {
+  background: var(--ct-error-soft) !important;
+  color: var(--ct-error) !important;
+}
+.orc-status-pill--expirado,
+[data-status='expirado'] .orc-status-pill {
+  background: var(--ct-warn-soft) !important;
+  color: var(--ct-warn) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ORÇAMENTOS — Filter Chips
+ * ═══════════════════════════════════════════════════════════════ */
+
+.orc-chip {
+  background: transparent !important;
+  border: none !important;
+  color: var(--ct-text-muted) !important;
+  border-radius: 999px !important;
+  padding: 6px 12px !important;
+  font-size: 12.5px !important;
+  font-weight: 450 !important;
+  transition: all 150ms ease !important;
+}
+.orc-chip:hover {
+  background: var(--ct-hover-softer) !important;
+  color: var(--ct-text) !important;
+}
+.orc-chip.is-active {
+  background: var(--ct-hover-soft) !important;
+  color: var(--ct-text) !important;
+  font-weight: 500 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ORÇAMENTOS — Cards de orçamento (lista)
+ * ═══════════════════════════════════════════════════════════════ */
+
+.orc-card {
+  background: var(--ct-surface) !important;
+  border: 1px solid var(--ct-border) !important;
+  border-radius: 12px !important;
+}
+.orc-card:hover {
+  border-color: var(--ct-border-strong) !important;
+}
+.orc-card__numero {
+  color: var(--ct-text-faint) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em !important;
+}
+.orc-card__title {
+  color: var(--ct-text) !important;
+  font-weight: 500 !important;
+}
+.orc-card__cliente,
+.orc-card__validity {
+  color: var(--ct-text-muted) !important;
+}
+.orc-card__total {
+  color: var(--ct-text) !important;
+  font-weight: 500 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * BUTTONS — refinamento global
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Primary button: azul sólido com hover mais claro */
+.btn.btn--primary {
+  background: var(--ct-brand) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+.btn.btn--primary:hover:not(:disabled) {
+  background: var(--ct-brand-hover) !important;
+}
+
+/* Outline button: borda sutil, fundo transparente */
+.btn.btn--outline {
+  background: transparent !important;
+  border: 1px solid var(--ct-border) !important;
+  color: var(--ct-text-muted) !important;
+}
+.btn.btn--outline:hover:not(:disabled) {
+  background: var(--ct-hover-softer) !important;
+  color: var(--ct-text) !important;
+  border-color: var(--ct-border-strong) !important;
+}
+
+/* Ghost button: sem borda, só texto */
+.btn.btn--ghost {
+  background: transparent !important;
+  border: none !important;
+  color: var(--ct-text-muted) !important;
+}
+.btn.btn--ghost:hover:not(:disabled) {
+  background: var(--ct-hover-softer) !important;
+  color: var(--ct-text) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * GLOBAL — micro-ajustes que melhoram a sensação geral
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Body: cor de fundo do app já vem das vars, mas reforça */
+body {
+  background: var(--ct-bg) !important;
+}
+
+/* Foco visível e sóbrio (acessibilidade) */
+:focus-visible {
+  outline: 2px solid var(--ct-brand) !important;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Scrollbar discreto (Webkit) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ct-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ct-border-strong);
+  border-radius: 10px;
+  border: 2px solid var(--ct-bg);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ct-text-faint);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * SIDEBAR — espaçamento + badges (patch)
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Mais respiro vertical entre itens da sidebar */
+.app-sidebar .app-sidebar__nav-item {
+  padding: 10px 12px !important;
+  margin-bottom: 2px !important;
+  font-size: 13px !important;
+  font-weight: 450 !important;
+  letter-spacing: -0.005em !important;
+}
+.app-sidebar .app-sidebar__nav-item.is-active {
+  font-weight: 500 !important;
+}
+
+/* Espaço entre os "grupos" (OPERAÇÃO / GESTÃO / SISTEMA) — mais respirado */
+.app-sidebar__nav > * + * {
+  margin-top: 4px !important;
+}
+
+/* Headers de grupo (OPERAÇÃO/GESTÃO/SISTEMA) com mais respiro acima */
+.app-sidebar__nav-group-label,
+.app-sidebar h3,
+.app-sidebar [class*='group-label'],
+.app-sidebar [class*='nav-section'] {
+  margin-top: 18px !important;
+  margin-bottom: 6px !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.12em !important;
+  color: var(--ct-text-faint) !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+}
+
+/* Atalho de teclado ("Atalho: R") — sutil, sem gritar.
+   Especificidade alta pra vencer regras antigas com fundo amarelo. */
+.app-sidebar .app-sidebar__nav-item .app-sidebar__nav-lock,
+.app-sidebar .app-sidebar__nav-item--register .app-sidebar__nav-lock {
+  background: transparent !important;
+  border: 1px solid var(--ct-border-strong) !important;
+  color: var(--ct-text-faint) !important;
+  font-family: 'JetBrains Mono', ui-monospace, monospace !important;
+  font-size: 9.5px !important;
+  font-weight: 500 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  letter-spacing: 0.02em !important;
+  margin-left: auto !important;
+  text-transform: uppercase !important;
+}
+.app-sidebar .app-sidebar__nav-item:hover .app-sidebar__nav-lock {
+  border-color: var(--ct-brand-border-hover) !important;
+  color: var(--ct-brand-text) !important;
+}
+
+.app-sidebar .app-sidebar__nav-lock-label {
+  color: inherit !important;
+  font-size: inherit !important;
+}
+
+/* Badge de alertas: bolinha discreta SOMENTE quando há alertas reais */
+.app-sidebar .app-sidebar__nav-badge {
+  width: 6px !important;
+  min-width: 6px !important;
+  max-width: 6px !important;
+  height: 6px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: var(--ct-brand) !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  margin-left: auto !important;
+  border: none !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+}
+
+/* Esconde o badge quando o conteúdo é "0" — usa o atributo hidden + display none.
+   Como o template já renderiza com hidden=true quando count===0, basta garantir. */
+.app-sidebar .app-sidebar__nav-badge[hidden] {
+  display: none !important;
+}
+
+/* Item "Registrar serviço" (--register): destaque mais sutil, não chapado em azul */
+.app-sidebar .app-sidebar__nav-item--register {
+  background: var(--ct-brand-soft) !important;
+  border: 1px solid var(--ct-brand-border) !important;
+  color: var(--ct-brand-text) !important;
+  margin-bottom: 6px !important;
+}
+.app-sidebar .app-sidebar__nav-item--register:hover {
+  background: var(--ct-brand-soft-hover) !important;
+  border-color: var(--ct-brand-border-hover) !important;
+}
+.app-sidebar .app-sidebar__nav-item--register svg {
+  color: var(--ct-brand) !important;
+}
+
+/* Tag "PRO" (em "Clientes • PRO") — sutil, sem competir com o item */
+.app-sidebar [class*='__brand-tag'],
+.app-sidebar .app-sidebar__nav-item--locked .app-sidebar__nav-lock {
+  background: transparent !important;
+  border: 1px solid var(--ct-border-strong) !important;
+  color: var(--ct-text-faint) !important;
+  font-size: 9.5px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+}
+
+/* Garantir que a barrinha lateral do item ativo aparece SÓ no item ativo
+   (não vaza pra outros). Com width 2px exato. */
+.app-sidebar .app-sidebar__nav-item:not(.is-active)::before {
+  display: none !important;
+  content: none !important;
+}
+.app-sidebar .app-sidebar__nav-item.is-active::before {
+  width: 2px !important;
+  left: -1px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * SIDEBAR — Atalho de teclado removido (preservando lock de paywall)
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* O elemento .app-sidebar__nav-lock é usado em DOIS contextos:
+ * 1. "Atalho: R" no item Registrar serviço (queremos ESCONDER)
+ * 2. "🔒 PRO" no item Clientes locked (queremos MANTER)
+ *
+ * O segundo só existe quando o item tem a classe --locked,
+ * então escondemos o lock APENAS quando NÃO é um item locked. */
+.app-sidebar .app-sidebar__nav-item:not(.app-sidebar__nav-item--locked) .app-sidebar__nav-lock {
+  display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * PLANOS — Opção B (Free cinza, Plus azul-marca, Pro gold dessaturado)
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* SIDEBAR PLAN CARD — sobrescreve o tratamento uniforme anterior. */
+
+/* Free: cinza neutro, sem destaque */
+.app-sidebar .app-sidebar__plan-card[data-plan='free'] {
+  background: var(--ct-surface) !important;
+  border: 1px solid var(--ct-border) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='free'] .app-sidebar__plan-card-head {
+  color: var(--ct-text-muted) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='free'] .app-sidebar__plan-card-cta {
+  background: transparent !important;
+  color: var(--ct-text-muted) !important;
+  border: 1px solid var(--ct-border-strong) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='free'] .app-sidebar__plan-card-cta:hover {
+  background: var(--ct-hover-soft) !important;
+  color: var(--ct-text) !important;
+}
+
+/* Plus: azul-marca, mas em translúcido pra não chapar */
+.app-sidebar .app-sidebar__plan-card[data-plan='plus'] {
+  background: var(--ct-surface) !important;
+  border: 1px solid var(--ct-brand-border) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='plus'] .app-sidebar__plan-card-head {
+  color: var(--ct-brand-text) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='plus'] .app-sidebar__plan-card-cta {
+  background: var(--ct-brand-soft) !important;
+  color: var(--ct-brand-text) !important;
+  border: 1px solid var(--ct-brand-border) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='plus'] .app-sidebar__plan-card-cta:hover {
+  background: var(--ct-brand-soft-hover) !important;
+  border-color: var(--ct-brand-border-hover) !important;
+}
+
+/* Pro: gold dessaturado — único toque warm do app */
+.app-sidebar .app-sidebar__plan-card[data-plan='pro'] {
+  background: var(--ct-surface) !important;
+  border: 1px solid var(--ct-gold-border) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='pro'] .app-sidebar__plan-card-head {
+  color: var(--ct-gold) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='pro'] .app-sidebar__plan-card-cta {
+  background: var(--ct-gold-soft) !important;
+  color: var(--ct-gold) !important;
+  border: 1px solid var(--ct-gold-border) !important;
+}
+.app-sidebar .app-sidebar__plan-card[data-plan='pro'] .app-sidebar__plan-card-cta:hover {
+  background: var(--ct-gold-soft-hover) !important;
+  border-color: var(--ct-gold-border-hover) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * LOGO HEADER — pill de plano (Free / Plus / Pro)
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Base do pill — todos os tiers */
+.app-logo__pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 7px !important;
+  border-radius: 4px !important;
+  font-size: 9.5px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  background: transparent !important;
+}
+
+/* Free: cinza */
+.app-logo__pill[data-tier='free'] {
+  color: var(--ct-text-faint) !important;
+  border: 1px solid var(--ct-border-strong) !important;
+}
+
+/* Plus: azul-marca */
+.app-logo__pill[data-tier='plus'] {
+  color: var(--ct-brand-text) !important;
+  border: 1px solid var(--ct-brand-border) !important;
+}
+
+/* Pro: gold dessaturado */
+.app-logo__pill[data-tier='pro'] {
+  color: var(--ct-gold) !important;
+  border: 1px solid var(--ct-gold-border) !important;
+}
+
+/* Tamanho do ícone do pill (estrela/coroa) */
+.app-logo__pill-icon {
+  width: 10px !important;
+  height: 10px !important;
+  display: block !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * HISTÓRICO — pills de categoria (HOJE, LIMPEZA DE FILTROS, etc.)
+ * ═══════════════════════════════════════════════════════════════ */
+
+/* Base: tinted ~12% opacidade + dot colorido */
+.hist-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 3px 8px !important;
+  border-radius: 5px !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  border: none !important;
+  line-height: 1.2 !important;
+}
+.hist-pill::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Variantes — todas tinted, cores dessaturadas */
+.hist-pill.hist-pill--neutral {
+  background: rgba(155, 161, 176, 0.12) !important;
+  color: var(--ct-text-muted) !important;
+}
+.hist-pill.hist-pill--success {
+  background: var(--ct-success-soft) !important;
+  color: var(--ct-success) !important;
+}
+.hist-pill.hist-pill--warn,
+.hist-pill.hist-pill--warning,
+.hist-pill.hist-pill--amber {
+  background: var(--ct-warn-soft) !important;
+  color: var(--ct-warn) !important;
+}
+.hist-pill.hist-pill--danger,
+.hist-pill.hist-pill--error,
+.hist-pill.hist-pill--red {
+  background: var(--ct-error-soft) !important;
+  color: var(--ct-error) !important;
+}
+.hist-pill.hist-pill--info,
+.hist-pill.hist-pill--blue,
+.hist-pill.hist-pill--primary {
+  background: var(--ct-brand-soft) !important;
+  color: var(--ct-brand-text) !important;
+}
+.hist-pill.hist-pill--purple,
+.hist-pill.hist-pill--violet {
+  background: rgba(155, 122, 226, 0.12) !important;
+  color: #b49dea !important;
+}
+.hist-pill.hist-pill--teal,
+.hist-pill.hist-pill--cyan {
+  background: rgba(86, 168, 170, 0.12) !important;
+  color: #6fbdbf !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * HISTÓRICO — quickfilters (Hoje / Últimos 7 dias / Tipo de serviço)
+ * ═══════════════════════════════════════════════════════════════ */
+
+.hist-quickfilter {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: var(--ct-text-muted) !important;
+  padding: 5px 11px !important;
+  border-radius: 999px !important;
+  font-size: 12.5px !important;
+  font-weight: 450 !important;
+  transition: all 150ms ease !important;
+}
+.hist-quickfilter:hover {
+  background: var(--ct-hover-softer) !important;
+  color: var(--ct-text) !important;
+}
+.hist-quickfilter.is-active {
+  background: var(--ct-hover-soft) !important;
+  color: var(--ct-text) !important;
+  font-weight: 500 !important;
+}
+.hist-quickfilter__dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  margin-right: 3px !important;
+}
