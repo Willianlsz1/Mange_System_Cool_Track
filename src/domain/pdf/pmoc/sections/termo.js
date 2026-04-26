@@ -10,7 +10,7 @@
  * Layout institucional: serif para o body legal, ample whitespace.
  */
 
-import { txt, txtBlock, rule, sectionHeader, numberedSectionHeader } from '../primitives.js';
+import { txt, txtBlock, rule, numberedSectionHeader } from '../primitives.js';
 import { PMOC_COLORS as PC, PMOC_TYPO as PT, PMOC_DECLARACAO_RT } from '../constants.js';
 
 /**
@@ -154,8 +154,6 @@ export function drawPmocTermo(doc, pageWidth, pageHeight, margins, ctx) {
     role: '',
     subtitle: 'Data: ___ / ___ / ______',
   });
-  y = sigYStart + 22;
-
   // Rodape legal
   const footY = pageHeight - margins.bottom - 8;
   rule(doc, left, footY - 4, right, PC.border, 0.2);

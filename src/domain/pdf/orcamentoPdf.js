@@ -423,7 +423,7 @@ export function generateOrcamentoPdf({ orcamento, profile = {}, asBlob = false }
   y = drawTotals(doc, pageWidth, margin, y, orcamento);
   y += 4;
   y = drawCondicoes(doc, pageWidth, margin, y, orcamento);
-  y = drawTermo(doc, pageWidth, pageHeight, margin, y, orcamento);
+  drawTermo(doc, pageWidth, pageHeight, margin, y, orcamento);
 
   drawFooter(doc, pageWidth, pageHeight, margin, orcamento);
 

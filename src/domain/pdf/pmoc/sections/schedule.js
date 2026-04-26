@@ -14,7 +14,7 @@
  */
 
 import autoTable from 'jspdf-autotable';
-import { sectionHeader, numberedSectionHeader, txt } from '../primitives.js';
+import { numberedSectionHeader, txt } from '../primitives.js';
 import { PMOC_COLORS as PC, PMOC_TYPO as PT, SCHEDULE_MARK as M } from '../constants.js';
 
 /**

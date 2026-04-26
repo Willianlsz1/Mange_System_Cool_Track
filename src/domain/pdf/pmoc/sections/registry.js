@@ -7,7 +7,7 @@
  */
 
 import autoTable from 'jspdf-autotable';
-import { sectionHeader, numberedSectionHeader, txt, rule } from '../primitives.js';
+import { sectionHeader, numberedSectionHeader, txt } from '../primitives.js';
 import { PMOC_COLORS as PC, PMOC_TYPO as PT } from '../constants.js';
 
 function pickCapacidade(dadosPlaca) {
