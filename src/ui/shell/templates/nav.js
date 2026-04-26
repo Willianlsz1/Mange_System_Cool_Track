@@ -46,18 +46,26 @@ export function renderShellNav() {
           </span>
           Serviços
         </button>
-        <button class="nav-btn" id="nav-alertas" data-nav="alertas" aria-label="Alertas">
+<!--
+          Botao "Clientes" no bottom nav (mobile). Antes era "Alertas" — mas
+          o sino no top header já cobre alertas, entao reaproveitamos o slot
+          pra Clientes (que antes ficava escondido dentro do menu de ajuda).
+          Pro-gate: não-Pro abre paywall via routes.js (não precisa CSS lock
+          aqui pq mobile-first não tem espaco pra um pill PRO ao lado do label).
+        -->
+        <button class="nav-btn" id="nav-clientes" data-nav="clientes" aria-label="Clientes">
           <span class="nav-btn__icon" aria-hidden="true">
             <svg class="nav-btn__svg nav-btn__svg--outline" width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <svg class="nav-btn__svg nav-btn__svg--filled" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M21.2 16.35c-.84-.94-2.4-2.5-2.4-8.35a6.8 6.8 0 1 0-13.6 0c0 5.85-1.56 7.41-2.4 8.35a1.2 1.2 0 0 0 .9 2H20.3a1.2 1.2 0 0 0 .9-2ZM12 22a2.6 2.6 0 0 0 2.52-2H9.48A2.6 2.6 0 0 0 12 22Z"/>
+              <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2a6 6 0 0 0-6 6v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1a6 6 0 0 0-6-6Zm7-9.87a4 4 0 0 1 0 7.75v-7.75ZM23 21v-2a4 4 0 0 0-3-3.87v9.87Z"/>
             </svg>
           </span>
-          Alertas
-          <span class="nav-btn__badge" id="alerta-badge">0</span>
+          Clientes
         </button>
       </nav>
 `;

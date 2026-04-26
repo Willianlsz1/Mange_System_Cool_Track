@@ -1,6 +1,7 @@
 import { on } from '../../../core/events.js';
 import { CustomConfirm } from '../../../core/modal.js';
 import { ErrorCodes, handleError } from '../../../core/errors.js';
+import { Toast } from '../../../core/toast.js';
 import {
   saveEquip,
   viewEquip,
@@ -15,6 +16,8 @@ import {
   initSetorColorPicker,
   openEditSetor,
   clearSetorEditingState,
+  moveEquipsToSetor,
+  renderEquip,
 } from '../../views/equipamentos.js';
 import { runAsyncAction } from '../../components/actionFeedback.js';
 
@@ -23,6 +26,11 @@ import { runAsyncAction } from '../../components/actionFeedback.js';
  * Design: só um menu pode estar aberto por vez. Clique fora ou Esc fecha.
  */
 let openSetorMenuId = null;
+
+// Flag pra "after-save" do setor: setado no open-setor-modal quando vier
+// data-after-save="select-in-eq-modal" (cadastro inline a partir do dropdown
+// de Setor no modal de equipamento). Consumido pelo save-setor handler.
+let _setorPendingAfterSave = null;
 
 // Seletor estável do kebab — agora ele é um __btn--icon com data-action.
 // Usamos data-action pra evitar acoplar ao nome de classe visual.
@@ -197,7 +205,7 @@ export function bindEquipmentHandlers() {
     try {
       const ok = await CustomConfirm.show(
         'Excluir Equipamento',
-        'Isso remove o equipamento e todo o historico vinculado. Essa acao não pode ser desfeita.',
+        'Isso remove o equipamento e todo o histórico vinculado. Essa ação não pode ser desfeita.',
         {
           confirmLabel: 'Excluir equipamento',
           cancelLabel: 'Manter equipamento',
@@ -208,7 +216,7 @@ export function bindEquipmentHandlers() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.VALIDATION_ERROR,
-        message: 'Não foi possível confirmar a exclusao do equipamento.',
+        message: 'Não foi possível confirmar a exclusão do equipamento.',
         context: { action: 'controller.delete-equip', id: el.dataset.id },
       });
     }
@@ -237,10 +245,81 @@ export function bindEquipmentHandlers() {
     goTo('equipamentos');
   });
 
+  // CTA do empty state quando filtra por cliente sem equipamentos: abre o
+  // modal-add-eq e pre-seleciona o cliente correspondente. data-id contem
+  // o clienteId vindo do empty state da view de equipamentos.
+  // Banner quick-move (no drill-down __sem_setor__ + cliente context):
+  // le os equipIds do data-equip-ids do banner pai e o setor escolhido no
+  // select #quick-move-target-setor, e move todos via moveEquipsToSetor.
+  on('quick-move-equip-batch', async () => {
+    const banner = document.querySelector('.quick-move-banner');
+    const select = document.getElementById('quick-move-target-setor');
+    if (!banner || !select) return;
+    const setorId = select.value;
+    if (!setorId) {
+      Toast.warning('Escolha um setor de destino primeiro.');
+      select.focus();
+      return;
+    }
+    const equipIds = (banner.dataset.equipIds || '').split(',').filter(Boolean);
+    if (!equipIds.length) return;
+
+    // Resolve o clienteId atual do equipCtx pra vincular o setor (caso seja
+    // orphan). Importa lazy pra evitar acoplamento.
+    const { getRouteEquipCtx } = await import('../../views/equipamentos/contextState.js');
+    const clienteId = getRouteEquipCtx()?.clienteId || null;
+
+    const { moved, linkedSetor } = moveEquipsToSetor(equipIds, setorId, clienteId);
+    if (linkedSetor) {
+      Toast.success(
+        `${moved} equipamento${moved !== 1 ? 's' : ''} movido${moved !== 1 ? 's' : ''} pro setor. Setor também foi vinculado ao cliente.`,
+      );
+    } else {
+      Toast.success(
+        `${moved} equipamento${moved !== 1 ? 's' : ''} movido${moved !== 1 ? 's' : ''} pro setor.`,
+      );
+    }
+    renderEquip();
+  });
+
+  on('eq-add-for-cliente', async (el) => {
+    const clienteId = el?.dataset?.id || '';
+    const [{ Modal }, { populateClienteSelect }, { Utils }] = await Promise.all([
+      import('../../../core/modal.js'),
+      import('../../views/clientes.js'),
+      import('../../../core/utils.js'),
+    ]);
+    Modal.open('modal-add-eq');
+    // Aguarda micro-task pra garantir DOM do modal montado, depois popula e
+    // pre-seleciona. populateClienteSelect re-renderiza o select com todos
+    // os clientes; setVal seleciona o desejado.
+    await Promise.resolve();
+    await populateClienteSelect();
+    if (clienteId) Utils.setVal('eq-cliente', clienteId);
+  });
+
   on('save-setor', async (el) => {
     try {
       await runAsyncAction(el, { loadingLabel: 'Salvando...' }, async () => {
-        await saveSetor();
+        const ok = await saveSetor();
+        if (ok && _setorPendingAfterSave === 'select-in-eq-modal') {
+          // Apos salvar, popula o select #eq-setor com o setor recem-criado
+          // selecionado. Pega o ultimo setor (assume que saveSetor o adicionou
+          // no fim do array). Sync labels do eq context picker.
+          const { populateEquipSelects } = await import('../../views/equipamentos.js');
+          await populateEquipSelects();
+          const { getState } = await import('../../../core/state.js');
+          const setores = getState().setores || [];
+          const newSetor = setores[setores.length - 1];
+          const select = document.getElementById('eq-setor');
+          if (select && newSetor?.id) {
+            select.value = String(newSetor.id);
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          const { syncSelectedLabels } = await import('../../components/eqContextPicker.js');
+          syncSelectedLabels?.();
+        }
+        _setorPendingAfterSave = null;
       });
     } catch (error) {
       handleError(error, {
@@ -304,18 +383,77 @@ export function bindEquipmentHandlers() {
     if (ctaText) ctaText.textContent = willExpand ? 'Recolher' : 'Ver todos';
   });
 
-  // Abre modal de criar setor e inicializa color picker
-  on('open-setor-modal', async () => {
+  // Abre modal de criar setor, inicializa color picker, popula o select de
+  // cliente com a lista atual e pre-seleciona o clienteId vindo do contexto
+  // (via data-cliente-id no botao). User pode trocar livremente.
+  on('open-setor-modal', async (el) => {
     try {
       // Garante que não estamos em modo edição quando clicar em "+ Novo setor"
       clearSetorEditingState();
+      // Registra after-save callback se vier do dropdown do equipamento
+      _setorPendingAfterSave =
+        el?.dataset?.afterSave === 'select-in-eq-modal' ? 'select-in-eq-modal' : null;
       const { Modal: M } = await import('../../../core/modal.js');
       M.open('modal-add-setor');
       initSetorColorPicker();
+
+      // Popula o select com todos os clientes atuais. Lazy-loaded pra evitar
+      // bundle bloat e respeitar o caso de uso "já tenho clientes na sessão".
+      const { getState } = await import('../../../core/state.js');
+      const { loadClientes } = await import('../../../core/clientes.js');
+      // Garante que clientes estão hidratados (no-op se já carregou).
+      try {
+        await loadClientes();
+      } catch (_e) {
+        /* offline ok */
+      }
+
+      const clientes = getState().clientes || [];
+      const select = document.getElementById('setor-cliente-select');
+      const hidden = document.getElementById('setor-cliente-id');
+      const helpEl = document.getElementById('setor-cliente-help');
+      if (select) {
+        // Reseta + popula. Mantem a opção "Sem cliente vinculado" no topo.
+        select.innerHTML =
+          '<option value="">— Sem cliente vinculado —</option>' +
+          clientes
+            .map(
+              (c) =>
+                `<option value="${String(c.id).replace(/"/g, '&quot;')}">${String(c.nome || '').replace(/</g, '&lt;')}</option>`,
+            )
+            .join('');
+
+        // Pre-seleciona o cliente vindo do contexto (data-cliente-id)
+        const ctxClienteId = el?.dataset?.clienteId || '';
+        if (ctxClienteId) {
+          select.value = ctxClienteId;
+        }
+        // Sincroniza o hidden input (saveSetor le dele) com o valor inicial
+        if (hidden) hidden.value = select.value || '';
+
+        // Bind change listener (idempotente via dataset flag)
+        if (!select.dataset.boundClienteSync) {
+          select.dataset.boundClienteSync = '1';
+          select.addEventListener('change', () => {
+            if (hidden) hidden.value = select.value || '';
+          });
+        }
+
+        // Hint contextual: se não ha clientes cadastrados, sinaliza pro user
+        if (helpEl) {
+          if (!clientes.length) {
+            helpEl.textContent =
+              'Você ainda não tem clientes cadastrados. Crie um em "Clientes" para vincular ao setor.';
+          } else {
+            helpEl.textContent =
+              'Vincule o setor a um cliente para organizar por carteira (ex: matriz, filial).';
+          }
+        }
+      }
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,
-        message: 'Nao foi possivel abrir o modal de setor.',
+        message: 'Não foi possivel abrir o modal de setor.',
         context: { action: 'controller.open-setor-modal' },
       });
     }

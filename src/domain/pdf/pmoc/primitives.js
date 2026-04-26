@@ -82,6 +82,90 @@ export function sectionHeader(doc, x, y, width, title) {
 }
 
 /**
+ * V2 (abr/2026): cabecalho de secao NUMERADO com badge azul navy.
+ * Visual:  [1] TITULO DA SECAO
+ *          ────────────────────────
+ *
+ * O numero fica num quadradinho navy a esquerda, mais profissional/formal
+ * que o sectionHeader simples. Usado nas 6 secoes principais do PMOC.
+ */
+export function numberedSectionHeader(doc, x, y, width, num, title) {
+  // Badge quadrado navy com numero branco
+  const badgeSize = 6;
+  doc.setFillColor(...PC.navy);
+  doc.rect(x, y - 4.5, badgeSize, badgeSize, 'F');
+  txt(doc, String(num), x + badgeSize / 2, y, {
+    typo: { ...PT.bodyBold, size: 8 },
+    color: PC.white,
+    align: 'center',
+  });
+
+  // Titulo a direita do badge
+  txt(doc, title.toUpperCase(), x + badgeSize + 4, y, {
+    typo: PT.sectionTitle,
+    color: PC.navy,
+  });
+
+  // Linha separadora navy fina
+  rule(doc, x, y + 2.5, x + width, PC.navy, 0.5);
+  return y + 8;
+}
+
+/**
+ * V2: card de resumo executivo (numero/valor grande + label embaixo).
+ * Box com borda fina cinza + barra lateral navy. Usado nos 4 cards
+ * de Resumo Executivo da capa.
+ *   ┌─┬───────────────┐
+ *   │█│ 1             │
+ *   │█│ Equipamento   │
+ *   └─┴───────────────┘
+ */
+export function summaryCard(doc, x, y, w, h, value, label, opts = {}) {
+  // Box branco com borda
+  doc.setDrawColor(...PC.border);
+  doc.setLineWidth(0.3);
+  doc.setFillColor(...PC.white);
+  doc.rect(x, y, w, h, 'FD');
+  // Barra lateral navy
+  doc.setFillColor(...PC.navy);
+  doc.rect(x, y, 1.8, h, 'F');
+  // Valor grande
+  txt(doc, value, x + 5, y + 8, {
+    typo: { font: 'helvetica', size: opts.smallValue ? 11 : 16, style: 'bold' },
+    color: PC.text,
+  });
+  // Label embaixo, em multiplas linhas se precisar
+  const labelLines = Array.isArray(label) ? label : [label];
+  let ly = y + (opts.smallValue ? 13 : 14);
+  labelLines.forEach((line) => {
+    txt(doc, line, x + 5, ly, {
+      typo: { font: 'helvetica', size: 6.5, style: 'normal' },
+      color: PC.text3,
+    });
+    ly += 3;
+  });
+}
+
+/**
+ * V2: badge destacado pra DOCUMENTO Nº + ANO-BASE (capa).
+ * Caixa com fundo navySoft + borda navyBorder, label uppercase + valor bold.
+ */
+export function badgeBox(doc, x, y, w, h, label, value, opts = {}) {
+  doc.setFillColor(...(opts.bg || PC.navySoft));
+  doc.setDrawColor(...(opts.border || PC.navyBorder));
+  doc.setLineWidth(0.4);
+  doc.rect(x, y, w, h, 'FD');
+  txt(doc, label.toUpperCase(), x + 4, y + 5.5, {
+    typo: { font: 'helvetica', size: 6.5, style: 'bold' },
+    color: PC.text3,
+  });
+  txt(doc, value, x + 4, y + 11, {
+    typo: { font: 'helvetica', size: 12, style: 'bold' },
+    color: opts.valueColor || PC.navy,
+  });
+}
+
+/**
  * Banner de cabeçalho de página continuada. Mais discreto que sectionHeader,
  * usado quando a seção quebra de página e a próxima precisa de orientação.
  */
@@ -96,7 +180,6 @@ export function continuationHeader(doc, x, y, width, title) {
 
 /**
  * Garante que há espaço vertical suficiente; senão cria nova página.
- * Retorna a nova Y após eventual page-break (mantém Y se cabe).
  */
 export function ensureSpace(doc, y, needed, pageHeight, marginBottom, marginTop) {
   if (y + needed > pageHeight - marginBottom) {
@@ -107,8 +190,7 @@ export function ensureSpace(doc, y, needed, pageHeight, marginBottom, marginTop)
 }
 
 /**
- * Footer compacto: número da página + número PMOC + ano. Stampado em todas
- * as páginas pelo orquestrador, não pelas sections.
+ * Footer compacto: número da página + número PMOC + ano.
  */
 export function stampPmocFooter(doc, pageWidth, pageHeight, marginLeft, marginRight, info) {
   const pageCount = doc.internal.pages.length - 1;
@@ -116,18 +198,15 @@ export function stampPmocFooter(doc, pageWidth, pageHeight, marginLeft, marginRi
     doc.setPage(p);
     const y = pageHeight - 10;
     rule(doc, marginLeft, y - 3, pageWidth - marginRight, PC.border, 0.2);
-    // Esquerda: PMOC YYYY/NN
     txt(doc, info.docNumber || '', marginLeft, y, {
       typo: PT.micro,
       color: PC.text3,
     });
-    // Centro: ano-base
     txt(doc, `Ano-base ${info.ano}`, pageWidth / 2, y, {
       typo: PT.micro,
       color: PC.text3,
       align: 'center',
     });
-    // Direita: paginação
     txt(doc, `Página ${p} de ${pageCount}`, pageWidth - marginRight, y, {
       typo: PT.micro,
       color: PC.text3,

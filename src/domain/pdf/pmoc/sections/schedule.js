@@ -14,8 +14,45 @@
  */
 
 import autoTable from 'jspdf-autotable';
-import { sectionHeader, txt } from '../primitives.js';
+import { sectionHeader, numberedSectionHeader, txt } from '../primitives.js';
 import { PMOC_COLORS as PC, PMOC_TYPO as PT, SCHEDULE_MARK as M } from '../constants.js';
+
+/**
+ * V2: Legenda visual do cronograma com pílulas coloridas.
+ * Cada item: [letra colorida][label] em sequência horizontal.
+ */
+function drawScheduleLegend(doc, left, y, _innerW) {
+  const items = [
+    { mark: 'R', label: 'Realizada (preventiva)', color: PC.ok },
+    { mark: 'C', label: 'Corretiva', color: PC.text },
+    { mark: 'L', label: 'Limpeza', color: PC.text2 },
+    { mark: 'P', label: 'Planejada', color: PC.warn },
+    { mark: '—', label: 'Sem ação', color: PC.na },
+  ];
+  txt(doc, 'Legenda:', left, y, {
+    typo: { font: 'helvetica', size: 7.5, style: 'bold' },
+    color: PC.text2,
+  });
+  let cursorX = left + 18;
+  items.forEach((it) => {
+    // Bullet/letra colorida em circle
+    doc.setFillColor(...it.color);
+    doc.circle(cursorX + 1.5, y - 1.2, 1.8, 'F');
+    txt(doc, it.mark, cursorX + 1.5, y, {
+      typo: { font: 'helvetica', size: 6.5, style: 'bold' },
+      color: PC.white,
+      align: 'center',
+    });
+    txt(doc, `= ${it.label}`, cursorX + 5, y, {
+      typo: { font: 'helvetica', size: 7.5 },
+      color: PC.text2,
+    });
+    // Calcula largura aproximada do label
+    doc.setFontSize(7.5);
+    cursorX += 7 + doc.getTextWidth(`= ${it.label}`) + 6;
+  });
+  return y + 4;
+}
 
 const MONTH_LABELS = [
   'Jan',
@@ -109,7 +146,8 @@ export function drawPmocSchedule(doc, pageWidth, pageHeight, margins, ctx) {
   const innerW = right - left;
   let y = margins.top;
 
-  y = sectionHeader(doc, left, y, innerW, `Cronograma anual de manutenção (${ano})`);
+  y = numberedSectionHeader(doc, left, y, innerW, 3, `Cronograma anual de manutenção (${ano})`);
+  y += 2;
 
   // Filtra equipamentos do cliente; ordena por TAG/nome.
   const filtered = (
@@ -167,8 +205,8 @@ export function drawPmocSchedule(doc, pageWidth, pageHeight, margins, ctx) {
       valign: 'middle',
     },
     headStyles: {
-      fillColor: PC.bg3,
-      textColor: PC.text,
+      fillColor: PC.navy,
+      textColor: PC.white,
       fontStyle: 'bold',
       fontSize: PT.microBold.size,
     },
@@ -179,7 +217,6 @@ export function drawPmocSchedule(doc, pageWidth, pageHeight, margins, ctx) {
       13: { cellWidth: 16, fontSize: 6 },
     },
     didParseCell: (data) => {
-      // Coloriza cell de mês baseado na mark
       if (data.section !== 'body') return;
       if (data.column.index < 1 || data.column.index > 12) return;
       const value = String(data.cell.raw || '').trim();
@@ -199,14 +236,7 @@ export function drawPmocSchedule(doc, pageWidth, pageHeight, margins, ctx) {
     },
   });
 
-  // ── Legenda ────────────────────────────────────────────────
+  // V2: Legenda visual com circles coloridos
   const legendY = (doc.lastAutoTable?.finalY ?? y) + 6;
-  txt(doc, 'Legenda:', left, legendY, { typo: PT.metaBold, color: PC.text2 });
-  txt(
-    doc,
-    'R = Realizada (preventiva)   ·   C = Corretiva   ·   L = Limpeza   ·   P = Planejada   ·   — = Sem ação',
-    left + 20,
-    legendY,
-    { typo: PT.meta, color: PC.text3 },
-  );
+  drawScheduleLegend(doc, left, legendY, innerW);
 }

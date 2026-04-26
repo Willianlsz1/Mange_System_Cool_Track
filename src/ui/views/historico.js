@@ -1,6 +1,6 @@
 /**
  * CoolTrack Pro - Histórico View v5.2
- * Port do mockup do Claude Design (docs/design/prompts/04-historico-redesign.md).
+ * Port do mockup do Claude Design (docs/design/prompts/04-histórico-redesign.md).
  *
  * Estrutura de render:
  *   - #hist-quickfilters-slot  → pílulas de período + tipo (row scrollable)
@@ -87,9 +87,9 @@ const URL_PARAM_KEYS = {
 };
 
 let _urlFiltersHydrated = false;
-// Filtro "Cliente: X" vindo da view /clientes -> "Ver servicos". Reset toda
-// vez que o user limpa via chip, ou navega pra historico sem clienteId nos
-// query params. Persistente apenas dentro da sessao (nao na URL).
+// Filtro "Cliente: X" vindo da view /clientes -> "Ver serviços". Reset toda
+// vez que o user limpa via chip, ou navega pra histórico sem clienteId nos
+// query params. Persistente apenas dentro da sessão (não na URL).
 let _clienteFilter = { id: null, nome: null };
 
 function readUrlFilters() {
@@ -109,8 +109,8 @@ function readUrlFilters() {
 }
 
 // Aplica filtros vindos da URL nos inputs/selects/sessionStorage. So roda
-// uma vez por sessao do view (flag _urlFiltersHydrated). Apos hydrate,
-// sessionStorage e DOM viram source-of-truth e a URL eh atualizada por write.
+// uma vez por sessão do view (flag _urlFiltersHydrated). Apos hydrate,
+// sessionStorage e DOM viram source-of-truth e a URL é atualizada por write.
 function hydrateFiltersFromUrl() {
   if (_urlFiltersHydrated) return;
   _urlFiltersHydrated = true;
@@ -149,7 +149,7 @@ function writeFiltersToUrl({ busca, setor, equip, periodo, tipo }) {
       window.history.replaceState(null, '', newUrl);
     }
   } catch {
-    /* nao crucial: se replaceState falhar, app segue funcionando sem deep link */
+    /* não crucial: se replaceState falhar, app segue funcionando sem deep link */
   }
 }
 
@@ -170,7 +170,7 @@ const TIPO_OPTIONS = [
   {
     id: 'inspecao',
     label: 'Inspeção',
-    match: ['inspeção', 'inspecao', 'verificação', 'verificacao'],
+    match: ['inspeção', 'inspecao', 'verificação', 'verificação'],
     color: 'teal',
   },
 ];
@@ -366,7 +366,7 @@ export function getRecurringEquips(list, days = 14, threshold = 3) {
  *
  * - vencida: data no passado → vermelho ("Vencida há X dias")
  * - hoje: data é hoje → âmbar ("Vence hoje")
- * - proxima: ≤7 dias no futuro → âmbar ("Vence em X dias")
+ * - próxima: ≤7 dias no futuro → âmbar ("Vence em X dias")
  * - distante: >7 dias no futuro → neutro ("Próxima em X dias")
  */
 export function getProximaStatus(proximaIso) {
@@ -420,7 +420,7 @@ export function getEquipStatusPill(eq) {
 
 // Agrupa lista de registros por categoria de data relativa pra renderizar
 // headers tipo "Hoje", "Ontem", "Esta semana" entre os grupos.
-// Espera lista ja ordenada (mais recente primeiro). Retorna lista de grupos
+// Espera lista já ordenada (mais recente primeiro). Retorna lista de grupos
 // [{ id, label, items }] preservando a ordem dos items dentro do grupo.
 function groupRegistrosByDate(list) {
   const today = Utils.localDateString();
@@ -438,7 +438,7 @@ function groupRegistrosByDate(list) {
     { id: 'hoje', label: 'Hoje', items: [] },
     { id: 'ontem', label: 'Ontem', items: [] },
     { id: 'semana', label: 'Esta semana', items: [] },
-    { id: 'mes', label: 'Este mes', items: [] },
+    { id: 'mês', label: 'Este mês', items: [] },
     { id: 'antigos', label: 'Anteriores', items: [] },
   ];
   const byId = Object.fromEntries(buckets.map((b) => [b.id, b]));
@@ -461,7 +461,7 @@ function groupRegistrosByDate(list) {
 
 function renderDayGroupHeader(group) {
   const count = group.items.length;
-  const countLabel = count === 1 ? '1 servico' : count + ' servicos';
+  const countLabel = count === 1 ? '1 serviço' : count + ' serviços';
   return (
     '<div class="hist-day-group" role="presentation">' +
     '<div class="hist-day-group__label">' +
@@ -853,8 +853,8 @@ function renderTimelineItem(
   const custoTotal = custoPecas + custoMao;
   const isToday = r.data.slice(0, 10) === Utils.localDateString();
   const typePill = getTypePillInfo(r.tipo);
-  // Quando o card esta dentro de um grupo de data (Hoje/Ontem/Esta semana/Este mes),
-  // mostra so a hora pq o header do grupo ja comunica o dia. Em "Anteriores"
+  // Quando o card esta dentro de um grupo de data (Hoje/Ontem/Esta semana/Este mês),
+  // mostra so a hora pq o header do grupo já comunica o dia. Em "Anteriores"
   // (sem contexto de grupo) mostra data + hora completa pra ficar inequivoco.
   const dateInGroupCtx = groupId && groupId !== 'antigos';
   let headerDateLabel;
@@ -1061,8 +1061,8 @@ function syncSetorSelect(currentSetorId) {
 // ──────────────────────────────────────────────────────────────────────
 
 /**
- * Setter publico chamado pela rota historico quando o usuario chega via
- * /clientes -> "Ver servicos" (params.clienteId presente). Limpa quando
+ * Setter público chamado pela rota histórico quando o usuário chega via
+ * /clientes -> "Ver serviços" (params.clienteId presente). Limpa quando
  * chamado sem args.
  */
 export function setHistClienteFilter({ id = null, nome = null } = {}) {
@@ -1074,7 +1074,7 @@ export function clearHistClienteFilter() {
 }
 
 export function renderHist() {
-  // Le filtros da URL na primeira vez que o view eh renderizado por sessao.
+  // Le filtros da URL na primeira vez que o view é renderizado por sessão.
   // Suporta deep linking: ?periodo=7d&setor=xyz aplica filtros direto.
   hydrateFiltersFromUrl();
 
@@ -1098,8 +1098,8 @@ export function renderHist() {
 
   if (filtSetor) list = list.filter((r) => equipIdsNoSetor.has(r.equipId));
   if (filtEq) list = list.filter((r) => r.equipId === filtEq);
-  // Filtro por cliente vindo de /clientes -> "Ver servicos". Restringe aos
-  // registros de equipamentos vinculados ao cliente. Se o cliente nao tem
+  // Filtro por cliente vindo de /clientes -> "Ver serviços". Restringe aos
+  // registros de equipamentos vinculados ao cliente. Se o cliente não tem
   // equipamentos, a lista vai pra zero (visual: empty state contextual).
   if (_clienteFilter.id) {
     const equipIdsForClient = new Set(
@@ -1129,8 +1129,8 @@ export function renderHist() {
       ? `${list.length} registro${list.length !== 1 ? 's' : ''}`
       : 'Sem registros';
   }
-  // Chip de filtro de cliente: aparece quando vier de /clientes -> Ver servicos.
-  // Renderiza no slot de active-chips ja existente.
+  // Chip de filtro de cliente: aparece quando vier de /clientes -> Ver serviços.
+  // Renderiza no slot de active-chips já existente.
   const activeChipsSlot = document.getElementById('hist-active-chips-slot');
   if (activeChipsSlot) {
     if (_clienteFilter.id && _clienteFilter.nome) {
@@ -1144,7 +1144,7 @@ export function renderHist() {
           </span>
         </div>`;
     } else if (activeChipsSlot.querySelector('.hist-active-chips')) {
-      // Nao remove se ja foi populado por outro filtro.
+      // Não remove se já foi populado por outro filtro.
       const ourChip = activeChipsSlot.querySelector('[data-hist-action="clear-cliente-filter"]');
       if (ourChip) activeChipsSlot.innerHTML = '';
     }
@@ -1277,7 +1277,7 @@ function attachFilterHandlers(container) {
 
   // Atualiza badge de contagem de filtros ativos no botao Filtros (mobile).
   // Conta apenas filtros que ficam dentro do sheet: setor, equipamento, tipo.
-  // Quick-filters (periodo) nao contam aqui pq tem chips visiveis no header.
+  // Quick-filters (periodo) não contam aqui pq tem chips visiveis no header.
   const filtersTrigger = document.getElementById('hist-filters-trigger');
   const filtersCount = document.getElementById('hist-filters-count');
   if (filtersTrigger && filtersCount) {
@@ -1296,7 +1296,7 @@ function attachFilterHandlers(container) {
   }
 
   // Toggle do kebab menu nos cards. Click no kebab abre/fecha esse card.
-  // Click fora ou em outro kebab fecha o anterior. ESC fecha tambem.
+  // Click fora ou em outro kebab fecha o anterior. ESC fecha também.
   // Gate dataset.histBound: container (#timeline) persiste entre renders;
   // sem o gate, addEventListener seria chamado N vezes apos N renders e
   // geraria cascata de cliques (=> congelamento ao clicar em algo).
@@ -1370,7 +1370,7 @@ function attachFilterHandlers(container) {
           const equipEl = document.getElementById('hist-equip');
           if (setorEl) {
             setorEl.value = setor;
-            // Re-sincroniza opcoes de equipamento se setor mudou
+            // Re-sincroniza opções de equipamento se setor mudou
             syncSetorSelect(setor);
             if (equipEl) equipEl.value = equip;
           } else if (equipEl) {
@@ -1465,8 +1465,8 @@ function attachFilterHandlers(container) {
         import('./equipamentos.js')
           .then((mod) => mod.viewEquip && mod.viewEquip(equipId))
           .catch(() => {
-            /* falha no import nao deve travar a navegacao — o usuario
-               pelo menos ja esta na aba certa, focado no setor */
+            /* falha no import não deve travar a navegacao — o usuário
+               pelo menos já esta na aba certa, focado no setor */
           });
       });
     }),
@@ -1496,7 +1496,7 @@ function attachFilterHandlers(container) {
     }),
   );
 
-  // Limpa o filtro "Cliente: X" injetado por /clientes -> Ver servicos.
+  // Limpa o filtro "Cliente: X" injetado por /clientes -> Ver serviços.
   // Reseta o state e re-renderiza pra remover o chip.
   each('[data-hist-action="clear-cliente-filter"]', (btn) =>
     btn.addEventListener('click', () => {
@@ -1571,5 +1571,5 @@ export function deleteReg(id) {
   localStorage.removeItem(`cooltrack-sig-${id}`);
   renderHist();
   updateHeader();
-  Toast.warning('Registro removido do historico.');
+  Toast.warning('Registro removido do histórico.');
 }

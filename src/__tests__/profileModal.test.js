@@ -201,12 +201,20 @@ describe('ProfileModal', () => {
       setInputValue('prof-telefone', ' 31988887777 ');
       getOverlay().querySelector('#prof-save').click();
       expect(mocks.profileSave).toHaveBeenCalledTimes(1);
-      expect(mocks.profileSave).toHaveBeenCalledWith({
-        nome: 'Novo Nome',
-        crea: 'CREA-X',
-        empresa: 'Empresa X',
-        telefone: '31988887777',
-      });
+      // V2 (#115): salva todos os campos coletados (4 originais + PMOC fields).
+      // Usa objectContaining pra ser resiliente a novos campos adicionados
+      // sem precisar atualizar o teste a cada migration de profile.
+      // V2 (#126): telefone agora é mascarado em tempo real via
+      // bindPhoneMaskInput — o valor no setInputValue dispara o evento
+      // 'input' que aplica a máscara antes do save.
+      expect(mocks.profileSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          nome: 'Novo Nome',
+          crea: 'CREA-X',
+          empresa: 'Empresa X',
+          telefone: '(31) 98888-7777',
+        }),
+      );
       expect(mocks.toastSuccess).toHaveBeenCalledTimes(1);
       // Fechou direto, sem passar pelo dirty-check (CustomConfirm).
       expect(mocks.customConfirmShow).not.toHaveBeenCalled();

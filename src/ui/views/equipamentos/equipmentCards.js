@@ -204,6 +204,23 @@ export function _idleClusterHtml(idleCards, count) {
  * travessão visível quando TAG estava vazia — ficava ruído. Agora, se TAG
  * é falsy, ela é simplesmente OMITIDA, e a linha fica só com o que tem.
  */
+/**
+ * Retorna o HTML do pill de componente (Evap/Cond/Unidade unica) pra mostrar
+ * ao lado do tipo no card. Vazio se equipamento nao tem componente (i.e.
+ * tipos que nao sao climatizacao).
+ */
+function _equipComponentePillHtml(componente) {
+  if (!componente) return '';
+  const map = {
+    evaporadora: { label: 'Evap.', tint: 'cyan' },
+    condensadora: { label: 'Cond.', tint: 'orange' },
+    unidade_unica: { label: 'Unidade unica', tint: 'neutral' },
+  };
+  const meta = map[componente];
+  if (!meta) return '';
+  return ` <span class="equip-card__componente-pill equip-card__componente-pill--${meta.tint}">${meta.label}</span>`;
+}
+
 function _equipCardMetaLine(eq, prioridadeLabel) {
   const parts = [];
   if (eq.tag && String(eq.tag).trim() !== '') {
@@ -211,7 +228,7 @@ function _equipCardMetaLine(eq, prioridadeLabel) {
   }
   parts.push(Utils.escapeHtml(eq.fluido || eq.tipo));
   parts.push(Utils.escapeHtml(prioridadeLabel));
-  return parts.join(' · ');
+  return parts.join(' · ') + _equipComponentePillHtml(eq.componente);
 }
 
 function equipCardIconBlock(eq) {
@@ -445,7 +462,7 @@ export function equipCardHtml(eq, { showLocal: _showLocal = true, evalCtx = null
       ${equipCardIconBlock(eq)}
       <div class="equip-card__meta">
         <div class="equip-card__name ${scls === 'danger' ? 'equip-card__name--danger' : ''}">${Utils.escapeHtml(eq.nome)}</div>
-        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · ${Utils.escapeHtml(prioridadeLabel)}</div>
+        <div class="equip-card__tag">${Utils.escapeHtml(eq.tag || '—')} · ${Utils.escapeHtml(eq.fluido || eq.tipo)} · ${Utils.escapeHtml(prioridadeLabel)}${_equipComponentePillHtml(eq.componente)}</div>
         <div class="equip-card__subtitle">${Utils.escapeHtml(eq.local || 'Local não informado')}</div>
       </div>
       ${headerRightHtml}

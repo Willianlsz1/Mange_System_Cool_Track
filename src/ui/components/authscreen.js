@@ -102,10 +102,26 @@ function passwordInputHTML(id, placeholder, autocomplete) {
     </div>`;
 }
 
-// Brand mark — alinhado com .lp-brand__mark da landing (arco cyan em squircle)
-const ICON_LOGO = `<span style="display:inline-grid;place-items:center;width:32px;height:32px;border:1px solid rgba(0,200,232,0.42);border-radius:8px;background:#071722" aria-hidden="true"><span style="display:block;width:14px;height:14px;border:2px solid #00c8e8;border-top-color:transparent;border-radius:999px"></span></span>`;
-
-const ICON_LOGO_SM = `<span style="display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid rgba(0,200,232,0.42);border-radius:6px;background:#071722" aria-hidden="true"><span style="display:block;width:10px;height:10px;border:1.5px solid #00c8e8;border-top-color:transparent;border-radius:999px"></span></span>`;
+// Brand mark V2 — usa o snowflake real do app (mesmo SVG do header).
+// Fundo amarelo da marca + stroke navy preserva identidade visual em vez do
+// arco generico anterior. Importante: mesma forma que o icone do PWA/favicon.
+function brandIconHTML(size = 32) {
+  const inner = Math.round(size * 0.62);
+  const radius = Math.round(size / 4);
+  return `
+    <span style="display:inline-grid;place-items:center;width:${size}px;height:${size}px;border-radius:${radius}px;background:#e8b94a;flex-shrink:0" aria-hidden="true">
+      <svg width="${inner}" height="${inner}" viewBox="0 0 24 24" fill="none">
+        <g stroke="#02131f" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <g><line x1="12" y1="3" x2="12" y2="21"/><polyline points="9.5,5 12,3 14.5,5"/><polyline points="9.5,19 12,21 14.5,19"/></g>
+          <g transform="rotate(60 12 12)"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="9.5,5 12,3 14.5,5"/><polyline points="9.5,19 12,21 14.5,19"/></g>
+          <g transform="rotate(120 12 12)"><line x1="12" y1="3" x2="12" y2="21"/><polyline points="9.5,5 12,3 14.5,5"/><polyline points="9.5,19 12,21 14.5,19"/></g>
+        </g>
+        <circle cx="12" cy="12" r="1.4" fill="#02131f"/>
+      </svg>
+    </span>`;
+}
+const ICON_LOGO = brandIconHTML(32);
+const ICON_LOGO_SM = brandIconHTML(22);
 
 const ICON_SNOWFLAKE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
   <line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/>
@@ -417,7 +433,244 @@ export const AuthScreen = {
           margin-top: 14px; line-height: 1.5;
         }
 
+        /* ── V3: Audience pill no topo do brand ── */
+        .auth-brand__audience {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 6px 12px;
+          background: rgba(0,200,232,0.08);
+          border: 1px solid rgba(0,200,232,0.22);
+          border-radius: 999px;
+          font-size: 11px; font-weight: 700; color: #00c8e8;
+          letter-spacing: 0.06em; text-transform: uppercase;
+          margin-top: 32px;
+          align-self: flex-start;
+          position: relative; z-index: 1;
+        }
+
+        /* ── V3: Trust line abaixo do botao Entrar (3 micro-promessas) ── */
+        .auth-trust-line {
+          display: flex; align-items: center; justify-content: center;
+          gap: 14px; flex-wrap: wrap;
+          margin-top: 16px;
+          font-size: 11.5px; color: #8aaac8;
+        }
+        .auth-trust-line__item {
+          display: inline-flex; align-items: center; gap: 5px;
+        }
+        .auth-trust-line__item svg {
+          color: #00c8e8;
+        }
+
+        /* ── V3: Trust card — "Acesso seguro e criptografado" ── */
+        .auth-trust-card {
+          display: flex; align-items: center; gap: 12px;
+          margin-top: 18px;
+          padding: 12px 14px;
+          background: rgba(0,200,232,0.04);
+          border: 1px solid rgba(0,200,232,0.15);
+          border-radius: 10px;
+        }
+        .auth-trust-card__icon {
+          width: 32px; height: 32px; border-radius: 8px;
+          background: rgba(0,200,232,0.12);
+          display: flex; align-items: center; justify-content: center;
+          color: #00c8e8; flex-shrink: 0;
+        }
+        .auth-trust-card__title {
+          font-size: 13px; font-weight: 700; color: #e8f2fa; line-height: 1.3;
+        }
+        .auth-trust-card__sub {
+          font-size: 11.5px; color: #8aaac8; margin-top: 2px;
+        }
+
+        /* ── V3: Social proof flutuante no rodape do form ── */
+        .auth-social-proof {
+          display: flex; align-items: center; gap: 12px;
+          margin-top: 24px; padding: 12px 14px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 12px;
+        }
+        .auth-social-proof__avatars {
+          display: flex; flex-shrink: 0;
+        }
+        .auth-social-proof__avatar {
+          width: 28px; height: 28px; border-radius: 50%;
+          border: 2px solid #07111f;
+          display: flex; align-items: center; justify-content: center;
+          color: #fff; font-size: 11px; font-weight: 700;
+          margin-left: -8px;
+        }
+        .auth-social-proof__avatar:first-child { margin-left: 0; }
+        .auth-social-proof__text {
+          flex: 1; min-width: 0;
+        }
+        .auth-social-proof__num {
+          font-size: 13px; font-weight: 700; color: #e8f2fa; line-height: 1.2;
+        }
+        .auth-social-proof__label {
+          font-size: 11px; color: #8aaac8; line-height: 1.3;
+        }
+
+        /* ── V3: Phone mockup (3a coluna em FullHD) ── */
+        .auth-phone-aside {
+          flex: 0 0 320px;
+          display: none;
+          flex-direction: column; align-items: center; justify-content: center;
+          padding: 40px 20px;
+          background: linear-gradient(160deg, #07111f 0%, #060d18 100%);
+          border-left: 1px solid rgba(255,255,255,0.04);
+          position: relative; overflow: hidden;
+          box-sizing: border-box;
+        }
+        .auth-phone-aside::before {
+          content: '';
+          position: absolute; top: 20%; right: -100px;
+          width: 280px; height: 280px; border-radius: 50%;
+          background: radial-gradient(circle, rgba(0,200,232,0.08) 0%, transparent 70%);
+          pointer-events: none;
+        }
+        .auth-phone {
+          width: 280px;
+          background: #06101e;
+          border: 8px solid #1a2333;
+          border-radius: 36px;
+          padding: 14px 12px;
+          box-shadow: 0 24px 56px rgba(0,0,0,0.55), 0 0 0 1px rgba(0,200,232,0.08);
+          position: relative; z-index: 1;
+        }
+        /* Notch superior do "celular" */
+        .auth-phone::before {
+          content: '';
+          position: absolute; top: -4px; left: 50%;
+          transform: translateX(-50%);
+          width: 80px; height: 18px;
+          background: #1a2333;
+          border-radius: 0 0 14px 14px;
+        }
+        .auth-phone__topbar {
+          display: flex; align-items: center; gap: 8px;
+          padding: 6px 4px 12px;
+        }
+        .auth-phone__topbar-brand {
+          display: inline-flex; align-items: center; gap: 6px;
+          font-size: 11px; font-weight: 700; color: #e8f2fa;
+        }
+        .auth-phone__topbar-pro {
+          font-size: 8px; font-weight: 700; color: #e8b94a;
+          background: rgba(232,185,74,0.15);
+          padding: 2px 5px; border-radius: 3px;
+        }
+        .auth-phone__topbar-spacer { flex: 1; }
+        .auth-phone__sync-pill {
+          display: inline-flex; align-items: center; gap: 4px;
+          font-size: 8.5px; color: #5fe6b3;
+          background: rgba(95,230,179,0.1);
+          padding: 3px 6px; border-radius: 999px;
+        }
+        .auth-phone__sync-dot {
+          width: 5px; height: 5px; border-radius: 50%;
+          background: #5fe6b3;
+          box-shadow: 0 0 6px rgba(95,230,179,0.6);
+        }
+        .auth-phone__hero {
+          padding: 10px 8px;
+          background: linear-gradient(135deg, rgba(232,185,74,0.08), rgba(0,200,232,0.04));
+          border: 1px solid rgba(232,185,74,0.18);
+          border-radius: 12px;
+          margin-bottom: 10px;
+        }
+        .auth-phone__greeting {
+          font-size: 12px; font-weight: 700; color: #e8f2fa;
+          margin-bottom: 2px;
+        }
+        .auth-phone__sub {
+          font-size: 9px; color: #8aaac8;
+          margin-bottom: 8px;
+        }
+        .auth-phone__status-pill {
+          display: inline-flex; align-items: center; gap: 4px;
+          padding: 3px 7px;
+          background: rgba(95,230,179,0.12);
+          border: 1px solid rgba(95,230,179,0.3);
+          border-radius: 999px;
+          font-size: 8.5px; font-weight: 700; color: #34d399;
+          letter-spacing: 0.06em;
+        }
+        .auth-phone__kpis {
+          display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+          margin-bottom: 10px;
+        }
+        .auth-phone__kpi {
+          padding: 8px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.05);
+          border-radius: 8px;
+        }
+        .auth-phone__kpi-label {
+          font-size: 7.5px; font-weight: 700; color: #6a8ba8;
+          letter-spacing: 0.06em; text-transform: uppercase;
+        }
+        .auth-phone__kpi-value {
+          font-size: 16px; font-weight: 700; color: #e8f2fa;
+          margin-top: 2px; line-height: 1;
+        }
+        .auth-phone__kpi-sub {
+          font-size: 8px; color: #5fe6b3; margin-top: 3px;
+        }
+        .auth-phone__card {
+          padding: 8px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.05);
+          border-radius: 8px;
+          margin-bottom: 8px;
+        }
+        .auth-phone__card-label {
+          font-size: 7.5px; font-weight: 700; color: #6a8ba8;
+          letter-spacing: 0.06em; text-transform: uppercase;
+          margin-bottom: 3px;
+        }
+        .auth-phone__card-title {
+          font-size: 11px; font-weight: 700; color: #e8f2fa;
+          margin-bottom: 1px;
+        }
+        .auth-phone__card-meta {
+          font-size: 9px; color: #8aaac8;
+        }
+        .auth-phone__bottom-nav {
+          display: flex; justify-content: space-around;
+          padding: 8px 4px 4px;
+          border-top: 1px solid rgba(255,255,255,0.05);
+          margin: 6px -4px 0;
+        }
+        .auth-phone__nav-item {
+          display: flex; flex-direction: column; align-items: center; gap: 2px;
+          font-size: 7.5px; color: #6a8ba8;
+        }
+        .auth-phone__nav-item.is-active {
+          color: #00c8e8;
+        }
+        .auth-phone__caption {
+          margin-top: 18px;
+          text-align: center;
+          font-size: 11px; color: #8aaac8;
+          line-height: 1.4;
+          max-width: 240px;
+          position: relative; z-index: 1;
+        }
+        .auth-phone__caption strong {
+          color: #00c8e8;
+        }
+
         /* ── Responsive ── */
+        @media (max-width: 1280px) {
+          .auth-phone-aside { display: none !important; }
+        }
+        @media (min-width: 1281px) {
+          .auth-phone-aside { display: flex; }
+          .auth-brand { flex: 0 0 38%; padding: 48px 44px; }
+          .auth-form-panel { flex: 1 1 auto; }
+        }
         @media (max-width: 768px) {
           .auth-brand { display: none; }
           .auth-form-panel {
@@ -425,6 +678,8 @@ export const AuthScreen = {
             align-items: flex-start;
           }
           .auth-card-header { display: block; }
+          .auth-social-proof { padding: 10px 12px; }
+          .auth-social-proof__num { font-size: 12px; }
         }
       </style>
 
@@ -435,6 +690,15 @@ export const AuthScreen = {
           <span class="auth-brand__logo-text">CoolTrack</span>
           <span class="auth-brand__logo-badge">PRO</span>
         </div>
+
+        <!-- V3: pill audiencia — qualifica em 1s "isso é pra mim" -->
+        <span class="auth-brand__audience">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+          Para técnicos de ar-condicionado
+        </span>
 
         <h1 class="auth-brand__headline">
           Do serviço ao PDF, direto do celular.
@@ -474,7 +738,7 @@ export const AuthScreen = {
             <div class="auth-brand__stat-label">Relatório pronto</div>
           </div>
           <div>
-            <div class="auth-brand__stat-num">∞</div>
+            <div class="auth-brand__stat-num">&infin;</div>
             <div class="auth-brand__stat-label">Equipamentos no Pro</div>
           </div>
           <div>
@@ -516,8 +780,60 @@ export const AuthScreen = {
             <label class="auth-label" for="signin-password">Senha</label>
             ${passwordInputHTML('signin-password', 'senha', 'current-password')}
             <button class="auth-btn" id="btn-signin" type="button">Entrar no app ${ICON_ARROW_RIGHT}</button>
+
+            <div class="auth-trust-line">
+              <span class="auth-trust-line__item">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="2" y="6" width="20" height="12" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+                Sem cartão
+              </span>
+              <span class="auth-trust-line__item">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/>
+                  <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>
+                </svg>
+                Funciona offline
+              </span>
+              <span class="auth-trust-line__item">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>
+                </svg>
+                Acesso imediato
+              </span>
+            </div>
+
+            <div class="auth-trust-card">
+              <div class="auth-trust-card__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+              </div>
+              <div>
+                <div class="auth-trust-card__title">Acesso seguro e criptografado</div>
+                <div class="auth-trust-card__sub">Seus dados sempre protegidos.</div>
+              </div>
+            </div>
+
             <div class="auth-actions-center">
               <button class="auth-btn-forgot" id="btn-forgot" type="button">Esqueci minha senha</button>
+            </div>
+
+            <div class="auth-social-proof">
+              <div class="auth-social-proof__avatars" aria-hidden="true">
+                <span class="auth-social-proof__avatar" style="background:linear-gradient(135deg,#00c8e8,#0096b4)">CR</span>
+                <span class="auth-social-proof__avatar" style="background:linear-gradient(135deg,#e8b94a,#c89a30)">FR</span>
+                <span class="auth-social-proof__avatar" style="background:linear-gradient(135deg,#5fe6b3,#1fa370)">LO</span>
+              </div>
+              <div class="auth-social-proof__text">
+                <div class="auth-social-proof__num">+500 relatórios já gerados</div>
+                <div class="auth-social-proof__label">Beta em produção · técnicos ativos no Brasil</div>
+              </div>
             </div>
           </div>
 
@@ -551,141 +867,187 @@ export const AuthScreen = {
 
         </div>
       </main>
+
+      <!-- V3: Phone mockup aside (>= 1281px). Mostra dashboard real do app. -->
+      <aside class="auth-phone-aside" aria-hidden="true">
+        <div class="auth-phone">
+          <div class="auth-phone__topbar">
+            <span class="auth-phone__topbar-brand">
+              ${brandIconHTML(16)} CoolTrack
+            </span>
+            <span class="auth-phone__topbar-pro">PRO</span>
+            <span class="auth-phone__topbar-spacer"></span>
+            <span class="auth-phone__sync-pill">
+              <span class="auth-phone__sync-dot"></span> Sincronizado
+            </span>
+          </div>
+
+          <div class="auth-phone__hero">
+            <div class="auth-phone__greeting">Olá, Carlos 👋</div>
+            <div class="auth-phone__sub">Seu parque está saudável.</div>
+            <span class="auth-phone__status-pill">● TUDO OPERANDO</span>
+          </div>
+
+          <div class="auth-phone__kpis">
+            <div class="auth-phone__kpi">
+              <div class="auth-phone__kpi-label">Equipamentos</div>
+              <div class="auth-phone__kpi-value">12/12</div>
+              <div class="auth-phone__kpi-sub">estável</div>
+            </div>
+            <div class="auth-phone__kpi">
+              <div class="auth-phone__kpi-label">Eficiência</div>
+              <div class="auth-phone__kpi-value">96%</div>
+              <div class="auth-phone__kpi-sub">excelente</div>
+            </div>
+          </div>
+
+          <div class="auth-phone__card">
+            <div class="auth-phone__card-label">Próximo serviço</div>
+            <div class="auth-phone__card-title">Limpeza preventiva</div>
+            <div class="auth-phone__card-meta">Clínica Norte · Sala 02 · 28/04</div>
+          </div>
+
+          <div class="auth-phone__card">
+            <div class="auth-phone__card-label">Último serviço</div>
+            <div class="auth-phone__card-title">Limpeza de filtros</div>
+            <div class="auth-phone__card-meta">há 2 dias · 12:49</div>
+          </div>
+
+          <div class="auth-phone__bottom-nav">
+            <span class="auth-phone__nav-item is-active">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              </svg>
+              Painel
+            </span>
+            <span class="auth-phone__nav-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.77 3.77z"/>
+              </svg>
+              Equip.
+            </span>
+            <span class="auth-phone__nav-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Serviços
+            </span>
+            <span class="auth-phone__nav-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              </svg>
+              Clientes
+            </span>
+          </div>
+        </div>
+
+        <p class="auth-phone__caption">
+          Veja seu parque inteiro <strong>em tempo real</strong>, registre e envie em segundos.
+        </p>
+      </aside>
     `;
 
     document.body.appendChild(overlay);
-
-    // Ativa todos os botões de olho
     bindPasswordToggles(overlay);
-
-    // Strength meter no signup
     bindStrengthMeter(overlay);
 
+    // Tabs
     const tabSignin = overlay.querySelector('#tab-signin');
     const tabSignup = overlay.querySelector('#tab-signup');
     const formSignin = overlay.querySelector('#auth-form-signin');
     const formSignup = overlay.querySelector('#auth-form-signup');
-
-    const setTab = (tab) => {
-      const showSignin = tab === 'signin';
-      tabSignin.classList.toggle('active', showSignin);
-      tabSignup.classList.toggle('active', !showSignin);
-      tabSignin.setAttribute('aria-selected', String(showSignin));
-      tabSignup.setAttribute('aria-selected', String(!showSignin));
-      formSignin.hidden = !showSignin;
-      formSignup.hidden = showSignin;
-      focusFirstField(overlay, showSignin ? '#signin-email' : '#signup-nome');
-
-      // Emite signup_started quando usuário muda pra aba de cadastro.
-      // É o gate pra medir drop-off entre "abriu tela" e "completou signup".
-      if (!showSignin) {
-        trackEvent('signup_started', { source: intentOptions.source || 'auth-screen' });
-      }
+    const switchTab = (which) => {
+      const isSignin = which === 'signin';
+      tabSignin.classList.toggle('active', isSignin);
+      tabSignup.classList.toggle('active', !isSignin);
+      tabSignin.setAttribute('aria-selected', String(isSignin));
+      tabSignup.setAttribute('aria-selected', String(!isSignin));
+      formSignin.hidden = !isSignin;
+      formSignup.hidden = isSignin;
+      focusFirstField(isSignin ? formSignin : formSignup, '.auth-input');
     };
+    tabSignin.addEventListener('click', () => switchTab('signin'));
+    tabSignup.addEventListener('click', () => switchTab('signup'));
+    if (initialTab === 'signup') switchTab('signup');
 
-    const triggerGoogleAuth = async (button) => {
-      trackEvent('auth_google_clicked', { source: intentOptions.source });
-
-      await runAsyncAction(button, { loadingLabel: 'Redirecionando...' }, async () => {
-        const result = await Auth.signInWithGoogle({ source: intentOptions.source });
-
-        if (!result?.ok) {
-          if (result?.message) Toast.error(result.message);
-          return;
-        }
-
-        persistPostAuthRedirect(postAuthRedirect);
-      });
-    };
-
-    tabSignin?.addEventListener('click', () => setTab('signin'));
-    tabSignup?.addEventListener('click', () => setTab('signup'));
-
-    overlay.querySelector('#btn-google-signin')?.addEventListener('click', async () => {
-      const button = overlay.querySelector('#btn-google-signin');
-      if (!button) return;
-      await triggerGoogleAuth(button);
-    });
-
-    overlay.querySelector('#btn-google-signup')?.addEventListener('click', async () => {
-      const button = overlay.querySelector('#btn-google-signup');
-      if (!button) return;
-      await triggerGoogleAuth(button);
-    });
-
-    overlay.querySelector('#btn-signin')?.addEventListener('click', async () => {
-      const btn = overlay.querySelector('#btn-signin');
-      if (!btn) return;
-      const emailEl = overlay.querySelector('#signin-email');
-      const passwordEl = overlay.querySelector('#signin-password');
-      const email = emailEl.value.trim();
-      const password = passwordEl.value;
-
-      if (!email || !password) {
-        Toast.warning('Informe email e senha para entrar.');
-        (!email ? emailEl : passwordEl).focus();
-        return;
-      }
-      if (!Auth.isValidEmail(email)) {
-        Toast.warning('Digite um email válido.');
-        emailEl.focus();
-        return;
-      }
-
-      await runAsyncAction(btn, { loadingLabel: 'Entrando...' }, async () => {
-        const user = await Auth.signIn(email, password);
-        if (!user) return;
-        handleAuthSuccess(overlay, postAuthRedirect);
-      });
-    });
-
-    overlay.querySelector('#btn-forgot')?.addEventListener('click', () => {
+    // Sign In
+    overlay.querySelector('#btn-signin').addEventListener('click', async (e) => {
       const email = overlay.querySelector('#signin-email').value.trim();
-      PasswordRecoveryModal.openPasswordResetEmailModal(email);
-    });
-
-    overlay.querySelector('#btn-signup')?.addEventListener('click', async () => {
-      const btn = overlay.querySelector('#btn-signup');
-      if (!btn) return;
-      const nomeEl = overlay.querySelector('#signup-nome');
-      const emailEl = overlay.querySelector('#signup-email');
-      const passwordEl = overlay.querySelector('#signup-password');
-      const confirmEl = overlay.querySelector('#signup-confirm');
-      const nome = nomeEl.value.trim();
-      const email = emailEl.value.trim();
-      const password = passwordEl.value;
-      const confirm = confirmEl.value;
-
-      if (!nome || !email || !password || !confirm) {
-        Toast.warning('Preencha todos os campos para criar a conta.');
-        // Foca no primeiro campo vazio para orientar o usuário
-        const firstEmpty = !nome ? nomeEl : !email ? emailEl : !password ? passwordEl : confirmEl;
-        firstEmpty.focus();
+      const password = overlay.querySelector('#signin-password').value;
+      if (!email || !password) {
+        Toast.warning('Preencha email e senha pra entrar.');
         return;
       }
-      if (!Auth.isValidEmail(email)) {
-        Toast.warning('Digite um email válido.');
-        emailEl.focus();
+      await runAsyncAction(e.currentTarget, { loadingLabel: 'Entrando...' }, async () => {
+        try {
+          await Auth.signIn(email, password);
+          trackEvent('auth_signin_success', { method: 'email' });
+          handleAuthSuccess(overlay, postAuthRedirect);
+        } catch (err) {
+          trackEvent('auth_signin_failed', { method: 'email' });
+          Toast.error(err?.message || 'Não foi possível entrar. Verifique email e senha.');
+        }
+      });
+    });
+
+    // Sign Up
+    overlay.querySelector('#btn-signup').addEventListener('click', async (e) => {
+      const nome = overlay.querySelector('#signup-nome').value.trim();
+      const email = overlay.querySelector('#signup-email').value.trim();
+      const password = overlay.querySelector('#signup-password').value;
+      const confirm = overlay.querySelector('#signup-confirm').value;
+      if (!nome || !email || !password) {
+        Toast.warning('Preencha nome, email e senha.');
         return;
       }
       if (password.length < 8) {
-        Toast.error('Senha deve ter no mínimo 8 caracteres.');
-        passwordEl.focus();
+        Toast.warning('A senha precisa ter pelo menos 8 caracteres.');
         return;
       }
       if (password !== confirm) {
-        Toast.error('As senhas não conferem. Verifique e tente novamente.');
-        confirmEl.focus();
+        Toast.warning('As senhas não conferem.');
         return;
       }
-
-      await runAsyncAction(btn, { loadingLabel: 'Criando conta...' }, async () => {
-        const user = await Auth.signUp(email, password, nome);
-        if (!user) return;
-        handleAuthSuccess(overlay, postAuthRedirect);
+      await runAsyncAction(e.currentTarget, { loadingLabel: 'Criando...' }, async () => {
+        try {
+          await Auth.signUp(email, password, { nome });
+          trackEvent('auth_signup_success', { method: 'email' });
+          handleAuthSuccess(overlay, postAuthRedirect);
+        } catch (err) {
+          trackEvent('auth_signup_failed', { method: 'email' });
+          Toast.error(err?.message || 'Não foi possível criar a conta.');
+        }
       });
     });
 
-    setTab(initialTab);
+    // Google
+    const googleHandler = (mode) => async (e) => {
+      await runAsyncAction(e.currentTarget, { loadingLabel: 'Abrindo Google...' }, async () => {
+        try {
+          await Auth.signInWithGoogle();
+          trackEvent(
+            mode === 'signup' ? 'auth_signup_google_started' : 'auth_signin_google_started',
+            {
+              method: 'google',
+            },
+          );
+        } catch (err) {
+          Toast.error(err?.message || 'Não foi possível abrir o Google.');
+        }
+      });
+    };
+    overlay.querySelector('#btn-google-signin').addEventListener('click', googleHandler('signin'));
+    overlay.querySelector('#btn-google-signup').addEventListener('click', googleHandler('signup'));
+
+    // Forgot
+    overlay.querySelector('#btn-forgot')?.addEventListener('click', () => {
+      PasswordRecoveryModal.open();
+    });
+
+    focusFirstField(overlay, '.auth-input');
   },
 };

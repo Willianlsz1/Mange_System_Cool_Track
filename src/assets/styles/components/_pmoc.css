@@ -229,16 +229,58 @@
   top: calc(100% + 4px);
   right: 0;
   z-index: 30;
-  min-width: 280px;
-  max-width: 340px;
+  /* V2: aumentado pra acomodar o card PMOC com subtitle mais informativo */
+  min-width: 340px;
+  max-width: 400px;
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
-  padding: 6px;
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+/* V2 mobile fix: em telas estreitas o min-width 340px estourava o viewport
+   (dropdown sumia parcialmente fora da tela). Mobile vira full-width
+   ancorado nas duas bordas com pequeno padding lateral. */
+@media (max-width: 540px) {
+  .rel-export-dd {
+    position: static; /* permite que o menu use viewport como referencia */
+  }
+  .rel-export-dd__menu {
+    position: fixed;
+    top: auto;
+    /* Ancora abaixo do bottom nav (96px) + folga */
+    bottom: 96px;
+    left: 12px;
+    right: 12px;
+    min-width: 0;
+    max-width: none;
+    width: auto;
+    border-radius: 14px;
+    padding: 10px;
+    box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+    /* Animacao bottom-sheet pra contexto mobile */
+    animation: relExportDdSlideUp 0.18s ease-out;
+  }
+  .rel-export-dd__item {
+    padding: 12px;
+  }
+  .rel-export-dd__item--featured {
+    padding: 16px 14px;
+  }
+}
+@keyframes relExportDdSlideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 /* Forca display: none quando o atributo HTML hidden esta presente.
    O default do browser ([hidden] { display: none }) tem especificidade
@@ -299,6 +341,67 @@
   font-size: 11.5px;
   color: var(--text-3);
   line-height: 1.35;
+}
+
+/* V2: PMOC item featured — destaca o produto premium dentro do dropdown.
+   Gradient violeta sutil (cor da marca PRO), borda accent, padding maior,
+   icone em circulo violeta, seta indicando "click here". O peso visual
+   aqui sinaliza que essa eh a açao "premium" do menu — diferenciada das
+   exportações comuns acima/abaixo. */
+.rel-export-dd__item--featured {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(139, 92, 246, 0.04));
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding: 14px 14px;
+  margin: 4px 0;
+  align-items: center;
+  position: relative;
+}
+.rel-export-dd__item--featured:hover,
+.rel-export-dd__item--featured:focus-visible {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.22), rgba(139, 92, 246, 0.08));
+  border-color: rgba(139, 92, 246, 0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(139, 92, 246, 0.2);
+}
+
+.rel-export-dd__item--featured .rel-export-dd__item-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);
+}
+.rel-export-dd__item--featured .rel-export-dd__item-icon svg {
+  color: #fff;
+  margin-top: 0;
+}
+
+.rel-export-dd__item--featured .rel-export-dd__item-text strong {
+  font-size: 14px;
+  letter-spacing: -0.005em;
+  color: var(--text);
+}
+.rel-export-dd__item--featured .rel-export-dd__item-text span {
+  font-size: 11.5px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+.rel-export-dd__item-arrow {
+  flex-shrink: 0;
+  color: rgba(139, 92, 246, 0.7);
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.15s ease;
+}
+.rel-export-dd__item--featured:hover .rel-export-dd__item-arrow {
+  transform: translateX(3px);
+  color: #8b5cf6;
 }
 
 .rel-export-dd__item--meta {
@@ -375,12 +478,26 @@
 }
 
 .pmoc-info-modal__head {
-  padding: 16px 20px;
+  padding: 18px 22px;
   border-bottom: 1px solid var(--border);
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  background: var(--surface-2, rgba(0, 0, 0, 0.03));
+  align-items: center;
+  gap: 14px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(30, 58, 95, 0.06));
+  position: relative;
+}
+
+.pmoc-info-modal__head-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .pmoc-info-modal__head-text {
@@ -389,18 +506,22 @@
 }
 
 .pmoc-info-modal__title {
-  margin: 0 0 4px;
-  font-size: 17px;
+  margin: 0 0 2px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--text);
-  line-height: 1.3;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 .pmoc-info-modal__sub {
   margin: 0;
-  font-size: 12.5px;
+  font-size: 11.5px;
   color: var(--text-2);
   line-height: 1.4;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  font-weight: 600;
 }
 
 .pmoc-info-modal__close {
@@ -422,110 +543,304 @@
 
 .pmoc-info-modal__close:hover,
 .pmoc-info-modal__close:focus-visible {
-  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
   color: var(--text);
-  border-color: var(--border);
+  border-color: rgba(255, 255, 255, 0.12);
+  outline: none;
 }
 
+/* ─── PMOC Info Modal V2 (abr/2026) — redesign comparativo ───
+   O markup antigo era um wall of text. Agora cada bloco vira card
+   visual: TL;DR no topo, 3 chips de base legal, comparação dos 2
+   PDFs em cards lado a lado, "quando usar" em timeline rows. */
+
 .pmoc-info-modal__body {
-  padding: 16px 20px 20px;
+  padding: 18px 22px 8px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
 
+/* TL;DR card no topo — chama atençao com gradient navy + icone */
+.pmoc-info-modal__tldr {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, rgba(81, 163, 255, 0.1), rgba(81, 163, 255, 0.04));
+  border: 1px solid rgba(81, 163, 255, 0.2);
+  border-radius: 10px;
+  align-items: flex-start;
+}
+.pmoc-info-modal__tldr-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+.pmoc-info-modal__tldr p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.pmoc-info-modal__tldr strong {
+  color: var(--primary, #51a3ff);
+  font-weight: 700;
+}
+
+/* Sections genericas */
+.pmoc-info-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .pmoc-info-modal__section h3 {
-  margin: 0 0 6px;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.005em;
+}
+
+/* Base legal — 3 cards horizontais com badge de tipo */
+.pmoc-info-modal__law-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.pmoc-info-modal__law-card {
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pmoc-info-modal__law-badge {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  background: var(--surface-2, rgba(255, 255, 255, 0.06));
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+.pmoc-info-modal__law-card strong {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.005em;
+}
+.pmoc-info-modal__law-card span {
+  font-size: 11px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+/* Compare — 2 cards lado a lado */
+.pmoc-info-modal__compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.pmoc-info-modal__compare-col {
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pmoc-info-modal__compare-col--pro {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.03));
+  border-color: rgba(139, 92, 246, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+.pmoc-info-modal__compare-col--pro::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #8b5cf6, #6d28d9);
+}
+
+.pmoc-info-modal__compare-head {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.pmoc-info-modal__compare-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.06));
+  color: var(--text-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pmoc-info-modal__compare-icon--pro {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #fff;
+  box-shadow: 0 3px 8px rgba(139, 92, 246, 0.3);
+}
+.pmoc-info-modal__compare-head strong {
+  display: block;
   font-size: 13.5px;
   font-weight: 700;
   color: var(--text);
 }
-
-.pmoc-info-modal__section p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-2);
-  line-height: 1.55;
-}
-
-.pmoc-info-modal__section ul {
-  margin: 4px 0 0;
-  padding-left: 18px;
-  font-size: 13px;
-  color: var(--text-2);
-  line-height: 1.55;
-}
-
-.pmoc-info-modal__section ul li {
-  margin-bottom: 4px;
-}
-
-.pmoc-info-modal__compare {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-  margin-top: 8px;
-}
-
-@media (min-width: 540px) {
-  .pmoc-info-modal__compare {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-.pmoc-info-modal__compare-col {
-  background: var(--surface-2, rgba(0, 0, 0, 0.03));
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.pmoc-info-modal__compare-col--pro {
-  border-color: rgba(255, 173, 51, 0.4);
-  background: rgba(255, 173, 51, 0.05);
-}
-
-.pmoc-info-modal__compare-tag {
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+.pmoc-info-modal__compare-tier {
+  display: block;
+  font-size: 10.5px;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
+  font-weight: 600;
+  margin-top: 2px;
 }
 
 .pmoc-info-modal__compare-col ul {
   margin: 0;
-  padding-left: 16px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pmoc-info-modal__compare-col li {
   font-size: 12px;
   color: var(--text-2);
-  line-height: 1.5;
+  line-height: 1.4;
+  position: relative;
+  padding-left: 14px;
+}
+.pmoc-info-modal__compare-col li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--text-3);
+  font-weight: 700;
+}
+.pmoc-info-modal__compare-col--pro li::before {
+  color: #8b5cf6;
 }
 
+.pmoc-info-modal__compare-use {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  border-radius: 6px;
+  font-size: 11.5px;
+  color: var(--text);
+  line-height: 1.4;
+  margin-top: 2px;
+}
+.pmoc-info-modal__compare-col--pro .pmoc-info-modal__compare-use {
+  background: rgba(139, 92, 246, 0.1);
+}
+.pmoc-info-modal__compare-use strong {
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* When to use — timeline rows */
+.pmoc-info-modal__when {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pmoc-info-modal__when-row {
+  display: grid;
+  grid-template-columns: minmax(160px, auto) 14px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12.5px;
+}
+.pmoc-info-modal__when-trigger {
+  font-weight: 700;
+  color: var(--text);
+}
+.pmoc-info-modal__when-arrow {
+  color: var(--primary, #51a3ff);
+  font-weight: 700;
+  text-align: center;
+}
+.pmoc-info-modal__when-action {
+  color: var(--text-2);
+  line-height: 1.4;
+}
+
+/* Footer com 2 botoes */
 .pmoc-info-modal__actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-  padding-top: 14px;
+  padding: 14px 22px;
   border-top: 1px solid var(--border);
+  background: var(--surface-2, rgba(255, 255, 255, 0.02));
 }
-
 .pmoc-info-modal__btn {
   min-width: 110px;
 }
+.pmoc-info-modal__btn--upgrade {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  color: #fff;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+}
+.pmoc-info-modal__btn--upgrade:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .pmoc-info-modal {
     width: 100vw;
     max-height: 100vh;
     border-radius: 0;
+    border: none;
+  }
+  .pmoc-info-modal__body {
+    padding: 16px 16px 4px;
+    gap: 14px;
+  }
+  .pmoc-info-modal__law-grid {
+    grid-template-columns: 1fr;
+  }
+  .pmoc-info-modal__compare {
+    grid-template-columns: 1fr;
+  }
+  .pmoc-info-modal__when-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .pmoc-info-modal__when-arrow {
+    display: none;
   }
   .pmoc-info-modal__actions {
     flex-direction: column-reverse;
+    padding: 14px 16px;
   }
   .pmoc-info-modal__btn {
     width: 100%;

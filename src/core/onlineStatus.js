@@ -37,6 +37,20 @@ function handleOffline() {
   emitStatus(false);
 }
 
+async function _attemptFlush() {
+  // Lazy import pra evitar dependencia circular (storage importa toast,
+  // toast importa onlineStatus em alguns flows). Fire-and-forget: se nao
+  // ha pending o flushPending retorna false e nao faz nada.
+  try {
+    const { Storage } = await import('./storage.js');
+    if (typeof Storage?.flushPending === 'function') {
+      await Storage.flushPending();
+    }
+  } catch (_e) {
+    // Falha silenciosa — o status do sync ja vai refletir via pill.
+  }
+}
+
 function handleOnline() {
   if (_lastKnownOnline === true) return;
   // Só emitimos toast se já havia sinalizado offline antes — evita mostrar
@@ -45,6 +59,9 @@ function handleOnline() {
   _lastKnownOnline = true;
   if (shouldToast) {
     Toast.success('Conexão restaurada. Sincronizando alterações pendentes...');
+    // Dispara flush real da fila de sync (era so visual antes — toast prometia
+    // sincronizar mas ninguem chamava o drain). Agora resolve de fato.
+    _attemptFlush();
   }
   emitStatus(true);
 }

@@ -27,6 +27,24 @@ export function bindRegistroHandlers() {
       });
     }
   });
+
+  // UX V2 audit fix #80: botao primario "Salvar e enviar pro cliente"
+  // executa save + WhatsApp share em 1 clique (era 4: salvar→toast→WhatsApp→share).
+  on('save-and-share-registro', async (el) => {
+    try {
+      await runAsyncAction(el, { loadingLabel: 'Salvando e abrindo WhatsApp...' }, async () => {
+        const saved = await saveRegistro({ andShare: true });
+        if (!saved) return;
+      });
+    } catch (error) {
+      handleError(error, {
+        code: ErrorCodes.VALIDATION_ERROR,
+        message: 'Não foi possível salvar e enviar o registro.',
+        context: { action: 'controller.save-and-share-registro' },
+      });
+    }
+  });
+
   on('clear-registro', () => clearRegistro());
   on('quick-service-template', (el) => applyQuickTemplate(el.dataset.template, el));
 

@@ -3,20 +3,22 @@
  *
  * Layout:
  *   1. Page header (titulo + Novo cliente CTA)
- *   2. KPI row (4 metricas: ativos, equipamentos, servicos no mes, manutencoes pendentes)
- *   3. Alert strip (clientes sem manutencao ha mais de 60 dias) — so aparece se houver
+ *   2. KPI row (4 metricas: ativos, equipamentos, serviços no mês, manutenções pendentes)
+ *   3. Alert strip (clientes sem manutenção ha mais de 60 dias) — so aparece se houver
  *   4. Filter bar (search + Status + Cidade + Ordenar)
  *   5. Grid de cards (3 colunas em desktop) com:
  *      - Industry icon (heuristica pelo nome)
- *      - Nome + status pill (Ativo / Sem manutencao / Precisa atencao)
+ *      - Nome + status pill (Ativo / Sem manutenção / Precisa atenção)
  *      - Endereco
- *      - 3 stats (equipamentos / servicos / ultima manutencao)
- *      - 3 acoes (Ver equipamentos / Ver servicos / Editar) + kebab
+ *      - 3 stats (equipamentos / serviços / ultima manutenção)
+ *      - 3 ações (Ver equipamentos / Ver serviços / Editar) + kebab
  *   6. Paginacao (6/pagina)
  *
  * Dados: state.clientes + state.equipamentos + state.registros.
- * Status derivado: 'ativo' default, 'sem_manutencao' se ultimo servico > 60 dias,
- * 'precisa_atencao' se > 90 dias OU sem registro nenhum.
+ * Status derivado:
+ *   - 'ativo'         = tem serviços recentes OU cliente novo (sem histórico)
+ *   - 'sem_manutencao' = ultimo serviço entre 60-90 dias atras
+ *   - 'precisa_atencao' = ultimo serviço ha mais de 90 dias
  */
 
 import { Utils } from '../../core/utils.js';
@@ -27,6 +29,8 @@ import { Toast } from '../../core/toast.js';
 import { CustomConfirm } from '../../core/modal.js';
 import { handleError, ErrorCodes } from '../../core/errors.js';
 import { goTo } from '../../core/router.js';
+import { getClienteAlert, daysUntilAlert } from '../../core/clienteAlerts.js';
+import { ClienteAlertModal } from '../components/clienteAlertModal.js';
 
 /* ─────────────────────── module state ──────────────────────────────── */
 
@@ -89,10 +93,22 @@ function _indexCliente(clientes, equipamentos, registros) {
     });
 
     const sinceLast = lastTs ? now - lastTs : Number.POSITIVE_INFINITY;
+    // Status do cliente:
+    //   - 'ativo'         = tem serviços recentes OU é cliente novo (sem
+    //                       histórico ainda — não podemos flagar como
+    //                       'sem manutenção' porque não ha sinal real de
+    //                       atraso, so ausencia de dados)
+    //   - 'sem_manutencao'= ultimo serviço entre 60-90 dias atras
+    //   - 'precisa_atencao' = ultimo serviço ha mais de 90 dias
+    //
+    // BUG FIX: antes flagava cliente sem serviço nenhum como 'precisa_atencao',
+    // o que não faz sentido pra cliente recem-criado. So ha 'atraso' real
+    // quando ha um lastTs documentado.
     let status = 'ativo';
-    if (!lastTs && equips.length > 0) status = 'precisa_atencao';
-    else if (sinceLast > DAYS_90_MS) status = 'precisa_atencao';
-    else if (sinceLast > DAYS_60_MS) status = 'sem_manutencao';
+    if (lastTs > 0) {
+      if (sinceLast > DAYS_90_MS) status = 'precisa_atencao';
+      else if (sinceLast > DAYS_60_MS) status = 'sem_manutencao';
+    }
 
     const displayCity = _extractCity(c.endereco);
 
@@ -194,7 +210,7 @@ const INDUSTRY_ICONS = [
   },
   { keys: ['academia', 'gym', 'fitness'], name: 'dumbbell', tint: 'cyan' },
   { keys: ['posto', 'gasolina'], name: 'fuel', tint: 'red' },
-  { keys: ['loja', 'comercio', 'comércio', 'shopping'], name: 'shop', tint: 'cyan' },
+  { keys: ['loja', 'comércio', 'comércio', 'shopping'], name: 'shop', tint: 'cyan' },
 ];
 
 const INDUSTRY_SVG = {
@@ -233,6 +249,7 @@ const ICON_SEARCH = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"
 const ICON_FILTER = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/></svg>`;
 const ICON_MONITOR_SM = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`;
 const ICON_CLOCK_SM = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
+const ICON_BELL_SM = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9Z"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
 const ICON_PEN = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4l6 6-11 11H3v-6L14 4z"/></svg>`;
 
 /* ─────────────────────── KPIs ──────────────────────────────────────── */
@@ -241,27 +258,40 @@ function _renderKpis({ clientes, equipamentos, registros, indexed }) {
   const totalClientes = clientes.length;
   const ativos = Array.from(indexed.values()).filter((d) => d.status === 'ativo').length;
   const ativosPercent = totalClientes ? Math.round((ativos / totalClientes) * 100) : 0;
-  const totalEquips = equipamentos.length;
+  // Total de equipamentos vinculados a algum cliente (escopo da view).
+  // O parque inteiro fica no Painel; aqui mostramos o que pertence a carteira.
+  const totalEquips = equipamentos.filter((e) => Boolean(e.clienteId)).length;
 
-  // Equipamentos cadastrados este mes
+  // Equipamentos cadastrados este mês - so os vinculados a clientes (escopo
+  // da view eh "carteira de clientes", entao equipamentos sem cliente não
+  // contam aqui).
   const startMonth = new Date();
   startMonth.setDate(1);
   startMonth.setHours(0, 0, 0, 0);
-  const equipsThisMonth = equipamentos.filter((e) => {
+  const equipsClientes = equipamentos.filter((e) => Boolean(e.clienteId));
+  const equipsThisMonth = equipsClientes.filter((e) => {
     const ts = e.criadoEm || e.createdAt || 0;
     return new Date(ts).getTime() >= startMonth.getTime();
   }).length;
 
-  // Servicos este mes (todos os registros)
+  // Conjunto de equipIds vinculados a clientes — usado pra filtrar registros.
+  // Sem isso, registros de equipamentos avulsos (sem cliente) eram contados
+  // aqui, dando a impressao errada de que o cliente teve serviços quando
+  // na verdade os serviços eram em outros equipamentos do parque.
+  const equipIdsComCliente = new Set(equipsClientes.map((e) => e.id));
+
+  // Serviços este mês - so os de equipamentos vinculados a algum cliente.
   const servicosMes = registros.filter((r) => {
+    if (!r.equipId || !equipIdsComCliente.has(r.equipId)) return false;
     const ts = r.data ? new Date(r.data).getTime() : 0;
     return ts >= startMonth.getTime();
   }).length;
 
-  // Servicos do mes anterior pra calcular variacao
+  // Serviços do mês anterior - mesmo escopo (equipamentos com cliente).
   const startPrevMonth = new Date(startMonth);
   startPrevMonth.setMonth(startPrevMonth.getMonth() - 1);
   const servicosPrevMonth = registros.filter((r) => {
+    if (!r.equipId || !equipIdsComCliente.has(r.equipId)) return false;
     const ts = r.data ? new Date(r.data).getTime() : 0;
     return ts >= startPrevMonth.getTime() && ts < startMonth.getTime();
   }).length;
@@ -276,7 +306,7 @@ function _renderKpis({ clientes, equipamentos, registros, indexed }) {
     trendTone = delta > 0 ? 'up' : delta < 0 ? 'down' : 'neutral';
   }
 
-  // Manutencoes pendentes = clientes com status sem_manutencao OU precisa_atencao
+  // Manutenções pendentes = clientes com status sem_manutencao OU precisa_atencao
   const pendentes = Array.from(indexed.values()).filter((d) => d.status !== 'ativo').length;
 
   return `
@@ -319,10 +349,14 @@ function _renderKpis({ clientes, equipamentos, registros, indexed }) {
 /* ─────────────────────── alert strip ───────────────────────────────── */
 
 function _renderAlertStrip({ indexed }) {
-  const semManutencao = Array.from(indexed.values()).filter(
-    (d) => d.status === 'sem_manutencao' || d.status === 'precisa_atencao',
+  // Conta apenas clientes que tem AT LEAST 1 serviço registrado
+  // (lastServiceTs > 0) e cuja ultima manutenção foi ha 60+ dias.
+  // Garante que o alert não aparece pra clientes recem-criados sem serviço.
+  const stale = Array.from(indexed.values()).filter(
+    (d) => d.lastServiceTs > 0 && (d.status === 'sem_manutencao' || d.status === 'precisa_atencao'),
   ).length;
-  if (!semManutencao) return '';
+  if (!stale) return '';
+  const semManutencao = stale;
   return `
     <div class="cli-alert" role="status">
       <span class="cli-alert__icon" aria-hidden="true">${ICON_ALERT}</span>
@@ -419,6 +453,26 @@ function _renderCard(cliente, data) {
   const lastLabel = _formatRelativeDate(data.lastServiceTs);
   const lastClass = _lastServiceClass(data.sinceLast);
 
+  // Alerta de retorno (se houver). Badge: cor varia por estado.
+  const alert = getClienteAlert(cliente.id);
+  const alertDays = alert ? daysUntilAlert(cliente.id) : null;
+  let alertBadgeHtml = '';
+  if (alert && alertDays !== null) {
+    const overdue = alertDays < 0;
+    const soon = alertDays >= 0 && alertDays <= 7;
+    const tone = overdue ? 'danger' : soon ? 'warn' : 'info';
+    const label = overdue
+      ? `Vencido ha ${Math.abs(alertDays)} dia${Math.abs(alertDays) !== 1 ? 's' : ''}`
+      : alertDays === 0
+        ? 'Alerta hoje'
+        : `Alerta em ${alertDays} dia${alertDays !== 1 ? 's' : ''}`;
+    alertBadgeHtml = `
+      <div class="cli-card__alert cli-card__alert--${tone}">
+        <span aria-hidden="true">${ICON_BELL_SM}</span>
+        <span>${label}</span>
+      </div>`;
+  }
+
   return `
     <article class="cli-card" data-id="${safeId}" role="listitem"
       tabindex="0" aria-label="Cliente ${nome}">
@@ -431,12 +485,30 @@ function _renderCard(cliente, data) {
           ${subline ? `<div class="cli-card__sub">${subline}</div>` : ''}
         </div>
         ${_statusPill(data.status)}
-        <button type="button" class="cli-card__kebab"
-          data-cli-action="card-menu" data-id="${safeId}"
-          aria-label="Mais ações para ${nome}" title="Mais ações">
-          ${ICON_KEBAB}
-        </button>
+        <div class="cli-card__menu" id="cli-card-menu-${safeId}" role="menu" hidden>
+          <button type="button" class="cli-card__menu-item"
+            data-cli-action="alert" data-id="${safeId}" role="menuitem">
+            ${ICON_BELL_SM}
+            <span>${alert ? 'Alterar alerta' : 'Definir alerta'}</span>
+          </button>
+          <button type="button" class="cli-card__menu-item"
+            data-cli-action="edit" data-id="${safeId}" role="menuitem">
+            ${ICON_PEN}
+            <span>Editar cliente</span>
+          </button>
+          <button type="button" class="cli-card__menu-item cli-card__menu-item--danger"
+            data-cli-action="delete" data-id="${safeId}" role="menuitem">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 6h18"/>
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <path d="m6 6 1 14a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-14"/>
+            </svg>
+            <span>Apagar cliente</span>
+          </button>
+        </div>
       </header>
+      ${alertBadgeHtml}
 
       <div class="cli-card__address">
         <span class="cli-card__address-icon" aria-hidden="true">${ICON_PIN}</span>
@@ -464,12 +536,14 @@ function _renderCard(cliente, data) {
           ${ICON_MONITOR_SM}<span>Ver equipamentos</span>
         </button>
         <button type="button" class="cli-card__action cli-card__action--secondary"
-          data-cli-action="ver-servicos" data-id="${safeId}">
+          data-cli-action="ver-serviços" data-id="${safeId}">
           ${ICON_CLOCK_SM}<span>Ver serviços</span>
         </button>
-        <button type="button" class="cli-card__action cli-card__action--ghost"
-          data-cli-action="edit" data-id="${safeId}">
-          ${ICON_PEN}<span>Editar</span>
+        <button type="button" class="cli-card__action cli-card__action--ghost cli-card__action--options"
+          data-cli-action="card-menu" data-id="${safeId}"
+          aria-label="Mais opções para ${nome}" title="Opções"
+          aria-haspopup="menu" aria-expanded="false">
+          ${ICON_KEBAB}<span>Opções</span>
         </button>
       </footer>
     </article>`;
@@ -531,7 +605,7 @@ function _renderPagination(filteredCount) {
           aria-label="Pagina anterior" ${prevDisabled}>${ICON_CHEV_L}</button>
         ${pageBtns.join('')}
         <button type="button" class="cli-pag__nav" data-cli-action="next-page"
-          aria-label="Proxima pagina" ${nextDisabled}>${ICON_CHEV_R}</button>
+          aria-label="Próxima pagina" ${nextDisabled}>${ICON_CHEV_R}</button>
       </div>
       <label class="cli-pag__size">
         <span>Itens por página</span>
@@ -669,6 +743,7 @@ export async function renderClientes() {
 function _bindOnce() {
   if (_bound) return;
   _bound = true;
+  _bindGlobalMenuClose();
   const view = document.getElementById('view-clientes');
   if (!view) return;
 
@@ -750,15 +825,26 @@ function _bindOnce() {
         renderClientes();
         break;
       case 'edit':
+        _closeAllMenus();
         openClienteModalForId(id);
         break;
+      case 'alert': {
+        _closeAllMenus();
+        const c = (getState().clientes || []).find((x) => x.id === id);
+        if (c) ClienteAlertModal.open(c.id, c.nome, { onSaved: () => renderClientes() });
+        break;
+      }
+      case 'delete':
+        _closeAllMenus();
+        confirmDeleteCliente(id);
+        break;
       case 'card-menu':
-        _openCardMenu(target, id);
+        _toggleCardMenu(id);
         break;
       case 'ver-equipamentos':
         _navigateVerEquipamentos(id);
         break;
-      case 'ver-servicos':
+      case 'ver-serviços':
         _navigateVerServicos(id);
         break;
       default:
@@ -767,16 +853,46 @@ function _bindOnce() {
   });
 }
 
-function _openCardMenu(triggerEl, id) {
-  // Menu inline simples: usa CustomConfirm pra dar opção de Apagar.
-  // Pra "Editar" o user já tem o botão dedicado no card, então o kebab
-  // foca no destrutivo + atalhos secundários.
-  const cliente = (getState().clientes || []).find((c) => c.id === id);
-  if (!cliente) return;
-  // Por simplicidade: kebab abre direto o flow de delete confirm.
-  // Pode evoluir pra dropdown menu real depois se precisar de mais opções.
-  void triggerEl;
-  confirmDeleteCliente(id);
+let _openMenuId = null;
+
+function _closeAllMenus() {
+  if (!_openMenuId) return;
+  const menu = document.getElementById(`cli-card-menu-${_openMenuId}`);
+  const trigger = document.querySelector(`[data-cli-action="card-menu"][data-id="${_openMenuId}"]`);
+  if (menu) menu.hidden = true;
+  if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  _openMenuId = null;
+}
+
+function _toggleCardMenu(id) {
+  if (_openMenuId === id) {
+    _closeAllMenus();
+    return;
+  }
+  _closeAllMenus();
+  const menu = document.getElementById(`cli-card-menu-${id}`);
+  const trigger = document.querySelector(`[data-cli-action="card-menu"][data-id="${id}"]`);
+  if (!menu || !trigger) return;
+  menu.hidden = false;
+  trigger.setAttribute('aria-expanded', 'true');
+  _openMenuId = id;
+}
+
+// Click fora ou Esc fecha o menu (idempotente via dataset flag)
+function _bindGlobalMenuClose() {
+  if (typeof document === 'undefined') return;
+  if (document.body.dataset.cliMenuBound === '1') return;
+  document.body.dataset.cliMenuBound = '1';
+  document.addEventListener('click', (e) => {
+    if (!_openMenuId) return;
+    const insideMenu = e.target.closest('.cli-card__menu');
+    const insideTrigger = e.target.closest('[data-cli-action="card-menu"]');
+    if (insideMenu || insideTrigger) return;
+    _closeAllMenus();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && _openMenuId) _closeAllMenus();
+  });
 }
 
 function _navigateVerEquipamentos(id) {
@@ -865,14 +981,14 @@ export async function populateClienteSelect() {
 }
 
 /**
- * Abre o ClienteModal em modo edicao para um cliente especifico (por id).
+ * Abre o ClienteModal em modo edição para um cliente especifico (por id).
  * Usado pelo clienteHandlers (kebab menu, edit action) e pelo card "Editar"
- * dentro da view. Se o cliente nao existir mais, mostra Toast e cancela.
+ * dentro da view. Se o cliente não existir mais, mostra Toast e cancela.
  */
 export function openClienteModalForId(id) {
   const cliente = (getState().clientes || []).find((c) => c.id === id);
   if (!cliente) {
-    Toast.warning('Cliente nao encontrado.');
+    Toast.warning('Cliente não encontrado.');
     return;
   }
   ClienteModal.openEdit(cliente, { onSaved: () => renderClientes() });

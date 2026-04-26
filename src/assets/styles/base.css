@@ -69,7 +69,22 @@
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
   --shadow-elevated: 0 4px 20px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06);
 
-  --layout-max: 1440px;
+  /* Layout responsivo V3 — antes era 1440px fixo, criava ~480px de sobra
+     lateral em FullHD (1920px). Agora cresce em 3 tiers: padrao 1600 →
+     min-width 1600 sobe pra 1760 → min-width 1920 sobe pra 1880. */
+  --layout-max: 1600px;
+}
+
+@media (min-width: 1600px) {
+  :root {
+    --layout-max: 1760px;
+  }
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --layout-max: 1880px;
+  }
 }
 
 /* ────────────────────────────────────────────────────────────

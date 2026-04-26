@@ -15,8 +15,8 @@ function resetRegistroEditingState() {
   if (saveBtn) {
     // Preserva o SVG do ícone — só mexe no span (mesmo padrão de registro.js).
     const saveLabel = saveBtn.querySelector('span');
-    if (saveLabel) saveLabel.textContent = 'Finalizar serviço';
-    else saveBtn.textContent = 'Finalizar serviço';
+    if (saveLabel) saveLabel.textContent = 'Salvar serviço';
+    else saveBtn.textContent = 'Salvar serviço';
     saveBtn.classList.remove('btn--editing');
   }
 
@@ -362,7 +362,7 @@ function bindSyncStatusUpdates() {
  *   - "R" (sem modificadores) -> navega pra /registro
  *
  * Ignora quando o foco esta em input/textarea/select/contenteditable, ou
- * quando ha modificador (Ctrl/Cmd/Alt/Meta) pra nao colidir com atalhos
+ * quando ha modificador (Ctrl/Cmd/Alt/Meta) pra não colidir com atalhos
  * do browser.
  */
 function bindGlobalKeyboardShortcuts() {

@@ -20,6 +20,7 @@ export const FEATURE_PDF_EXPORT = 'pdf_export';
 export const FEATURE_EQUIPAMENTOS_EXTRA = 'equipamentos_extra';
 export const FEATURE_HISTORICO_COMPLETO = 'historico_completo';
 export const FEATURE_SETORES = 'setores';
+export const FEATURE_CLIENTES = 'clientes';
 export const FEATURE_SUPORTE_PRIORITARIO = 'suporte_prioritario';
 
 // PDF export agora é liberado para TODOS os planos (inclusive Free), mas com
@@ -42,6 +43,7 @@ const FEATURE_MIN_PLAN = {
   [FEATURE_DIGITAL_SIGNATURE]: PLAN_CODE_PLUS,
   [FEATURE_NAMEPLATE_ANALYSIS]: PLAN_CODE_PLUS,
   [FEATURE_SETORES]: PLAN_CODE_PRO,
+  [FEATURE_CLIENTES]: PLAN_CODE_PRO,
   [FEATURE_SUPORTE_PRIORITARIO]: PLAN_CODE_PRO,
 };
 
@@ -200,6 +202,7 @@ const FEATURE_MESSAGES = Object.freeze({
   [FEATURE_DIGITAL_SIGNATURE]:
     'Assinatura digital do cliente no PDF está disponível a partir do plano Plus.',
   [FEATURE_SETORES]: 'Agrupamento por setores é exclusivo do plano Pro.',
+  [FEATURE_CLIENTES]: 'Carteira de clientes é exclusiva do plano Pro.',
   [FEATURE_SUPORTE_PRIORITARIO]: 'Suporte prioritário é exclusivo do plano Pro.',
 });
 

@@ -110,7 +110,7 @@ function _sparklineSvg(data) {
     return [x, y];
   });
   const line = pts.map(([x, y], i) => (i === 0 ? `M${x},${y}` : `L${x},${y}`)).join(' ');
-  const area = `${line} L${w},${h} L0,${h} Z`;
+  const área = `${line} L${w},${h} L0,${h} Z`;
   const dots = pts
     .map(([x, y], i) => {
       const r = data[i] > 0 ? 1.8 : 1;
@@ -125,7 +125,7 @@ function _sparklineSvg(data) {
         <stop offset="100%" stop-color="var(--dsh-accent,currentColor)" stop-opacity="0"/>
       </linearGradient>
     </defs>
-    <path d="${area}" fill="url(#dsh-spark)"/>
+    <path d="${área}" fill="url(#dsh-spark)"/>
     <path d="${line}" fill="none" stroke="var(--dsh-accent,currentColor)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
     ${dots}
   </svg>`;
@@ -274,7 +274,7 @@ function _renderProStatusCard() {
       <span class="upgrade-nudge-card__badge">PRO ATIVO</span>
       <div class="upgrade-nudge-card__icon" aria-hidden="true">&#10003;</div>
       <h3 class="upgrade-nudge-card__pro-title">Plano Pro ativo</h3>
-      <p class="upgrade-nudge-card__pro-copy">Todos os recursos premium estao liberados para sua conta.</p>
+      <p class="upgrade-nudge-card__pro-copy">Todos os recursos premium estão liberados para sua conta.</p>
     </article>
   `;
 }
@@ -290,7 +290,7 @@ function _getAlertActionMeta(alert) {
     case 'schedule':
       return { action: 'go-register-equip', id, label: 'Registrar serviço preventivo' };
     case 'start-history':
-      return { action: 'go-register-equip', id, label: 'Iniciar historico' };
+      return { action: 'go-register-equip', id, label: 'Iniciar histórico' };
     case 'inspect':
       return { action: 'view-equip', id, label: 'Abrir equipamento' };
     default:
@@ -583,19 +583,34 @@ function _renderHero({
       }
       if (ctaSecondary) ctaSecondary.hidden = true;
     } else {
-      // Estado normal (tudo operando, com equipamentos): promove IA como
-      // CTA primário — é o diferencial de mercado e a função que reduz
-      // fricção de cadastro. Secundário = "Registrar serviço" pra manter
-      // atalho direto pro fluxo mais frequente do técnico.
-      ctaBtn.setAttribute('data-action', 'open-modal');
-      ctaBtn.setAttribute('data-id', 'modal-add-eq');
-      ctaBtn.removeAttribute('data-nav');
-      ctaLabel.textContent = 'Cadastrar com foto';
+      // UX V2 audit fix #86: Estado normal (tudo operando, com equipamentos):
+      // PROMOVE "Registrar serviço" como CTA primário — eh a açao DIARIA do
+      // tecnico em campo (10-30x por dia), nao "Cadastrar com foto" (setup
+      // ocasional). Secundario fica "Cadastrar com foto" pra IA continuar
+      // descobrivel sem competir com o muscle memory.
+      ctaBtn.setAttribute('data-action', '');
+      ctaBtn.removeAttribute('data-action');
+      ctaBtn.setAttribute('data-nav', 'registro');
+      ctaBtn.removeAttribute('data-id');
+      ctaLabel.textContent = 'Registrar serviço';
       if (ctaIcon) {
+        // Icone de raio (energia/acao rapida) — combina com Atalho R
         ctaIcon.innerHTML =
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.5" /></svg>';
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></svg>';
       }
-      if (ctaSecondary) ctaSecondary.hidden = false;
+      if (ctaSecondary) {
+        ctaSecondary.hidden = false;
+        ctaSecondary.setAttribute('data-action', 'open-modal');
+        ctaSecondary.setAttribute('data-id', 'modal-add-eq');
+        ctaSecondary.removeAttribute('data-nav');
+        const secondaryLabel = document.getElementById('dash-hero-cta-secondary-label');
+        if (secondaryLabel) secondaryLabel.textContent = 'Cadastrar com foto';
+        const secondaryIcon = ctaSecondary.querySelector('.dash__hero-cta-icon');
+        if (secondaryIcon) {
+          secondaryIcon.innerHTML =
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.5" /></svg>';
+        }
+      }
     }
   }
 }
@@ -718,7 +733,7 @@ function _renderNextActionCard({ alerts, equipCount }) {
   } else {
     titleEl.textContent = 'Nenhuma ação urgente';
     subEl.textContent = 'Todas as rotinas dentro do prazo.';
-    ctaEl.setAttribute('data-nav', 'historico');
+    ctaEl.setAttribute('data-nav', 'histórico');
     ctaEl.removeAttribute('data-action');
     ctaEl.removeAttribute('data-id');
     ctaLabelEl.textContent = 'Ver histórico';
@@ -833,7 +848,7 @@ function _renderAlertsMiniSection({ alerts, planContext }) {
   if (hint) {
     hint.innerHTML = planContext.hasPro
       ? ''
-      : UpgradeNudge.renderInlineHint('Exportar relatorio em lote', {
+      : UpgradeNudge.renderInlineHint('Exportar relatório em lote', {
           planCode: planContext.planCode,
           requiredPlan: 'plus',
         });
@@ -992,6 +1007,20 @@ function _updateGlobalHeader({ equipamentos, registros, alerts }) {
     headerAlertBtn.setAttribute('title', headerAlertTooltip.textContent);
   }
 
+  // UX V2 audit fix #84: Header colapsado em mobile — espelha o badge de
+  // alertas no item "Alertas" do help menu (visivel so em mobile) e marca
+  // a engrenagem com um ponto vermelho pra puxar atençao.
+  const helpMenuBadge = Utils.getEl('header-help-menu-alert-badge');
+  if (helpMenuBadge) {
+    helpMenuBadge.textContent = String(preventivas7dCount);
+    helpMenuBadge.hidden = preventivas7dCount <= 0;
+  }
+  const helpBtn = Utils.getEl('header-help-btn');
+  if (helpBtn) {
+    if (preventivas7dCount > 0) helpBtn.setAttribute('data-has-alerts', '1');
+    else helpBtn.removeAttribute('data-has-alerts');
+  }
+
   const statusSistema = Utils.getEl('status-sistema');
   const statusFalhas = Utils.getEl('status-falhas');
   const statusFalhasTxt = Utils.getEl('status-falhas-txt');
@@ -1017,30 +1046,76 @@ function _updateGlobalHeader({ equipamentos, registros, alerts }) {
     }
   }
 
-  const syncStatusEl = Utils.getEl('sync-status');
-  const syncStatusTxt = Utils.getEl('sync-status-txt');
-  if (syncStatusEl && syncStatusTxt) {
-    const syncStatus = Storage.getSyncStatus();
-    const dot = syncStatusEl.querySelector('.status-indicator__dot');
+  // Sync status: atualiza tanto o pill do header (visivel em mobile) quanto
+  // o pill da sidebar (visivel em desktop, no rodape). Single source of truth
+  // = Storage.getSyncStatus(), aplicado nos dois alvos.
+  const syncStatus = Storage.getSyncStatus();
+  const syncTargets = [
+    { el: Utils.getEl('sync-status'), txt: Utils.getEl('sync-status-txt'), kind: 'header' },
+    {
+      el: Utils.getEl('sidenav-sync-status'),
+      txt: Utils.getEl('sidenav-sync-status-txt'),
+      kind: 'sidenav',
+    },
+  ];
+
+  syncTargets.forEach(({ el, txt, kind }) => {
+    if (!el || !txt) return;
+    const dot = el.querySelector('.status-indicator__dot, .app-sidebar__sync-dot');
+
     if (syncStatus.state === 'syncing') {
-      syncStatusEl.hidden = false;
-      if (dot) dot.className = 'status-indicator__dot status-indicator__dot--ok';
-      _setStatusIndicatorState(syncStatusEl, 'ok', { live: true, syncing: true });
-      syncStatusTxt.textContent =
+      el.hidden = false;
+      if (dot) {
+        if (kind === 'header') {
+          dot.className = 'status-indicator__dot status-indicator__dot--ok';
+        } else {
+          dot.className = 'app-sidebar__sync-dot app-sidebar__sync-dot--ok';
+        }
+      }
+      if (kind === 'header') {
+        _setStatusIndicatorState(el, 'ok', { live: true, syncing: true });
+      } else {
+        el.setAttribute('data-state', 'syncing');
+      }
+      txt.textContent =
         syncStatus.pendingOps > 1 ? 'Sincronizando alterações...' : 'Sincronizando...';
     } else if (syncStatus.state === 'pending') {
-      syncStatusEl.hidden = false;
-      if (dot) dot.className = 'status-indicator__dot status-indicator__dot--warn';
-      _setStatusIndicatorState(syncStatusEl, 'warn', { live: true });
-      syncStatusTxt.textContent =
-        syncStatus.pendingOps > 0
-          ? `Sincronização pendente (${syncStatus.pendingOps})`
-          : 'Sincronização pendente';
+      el.hidden = false;
+      // errorKind diferencia: 'offline' = sem rede (amber), 'server' = erro
+      // do supabase (vermelho). Default amber se nao especificado (back-compat).
+      const isServerErr = syncStatus.errorKind === 'server';
+      const dotVariant = isServerErr ? 'danger' : 'warn';
+      if (dot) {
+        if (kind === 'header') {
+          dot.className = `status-indicator__dot status-indicator__dot--${dotVariant}`;
+        } else {
+          dot.className = `app-sidebar__sync-dot app-sidebar__sync-dot--${dotVariant}`;
+        }
+      }
+      if (kind === 'header') {
+        _setStatusIndicatorState(el, dotVariant, { live: true });
+      } else {
+        el.setAttribute('data-state', isServerErr ? 'error' : 'pending');
+      }
+      // Texto: prioriza message vinda do storage (que ja diferencia offline
+      // vs erro de servidor), com fallback pro generico antigo.
+      const baseLabel = isServerErr ? 'Erro ao sincronizar' : 'Sincronização pendente';
+      txt.textContent =
+        syncStatus.pendingOps > 0 ? `${baseLabel} (${syncStatus.pendingOps})` : baseLabel;
+      // Tooltip com message detalhada do storage
+      if (syncStatus.message) {
+        el.title = syncStatus.message;
+      }
     } else {
-      syncStatusEl.hidden = true;
-      _setStatusIndicatorState(syncStatusEl, 'ok');
+      el.hidden = true;
+      el.removeAttribute('title');
+      if (kind === 'header') {
+        _setStatusIndicatorState(el, 'ok');
+      } else {
+        el.removeAttribute('data-state');
+      }
     }
-  }
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1053,6 +1128,72 @@ export function updateHeader() {
   _updateGlobalHeader({ equipamentos, registros, alerts });
   // KPIs também são populadas aqui para respostas em tempo real a mudanças vindas de outras views.
   _renderKPIs({ equipamentos, registros, alerts });
+}
+
+/**
+ * Continue card (UX V2 audit) — mostra um card sticky no topo do painel
+ * quando ha rascunho/edicao de registro em sessionStorage. Resolve o
+ * pain point "tecnico abriu o app querendo continuar de onde parou".
+ */
+function _renderContinueDraftCard(equipamentos = []) {
+  const host = document.getElementById('dash-onboarding');
+  if (!host) return;
+  let editingId = null;
+  try {
+    editingId = sessionStorage.getItem('cooltrack-editing-id');
+  } catch (_e) {
+    /* sessionStorage indisponivel */
+  }
+  if (!editingId) {
+    // Limpa qualquer card antigo que tenha ficado renderizado
+    const stale = host.querySelector('.dash__continue-card');
+    if (stale) stale.remove();
+    return;
+  }
+  // Tenta encontrar o equipamento associado ao draft (registro em edicao
+  // pode ter equipId; se nao tem, mostra generico)
+  const { registros } = getState();
+  const reg = (registros || []).find((r) => r.id === editingId);
+  const eq = reg?.equipId ? (equipamentos || []).find((e) => e.id === reg.equipId) : null;
+  const eqName = eq?.nome || 'um equipamento';
+  const isEdit = Boolean(reg);
+
+  host.insertAdjacentHTML(
+    'beforeend',
+    `
+    <article class="dash__continue-card" data-action="continue-draft" data-id="${Utils.escapeAttr(editingId)}">
+      <span class="dash__continue-card__icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/>
+        </svg>
+      </span>
+      <div class="dash__continue-card__body">
+        <div class="dash__continue-card__title">
+          ${isEdit ? 'Continuar edicao de servico' : 'Voltar ao registro em andamento'}
+        </div>
+        <div class="dash__continue-card__sub">
+          ${eq ? `Equipamento: <strong>${Utils.escapeHtml(eqName)}</strong>` : 'Voce tem um rascunho aguardando finalizacao.'}
+        </div>
+      </div>
+      <button type="button" class="dash__continue-card__cta"
+        data-action="continue-draft" data-id="${Utils.escapeAttr(editingId)}">
+        Continuar
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 6 15 12 9 18"/>
+        </svg>
+      </button>
+      <button type="button" class="dash__continue-card__close"
+        data-action="discard-draft" aria-label="Descartar rascunho">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </article>
+  `,
+  );
 }
 
 export async function renderDashboard() {
@@ -1071,6 +1212,11 @@ export async function renderDashboard() {
     // Tier no root pra theming
     const dashRoot = document.getElementById('dash');
     if (dashRoot) dashRoot.setAttribute('data-tier', tier);
+
+    // ─── Continue card (UX V2 audit fix) ──────────────────────────────
+    // Se ha rascunho de registro em sessionStorage, mostra card sticky no
+    // topo "Continuar registro de [Equipamento]" pra resgatar o flow.
+    _renderContinueDraftCard(equipamentos);
 
     // Empty state curto quando sem equipamentos — mantém hero + KPIs desligados
     const emptyHost = document.getElementById('dash-empty');

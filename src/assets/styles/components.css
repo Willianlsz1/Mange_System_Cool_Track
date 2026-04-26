@@ -5332,16 +5332,34 @@ mark,
   }
 }
 
-/* ── Ultrawide: limitar largura das views de formulário ── */
+/* ── Ultrawide: limitar largura das views de formulário (V3 — escalar)
+   Antes era cap rigido 900px. Em FullHD ficava muito apertado com sobra
+   lateral enorme. Agora escala em 3 tiers conforme viewport.            */
 @media (min-width: 1400px) {
   #view-registro .card {
-    max-width: 900px;
+    max-width: 1080px;
   }
 
   #view-relatorio .form-row {
-    max-width: 900px;
+    max-width: 1080px;
     margin-left: auto;
     margin-right: auto;
+  }
+}
+@media (min-width: 1600px) {
+  #view-registro .card {
+    max-width: 1180px;
+  }
+  #view-relatorio .form-row {
+    max-width: 1180px;
+  }
+}
+@media (min-width: 1920px) {
+  #view-registro .card {
+    max-width: 1280px;
+  }
+  #view-relatorio .form-row {
+    max-width: 1280px;
   }
 }
 
@@ -11140,6 +11158,18 @@ mark,
   color: var(--dsh-red);
 }
 
+/* UX V2 audit fix #85: pill "TUDO OPERANDO" em verde quando esta tudo ok.
+   Antes herdava o accent amarelo da marca, o que confundia (amarelo =
+   warning na cabeça do usuario). Verde sinaliza saude correta. */
+.dash__hero[data-tone='ok'] .dash__hero-pill {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.18), rgba(16, 185, 129, 0.08));
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
+}
+.dash__hero[data-tone='ok'] .dash__hero-pill-icon svg {
+  color: #34d399;
+}
+
 .dash__hero-pill-icon {
   display: inline-flex;
   line-height: 0;
@@ -12883,6 +12913,50 @@ mark,
   transform: translateY(1px);
 }
 
+/* UX V2 audit fix #80: layout V2 — botão primário "Salvar e enviar pro
+   cliente" verde WhatsApp ocupa o espaço principal; "Só salvar" aparece
+   como ghost compacto secundário ao lado. Recomeçar fica a esquerda. */
+#view-registro .registro-actions--v2 {
+  align-items: stretch;
+  gap: 12px;
+}
+#view-registro .registro-actions--v2 .registro-actions__main {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+#view-registro .registro-actions--v2 .registro-actions__main .btn {
+  flex: 0 1 auto;
+}
+#view-registro .registro-actions--v2 .btn.btn--whats {
+  flex: 1 1 auto;
+  background: linear-gradient(135deg, #25d366, #1da851);
+  color: #fff;
+  border: none;
+  box-shadow: 0 8px 18px rgba(37, 211, 102, 0.32);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+#view-registro .registro-actions--v2 .btn.btn--whats:hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+#view-registro .registro-actions--v2 .btn.btn--whats:active {
+  transform: translateY(0);
+}
+#view-registro .registro-actions--v2 .btn.btn--whats svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+#view-registro .registro-actions--v2 .registro-actions__save-only {
+  font-size: 13px;
+  padding: 12px 14px;
+  white-space: nowrap;
+}
+
 #view-registro .registro-actions .btn.btn--editing {
   background: linear-gradient(135deg, var(--warning), #c87a0c);
   color: #1a1100;
@@ -13031,6 +13105,18 @@ mark,
 
   #view-registro .registro-actions .btn--ghost,
   #view-registro .registro-actions .btn--primary {
+    width: 100%;
+  }
+
+  /* V2 mobile: na coluna invertida, __main vai pro topo. Empilhamos
+     "Salvar e enviar" + "Só salvar" verticalmente pra evitar duas linhas
+     truncadas. Recomeçar fica na ponta. */
+  #view-registro .registro-actions--v2 .registro-actions__main {
+    flex-direction: column;
+    width: 100%;
+  }
+  #view-registro .registro-actions--v2 .registro-actions__main .btn,
+  #view-registro .registro-actions--v2 .registro-actions__save-only {
     width: 100%;
   }
 }
@@ -15739,31 +15825,36 @@ select option {
 .servicos-toggle {
   display: inline-flex;
   align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 3px;
-  margin: 0 0 14px;
-  gap: 2px;
+  background: var(--surface-2, #16283e);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+  padding: 4px;
+  margin: 0 0 16px;
+  gap: 4px;
 }
 .servicos-toggle__btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 7px;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 9px;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
+  min-height: 36px;
   transition:
     background 0.15s ease,
     color 0.15s ease,
     border-color 0.15s ease;
+}
+.servicos-toggle__btn svg {
+  width: 15px;
+  height: 15px;
 }
 .servicos-toggle__btn:hover {
   color: var(--text);
@@ -16606,14 +16697,20 @@ select option {
 .app-sidebar__nav {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  flex: 1;
+  gap: 1px;
+  /* V3: removido flex:1 — antes empurrava o footer pro fundo da viewport,
+     criando ~200px de vazio entre o ultimo item de nav (Alertas) e o
+     plan card. Sem flex, o footer encosta naturalmente no nav e o
+     vazio (se houver) fica embaixo do user chip — mais natural. */
 }
 .app-sidebar__nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
+  gap: 11px;
+  /* V3: padding vertical de 9->7 pra tornar a lista mais compacta sem
+     perder hit-area minima (38px de altura efetiva ainda dentro do
+     padrao Apple/Google). */
+  padding: 7px 12px;
   border-radius: 8px;
   color: var(--text-2, #8aaac8);
   font-size: 13px;
@@ -16694,25 +16791,27 @@ select option {
    Sidebar V3 — Plano Card + User Chip no footer
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Footer da sidebar — empilha plan card + user chip com gap */
+/* V3: footer mais proximo do nav. Antes tinha margin-top:12 + flex:1 no
+   nav que empurrava 200px+ pra baixo. Agora nav nao expande, footer cola
+   embaixo do nav com pequena separacao visual. */
 .app-sidebar__footer {
   border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 12px;
-  margin-top: 12px;
+  padding-top: 10px;
+  margin-top: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
-/* Plan card — destaque visual sutil pra plano ativo */
+/* V3: Plan card mais compacto — padding 12->10, gap 8->6 */
 .app-sidebar__plan-card {
   background: rgba(232, 160, 32, 0.06);
   border: 1px solid rgba(232, 160, 32, 0.18);
   border-radius: 10px;
-  padding: 12px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .app-sidebar__plan-card-head {
   display: flex;
@@ -17934,7 +18033,10 @@ select option {
 
 .cli-page {
   padding: 16px 14px 80px;
-  max-width: 1280px;
+  /* V3 responsivo: usa --layout-max pra subir junto com viewport (1600 →
+     1760 → 1880 conforme breakpoints). Antes era 1280px fixo, mais
+     restritivo que o resto do app. */
+  max-width: var(--layout-max);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -18523,6 +18625,12 @@ select option {
   background: rgba(255, 255, 255, 0.04);
   color: var(--text);
 }
+/* Botao "Opcoes" reflete estado aberto/fechado do menu */
+.cli-card__action--options[aria-expanded='true'] {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text);
+}
 
 /* ── Empty + loading ────────────────────────────────────────────────── */
 
@@ -18698,12 +18806,12 @@ select option {
     padding: 18px 12px 20px;
   }
 
-  /* Section grouping com kicker label */
+  /* V3: section grouping mais compacto (16->10mb, menos padding interno) */
   .app-sidebar__section {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin-bottom: 16px;
+    gap: 1px;
+    margin-bottom: 10px;
   }
   .app-sidebar__section:last-child {
     margin-bottom: 0;
@@ -18713,8 +18821,8 @@ select option {
     font-weight: 700;
     color: var(--text-3, #6a8ba8);
     letter-spacing: 0.14em;
-    padding: 0 14px 6px;
-    margin-top: 4px;
+    padding: 0 14px 4px;
+    margin-top: 2px;
   }
 
   /* Nav item base com indicador lateral cyan no estado ativo */
@@ -18908,4 +19016,3249 @@ select option {
   .app-sidebar__settings-chev svg {
     display: block;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Sidebar: lock + PRO badge no item Clientes (Free/Plus)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  /* Lock badge (escondido por default, JS toggle .hidden conforme plano) */
+  .app-sidebar__nav-lock {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: rgba(232, 160, 32, 0.1);
+    color: #f5b54a;
+    border: 1px solid rgba(232, 160, 32, 0.26);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .app-sidebar__nav-lock svg {
+    display: block;
+  }
+  .app-sidebar__nav-lock-label {
+    line-height: 1;
+  }
+
+  /* Item locked: leve dim no texto/icone, mas ainda clickable (paywall) */
+  .app-sidebar__nav-item--locked {
+    color: var(--text-3, #6a8ba8);
+  }
+  .app-sidebar__nav-item--locked:hover {
+    background: rgba(232, 160, 32, 0.06);
+    color: var(--text-2, #8aaac8);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ClientesPaywallModal — modal exibido pra Free/Plus que tenta abrir Clientes
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.clientes-paywall-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 14, 0.78);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.clientes-paywall {
+  position: relative;
+  max-width: 540px;
+  width: 100%;
+  margin: auto;
+  border-radius: 18px;
+  background: var(--surface, #0e1820);
+  border: 1px solid rgba(232, 160, 32, 0.22);
+  box-shadow: 0 30px 80px rgba(2, 6, 14, 0.6);
+  overflow: hidden;
+}
+
+.clientes-paywall__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-2, #8aaac8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.clientes-paywall__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+.clientes-paywall__close svg {
+  display: block;
+}
+
+.clientes-paywall__hero {
+  position: relative;
+  padding: 28px 24px 20px;
+  background:
+    radial-gradient(80% 60% at 110% -10%, rgba(232, 160, 32, 0.18) 0%, transparent 60%),
+    radial-gradient(60% 50% at -10% 110%, rgba(58, 142, 230, 0.12) 0%, transparent 60%),
+    linear-gradient(160deg, #0a1622 0%, #060d16 100%);
+  text-align: center;
+  isolation: isolate;
+  overflow: hidden;
+}
+.clientes-paywall__hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(50px);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+.clientes-paywall__hero-orb--a {
+  width: 240px;
+  height: 240px;
+  top: -100px;
+  right: -80px;
+  background: radial-gradient(circle, rgba(232, 160, 32, 0.5), transparent 65%);
+}
+.clientes-paywall__hero-orb--b {
+  width: 200px;
+  height: 200px;
+  bottom: -80px;
+  left: -80px;
+  background: radial-gradient(circle, rgba(58, 142, 230, 0.4), transparent 70%);
+}
+
+.clientes-paywall__badge {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(232, 160, 32, 0.14);
+  border: 1px solid rgba(232, 160, 32, 0.36);
+  color: #f5b54a;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 18px;
+}
+.clientes-paywall__badge svg {
+  display: block;
+}
+
+.clientes-paywall__mockup {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0 auto 20px;
+  max-width: 380px;
+}
+.clientes-paywall__mockup-card {
+  padding: 12px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.clientes-paywall__mockup-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.clientes-paywall__mockup-icon svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+.clientes-paywall__mockup-icon--orange {
+  background: rgba(232, 130, 32, 0.14);
+  color: #f59e3a;
+  border: 1px solid rgba(232, 130, 32, 0.24);
+}
+.clientes-paywall__mockup-icon--blue {
+  background: rgba(58, 142, 230, 0.14);
+  color: #5ba0ff;
+  border: 1px solid rgba(58, 142, 230, 0.24);
+}
+.clientes-paywall__mockup-icon--teal {
+  background: rgba(45, 212, 164, 0.14);
+  color: #5fe6b3;
+  border: 1px solid rgba(45, 212, 164, 0.24);
+}
+.clientes-paywall__mockup-line {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.clientes-paywall__mockup-line--lg {
+  width: 80%;
+}
+.clientes-paywall__mockup-line--sm {
+  width: 50%;
+  opacity: 0.6;
+}
+
+.clientes-paywall__title {
+  position: relative;
+  z-index: 2;
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.015em;
+}
+@media (min-width: 720px) {
+  .clientes-paywall__title {
+    font-size: 26px;
+  }
+}
+.clientes-paywall__sub {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  font-size: 13.5px;
+  color: rgba(232, 242, 250, 0.75);
+  line-height: 1.55;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.clientes-paywall__perks {
+  padding: 22px 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.clientes-paywall__perk {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.clientes-paywall__perk-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.clientes-paywall__perk-icon svg {
+  display: block;
+}
+.clientes-paywall__perk-icon--cyan {
+  background: rgba(74, 163, 255, 0.1);
+  color: #6fbfff;
+  border: 1px solid rgba(74, 163, 255, 0.22);
+}
+.clientes-paywall__perk-icon--amber {
+  background: rgba(232, 160, 32, 0.1);
+  color: #f5b54a;
+  border: 1px solid rgba(232, 160, 32, 0.22);
+}
+.clientes-paywall__perk-icon--teal {
+  background: rgba(45, 212, 164, 0.1);
+  color: #5fe6b3;
+  border: 1px solid rgba(45, 212, 164, 0.22);
+}
+.clientes-paywall__perk-body {
+  flex: 1;
+  min-width: 0;
+}
+.clientes-paywall__perk-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text, #e8f2fa);
+  letter-spacing: -0.005em;
+}
+.clientes-paywall__perk-desc {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--text-2, #8aaac8);
+  line-height: 1.5;
+}
+
+.clientes-paywall__actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 24px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+@media (max-width: 480px) {
+  .clientes-paywall__actions {
+    flex-direction: column-reverse;
+  }
+}
+.clientes-paywall__cancel,
+.clientes-paywall__upgrade {
+  flex: 1;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.clientes-paywall__cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2, #8aaac8);
+}
+.clientes-paywall__cancel:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.clientes-paywall__upgrade {
+  background: linear-gradient(120deg, #e8a020 0%, #f5b54a 100%);
+  border: none;
+  color: #1a1100;
+  box-shadow: 0 8px 22px rgba(232, 160, 32, 0.28);
+}
+.clientes-paywall__upgrade:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(232, 160, 32, 0.36);
+}
+.clientes-paywall__upgrade svg {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Setor modal: badge contextual "Para cliente: X" no topo do form
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.setor-modal__cliente-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border-radius: 10px;
+  background: rgba(74, 163, 255, 0.08);
+  border: 1px solid rgba(74, 163, 255, 0.22);
+  color: var(--text, #e8f2fa);
+  font-size: 12.5px;
+}
+.setor-modal__cliente-badge svg {
+  display: block;
+  color: #6fbfff;
+  flex-shrink: 0;
+}
+.setor-modal__cliente-badge strong {
+  color: #6fbfff;
+  font-weight: 700;
+}
+
+/* Tile "Sem setor" (compat backward na grade do cliente) — visual mais sutil
+   pra diferenciar dos setores reais. */
+.setor-card--sem-setor {
+  background: rgba(138, 170, 200, 0.04);
+  border: 1px dashed rgba(138, 170, 200, 0.24);
+  cursor: pointer;
+}
+.setor-card--sem-setor:hover {
+  background: rgba(138, 170, 200, 0.08);
+  border-color: rgba(138, 170, 200, 0.36);
+}
+.setor-card--sem-setor .setor-card__name {
+  color: var(--text-2, #8aaac8);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Cliente: alert badge no card + dropdown menu real do kebab
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Badge de alerta de retorno (mostra se cliente tem alerta setado) */
+.cli-card__alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  align-self: flex-start;
+}
+.cli-card__alert svg {
+  display: block;
+  flex-shrink: 0;
+}
+.cli-card__alert--info {
+  background: rgba(74, 163, 255, 0.1);
+  color: #6fbfff;
+  border: 1px solid rgba(74, 163, 255, 0.22);
+}
+.cli-card__alert--warn {
+  background: rgba(232, 160, 32, 0.1);
+  color: #f5b54a;
+  border: 1px solid rgba(232, 160, 32, 0.26);
+}
+.cli-card__alert--danger {
+  background: rgba(224, 48, 64, 0.1);
+  color: #f47082;
+  border: 1px solid rgba(224, 48, 64, 0.26);
+}
+
+/* Dropdown menu do kebab (substitui o openCardMenu antigo que ia direto pra delete) */
+.cli-card {
+  position: relative;
+}
+.cli-card__menu {
+  position: absolute;
+  /* Anchored ao botao "Opcoes" no canto inferior direito do card.
+     Sobe pra cima do botao com gap de 8px. Bottom = padding bottom do card +
+     altura do footer + gap. */
+  bottom: calc(18px + 36px + 8px);
+  right: 18px;
+  z-index: 10;
+  min-width: 180px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 28px rgba(2, 6, 14, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cli-card__menu[hidden] {
+  display: none;
+}
+.cli-card__menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+.cli-card__menu-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.cli-card__menu-item svg {
+  display: block;
+  flex-shrink: 0;
+  color: var(--text-3, #6a8ba8);
+}
+.cli-card__menu-item--danger {
+  color: #f47082;
+}
+.cli-card__menu-item--danger:hover {
+  background: rgba(224, 48, 64, 0.08);
+}
+.cli-card__menu-item--danger svg {
+  color: #f47082;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ClienteAlertModal — picker de alerta de retorno (30/60/90/custom)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cliente-alert-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 14, 0.78);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.cliente-alert-modal {
+  position: relative;
+  max-width: 460px;
+  width: 100%;
+  margin: auto;
+  border-radius: 16px;
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 80px rgba(2, 6, 14, 0.6);
+  overflow: hidden;
+}
+
+.cliente-alert-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-2, #8aaac8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cliente-alert-modal__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+.cliente-alert-modal__close svg {
+  display: block;
+}
+
+.cliente-alert-modal__head {
+  display: flex;
+  gap: 14px;
+  padding: 22px 22px 16px;
+  background: linear-gradient(160deg, rgba(74, 163, 255, 0.06), transparent);
+}
+.cliente-alert-modal__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(74, 163, 255, 0.12);
+  color: #6fbfff;
+  border: 1px solid rgba(74, 163, 255, 0.22);
+  flex-shrink: 0;
+}
+.cliente-alert-modal__icon svg {
+  display: block;
+}
+.cliente-alert-modal__title {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.cliente-alert-modal__sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-2, #8aaac8);
+  line-height: 1.5;
+}
+.cliente-alert-modal__sub strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Card "Alerta atual" mostrado quando ja existe alerta setado */
+.cliente-alert-modal__current {
+  margin: 0 22px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(74, 163, 255, 0.06);
+  border: 1px solid rgba(74, 163, 255, 0.18);
+}
+.cliente-alert-modal__current-icon {
+  color: #6fbfff;
+  display: inline-flex;
+}
+.cliente-alert-modal__current-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+.cliente-alert-modal__current-body {
+  flex: 1;
+  min-width: 0;
+}
+.cliente-alert-modal__current-label {
+  font-size: 11px;
+  color: var(--text-3, #6a8ba8);
+  font-weight: 500;
+}
+.cliente-alert-modal__current-date {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.cliente-alert-modal__remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid rgba(224, 48, 64, 0.3);
+  color: #f47082;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.cliente-alert-modal__remove:hover {
+  background: rgba(224, 48, 64, 0.12);
+}
+.cliente-alert-modal__remove svg {
+  display: block;
+}
+
+.cliente-alert-modal__body {
+  padding: 0 22px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cliente-alert-modal__field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2, #8aaac8);
+  margin-bottom: 8px;
+  display: block;
+}
+.cliente-alert-modal__field-hint {
+  color: var(--text-3, #6a8ba8);
+  font-weight: 400;
+  font-size: 11px;
+}
+
+.cliente-alert-modal__quick {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.cliente-alert-modal__quick-btn {
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cliente-alert-modal__quick-btn:hover {
+  border-color: rgba(74, 163, 255, 0.3);
+  color: #6fbfff;
+}
+.cliente-alert-modal__quick-btn.is-active {
+  background: rgba(74, 163, 255, 0.12);
+  border-color: rgba(74, 163, 255, 0.4);
+  color: #6fbfff;
+}
+
+.cliente-alert-modal__custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cliente-alert-modal__input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.cliente-alert-modal__input:focus {
+  outline: none;
+  border-color: rgba(74, 163, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.15);
+}
+.cliente-alert-modal__custom-unit {
+  font-size: 13px;
+  color: var(--text-2, #8aaac8);
+}
+.cliente-alert-modal__preview {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  background: rgba(45, 212, 164, 0.06);
+  border: 1px solid rgba(45, 212, 164, 0.18);
+  font-size: 12px;
+  color: var(--text-2, #8aaac8);
+}
+.cliente-alert-modal__preview strong {
+  color: #5fe6b3;
+  font-variant-numeric: tabular-nums;
+}
+
+.cliente-alert-modal__textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  resize: vertical;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+.cliente-alert-modal__textarea:focus {
+  outline: none;
+  border-color: rgba(74, 163, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.15);
+}
+
+.cliente-alert-modal__actions {
+  display: flex;
+  gap: 10px;
+  padding: 16px 22px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.cliente-alert-modal__cancel,
+.cliente-alert-modal__save {
+  flex: 1;
+  padding: 11px 16px;
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.cliente-alert-modal__cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2, #8aaac8);
+}
+.cliente-alert-modal__cancel:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.cliente-alert-modal__save {
+  background: linear-gradient(120deg, #0bb6d9 0%, #4aa3ff 100%);
+  border: none;
+  color: #042233;
+  box-shadow: 0 6px 18px rgba(11, 182, 217, 0.28);
+}
+.cliente-alert-modal__save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(11, 182, 217, 0.36);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Header: esconde elementos redundantes em desktop (sidebar ja cobre).
+   - Sino: sidebar tem item Alertas com badge
+   - Engrenagem: sidebar tem rodape Configuracoes
+   - Avatar: sidebar tem user chip (Fernando Ruan / Administrador)
+   - Sync status: vai pro rodape da sidebar (style abaixo)
+   Mantemos: brand + (sync status escondido aqui pq o da sidebar assume)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  /* Desktop: sidebar cobre tudo. Esconde sino, avatar, sync e o BOTAO da
+     engrenagem do header (mas NAO o wrapper .header-settings — ele continua
+     hospedando o #header-help-menu que eh aberto pela "Configuracoes" do
+     sidebar via re-posicionamento JS).
+
+     ATENCAO: header-help-btn e header-alert-btn sao IDs no DOM (com
+     seletor #), nao classes. Por isso usamos os 2 seletores aqui. */
+  .app-header #header-help-btn,
+  .app-header .header-alert-btn,
+  .app-header #header-alert-btn,
+  .app-header .header-avatar,
+  .app-header #header-avatar,
+  .app-header #sync-status {
+    display: none !important;
+  }
+  /* O wrapper .header-settings precisa nao ocupar espaco visual, mas continuar
+     no fluxo pra hospedar o menu via getBoundingClientRect (re-anchored pelo
+     handler quando triggered from sidebar). display: contents resolve. */
+  .app-header .header-settings {
+    display: contents;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Sidebar: sync status pill no rodape (acima do plan card)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  .app-sidebar__sync {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-2, #8aaac8);
+  }
+  .app-sidebar__sync[hidden] {
+    display: none;
+  }
+  .app-sidebar__sync-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--text-3, #6a8ba8);
+  }
+  .app-sidebar__sync-dot--ok {
+    background: #5fe6b3;
+    box-shadow: 0 0 6px rgba(95, 230, 179, 0.6);
+    animation: sidenavSyncPulse 1.5s ease-in-out infinite;
+  }
+  .app-sidebar__sync-dot--warn {
+    background: #f5b54a;
+  }
+  @keyframes sidenavSyncPulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.4;
+    }
+  }
+  .app-sidebar__sync-icon {
+    color: var(--text-3, #6a8ba8);
+    flex-shrink: 0;
+  }
+  .app-sidebar__sync[data-state='syncing'] .app-sidebar__sync-icon {
+    color: #5fe6b3;
+    animation: sidenavSyncRotate 2s linear infinite;
+  }
+  @keyframes sidenavSyncRotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .app-sidebar__sync[data-state='pending'] .app-sidebar__sync-icon {
+    color: #f5b54a;
+  }
+  .app-sidebar__sync-text {
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Mobile/tablet: sidebar nao aparece, pill nunca renderiza */
+@media (max-width: 1023px) {
+  .app-sidebar__sync {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Setor cliente empty: hero convidativo + banner Sem setor secundario
+   Mostrado quando o cliente tem 0 setores cadastrados (mas pode ter eq
+   sem setor por compat backward).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.setor-cliente-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 12px;
+}
+
+.setor-cliente-empty__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 36px 24px 32px;
+  border-radius: 18px;
+  background:
+    radial-gradient(80% 60% at 110% -10%, rgba(74, 163, 255, 0.12) 0%, transparent 60%),
+    radial-gradient(60% 50% at -10% 110%, rgba(45, 212, 164, 0.1) 0%, transparent 60%),
+    linear-gradient(160deg, #0a1622 0%, #060d16 100%);
+  border: 1px solid rgba(74, 163, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.setor-cliente-empty__art {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  background: rgba(74, 163, 255, 0.1);
+  border: 1px solid rgba(74, 163, 255, 0.24);
+  color: #6fbfff;
+  margin-bottom: 4px;
+}
+.setor-cliente-empty__art svg {
+  display: block;
+}
+
+.setor-cliente-empty__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  max-width: 480px;
+}
+@media (min-width: 720px) {
+  .setor-cliente-empty__title {
+    font-size: 24px;
+  }
+}
+
+.setor-cliente-empty__sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: rgba(232, 242, 250, 0.75);
+  line-height: 1.55;
+  max-width: 460px;
+}
+
+.setor-cliente-empty__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #0bb6d9 0%, #4aa3ff 100%);
+  color: #042233;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 22px rgba(11, 182, 217, 0.28);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  margin-top: 8px;
+}
+.setor-cliente-empty__cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(11, 182, 217, 0.36);
+}
+.setor-cliente-empty__cta svg {
+  display: block;
+}
+
+/* Lista de hints (1, 2, 3) — etapas do setup */
+.setor-cliente-empty__hints {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 18px;
+  width: 100%;
+  max-width: 380px;
+}
+.setor-cliente-empty__hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: left;
+  font-size: 12.5px;
+  color: rgba(232, 242, 250, 0.78);
+}
+.setor-cliente-empty__hint-num {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(74, 163, 255, 0.14);
+  color: #6fbfff;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Banner secundario "Sem setor" (mostra so se ha equips backward sem setor) */
+.setor-cliente-empty__sem-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: rgba(232, 160, 32, 0.06);
+  border: 1px solid rgba(232, 160, 32, 0.2);
+  border-left: 3px solid rgba(232, 160, 32, 0.55);
+}
+.setor-cliente-empty__sem-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(232, 160, 32, 0.1);
+  color: #f5b54a;
+  flex-shrink: 0;
+}
+.setor-cliente-empty__sem-icon svg {
+  display: block;
+}
+.setor-cliente-empty__sem-body {
+  flex: 1;
+  min-width: 0;
+}
+.setor-cliente-empty__sem-body strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffe1a1;
+}
+.setor-cliente-empty__sem-body p {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: rgba(255, 220, 160, 0.78);
+  line-height: 1.4;
+}
+.setor-cliente-empty__sem-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: transparent;
+  border: 1px solid rgba(232, 160, 32, 0.32);
+  color: #f5b54a;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.setor-cliente-empty__sem-link:hover {
+  background: rgba(232, 160, 32, 0.1);
+}
+.setor-cliente-empty__sem-link svg {
+  display: block;
+}
+
+@media (max-width: 540px) {
+  .setor-cliente-empty__sem-banner {
+    flex-wrap: wrap;
+  }
+  .setor-cliente-empty__sem-link {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Quick-move banner: aparece no drill-down __sem_setor__ dentro do contexto
+   cliente. Permite mover todos os equipamentos sem setor pra um setor
+   existente em 1 click.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.quick-move-banner {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: rgba(74, 163, 255, 0.06);
+  border: 1px solid rgba(74, 163, 255, 0.22);
+  border-left: 3px solid #6fbfff;
+}
+@media (max-width: 720px) {
+  .quick-move-banner {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+}
+
+.quick-move-banner__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(74, 163, 255, 0.12);
+  color: #6fbfff;
+  flex-shrink: 0;
+  border: 1px solid rgba(74, 163, 255, 0.24);
+}
+.quick-move-banner__icon svg {
+  display: block;
+}
+
+.quick-move-banner__body {
+  min-width: 0;
+}
+.quick-move-banner__body strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text, #e8f2fa);
+  letter-spacing: -0.005em;
+}
+.quick-move-banner__body p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--text-2, #8aaac8);
+  line-height: 1.4;
+}
+
+.quick-move-banner__action {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+@media (max-width: 720px) {
+  .quick-move-banner__action {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .quick-move-banner__select {
+    flex: 1;
+    min-width: 140px;
+  }
+}
+
+.quick-move-banner__select {
+  padding: 9px 14px 9px 12px;
+  border-radius: 8px;
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%236a8ba8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  min-width: 160px;
+}
+.quick-move-banner__select:focus {
+  outline: none;
+  border-color: rgba(74, 163, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.15);
+}
+
+.quick-move-banner__btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: linear-gradient(120deg, #0bb6d9 0%, #4aa3ff 100%);
+  color: #042233;
+  border: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.quick-move-banner__btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(11, 182, 217, 0.32);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Equipment card: pill de componente (evaporadora / condensadora / unica)
+   Aparece ao lado do tipo na meta line. Discreto, cor por categoria.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.equip-card__componente-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.equip-card__componente-pill--cyan {
+  background: rgba(74, 163, 255, 0.14);
+  color: #6fbfff;
+  border: 1px solid rgba(74, 163, 255, 0.28);
+}
+.equip-card__componente-pill--orange {
+  background: rgba(232, 130, 32, 0.14);
+  color: #f59e3a;
+  border: 1px solid rgba(232, 130, 32, 0.3);
+}
+.equip-card__componente-pill--neutral {
+  background: rgba(138, 170, 200, 0.1);
+  color: var(--text-2, #8aaac8);
+  border: 1px solid rgba(138, 170, 200, 0.22);
+}
+
+/* form-help dentro do modal de equipamento (usado pelo eq-componente) */
+#eq-componente-wrapper .form-help {
+  font-size: 11px;
+  color: var(--text-3, #6a8ba8);
+  margin: 4px 2px 0;
+  line-height: 1.45;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Eq Context V2 — header + grid de cards (Setor / Cliente)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.eq-context-group {
+  margin: 16px 0 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(74, 163, 255, 0.04);
+  border: 1px solid rgba(74, 163, 255, 0.14);
+}
+
+.eq-context-group__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.eq-context-group__label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2, #8aaac8);
+  letter-spacing: 0.12em;
+}
+.eq-context-group__opt {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(138, 170, 200, 0.1);
+  color: var(--text-3, #6a8ba8);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  border: 1px solid rgba(138, 170, 200, 0.18);
+}
+.eq-context-group__hint {
+  font-size: 12px;
+  color: var(--text-3, #6a8ba8);
+  margin-left: auto;
+}
+@media (max-width: 540px) {
+  .eq-context-group__hint {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+}
+
+.eq-context-group__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+@media (min-width: 540px) {
+  .eq-context-group__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.eq-context-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eq-context-card__trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+.eq-context-card__trigger:hover {
+  border-color: rgba(74, 163, 255, 0.3);
+}
+.eq-context-card__trigger[aria-expanded='true'] {
+  border-color: rgba(74, 163, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.12);
+}
+
+.eq-context-card__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+.eq-context-card__icon--setor {
+  background: rgba(168, 132, 255, 0.1);
+  color: #b89eff;
+  border: 1px solid rgba(168, 132, 255, 0.2);
+}
+.eq-context-card__icon--cliente {
+  background: rgba(74, 163, 255, 0.1);
+  color: #6fbfff;
+  border: 1px solid rgba(74, 163, 255, 0.22);
+}
+.eq-context-card__icon svg {
+  display: block;
+}
+
+.eq-context-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.eq-context-card__label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-3, #6a8ba8);
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.eq-context-card__value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+.eq-context-card__value--placeholder {
+  color: var(--text-3, #6a8ba8);
+  font-weight: 500;
+}
+
+.eq-context-card__chev {
+  color: var(--text-3, #6a8ba8);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.eq-context-card__trigger[aria-expanded='true'] .eq-context-card__chev {
+  transform: rotate(180deg);
+  color: #6fbfff;
+}
+
+.eq-context-card__hidden-select {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.eq-context-card__create-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  margin-top: 2px;
+  background: transparent;
+  border: none;
+  color: #44d4a4;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+.eq-context-card__create-link:hover {
+  background: rgba(68, 212, 164, 0.08);
+}
+.eq-context-card__create-link svg {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Eq Context Picker — dropdown panel anexado ao body
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.eq-context-picker {
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(2, 6, 14, 0.55);
+  overflow: hidden;
+  max-height: min(420px, 70vh);
+  display: flex;
+  flex-direction: column;
+}
+
+.eq-context-picker__search-wrap {
+  position: relative;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+.eq-context-picker__search-icon {
+  position: absolute;
+  top: 50%;
+  left: 24px;
+  transform: translateY(-50%);
+  color: var(--text-3, #6a8ba8);
+  pointer-events: none;
+}
+.eq-context-picker__search {
+  width: 100%;
+  padding: 9px 12px 9px 36px;
+  border-radius: 8px;
+  background: rgba(2, 6, 14, 0.5);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+.eq-context-picker__search:focus {
+  outline: none;
+  border-color: rgba(74, 163, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.15);
+}
+
+.eq-context-picker__section {
+  padding: 6px 8px;
+  overflow-y: auto;
+}
+.eq-context-picker__section + .eq-context-picker__section {
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+.eq-context-picker__section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3, #6a8ba8);
+  letter-spacing: 0.12em;
+  padding: 6px 10px 4px;
+}
+
+.eq-context-picker__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+.eq-context-picker__item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.eq-context-picker__item.is-selected {
+  background: rgba(74, 163, 255, 0.08);
+}
+.eq-context-picker__item.is-selected .eq-context-picker__item-name {
+  color: #6fbfff;
+}
+
+.eq-context-picker__avatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.eq-context-picker__icon-tile {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(138, 170, 200, 0.08);
+  color: var(--text-2, #8aaac8);
+  border: 1px solid rgba(138, 170, 200, 0.16);
+  flex-shrink: 0;
+}
+.eq-context-picker__icon-tile svg {
+  display: block;
+}
+.eq-context-picker__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-left: 9px;
+}
+
+.eq-context-picker__item-body {
+  min-width: 0;
+}
+.eq-context-picker__item-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.005em;
+}
+.eq-context-picker__item-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-3, #6a8ba8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eq-context-picker__check {
+  color: #6fbfff;
+  flex-shrink: 0;
+}
+
+.eq-context-picker__empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-3, #6a8ba8);
+}
+
+.eq-context-picker__footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 8px;
+  background: rgba(2, 6, 14, 0.3);
+  flex-shrink: 0;
+}
+.eq-context-picker__create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px dashed rgba(74, 163, 255, 0.32);
+  color: #6fbfff;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.eq-context-picker__create:hover {
+  background: rgba(74, 163, 255, 0.06);
+  border-color: rgba(74, 163, 255, 0.5);
+  border-style: solid;
+}
+.eq-context-picker__create svg {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Sync pill: variant 'danger' (erro de servidor — vermelho)
+   Complementa o variant 'warn' (offline — amber) ja existente.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1024px) {
+  .app-sidebar__sync-dot--danger {
+    background: #f47082;
+    box-shadow: 0 0 6px rgba(244, 112, 130, 0.5);
+  }
+  .app-sidebar__sync[data-state='error'] {
+    background: rgba(224, 48, 64, 0.06);
+    border-color: rgba(224, 48, 64, 0.22);
+    color: #f47082;
+  }
+  .app-sidebar__sync[data-state='error'] .app-sidebar__sync-icon {
+    color: #f47082;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Relatório toolbar V2 (UX audit fix): WhatsApp como primary verde grande,
+   PDF como secondary, kebab pra ações raras (PMOC, Sobre).
+   Reduz cliques pra a ação mais comum de 5 → 2.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.rel-toolbar__actions--v2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rel-toolbar__btn--whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: linear-gradient(120deg, #25d366 0%, #128c7e 100%);
+  color: #ffffff;
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.32);
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+  flex: 1 1 auto;
+  min-width: 200px;
+  justify-content: center;
+}
+.rel-toolbar__btn--whatsapp:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37, 211, 102, 0.42);
+}
+.rel-toolbar__btn--whatsapp:active {
+  transform: translateY(0);
+}
+.rel-toolbar__btn--whatsapp svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.rel-toolbar__btn--pdf {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 16px;
+  border-radius: 10px;
+  background: rgba(74, 163, 255, 0.08);
+  color: #6fbfff;
+  border: 1px solid rgba(74, 163, 255, 0.32);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.rel-toolbar__btn--pdf:hover {
+  background: rgba(74, 163, 255, 0.14);
+  border-color: rgba(74, 163, 255, 0.5);
+}
+.rel-toolbar__btn--pdf svg {
+  display: block;
+}
+
+.rel-toolbar__btn--icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-2, #8aaac8);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.rel-toolbar__btn--icon:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.rel-toolbar__btn--icon svg {
+  display: block;
+}
+
+.rel-toolbar__more {
+  position: relative;
+}
+
+@media (max-width: 540px) {
+  .rel-toolbar__btn--whatsapp {
+    width: 100%;
+    min-width: 0;
+  }
+  .rel-toolbar__btn--pdf {
+    flex: 1;
+    justify-content: center;
+  }
+  .rel-toolbar__actions--v2 {
+    flex-wrap: wrap;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Registro hero V2 compact — UX audit fix.
+   Layout horizontal: pill (esquerda) + meter (centro flex) + count (direita).
+   Substitui o hero antigo que ocupava ~150px vertical.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.registro-hero--compact {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(74, 163, 255, 0.05);
+  border: 1px solid rgba(74, 163, 255, 0.16);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.registro-hero--compact .registro-hero__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(74, 163, 255, 0.12);
+  color: #6fbfff;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.registro-hero--compact .registro-hero__pill svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.registro-hero--compact .registro-hero__progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.registro-hero--compact .registro-hero__meter {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+  min-width: 80px;
+}
+.registro-hero--compact .registro-hero__seg {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  transition: background 0.2s ease;
+}
+.registro-hero--compact .registro-hero__seg.is-filled {
+  background: linear-gradient(90deg, #44d4a4 0%, #6fbfff 100%);
+  box-shadow: 0 0 6px rgba(95, 230, 179, 0.4);
+}
+
+.registro-hero--compact .registro-hero__count {
+  font-size: 12px;
+  color: var(--text-2, #8aaac8);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.registro-hero--compact .registro-hero__count b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.registro-hero--compact .registro-hero__sub {
+  font-size: 11.5px;
+  color: var(--text-3, #6a8ba8);
+  margin: 0;
+  flex-basis: 100%;
+}
+
+/* Esconde elementos antigos do hero (orb/title/chips) caso ainda persistam */
+.registro-hero--compact .registro-hero__orb,
+.registro-hero--compact .registro-hero__title,
+.registro-hero--compact .registro-hero__chips {
+  display: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Nameplate CTA: estado 'locked' (Free) vira link discreto.
+   UX audit fix: hero PLUS gigante com botão de upsell roubava atenção
+   indevida pra um Free que não pode usar. Agora vira 1 linha sutil.
+   Active (Plus/Pro) mantém o hero completo — feature é destacada quem usa.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.nameplate-cta[data-state='locked'] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 0 0 12px;
+  background: transparent;
+  border: 1px dashed rgba(232, 160, 32, 0.32);
+  border-radius: 8px;
+  box-shadow: none;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__icon {
+  width: 24px;
+  height: 24px;
+  background: rgba(232, 160, 32, 0.12);
+  color: #f5b54a;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__icon svg {
+  width: 14px;
+  height: 14px;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__text {
+  flex: 1;
+  min-width: 0;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2, #8aaac8);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+}
+.nameplate-cta[data-state='locked'] .plus-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(232, 160, 32, 0.14);
+  color: #f5b54a;
+  border: 1px solid rgba(232, 160, 32, 0.28);
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__sub,
+.nameplate-cta[data-state='locked'] .nameplate-cta__hint {
+  display: none;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__action {
+  flex-shrink: 0;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__btn--active {
+  display: none;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__btn--locked {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: transparent;
+  border: 1px solid rgba(232, 160, 32, 0.4);
+  color: #f5b54a;
+  text-transform: none;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.nameplate-cta[data-state='locked'] .nameplate-cta__btn--locked:hover {
+  background: rgba(232, 160, 32, 0.1);
+}
+
+/* Trial state (Free com uso restante) — fica intermediário: card pequeno */
+.nameplate-cta[data-state='trial'] {
+  padding: 12px 14px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Datetime UX V2 — "Hoje agora" + Mudar (UX audit fix)
+   Substitui o input datetime-local nativo por 2 botoes grandes.
+   90% dos casos = "Hoje agora" (1 click = pronto). Mudar abre o picker.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.registro-field__datetime {
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.registro-field__datetime-now {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  background: rgba(74, 163, 255, 0.08);
+  border: 1px solid rgba(74, 163, 255, 0.22);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.registro-field__datetime-now[aria-pressed='true'] {
+  background: rgba(74, 163, 255, 0.14);
+  border-color: rgba(74, 163, 255, 0.4);
+  color: #6fbfff;
+}
+.registro-field__datetime-now[aria-pressed='false'] {
+  background: var(--surface, #0e1820);
+  border-color: var(--border);
+  color: var(--text);
+}
+.registro-field__datetime-now:hover {
+  border-color: rgba(74, 163, 255, 0.5);
+}
+.registro-field__datetime-now svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.registro-field__datetime-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2, #8aaac8);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.registro-field__datetime-edit:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.registro-field__datetime-edit svg {
+  display: block;
+}
+
+.registro-field__input--datetime-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Continue card no painel — UX V2 (audit fix).
+   Aparece sticky no topo quando ha rascunho de registro pendente.
+   Resgata o flow do tecnico que abriu o app pra continuar onde parou.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.dash__continue-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: rgba(74, 163, 255, 0.06);
+  border: 1px solid rgba(74, 163, 255, 0.22);
+  border-left: 3px solid #6fbfff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.dash__continue-card:hover {
+  background: rgba(74, 163, 255, 0.1);
+}
+.dash__continue-card__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(74, 163, 255, 0.14);
+  color: #6fbfff;
+  border: 1px solid rgba(74, 163, 255, 0.24);
+  flex-shrink: 0;
+}
+.dash__continue-card__icon svg {
+  display: block;
+  animation: dash-continue-spin 4s linear infinite;
+}
+@keyframes dash-continue-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.dash__continue-card__body {
+  min-width: 0;
+}
+.dash__continue-card__title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.005em;
+}
+.dash__continue-card__sub {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-2, #8aaac8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash__continue-card__sub strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.dash__continue-card__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: linear-gradient(120deg, #0bb6d9 0%, #4aa3ff 100%);
+  color: #042233;
+  border: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+}
+.dash__continue-card__cta:hover {
+  transform: translateY(-1px);
+}
+.dash__continue-card__cta svg {
+  display: block;
+}
+.dash__continue-card__close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-3, #6a8ba8);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.12s ease;
+}
+.dash__continue-card__close:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+.dash__continue-card__close svg {
+  display: block;
+}
+
+@media (max-width: 540px) {
+  .dash__continue-card {
+    grid-template-columns: auto 1fr auto;
+  }
+  .dash__continue-card__close {
+    grid-column: 3;
+  }
+  .dash__continue-card__cta {
+    grid-column: 1 / -1;
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Tile "Sem setor" no setor grid — visual MUITO mais discreto.
+   UX audit fix: antes competia visualmente com setores reais. Agora eh
+   um card secundario com texto cinza, sem cor de destaque.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.setor-card--sem-setor {
+  background: transparent !important;
+  border: 1px dashed rgba(138, 170, 200, 0.18) !important;
+  opacity: 0.7;
+}
+.setor-card--sem-setor:hover {
+  opacity: 1;
+  border-color: rgba(138, 170, 200, 0.32) !important;
+}
+.setor-card--sem-setor .setor-card__name {
+  color: var(--text-3, #6a8ba8) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+.setor-card--sem-setor .setor-card__sub {
+  color: var(--text-3, #6a8ba8) !important;
+  font-size: 11.5px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Breadcrumb (UX audit fix) — aparece no topo de /equipamentos quando ha
+   filtro ativo (cliente/setor). Da ao tecnico contexto sempre visivel.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.equip-breadcrumb {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+  font-size: 12px;
+  color: var(--text-3, #6a8ba8);
+  margin-bottom: 8px;
+}
+.equip-breadcrumb__item {
+  background: transparent;
+  border: none;
+  color: var(--text-3, #6a8ba8);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all 0.12s ease;
+}
+.equip-breadcrumb__item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+}
+.equip-breadcrumb__item--current {
+  color: var(--text);
+  font-weight: 600;
+  cursor: default;
+}
+.equip-breadcrumb__item--current:hover {
+  background: transparent;
+}
+.equip-breadcrumb__sep {
+  color: var(--text-3, #6a8ba8);
+  opacity: 0.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Registro equipamento picker — UX V2 audit fix.
+   Substitui o select nativo por trigger card + picker fullscreen com search.
+   Resolve o gargalo de tecnico com 50+ equips rolando lista nativa.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.registro-field--equip-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.registro-equip-trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--surface, #0e1820);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.registro-equip-trigger:hover {
+  border-color: rgba(74, 163, 255, 0.32);
+}
+.registro-equip-trigger[aria-expanded='true'] {
+  border-color: rgba(74, 163, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.15);
+}
+.registro-equip-trigger__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: rgba(74, 163, 255, 0.1);
+  color: #6fbfff;
+  border: 1px solid rgba(74, 163, 255, 0.2);
+  flex-shrink: 0;
+}
+.registro-equip-trigger__icon svg {
+  display: block;
+}
+.registro-equip-trigger__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.registro-equip-trigger__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.registro-equip-trigger__name--placeholder {
+  color: var(--text-3, #6a8ba8);
+  font-weight: 500;
+}
+.registro-equip-trigger__meta {
+  font-size: 11.5px;
+  color: var(--text-3, #6a8ba8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.registro-equip-trigger__chev {
+  color: var(--text-3, #6a8ba8);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+.registro-equip-trigger[aria-expanded='true'] .registro-equip-trigger__chev {
+  transform: rotate(180deg);
+  color: #6fbfff;
+}
+
+.registro-field__select--hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* Picker fullscreen mobile / modal grande desktop */
+.registro-equip-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+}
+.registro-equip-picker__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 14, 0.78);
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+}
+.registro-equip-picker__sheet {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--surface, #0e1820);
+  border-top: 1px solid rgba(74, 163, 255, 0.22);
+}
+@media (min-width: 720px) {
+  .registro-equip-picker {
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+  }
+  .registro-equip-picker__sheet {
+    width: 100%;
+    max-width: 540px;
+    max-height: 80vh;
+    border-radius: 18px;
+    border: 1px solid rgba(74, 163, 255, 0.22);
+    box-shadow: 0 30px 80px rgba(2, 6, 14, 0.6);
+  }
+}
+
+.registro-equip-picker__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+}
+.registro-equip-picker__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.registro-equip-picker__close {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-2, #8aaac8);
+  cursor: pointer;
+}
+.registro-equip-picker__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+.registro-equip-picker__close svg {
+  display: block;
+}
+
+.registro-equip-picker__search-wrap {
+  position: relative;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+}
+.registro-equip-picker__search-icon {
+  position: absolute;
+  top: 50%;
+  left: 26px;
+  transform: translateY(-50%);
+  color: var(--text-3, #6a8ba8);
+  pointer-events: none;
+}
+.registro-equip-picker__search {
+  width: 100%;
+  padding: 12px 14px 12px 40px;
+  border-radius: 10px;
+  background: rgba(2, 6, 14, 0.5);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+.registro-equip-picker__search:focus {
+  outline: none;
+  border-color: rgba(74, 163, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(74, 163, 255, 0.15);
+}
+
+.registro-equip-picker__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 6px;
+}
+
+.registro-equip-picker__group {
+  margin-bottom: 8px;
+}
+.registro-equip-picker__group-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-3, #6a8ba8);
+  letter-spacing: 0.12em;
+  padding: 8px 12px 6px;
+  text-transform: uppercase;
+}
+
+.registro-equip-picker__item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s ease;
+}
+.registro-equip-picker__item:hover {
+  background: var(--surface-2, #19324a);
+}
+.registro-equip-picker__item:focus-visible {
+  outline: 2px solid var(--accent, #51a3ff);
+  outline-offset: -2px;
+}
+
+.registro-equip-picker__item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2, #19324a);
+  color: var(--text-2, #a4becf);
+  flex-shrink: 0;
+}
+.registro-equip-picker__item-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.registro-equip-picker__item-body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.registro-equip-picker__item-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.registro-equip-picker__item-meta {
+  font-size: 12px;
+  color: var(--text-3, #6a8ba8);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.registro-equip-picker__item-meta-sep {
+  opacity: 0.5;
+}
+
+.registro-equip-picker__item-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-2, #a4becf);
+  background: var(--surface-2, #19324a);
+  padding: 4px 8px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.registro-equip-picker__empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-3, #6a8ba8);
+  font-size: 13px;
+}
+
+@media (min-width: 720px) {
+  .registro-equip-picker__sheet {
+    max-width: 540px;
+    max-height: 80vh;
+    margin: auto;
+    border-radius: 16px;
+  }
+}
+
+/* UX V2 audit fix #82: foto promovida a açao rapida acima do form.
+   Tile largo, gradient suave azul/cyan pra puxar atençao sem competir
+   com o botao verde primario lá embaixo. Em mobile vira card cheio. */
+#view-registro .registro-photo-quick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  margin: 0 0 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(81, 163, 255, 0.16), rgba(45, 212, 191, 0.1));
+  border: 1px solid rgba(81, 163, 255, 0.28);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+}
+#view-registro .registro-photo-quick:hover {
+  transform: translateY(-1px);
+  border-color: rgba(81, 163, 255, 0.5);
+  box-shadow: 0 8px 20px rgba(81, 163, 255, 0.18);
+}
+#view-registro .registro-photo-quick:focus-within {
+  outline: 2px solid var(--accent, #51a3ff);
+  outline-offset: 2px;
+}
+#view-registro .registro-photo-quick__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(81, 163, 255, 0.22);
+  color: #6cc5ff;
+  flex-shrink: 0;
+}
+#view-registro .registro-photo-quick__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+#view-registro .registro-photo-quick__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+#view-registro .registro-photo-quick__hint {
+  font-size: 12px;
+  color: var(--text-3, #8aa6bd);
+}
+#view-registro .registro-photo-quick__chevron {
+  color: var(--text-3, #8aa6bd);
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* Em desktop (com mouse), camera capture nao faz tanto sentido —
+   tornamos o tile ainda valido (vai abrir picker de file) mas reduzimos
+   a enfase porque o fluxo desktop tipicamente arrasta arquivo no <details>. */
+@media (hover: hover) and (pointer: fine) {
+  #view-registro .registro-photo-quick {
+    background: var(--surface-1, rgba(255, 255, 255, 0.04));
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+  #view-registro .registro-photo-quick__icon {
+    background: var(--surface-2, #19324a);
+    color: var(--text-2, #a4becf);
+  }
+}
+
+/* UX V2 audit fix #84: Header colapsado em mobile (< 720px).
+   Tecnico em campo nao precisa de 3 botoes no topo (sino, gear, avatar).
+   Esconde alertas + avatar; gear vira o unico ponto de entrada (kebab),
+   e o menu de ajuda agora hospeda Alertas + Meu perfil (is-mobile-only).
+   Em desktop continua tudo como antes (sidebar cobre). */
+@media (max-width: 719.98px) {
+  .app-header .header-alert-btn,
+  .app-header #header-alert-btn,
+  .app-header .header-avatar,
+  .app-header #header-avatar {
+    display: none !important;
+  }
+
+  /* Gear ainda mostra um ponto vermelho quando ha alertas pendentes pra
+     que o user perceba sem precisar abrir o menu. JS atualiza data-attr. */
+  .app-header #header-help-btn {
+    position: relative;
+  }
+  .app-header #header-help-btn[data-has-alerts='1']::after {
+    content: '';
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--danger, #f24e4e);
+    box-shadow: 0 0 0 2px var(--surface-1, #0c1f33);
+  }
+}
+
+/* Itens .is-mobile-only do help menu — visiveis somente em mobile */
+.header-help-menu__item.is-mobile-only,
+.header-help-menu__sep.is-mobile-only {
+  display: none;
+}
+@media (max-width: 719.98px) {
+  .header-help-menu__item.is-mobile-only {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .header-help-menu__sep.is-mobile-only {
+    display: block;
+    height: 1px;
+    margin: 6px 4px;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.header-help-menu__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--danger, #f24e4e);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.header-help-menu__badge[hidden] {
+  display: none;
+}
+
+/* UX V2 audit fix #89: esconde brand duplicado da sidebar em desktop.
+   O topbar (app-header) ja mostra "CoolTrack PRO" — repetir na sidebar
+   é redundante e empurra o nav menu pra baixo desnecessariamente.
+   Mantemos o markup pra acessibilidade (aria-label da aside ja cobre o
+   nome do app), mas escondemos visualmente pra ganhar espaço vertical. */
+@media (min-width: 1024px) {
+  .app-sidebar__brand {
+    display: none !important;
+  }
+  /* Compensa o padding-top da sidebar pra primeira section nao colar no topo */
+  .app-sidebar {
+    padding-top: 18px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   UX V3 — Layout responsivo FullHD (>= 1600px) e ultrawide (>= 1920px)
+   Antes nao havia breakpoint algum acima de 1400px. Em telas FullHD
+   1920x1080, o conteudo ficava cap em 1440px (--layout-max), criando
+   ~480px de espaço vazio nos lados.
+   Agora --layout-max sobe progressivamente (1600→1760→1880) e os
+   componentes principais ganham respiro adicional.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 1600px) {
+  /* Padding interno do main-content cresce pra dar respiro entre sidebar
+     e conteudo, em vez de colar nas bordas. */
+  .app-shell--with-sidebar #main-content {
+    padding-left: 36px;
+    padding-right: 36px;
+  }
+
+  /* Hero do dashboard ganha mais respiro vertical */
+  .dash__hero {
+    padding: 28px 32px;
+  }
+
+  /* KPI grid: gap maior em FullHD pra nao parecer apertado */
+  .dash__kpi-grid {
+    gap: 16px;
+  }
+  .dash__kpi {
+    padding: 18px;
+  }
+
+  /* Sidebar fica um tico mais larga em FullHD pra acomodar labels longos
+     sem quebra (ex: "Equipamentos" + atalho R) */
+  .app-shell--with-sidebar.app-content {
+    grid-template-columns: 264px 1fr;
+  }
+
+  /* Cards de cliente: 2 colunas em FullHD (antes ficavam stacked) */
+  .cli-page .cli-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1920px) {
+  /* Ultrawide: padding ainda maior, sidebar cresce mais um pouco */
+  .app-shell--with-sidebar #main-content {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+
+  .app-shell--with-sidebar.app-content {
+    grid-template-columns: 280px 1fr;
+  }
+
+  .dash__hero {
+    padding: 32px 40px;
+  }
+  .dash__hero-greeting {
+    font-size: 28px;
+  }
+
+  .dash__kpi-grid {
+    gap: 20px;
+  }
+  .dash__kpi {
+    padding: 22px;
+  }
+  .dash__kpi-value {
+    font-size: 32px;
+  }
+
+  .cli-page .cli-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   V3 Instalação (abr/2026) — Orçamentos
+   Página /orcamentos + modal de criação/edição.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.orc-page {
+  padding: 16px 14px 80px;
+  max-width: var(--layout-max);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--text);
+}
+@media (min-width: 1024px) {
+  .orc-page {
+    padding: 24px 28px 96px;
+    gap: 22px;
+  }
+}
+
+.orc-header {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.orc-header__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.orc-header__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.orc-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.orc-kpi {
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.orc-kpi__value {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.orc-kpi__label {
+  font-size: 11px;
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.orc-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (min-width: 720px) {
+  .orc-toolbar {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+.orc-search {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.orc-search svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-3);
+}
+.orc-search__input {
+  width: 100%;
+  padding: 10px 12px 10px 34px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.orc-search__input:focus {
+  border-color: var(--primary);
+}
+.orc-filter-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+.orc-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.orc-chip:hover {
+  color: var(--text);
+}
+.orc-chip.is-active {
+  background: rgba(0, 200, 232, 0.12);
+  border-color: rgba(0, 200, 232, 0.4);
+  color: var(--primary);
+}
+
+.orc-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 720px) {
+  .orc-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .orc-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.orc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.orc-card:hover {
+  border-color: rgba(0, 200, 232, 0.3);
+  transform: translateY(-1px);
+}
+.orc-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.orc-card__numero {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.04em;
+  margin-right: 8px;
+}
+.orc-status-pill {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.orc-card__total {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -0.01em;
+}
+.orc-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.orc-card__title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+.orc-card__cliente {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.orc-card__cliente svg {
+  color: var(--text-3);
+  flex-shrink: 0;
+}
+.orc-card__meta {
+  display: flex;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-3);
+  flex-wrap: wrap;
+}
+.orc-card__validity {
+  font-weight: 600;
+}
+/* Fase 2: linha de assinatura digital aprovada */
+.orc-card__signed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border-left: 3px solid #10b981;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #047857;
+  line-height: 1.4;
+}
+.orc-card__signed svg {
+  flex: 0 0 auto;
+  color: #10b981;
+}
+.orc-card__signed strong {
+  font-weight: 600;
+}
+.orc-card__actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.orc-card__kebab {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.orc-card__kebab:hover {
+  color: var(--danger, #ef4444);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.orc-empty {
+  text-align: center;
+  padding: 60px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.orc-empty__art {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  background: rgba(0, 200, 232, 0.08);
+  border: 1px solid rgba(0, 200, 232, 0.2);
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.orc-empty__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+.orc-empty__sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-3);
+  max-width: 380px;
+  line-height: 1.5;
+}
+.orc-empty__cta {
+  margin-top: 4px;
+}
+.orc-empty-filter {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+/* ─── Orçamento Modal ─── */
+.orcamento-modal {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.32);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.orcamento-modal__head {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, rgba(0, 200, 232, 0.08), rgba(0, 200, 232, 0.02));
+}
+.orcamento-modal__head-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+  color: #06101e;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.orcamento-modal__head-text {
+  flex: 1;
+  min-width: 0;
+}
+.orcamento-modal__title {
+  margin: 0 0 2px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.orcamento-modal__sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.4;
+}
+.orcamento-modal__close {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+}
+.orcamento-modal__close:hover {
+  background: var(--surface-2, rgba(255, 255, 255, 0.04));
+  color: var(--text);
+}
+.orcamento-modal__body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.orcamento-modal__section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.orcamento-modal__section h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.005em;
+}
+.orcamento-modal__section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.orcamento-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.orcamento-modal__field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.orcamento-modal__field .req {
+  color: var(--danger, #ef4444);
+  margin-left: 2px;
+}
+.orcamento-modal__row--two {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+@media (min-width: 540px) {
+  .orcamento-modal__row--two {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.orc-items-header {
+  display: grid;
+  grid-template-columns: 1fr 60px 100px 80px 30px;
+  gap: 8px;
+  padding: 0 4px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.orc-item-row {
+  display: grid;
+  grid-template-columns: 1fr 60px 100px 80px 30px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.orc-item-row .form-control {
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.orc-item__total {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: right;
+  padding: 0 4px;
+}
+.orc-item__remove {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.orc-item__remove:hover {
+  color: var(--danger, #ef4444);
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.orc-totals {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--surface, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.orc-totals__row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.orc-totals__input {
+  width: 100px;
+  text-align: right;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+.orc-totals__row--total {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.orc-totals__row--total strong {
+  color: var(--primary);
+  font-size: 18px;
+}
+
+.orcamento-modal__actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
 }

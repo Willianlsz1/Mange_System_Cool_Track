@@ -64,6 +64,7 @@ function normalizeEquip(e) {
     status: ['ok', 'warn', 'danger'].includes(e.status) ? e.status : 'ok',
     tag: sanitized.tag,
     tipo: String(e.tipo || 'Outro'),
+    componente: e.componente ? String(e.componente) : null,
     modelo: sanitized.modelo,
     fluido: String(e.fluido || ''),
     criticidade: normalizeCriticidade(e.criticidade),
@@ -80,16 +81,13 @@ function normalizeEquip(e) {
   };
 }
 
-function isLegacyEquipmentSchemaError(error) {
-  const message = String(error?.message || '').toLowerCase();
-  return (
-    message.includes('column') &&
-    (message.includes('criticidade') ||
-      message.includes('prioridade_operacional') ||
-      message.includes('periodicidade_preventiva_dias') ||
-      message.includes('fotos'))
-  );
-}
+// V2 (#119): detectores `isLegacyEquipmentSchemaError`,
+// `isMissingClienteSchemaError` e `isMissingComponenteSchemaError` foram
+// REMOVIDOS. A logica de fallback em pushEquipamentos foi refatorada pra
+// subtracao progressiva (#101) — itera sobre NULLABLE_EQUIP_COLUMNS
+// removendo coluna por coluna conforme o erro menciona, em vez de
+// detectores rigidos por nome. Cobre TODOS os casos sem precisar editar
+// codigo a cada coluna nova.
 
 function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
   const row = {
@@ -100,6 +98,7 @@ function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
     status: equipamento.status,
     tag: equipamento.tag,
     tipo: equipamento.tipo,
+    componente: equipamento.componente || null,
     modelo: equipamento.modelo,
     fluido: equipamento.fluido,
     setor_id: equipamento.setorId ?? null,
@@ -114,21 +113,22 @@ function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) {
       equipamento.tipo,
       equipamento.criticidade,
     ),
-    // Mesma semântica de `registros.fotos` (jsonb). Fallback pra legacy acima
-    // se a coluna ainda não existir no schema (isLegacyEquipmentSchemaError).
     fotos: normalizePhotoList(equipamento.fotos),
-    // PMOC Fase 2: cliente_id opcional. Quando a migration 20260425120000
-    // já rodou, o campo é populado; caso contrário, retry pode acontecer
-    // via isMissingClienteSchemaError abaixo (defensivo, sem bloquear save).
     cliente_id: equipamento.clienteId ?? null,
   };
 }
 
-function isMissingClienteSchemaError(error) {
+/**
+ * Detecta erro de coluna 'cliente_id' faltando especificamente em setores
+ * (campo novo da hierarquia Cliente -> Setor). Distingue do equipamento
+ * pelo contexto da tabela que veio no error.
+ */
+function isMissingSetorClienteSchemaError(error) {
   const message = String(error?.message || '').toLowerCase();
   return (
     (message.includes('column') || message.includes('schema cache')) &&
-    message.includes('cliente_id')
+    message.includes('cliente_id') &&
+    (message.includes('setor') || message.includes('setores'))
   );
 }
 
@@ -179,6 +179,7 @@ function normalizeRegistro(r, equipamentoIds) {
     equipId: sanitized.equipId,
     data: sanitized.data,
     tipo: sanitized.tipo,
+    componente: sanitized.componente || null,
     obs: sanitized.obs,
     status: sanitized.status,
     pecas: sanitized.pecas,
@@ -341,25 +342,46 @@ async function getUserId() {
   }
 }
 
+// Lista de colunas "novas" que podem estar faltando no schema remoto enquanto
+// migrations nao rodaram. Ordem: detectores especificos primeiro, fallbacks
+// generales depois. Se PostgREST retorna PGRST204 mencionando uma dessas, a
+// gente strip-a do payload e retenta — ate todas acabarem ou max attempts.
+const NULLABLE_EQUIP_COLUMNS = [
+  'componente',
+  'cliente_id',
+  'fotos',
+  'criticidade',
+  'prioridade_operacional',
+  'periodicidade_preventiva_dias',
+];
+
 async function pushEquipamentos(equipamentos, userId) {
   if (!equipamentos.length) return;
   try {
-    const rows = equipamentos.map((equipamento) => mapEquipamentoRow(equipamento, userId));
+    let rows = equipamentos.map((equipamento) => mapEquipamentoRow(equipamento, userId));
     let { error } = await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' });
-    if (error && isMissingClienteSchemaError(error)) {
-      // Schema antigo (pré-migration PMOC Fase 2): retira cliente_id e tenta de novo.
-      // Mantém todos os outros campos novos (criticidade etc) — só faz fallback no campo
-      // que faltou. Se o campo legado também estiver faltando, o catch de baixo cobre.
-      const rowsWithoutCliente = rows.map(({ cliente_id: _omit, ...rest }) => rest);
-      ({ error } = await supabase
-        .from('equipamentos')
-        .upsert(rowsWithoutCliente, { onConflict: 'id' }));
-    }
-    if (error && isLegacyEquipmentSchemaError(error)) {
-      const legacyRows = equipamentos.map((equipamento) =>
-        mapEquipamentoRow(equipamento, userId, { legacy: true }),
-      );
-      ({ error } = await supabase.from('equipamentos').upsert(legacyRows, { onConflict: 'id' }));
+
+    // Refator V2: subtração progressiva. Em vez de fallbacks rigidos um por
+    // um (que falham quando MULTIPLAS colunas estao faltando — caso real do
+    // bug 2026-04-26), itera enquanto o erro indica coluna faltando E
+    // continua tendo coluna pra remover. Cobre todos os casos sem precisar
+    // editar codigo a cada coluna nova.
+    let attempt = 0;
+    while (error && attempt < NULLABLE_EQUIP_COLUMNS.length) {
+      const msg = String(error?.message || '').toLowerCase();
+      // So tenta progressao se o erro for de schema/column. Senao escala.
+      if (!/column|schema cache|does not exist/i.test(msg)) break;
+
+      // Encontra a coluna culpada mencionada no erro. Se nao mencionar
+      // nenhuma especifica, strip-a a primeira que ainda existe no payload.
+      const culprit =
+        NULLABLE_EQUIP_COLUMNS.find((col) => msg.includes(col) && col in rows[0]) ||
+        NULLABLE_EQUIP_COLUMNS.find((col) => col in rows[0]);
+      if (!culprit) break; // ja stripamos tudo, nao tem mais o que tirar
+
+      rows = rows.map(({ [culprit]: _omit, ...rest }) => rest);
+      ({ error } = await supabase.from('equipamentos').upsert(rows, { onConflict: 'id' }));
+      attempt += 1;
     }
     if (error) throw error;
   } catch (error) {
@@ -445,12 +467,17 @@ async function pushSetores(setores, userId) {
   const sanitized = setores.map((s) => sanitizePersistedSetor(s)).filter(Boolean);
   if (!sanitized.length) return;
 
-  const buildRows = ({ legacy = false } = {}) =>
+  // Modos de payload, do mais novo (full) ao mais legacy (so o essencial).
+  // Reduz progressivamente conforme migrations remotas faltam.
+  const buildRows = ({ withCliente = true, withDescResp = true } = {}) =>
     sanitized.map((s) => {
       const row = { id: s.id, user_id: userId, nome: s.nome, cor: s.cor };
-      if (!legacy) {
+      if (withDescResp) {
         row.descricao = s.descricao || null;
         row.responsavel = s.responsavel || null;
+      }
+      if (withCliente && s.clienteId) {
+        row.cliente_id = s.clienteId;
       }
       return row;
     });
@@ -458,13 +485,19 @@ async function pushSetores(setores, userId) {
   try {
     let { error } = await supabase.from('setores').upsert(buildRows(), { onConflict: 'id' });
 
-    // Fallback: schema remoto ainda não rodou a migration de descricao/responsavel.
-    // Reenviamos sem essas colunas pra que pelo menos nome/cor persistam —
-    // assim os equipamentos subsequentes (com setor_id) não quebram no FK.
+    // Fallback A: cliente_id (hierarquia Cliente -> Setor) nao existe na tabela
+    // setores. Retira e retenta com desc/resp ainda dentro.
+    if (error && isMissingSetorClienteSchemaError(error)) {
+      ({ error } = await supabase
+        .from('setores')
+        .upsert(buildRows({ withCliente: false }), { onConflict: 'id' }));
+    }
+
+    // Fallback B: descricao/responsavel (P1) nao migrado. Tira tambem.
     if (error && isMissingSetorColumnError(error)) {
       ({ error } = await supabase
         .from('setores')
-        .upsert(buildRows({ legacy: true }), { onConflict: 'id' }));
+        .upsert(buildRows({ withCliente: false, withDescResp: false }), { onConflict: 'id' }));
     }
 
     if (error) {
@@ -595,6 +628,7 @@ async function pullFromSupabase(userId) {
     status: e.status,
     tag: e.tag || '',
     tipo: e.tipo || 'Outro',
+    componente: e.componente || null,
     modelo: e.modelo || '',
     fluido: e.fluido || '',
     criticidade: normalizeCriticidade(e.criticidade),
@@ -896,16 +930,35 @@ export const Storage = {
       updateSyncStatus({ state: 'synced', message: 'Dados sincronizados.' });
       return true;
     } catch (err) {
+      // Diferencia offline (sem rede) vs erro do servidor (rede ok mas
+      // Supabase respondeu erro). O message do pill reflete a causa real
+      // pra o user nao ficar confuso.
+      const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+      const errorMsg = String(err?.message || '').toLowerCase();
+      const isNetworkErr =
+        isOffline ||
+        errorMsg.includes('network') ||
+        errorMsg.includes('failed to fetch') ||
+        errorMsg.includes('timeout') ||
+        errorMsg.includes('connection');
+
+      const userMsg = isNetworkErr
+        ? 'Sem conexão. Sincronização será retomada quando a rede voltar.'
+        : 'Erro do servidor ao sincronizar. Tentaremos novamente.';
+
       handleError(err, {
         code: ErrorCodes.SYNC_FAILED,
         severity: 'warning',
-        message: 'Sincronização pendente. Seus dados estão salvos localmente.',
-        context: { action: context },
+        message: userMsg,
+        context: { action: context, isOffline, isNetworkErr },
         showToast: !silent,
       });
       updateSyncStatus({
         state: 'pending',
-        message: 'Sincronização pendente. Tentaremos novamente automaticamente.',
+        message: userMsg,
+        // Adiciona errorKind pra UI poder estilizar diferente (icon vermelho
+        // pra erro de servidor vs amarelo pra offline)
+        errorKind: isNetworkErr ? 'offline' : 'server',
       });
       return false;
     }
@@ -956,6 +1009,28 @@ export const Storage = {
       queue.setores.length ||
       _syncRunning,
     );
+  },
+
+  /**
+   * Tenta drenar a fila de sync agora. Util quando a conexao volta — o
+   * listener de online status chama isso pra empurrar mutations que ficaram
+   * pending offline. No-op se nao ha nada pendente OU se ja esta rodando.
+   *
+   * Retorna true se iniciou um drain, false caso contrario.
+   */
+  async flushPending() {
+    if (_syncRunning) return false;
+    if (!this.hasPendingSync()) return false;
+    // Garante que ha um snapshot pra empurrar — se _queuedState estiver vazio,
+    // re-enfileira o estado local atual (caso haja dirty mas sem queue).
+    if (!_queuedState) {
+      const local = this._loadLocal();
+      if (local) _queuedState = local;
+    }
+    _syncRunning = true;
+    updateSyncStatus({ state: 'syncing', message: 'Sincronizando alteracoes...' });
+    void this._drainSyncQueue();
+    return true;
   },
 
   getSyncStatus() {

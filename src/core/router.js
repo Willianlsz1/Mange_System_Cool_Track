@@ -14,7 +14,7 @@ import { Modal } from './modal.js';
 // vez do core importar de ui/* (o que viola a regra core ↛ ui).
 //
 // Cada entry: { id: string, isOpen: () => boolean, close: () => void, getElement?: () => Element|null }
-// O id e usado pra dedupe (mesma camada nao registra duas vezes).
+// O id e usado pra dedupe (mesma camada não registra duas vezes).
 // ──────────────────────────────────────────────────────────────────────
 const _blockingLayerRegistry = new Map();
 
@@ -121,7 +121,7 @@ function closeTopBlockingLayer() {
   }
 
   // Camadas registradas via registerBlockingLayer (signature modals etc.).
-  // Inversao de dependencia — core nao importa de ui/* mais.
+  // Inversao de dependencia — core não importa de ui/* mais.
   _blockingLayerRegistry.forEach((entry) => {
     if (!entry.isOpen()) return;
     const element = entry.getElement?.() || null;
@@ -277,7 +277,7 @@ export function goTo(name, params = {}, options = {}) {
   }
 
   // Guard check — só dispara se ha guard E rota destino diferente da atual
-  // E nao e fromHistory (back/forward do browser tem fluxo proprio) E nao
+  // E não e fromHistory (back/forward do browser tem fluxo proprio) E não
   // explicitamente bypassed. Resultado pode ser sync (boolean) ou async.
   if (_navGuard && _current !== name && !fromHistory && !bypassGuard) {
     const guardResult = _navGuard(name, safeParams);
@@ -291,7 +291,7 @@ export function goTo(name, params = {}, options = {}) {
           }
         })
         .catch(() => {
-          /* erro no guard nao deve bloquear permanente — log e libera */
+          /* erro no guard não deve bloquear permanente — log e libera */
           console.warn('[Router] Guard rejeitou com erro; navegacao cancelada');
         });
       return;

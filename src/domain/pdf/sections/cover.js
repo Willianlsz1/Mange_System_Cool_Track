@@ -88,8 +88,13 @@ function drawMasthead(doc, pageWidth, margin, profile) {
 
 // -------------------------- title & meta line --------------------------
 
-function drawTitleBlock(doc, pageWidth, margin, startY, context = {}) {
+function drawTitleBlock(doc, pageWidth, margin, startY, context = {}, profile, cliente) {
   let y = startY;
+
+  // V3 refator: titulo grande + faixa de identificadores
+  // (OS · Data · Cliente · Técnico) consolidada num strip único.
+  // Cliente fica em destaque (bold + cor text) porque eh quem
+  // recebe o documento — segue convenção de invoice/recibo formal.
 
   txt(doc, 'RELATÓRIO DE MANUTENÇÃO', margin, y, {
     size: T.title.size,
@@ -98,23 +103,63 @@ function drawTitleBlock(doc, pageWidth, margin, startY, context = {}) {
   });
 
   if (context.osNumber) {
-    txt(doc, `OS ${context.osNumber}`, pageWidth - margin, y, {
-      size: 10,
+    // OS em badge destacado no canto direito
+    const osLabel = `OS ${context.osNumber}`;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    const osWidth = doc.getTextWidth(osLabel) + 6;
+    doc.setFillColor(...C.primary);
+    doc.roundedRect(pageWidth - margin - osWidth, y - 4.5, osWidth, 6.5, 1, 1, 'F');
+    txt(doc, osLabel, pageWidth - margin - 3, y, {
+      size: 9,
       style: 'bold',
-      color: C.primary,
+      color: C.white,
       align: 'right',
     });
   }
-  y += 7;
+  y += 8;
 
-  const emitido = context.emitido
-    ? `Emitido em ${context.emitido}`
-    : `Emitido em ${new Date().toLocaleDateString('pt-BR')}`;
-  const periodo = context.periodoTexto ? `  ·  ${context.periodoTexto}` : '';
-  txt(doc, `${emitido}${periodo}`, margin, y, { size: T.meta.size, color: C.text3 });
+  // V3: Strip horizontal "DATA · CLIENTE · TÉCNICO" — tudo numa linha so,
+  // pra cliente ler o quem-pra-quem-quando em um vistazo.
+  const emitido = context.emitido || new Date().toLocaleDateString('pt-BR');
+  const clienteNome = cliente?.nome ? sanitizePublicText(cliente.nome, '') : '';
+  const tecnicoNome = profile?.nome?.trim() || 'Técnico';
 
-  y += 4;
-  accentLine(doc, margin, y, pageWidth - margin, C.border);
+  // Constroi label inline tipo "Emitido 26/04/2026  |  Cliente: Empresa X  |  Técnico: Fulano"
+  // Usa cores diferentes pra label (cinza) e value (escuro) — implementado
+  // segmento por segmento pra ter controle de cor.
+  let cursorX = margin;
+  const drawSegment = (label, value, valueBold = false) => {
+    txt(doc, label, cursorX, y, { size: 7.5, color: C.text3 });
+    doc.setFontSize(7.5);
+    const labelW = doc.getTextWidth(label) + 1;
+    txt(doc, value, cursorX + labelW, y, {
+      size: 8.5,
+      color: C.text,
+      style: valueBold ? 'bold' : 'normal',
+    });
+    doc.setFontSize(8.5);
+    if (valueBold) doc.setFont('helvetica', 'bold');
+    const valueW = doc.getTextWidth(value);
+    doc.setFont('helvetica', 'normal');
+    cursorX += labelW + valueW + 6;
+
+    // Separador "·"
+    txt(doc, '·', cursorX - 3, y, { size: 8, color: C.text3 });
+  };
+
+  drawSegment('Emitido em ', emitido);
+  if (clienteNome) drawSegment('Cliente ', clienteNome, true);
+  drawSegment('Técnico ', tecnicoNome);
+
+  // Periodo se tiver — segunda linha discreta
+  if (context.periodoTexto) {
+    y += 5;
+    txt(doc, context.periodoTexto, margin, y, { size: 7, color: C.text3, style: 'italic' });
+  }
+
+  y += 5;
+  accentLine(doc, margin, y, pageWidth - margin, C.borderStrong);
   return y + 6;
 }
 
@@ -216,12 +261,24 @@ function drawLabeledBlock(doc, x, y, w, h, label, lines) {
 // ------------------------- resumo executivo -------------------------
 
 function drawResumoExecutivo(doc, pageWidth, margin, startY, filtered, equipamentos) {
+  // Refator V3: 3 cards visuais (Servicos / Equipamentos / Status geral)
+  // em vez de bullets de prosa. Numero grande no topo, label embaixo,
+  // barra colorida lateral pra identidade. Compacto, lido em 1 segundo.
   const totalServicos = filtered.length;
-  const totalCusto = calculateTotalCost(filtered);
   const ok = countByStatus(filtered, 'ok');
   const warn = countByStatus(filtered, 'warn');
   const danger = countByStatus(filtered, 'danger');
   const equipCount = listEquipamentosUnicos(filtered, equipamentos).length;
+
+  // Status geral consolidado: pior wins. Se ha alguma falha, vira "Atenção".
+  const statusLabel = danger
+    ? 'Fora de operação'
+    : warn
+      ? 'Requer atenção'
+      : totalServicos > 0
+        ? 'OK'
+        : '—';
+  const statusColor = danger ? C.red : warn ? C.amber : totalServicos > 0 ? C.green : C.text3;
 
   let y = startY;
   txt(doc, 'RESUMO EXECUTIVO', margin, y, {
@@ -233,44 +290,59 @@ function drawResumoExecutivo(doc, pageWidth, margin, startY, filtered, equipamen
   accentLine(doc, margin, y + 1, pageWidth - margin, C.border);
   y += 6;
 
-  // Prosa curta, sem tiles. Cliente lê como documento formal.
-  const bulletX = margin + 2;
-  const items = [];
+  // Layout: 3 cards lado a lado, gap 4mm
+  const gap = 4;
+  const cardW = (pageWidth - margin * 2 - gap * 2) / 3;
+  const cardH = 22;
 
-  if (totalServicos === 0) {
-    items.push('Nenhum serviço executado no período selecionado.');
-  } else {
-    items.push(
-      `${totalServicos} ${totalServicos === 1 ? 'serviço executado' : 'serviços executados'} em ${equipCount} ${equipCount === 1 ? 'equipamento' : 'equipamentos'}.`,
-    );
-    const statusParts = [];
-    if (ok)
-      statusParts.push(
-        `${ok} ${ok === 1 ? 'equipamento operando normalmente' : 'equipamentos operando normalmente'}`,
-      );
-    if (warn)
-      statusParts.push(
-        `${warn} ${warn === 1 ? 'equipamento em atenção' : 'equipamentos em atenção'}`,
-      );
-    if (danger)
-      statusParts.push(
-        `${danger} ${danger === 1 ? 'equipamento fora de operação' : 'equipamentos fora de operação'}`,
-      );
-    if (statusParts.length) items.push(`Status atual: ${statusParts.join(', ')}.`);
-    if (totalCusto > 0) items.push(`Custo total dos serviços: ${formatMoney(totalCusto)}.`);
-  }
+  const cards = [
+    {
+      x: margin,
+      value: String(totalServicos),
+      label: totalServicos === 1 ? 'Serviço realizado' : 'Serviços realizados',
+      barColor: C.primary,
+      valueColor: C.text,
+    },
+    {
+      x: margin + cardW + gap,
+      value: String(equipCount),
+      label: equipCount === 1 ? 'Equipamento atendido' : 'Equipamentos atendidos',
+      barColor: C.accent,
+      valueColor: C.text,
+    },
+    {
+      x: margin + cardW * 2 + gap * 2,
+      value: statusLabel,
+      label: 'Status geral',
+      barColor: statusColor,
+      valueColor: statusColor,
+      smallValue: statusLabel.length > 4, // "Fora de operação" / "Requer atenção" precisam fonte menor
+    },
+  ];
 
-  items.forEach((line) => {
-    txt(doc, '•', bulletX, y, { size: T.body.size, color: C.primary, style: 'bold' });
-    const textLines = doc.splitTextToSize(line, pageWidth - margin * 2 - 6);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(T.body.size);
-    doc.setTextColor(...C.text2);
-    doc.text(textLines, bulletX + 4, y);
-    y += textLines.length * 4.5 + 1.5;
+  cards.forEach((card) => {
+    // Box com borda fina + barra lateral colorida
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.3);
+    doc.setFillColor(...C.surface);
+    doc.rect(card.x, y, cardW, cardH, 'FD');
+    fillRect(doc, card.x, y, 2.5, cardH, card.barColor);
+
+    // Valor grande
+    txt(doc, card.value, card.x + 6, y + 11, {
+      size: card.smallValue ? 12 : 18,
+      style: 'bold',
+      color: card.valueColor,
+    });
+
+    // Label embaixo
+    txt(doc, card.label, card.x + 6, y + 18, {
+      size: 7.5,
+      color: C.text3,
+    });
   });
 
-  return y + 4;
+  return y + cardH + 6;
 }
 
 function drawConclusao(doc, pageWidth, margin, startY, filtered) {
@@ -324,21 +396,31 @@ function drawEquipamentosTable(doc, pageWidth, margin, startY, filtered, equipam
     const st = STATUS_CLIENTE[lastRegistro.status] || STATUS_CLIENTE.ok;
     const ultimo = lastRegistro.data ? Utils.formatDate(lastRegistro.data) : '—';
     const proxima = lastRegistro.proxima ? Utils.formatDate(lastRegistro.proxima) : '—';
+    // V3 refator: nome trunca em 32 chars + "…" pra evitar wrap feio.
+    // Cliente prefere overflow controlado a duas linhas estouradas.
+    const nomeBruto = eq.nome || '—';
+    const nome = nomeBruto.length > 32 ? `${nomeBruto.slice(0, 31)}…` : nomeBruto;
+    const localBruto = eq.local || '—';
+    const local = localBruto.length > 28 ? `${localBruto.slice(0, 27)}…` : localBruto;
     return {
       tag: eq.codigo || eq.tag || '—',
-      nome: eq.nome || '—',
-      local: eq.local || '—',
+      nome,
+      local,
       ultimo,
       proxima,
       statusLabel: st.label,
       statusColor: st.color,
+      statusKey: lastRegistro.status || 'ok',
     };
   });
 
   autoTable(doc, {
     startY: y + 2,
-    head: [['Tag', 'Equipamento', 'Localização', 'Último', 'Próximo', 'Status']],
-    body: rows.map((r) => [r.tag, r.nome, r.local, r.ultimo, r.proxima, r.statusLabel]),
+    // V3 refator: coluna nova "•" pra bullet colorido de status (canto esquerdo).
+    // Mantive a coluna texto "Status" no fim porque cliente formal precisa do
+    // label escrito ("Funcionando normalmente"), nao so cor.
+    head: [['', 'Tag', 'Equipamento', 'Localização', 'Último', 'Próximo', 'Status']],
+    body: rows.map((r) => ['●', r.tag, r.nome, r.local, r.ultimo, r.proxima, r.statusLabel]),
     theme: 'plain',
     margin: { left: margin, right: margin },
     styles: {
@@ -348,6 +430,8 @@ function drawEquipamentosTable(doc, pageWidth, margin, startY, filtered, equipam
       textColor: C.text2,
       lineColor: C.border,
       lineWidth: 0.15,
+      overflow: 'ellipsize', // V3: previne wrap feio — corta com elipse
+      valign: 'middle',
     },
     headStyles: {
       fillColor: C.bg2,
@@ -359,17 +443,25 @@ function drawEquipamentosTable(doc, pageWidth, margin, startY, filtered, equipam
     },
     alternateRowStyles: { fillColor: [252, 252, 253] },
     columnStyles: {
-      0: { cellWidth: 18, fontStyle: 'bold', textColor: C.text },
-      1: { cellWidth: 44 },
-      2: { cellWidth: 40, textColor: C.text3 },
-      3: { cellWidth: 20, halign: 'center' },
+      0: { cellWidth: 6, halign: 'center', fontSize: 11 }, // bullet status
+      1: { cellWidth: 18, fontStyle: 'bold', textColor: C.text },
+      2: { cellWidth: 42 },
+      3: { cellWidth: 36, textColor: C.text3 },
       4: { cellWidth: 20, halign: 'center' },
-      5: { halign: 'right', fontStyle: 'bold' },
+      5: { cellWidth: 20, halign: 'center' },
+      6: { halign: 'right', fontStyle: 'bold' },
     },
     didParseCell(data) {
-      if (data.section === 'body' && data.column.index === 5) {
-        const row = rows[data.row.index];
-        if (row?.statusColor) data.cell.styles.textColor = row.statusColor;
+      if (data.section !== 'body') return;
+      const row = rows[data.row.index];
+      if (!row) return;
+      // Bullet (col 0) recebe a cor do status
+      if (data.column.index === 0) {
+        data.cell.styles.textColor = row.statusColor;
+      }
+      // Label de status (ultima coluna) tambem na cor
+      if (data.column.index === 6) {
+        data.cell.styles.textColor = row.statusColor;
       }
     },
   });
@@ -539,7 +631,7 @@ export function drawCover(
   ate,
   filtered,
   equipamentos,
-  _drawFooter, // assinatura mantida pra compatibilidade; footer final é feito em stampFooterTotals
+  _drawFooter,
   context = {},
 ) {
   fillPage(doc, pageWidth, pageHeight);
@@ -551,19 +643,25 @@ export function drawCover(
       ? `Período ${de ? Utils.formatDate(de) : 'início'} – ${ate ? Utils.formatDate(ate) : 'atual'}`
       : '';
 
-  let y = drawTitleBlock(doc, pageWidth, margin, 32, {
-    osNumber: context.osNumber,
-    emitido: context.emitido,
-    periodoTexto,
-  });
+  let y = drawTitleBlock(
+    doc,
+    pageWidth,
+    margin,
+    32,
+    {
+      osNumber: context.osNumber,
+      emitido: context.emitido,
+      periodoTexto,
+    },
+    profile,
+    context.cliente,
+  );
 
   y = drawInfoBlocks(doc, pageWidth, margin, y, profile, context.cliente);
   y = drawResumoExecutivo(doc, pageWidth, margin, y, filtered, equipamentos);
   y = drawEquipamentosTable(doc, pageWidth, margin, y, filtered, equipamentos);
   y = drawConclusao(doc, pageWidth, margin, y, filtered);
   y = drawFichaTecnica(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
-  // PMOC Fase 3: checklist NBR 13971 dos registros que tiveram preenchimento.
-  // Pula silenciosamente quando não há nenhum (PDFs FREE / não-PMOC).
   y = drawChecklist(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
   drawPendencias(doc, pageWidth, pageHeight, margin, y, filtered, equipamentos);
 }

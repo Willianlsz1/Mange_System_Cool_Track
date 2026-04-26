@@ -78,6 +78,22 @@ export function renderShellHeader() {
               </svg>
             </button>
             <div class="header-help-menu" id="header-help-menu" hidden>
+              <!-- UX V2 audit fix #84: itens visiveis SO em mobile (CSS via
+                   .is-mobile-only). Em desktop sidebar ja cobre alertas e
+                   meu perfil, entao nao mostra duplicado. -->
+              <button type="button" class="header-help-menu__item is-mobile-only" data-action="go-alertas">
+                <span>🔔 Alertas</span>
+                <span class="header-help-menu__badge" id="header-help-menu-alert-badge" hidden>0</span>
+              </button>
+              <button type="button" class="header-help-menu__item is-mobile-only" data-action="open-profile">
+                👤 Meu perfil
+              </button>
+              <!-- V2 (#127): Orçamentos não cabe no bottom nav (5 slots cheios)
+                   então vive aqui no menu mobile. Em desktop a sidebar já cobre. -->
+              <button type="button" class="header-help-menu__item is-mobile-only" data-action="go-orcamentos">
+                📋 Orçamentos
+              </button>
+              <div class="header-help-menu__sep is-mobile-only" aria-hidden="true"></div>
               <button type="button" class="header-help-menu__item" data-action="help-open-tutorial">
                 Ver tutorial
               </button>
@@ -87,9 +103,8 @@ export function renderShellHeader() {
               <button type="button" class="header-help-menu__item" data-action="toggle-theme">
                 <span id="header-theme-label">Alternar tema</span>
               </button>
-              <button type="button" class="header-help-menu__item" data-nav="clientes">
-                Meus clientes
-              </button>
+              <!-- "Meus clientes" removido daqui — agora vive no bottom nav (mobile)
+                   e sidebar (desktop), não precisa duplicar no help menu. -->
               <!-- PMOC Fase 6: atalho global pra abrir o gerador PMOC + doc -->
               <button type="button" class="header-help-menu__item" data-action="open-pmoc-modal">
                 📜 Gerar documento PMOC
@@ -136,6 +151,7 @@ export function renderShellHeader() {
             <div class="stat-pill__label">ALERTAS CRÍTICOS</div>
           </div>
         </div>
+      </div>
       </div>
 
       <!-- Status legado preservado para outros fluxos (alerts sistema/falhas) — oculto por padrão e

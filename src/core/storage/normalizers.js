@@ -34,6 +34,7 @@ export function normalizeEquip(e) {
     status: ['ok', 'warn', 'danger'].includes(e.status) ? e.status : 'ok',
     tag: sanitized.tag,
     tipo: String(e.tipo || 'Outro'),
+    componente: e.componente ? String(e.componente) : null,
     modelo: sanitized.modelo,
     fluido: String(e.fluido || ''),
     criticidade: normalizeCriticidade(e.criticidade),
@@ -89,6 +90,7 @@ export function mapEquipamentoRow(equipamento, userId, { legacy = false } = {}) 
     status: equipamento.status,
     tag: equipamento.tag,
     tipo: equipamento.tipo,
+    componente: equipamento.componente || null,
     modelo: equipamento.modelo,
     fluido: equipamento.fluido,
   };
@@ -136,6 +138,7 @@ export function normalizeRegistro(r, equipamentoIds) {
     equipId: sanitized.equipId,
     data: sanitized.data,
     tipo: sanitized.tipo,
+    componente: sanitized.componente || null,
     obs: sanitized.obs,
     status: sanitized.status,
     pecas: sanitized.pecas,

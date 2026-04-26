@@ -87,7 +87,7 @@ export function updateShellSidebar() {
   // Plan card V3 — nome + status sub + (data se Plus/Pro) + CTA contextual.
   // Cache sync; data de renovacao vem do mesmo profile (subscription_current_period_end)
   // e so aparece pra planos pagos que tem essa info.
-  const planCode = getCachedPlan()?.planCode || PLAN_CODE_FREE;
+  const planCode = getCachedPlan() || PLAN_CODE_FREE;
   const planMeta = _PLAN_LABELS[planCode] || _PLAN_LABELS[PLAN_CODE_FREE];
 
   const cardEl = document.getElementById('sidenav-plan-card');
@@ -113,6 +113,17 @@ export function updateShellSidebar() {
   const ctaLabelEl = document.getElementById('sidenav-plan-cta-label');
   if (ctaLabelEl) {
     ctaLabelEl.textContent = planCode === PLAN_CODE_FREE ? 'Conhecer planos' : 'Gerenciar plano';
+  }
+
+  // Pro-gate Clientes: mostra cadeado + PRO badge se nao for Pro. O click
+  // continua disparando data-nav="clientes" mas o handler da rota intercepta
+  // e abre o paywall em vez de renderizar a view.
+  const clientesItem = document.getElementById('sidenav-clientes');
+  const clientesLock = document.getElementById('sidenav-clientes-lock');
+  const isPro = planCode === PLAN_CODE_PRO;
+  if (clientesLock) clientesLock.hidden = isPro;
+  if (clientesItem) {
+    clientesItem.classList.toggle('app-sidebar__nav-item--locked', !isPro);
   }
 }
 

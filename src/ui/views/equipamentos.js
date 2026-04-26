@@ -74,6 +74,39 @@ export {
   saveEquipPhotos,
 } from './equipamentos/fotos.js';
 
+// ── Tipos de climatização que tem componente (evap/cond/única) ────────────
+// Lista de tipos onde o select de "componente" aparece no modal. Outros tipos
+// (Geladeira, Freezer, etc) não tem split, entao o campo fica oculto.
+const TIPOS_COM_COMPONENTE = new Set([
+  'Split Hi-Wall',
+  'Split Cassette',
+  'Split Piso Teto',
+  'VRF / VRV',
+  'GHP',
+  'Fan Coil',
+  'Chiller',
+  'Self Contained',
+  'Roof Top',
+]);
+
+/**
+ * Mostra/esconde o select de componente baseado no tipo selecionado.
+ * Idempotente — pode ser chamado a qualquer momento (open modal, change tipo,
+ * edit equip).
+ */
+export function syncComponenteVisibility() {
+  const tipo = Utils.getVal('eq-tipo');
+  const wrapper = Utils.getEl('eq-componente-wrapper');
+  if (!wrapper) return;
+  if (TIPOS_COM_COMPONENTE.has(tipo)) {
+    wrapper.style.display = '';
+  } else {
+    wrapper.style.display = 'none';
+    // Limpa o valor pra não salvar componente em equipamento que não usa
+    Utils.setVal('eq-componente', '');
+  }
+}
+
 // ── Edit mode tracking ─────────────────────────────────────────────────────
 // Quando preenchido, saveEquip() atualiza o equipamento existente em vez de criar um novo.
 let _editingEquipId = null;
@@ -205,25 +238,28 @@ export function setActiveQuickFilter(id) {
 import { computeEquipKpis, renderEquipHero, renderEquipFilters } from './equipamentos/hero.js';
 export { computeEquipKpis, renderEquipHero, renderEquipFilters };
 
-/** Atualiza a toolbar da view de equipamentos. */
-function _setToolbar({ title, extraBtn } = {}) {
+/** Atualiza a toolbar da view de equipamentos.
+ *  hideDefaultCta=true suprime o "+ Novo equipamento" default (usado em
+ *  contexto cliente, onde adicionar equipamento é feito via drill-down
+ *  de setor — não via toolbar global). */
+function _setToolbar({ title, extraBtn, hideDefaultCta = false } = {}) {
   const titleEl = Utils.getEl('equip-page-title');
   const actionsEl = Utils.getEl('equip-toolbar-actions');
   if (titleEl) titleEl.textContent = title || 'Parque de Equipamentos';
   if (actionsEl) {
     // CTA único "+ Novo equipamento". Antes eram 2 botões ("Cadastrar com
     // foto" primário + "Novo equipamento" outline), o que duplicava a ação
-    // na toolbar — ambos abriam o mesmo modal-add-eq. A feature de foto
-    // continua 100% descobrível: o próprio modal tem um nameplate-cta hero
-    // ("Aponta a câmera pra etiqueta") renderizado no topo do formulário,
-    // com gate Plus/trial via applyNameplateCtaGate no controller.
+    // na toolbar — ambos abriam o mesmo modal-add-eq.
+    const defaultCta = hideDefaultCta
+      ? ''
+      : `<button class="btn btn--primary btn--sm"
+          data-action="open-modal" data-id="modal-add-eq"
+          data-source="toolbar_primary"
+          data-testid="equipamentos-add-equipment"
+          aria-label="Cadastrar novo equipamento (manual ou via foto da etiqueta)">+ Novo equipamento</button>`;
     actionsEl.innerHTML = `
       ${extraBtn || ''}
-      <button class="btn btn--primary btn--sm"
-        data-action="open-modal" data-id="modal-add-eq"
-        data-source="toolbar_primary"
-        data-testid="equipamentos-add-equipment"
-        aria-label="Cadastrar novo equipamento (manual ou via foto da etiqueta)">+ Novo equipamento</button>
+      ${defaultCta}
     `;
   }
 }
@@ -283,11 +319,19 @@ export function populateSetorSelect(isPro = false) {
   syncContextGroupVisibility();
 }
 
-/** Navega para dentro de um setor (ou volta ao grid se id === null). */
+/** Navega para dentro de um setor (ou volta ao grid se id === null).
+ *  Preserva clienteId se estivermos no contexto de um cliente — assim o
+ *  drill-down dentro do cliente ainda mostra o chip "Limpar cliente" e
+ *  o titulo "Setor X de [Cliente Y]". */
 export function setActiveSector(id) {
+  const currentCtx = _getRouteEquipCtx();
   _navigateEquipCtx({
     sectorId: id ?? null,
     quickFilter: null,
+    // Preserva contexto de cliente se houver. Quando id é null (back to grid),
+    // mantemos clienteId pra voltar pra grade do cliente, não a global.
+    clienteId: currentCtx.clienteId || null,
+    clienteNome: currentCtx.clienteNome || null,
   });
 }
 
@@ -331,6 +375,161 @@ function renderSetorGrid() {
   el.innerHTML = `<div class="setor-grid">${setorCards.join('')}</div>`;
 }
 
+/**
+ * Renderiza grade de setores filtrada por cliente. Vinda de
+ * /clientes -> "Ver equipamentos". Mostra so os setores DAQUELE cliente.
+ * Empty state: "Crie o primeiro setor de [Cliente]" + CTA pre-fill clienteId.
+ *
+ * Inclui tile "Sem setor" se houver equipamentos do cliente sem setor
+ * (compat: equipamentos antigos cadastrados antes da hierarquia).
+ */
+function renderSetorGridForCliente(clienteId, clienteNome) {
+  const el = Utils.getEl('lista-equip');
+  if (!el) return;
+
+  const { setores, equipamentos } = getState();
+  // Esconde search bar + view toggle em contexto cliente (irrelevantes na
+  // grade de setores enxuta).
+  const searchBar = Utils.getEl('equip-search-bar');
+  if (searchBar) searchBar.style.display = 'none';
+  const viewToggle = document.querySelector('.equip-view-toggle');
+  if (viewToggle) viewToggle.style.display = 'none';
+
+  const safeNome = clienteNome || 'cliente';
+  // Toolbar enxuto: SEM "+ Novo equipamento" (acessado via drill-down do setor).
+  // Apenas: + Novo setor (primario) + Limpar cliente (ghost discreto).
+  // O "+ Novo equipamento" default vem do _setToolbar — passamos hideDefaultCta
+  // pra suprimir.
+  _setToolbar({
+    title: `Setores de ${safeNome}`,
+    extraBtn: `
+      <button class="btn btn--primary btn--sm" data-action="open-setor-modal" data-cliente-id="${Utils.escapeAttr(clienteId)}">+ Novo setor</button>
+      <button class="btn btn--ghost btn--sm" data-action="equip-clear-cliente-filter" title="Voltar pra grade global">x Limpar cliente</button>
+    `,
+    hideDefaultCta: true,
+  });
+
+  // Bug fix #100: Filtra setores DUAL-PATH pra ser robusto a sync issues.
+  //
+  //   Caminho 1 (direto): setor.clienteId === clienteId
+  //     Funciona quando o setor.cliente_id chegou do Supabase OK.
+  //   Caminho 2 (derivado): setor tem equipamento.clienteId === clienteId
+  //     Funciona quando setor.cliente_id foi STRIPPED do payload (migration
+  //     setores.cliente_id pendente no remoto), mas o equipamento.clienteId
+  //     persistiu. Sem esse fallback, criar setor + equipamento dentro do
+  //     contexto de cliente "some" ao voltar pra view do cliente.
+  const equipsDoCliente = (equipamentos || []).filter((e) => e.clienteId === clienteId);
+  const setoresIdsViaEquip = new Set(equipsDoCliente.map((e) => e.setorId).filter(Boolean));
+  const setoresDoCliente = (setores || []).filter(
+    (s) => s.clienteId === clienteId || setoresIdsViaEquip.has(s.id),
+  );
+  // Equipamentos do cliente sem setor (compat backward)
+  const equipsSemSetor = equipsDoCliente.filter((e) => !e.setorId);
+
+  // Hero convidativo + (opcional) banner Sem setor: mostrado quando o cliente
+  // ainda não tem nenhum setor real cadastrado. Equipamentos sem setor (compat
+  // backward) aparecem como banner discreto secundario, NÃO como card primary.
+  if (!setoresDoCliente.length) {
+    const semSetorBanner = equipsSemSetor.length
+      ? `
+        <div class="setor-cliente-empty__sem-banner">
+          <div class="setor-cliente-empty__sem-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+          </div>
+          <div class="setor-cliente-empty__sem-body">
+            <strong>${equipsSemSetor.length} equipamento${equipsSemSetor.length !== 1 ? 's' : ''} sem setor vinculado</strong>
+            <p>Apos criar o primeiro setor, você pode vincular os equipamentos existentes a ele.</p>
+          </div>
+          <button type="button" class="setor-cliente-empty__sem-link"
+            data-action="open-setor" data-id="__sem_setor__">
+            Ver equipamento${equipsSemSetor.length !== 1 ? 's' : ''}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 6 15 12 9 18"/>
+            </svg>
+          </button>
+        </div>`
+      : '';
+
+    el.innerHTML = `
+      <section class="setor-cliente-empty" aria-label="Cliente sem setores ainda">
+        <div class="setor-cliente-empty__hero">
+          <div class="setor-cliente-empty__art" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7v13a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V7"/>
+              <path d="M21 7H3l1.5-3a1 1 0 0 1 .9-.5h13.2a1 1 0 0 1 .9.5L21 7z"/>
+              <line x1="10" y1="12" x2="14" y2="12"/>
+            </svg>
+          </div>
+          <h2 class="setor-cliente-empty__title">Crie o primeiro setor de ${Utils.escapeHtml(safeNome)}</h2>
+          <p class="setor-cliente-empty__sub">
+            Setores agrupam equipamentos por área, andar ou bloco. Ajuda a organizar
+            grandes carteiras (matriz, filial, sala tecnica) e gerar PMOC certinho.
+          </p>
+          <button type="button" class="setor-cliente-empty__cta"
+            data-action="open-setor-modal" data-cliente-id="${Utils.escapeAttr(clienteId)}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            <span>Criar primeiro setor</span>
+          </button>
+          <div class="setor-cliente-empty__hints">
+            <div class="setor-cliente-empty__hint">
+              <span class="setor-cliente-empty__hint-num">1</span>
+              <span>Crie um setor (ex: "Sala 1", "Cozinha", "Bloco A")</span>
+            </div>
+            <div class="setor-cliente-empty__hint">
+              <span class="setor-cliente-empty__hint-num">2</span>
+              <span>Adicione equipamentos a esse setor</span>
+            </div>
+            <div class="setor-cliente-empty__hint">
+              <span class="setor-cliente-empty__hint-num">3</span>
+              <span>Registre manutenções e gere relatórios PMOC</span>
+            </div>
+          </div>
+        </div>
+        ${semSetorBanner}
+      </section>`;
+    return;
+  }
+
+  // Cliente JA tem setores: mostra grade dos setores + tile "Sem setor"
+  // (compat backward) caso ainda haja equipamentos sem vínculo de setor.
+  // Bug fix #100: filtro AND (setorId === s.id) AND (clienteId match OR
+  // sem clienteId pra preservar setores compartilhados entre clientes que
+  // existiam antes do PMOC). Evita misturar equips de outros clientes
+  // que por acaso compartilhem setor (raro mas possivel).
+  const setorCards = setoresDoCliente.map((s) => {
+    const eqs = equipamentos.filter(
+      (e) => e.setorId === s.id && (!e.clienteId || e.clienteId === clienteId),
+    );
+    return setorCardHtml(s, eqs);
+  });
+
+  let semSetorTile = '';
+  if (equipsSemSetor.length) {
+    semSetorTile = `
+      <article class="setor-card setor-card--sem-setor" data-action="open-setor" data-id="__sem_setor__">
+        <div class="setor-card__head">
+          <div class="setor-card__title">
+            <h3 class="setor-card__name">Sem setor</h3>
+            <p class="setor-card__sub">${equipsSemSetor.length} equipamento${equipsSemSetor.length !== 1 ? 's' : ''} sem setor vinculado</p>
+          </div>
+        </div>
+      </article>`;
+  }
+
+  el.innerHTML = `<div class="setor-grid">${setorCards.join('')}${semSetorTile}</div>`;
+}
+
 /** Renderiza a lista flat de equipamentos (FREE ou drill-down de um setor). */
 function renderFlatList(filtro = '', options = {}, setorId = null) {
   const { equipamentos, registros } = getState();
@@ -339,13 +538,13 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
   // Filtros por statusFilter — cada um constrói um Set de IDs permitidos (null = sem filtro).
   //  · 'preventiva-7d' (legado do handler "go-alertas")
   //  · 'preventiva-30d' (quick filter novo)
-  //  · 'em-atencao' / 'criticos' (quick filters novos, avaliados via priority engine)
+  //  · 'em-atenção' / 'criticos' (quick filters novos, avaliados via priority engine)
   let allowedIds = null;
   if (options.statusFilter === 'preventiva-7d') {
     allowedIds = new Set(getPreventivaDueEquipmentIds(registros, 7));
   } else if (options.statusFilter === 'preventiva-30d') {
     allowedIds = new Set(getPreventivaDueEquipmentIds(registros, 30));
-  } else if (options.statusFilter === 'em-atencao') {
+  } else if (options.statusFilter === 'em-atenção') {
     allowedIds = new Set(
       equipamentos
         .filter((e) => {
@@ -406,6 +605,19 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
 
   // Copy contextual do empty state: depende do que o usuário tentou filtrar.
   const emptyCopy = (() => {
+    // Filtro por cliente vindo de /clientes -> "Ver equipamentos". Empty state
+    // customizado com nome do cliente e CTA pra adicionar o primeiro.
+    if (filterClienteId) {
+      const clienteNomeFromOpts = options.clienteNome || 'este cliente';
+      return {
+        title: `${clienteNomeFromOpts} ainda não tem equipamentos`,
+        description:
+          'Adicione o primeiro equipamento deste cliente pra começar a registrar manutenções e gerar relatórios.',
+        ctaLabel: 'Adicionar primeiro equipamento',
+        ctaAction: 'eq-add-for-cliente',
+        ctaClienteId: filterClienteId,
+      };
+    }
     if (setorId === '__sem_setor__') {
       return {
         title: 'Nenhum equipamento órfão',
@@ -419,7 +631,7 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
       };
     }
     switch (options.statusFilter) {
-      case 'em-atencao':
+      case 'em-atenção':
         return {
           title: 'Nenhum equipamento pedindo atenção',
           description: 'Parque em ordem — nada pra olhar com lupa agora.',
@@ -472,21 +684,98 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
     { enabled: true, variant: 'equipment', count: Math.min(Math.max(list.length, 3), 5) },
     () => {
       if (!sortedList.length) {
+        // Cliente filter: usa CTA customizado que pre-seleciona o cliente no
+        // modal-add-eq. Outros casos: CTA padrao "Novo equipamento".
+        const cta = emptyCopy.ctaAction
+          ? {
+              label: emptyCopy.ctaLabel,
+              action: emptyCopy.ctaAction,
+              id: emptyCopy.ctaClienteId || '',
+              tone: 'primary',
+              size: 'sm',
+              autoWidth: true,
+            }
+          : {
+              label: '+ Novo equipamento',
+              action: 'open-modal',
+              id: 'modal-add-eq',
+              tone: 'primary',
+              size: 'sm',
+              autoWidth: true,
+            };
         el.innerHTML = emptyStateHtml({
-          icon: '🔧',
+          icon: emptyCopy.ctaAction ? '👥' : '🔧',
           title: emptyCopy.title,
           description: emptyCopy.description,
-          cta: {
-            label: '+ Novo equipamento',
-            action: 'open-modal',
-            id: 'modal-add-eq',
-            tone: 'primary',
-            size: 'sm',
-            autoWidth: true,
-          },
+          cta,
         });
         return;
       }
+      // Banner quick-move: aparece quando estamos vendo equips "sem setor"
+      // dentro do contexto cliente E ha setores disponiveis. Inclui:
+      //   1. Setores já vinculados a este cliente (priority)
+      //   2. Setores "orphan" sem cliente (legacy) — ao escolher, o setor eh
+      //      auto-vinculado ao cliente durante o move (preenche o gap da
+      //      hierarquia Cliente -> Setor -> Equipamento).
+      let quickMoveBannerHtml = '';
+      if (filterClienteId && setorId === '__sem_setor__' && sortedList.length > 0) {
+        const { setores } = getState();
+        const setoresDoCliente = (setores || []).filter((s) => s.clienteId === filterClienteId);
+        const setoresOrfaos = (setores || []).filter((s) => !s.clienteId);
+        const totalDisponiveis = setoresDoCliente.length + setoresOrfaos.length;
+
+        if (totalDisponiveis > 0) {
+          const equipIds = sortedList.map((e) => e.id).join(',');
+
+          // Constroi options agrupadas: do cliente primeiro, depois orphan
+          // (com label visual indicando que serão vinculados ao cliente).
+          const optClientes = setoresDoCliente
+            .map(
+              (s) =>
+                `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHtml(s.nome)}</option>`,
+            )
+            .join('');
+          const optOrfaos = setoresOrfaos
+            .map(
+              (s) =>
+                `<option value="${Utils.escapeAttr(s.id)}">${Utils.escapeHtml(s.nome)} (sem cliente — sera vinculado)</option>`,
+            )
+            .join('');
+          const setorOptions =
+            (setoresDoCliente.length
+              ? `<optgroup label="Setores deste cliente">${optClientes}</optgroup>`
+              : '') +
+            (setoresOrfaos.length
+              ? `<optgroup label="Setores sem cliente (sera vinculado)">${optOrfaos}</optgroup>`
+              : '');
+          quickMoveBannerHtml = `
+            <div class="quick-move-banner" data-equip-ids="${Utils.escapeAttr(equipIds)}">
+              <div class="quick-move-banner__icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                </svg>
+              </div>
+              <div class="quick-move-banner__body">
+                <strong>Organizar ${sortedList.length} equipamento${sortedList.length !== 1 ? 's' : ''} sem setor</strong>
+                <p>Escolha um setor para mover todos de uma vez. Ou edite cada equipamento individualmente.</p>
+              </div>
+              <div class="quick-move-banner__action">
+                <select class="quick-move-banner__select" id="quick-move-target-setor"
+                  aria-label="Setor de destino">
+                  <option value="">Selecione um setor...</option>
+                  ${setorOptions}
+                </select>
+                <button type="button" class="quick-move-banner__btn"
+                  data-action="quick-move-equip-batch">
+                  Mover todos
+                </button>
+              </div>
+            </div>`;
+        }
+      }
+
       if (clusterActive) {
         const idleCardsHtml = idleList
           .map((eq) => equipCardHtml(eq, { showLocal: !setorId, evalCtx }))
@@ -494,11 +783,12 @@ function renderFlatList(filtro = '', options = {}, setorId = null) {
         const activeCardsHtml = activeList
           .map((eq) => equipCardHtml(eq, { showLocal: !setorId, evalCtx }))
           .join('');
-        el.innerHTML = _idleClusterHtml(idleCardsHtml, idleList.length) + activeCardsHtml;
+        el.innerHTML =
+          quickMoveBannerHtml + _idleClusterHtml(idleCardsHtml, idleList.length) + activeCardsHtml;
       } else {
-        el.innerHTML = sortedList
-          .map((eq) => equipCardHtml(eq, { showLocal: !setorId, evalCtx }))
-          .join('');
+        el.innerHTML =
+          quickMoveBannerHtml +
+          sortedList.map((eq) => equipCardHtml(eq, { showLocal: !setorId, evalCtx })).join('');
       }
       _bindEquipCardImageFallbacks(el);
     },
@@ -544,7 +834,7 @@ export async function renderEquip(filtro = '', options = {}) {
   const activeClienteNome = equipCtx.clienteNome;
   // Spread opcional pra propagar o filtro de cliente nas renderFlatList calls.
   const renderOptionsWithClient = activeClienteId
-    ? { ...renderOptions, clienteId: activeClienteId }
+    ? { ...renderOptions, clienteId: activeClienteId, clienteNome: activeClienteNome }
     : renderOptions;
 
   // Renderiza imediatamente com snapshot local do plano (não bloqueia a tela).
@@ -561,9 +851,17 @@ export async function renderEquip(filtro = '', options = {}) {
   }
 
   // Hero + filters sempre no topo da view (hidden quando não há equipamentos).
-  // Precisa rodar antes de qualquer return — os slots são estáveis entre modos.
-  renderEquipHero({ isPro });
-  renderEquipFilters();
+  // Em contexto cliente eles são escondidos (parte da view global do parque).
+  if (activeClienteId) {
+    // Esconde explicitamente caso renderizado em sessão anterior
+    const heroEl = Utils.getEl('equip-hero');
+    if (heroEl) heroEl.hidden = true;
+    const filtersEl = Utils.getEl('equip-filters');
+    if (filtersEl) filtersEl.hidden = true;
+  } else {
+    renderEquipHero({ isPro });
+    renderEquipFilters();
+  }
 
   // Quick filter ativo sobrescreve o fluxo normal: vai pra flat list com
   // statusFilter correspondente. Sempre rende com a toolbar "← Todos" pra dar
@@ -573,7 +871,7 @@ export async function renderEquip(filtro = '', options = {}) {
     if (searchBar) searchBar.style.display = '';
     const titleMap = {
       'sem-setor': 'Sem setor',
-      'em-atencao': 'Em atenção',
+      'em-atenção': 'Em atenção',
       criticos: 'Críticos',
       'preventiva-30d': 'Preventivas ≤30d',
     };
@@ -587,6 +885,17 @@ export async function renderEquip(filtro = '', options = {}) {
     } else {
       renderFlatList(filtro, { ...renderOptionsWithClient, statusFilter: activeQuickFilter }, null);
     }
+    return;
+  }
+
+  // Filtro por cliente (vindo de /clientes -> "Ver equipamentos"): hierarquia
+  // Cliente -> Setor -> Equipamento. Mostra grade de setores DESTE cliente.
+  // Drill-down num setor preserva o clienteId no equipCtx (atrayes do
+  // setActiveSector chain que usa _navigateEquipCtx).
+  // Se vem com sectorId também (drill-down dentro do cliente), pula direto
+  // pra flat list filtrada por cliente + setor.
+  if (activeClienteId && !activeSectorId) {
+    renderSetorGridForCliente(activeClienteId, activeClienteNome);
     return;
   }
 
@@ -620,9 +929,28 @@ export async function renderEquip(filtro = '', options = {}) {
     const setor =
       activeSectorId === '__sem_setor__' ? { nome: 'Sem setor' } : findSetor(activeSectorId);
     const nome = setor?.nome ?? 'Setor';
+    // Contexto cliente: titulo "Setor X · Cliente Y" e back vai pra grid do cliente
+    const titlePrefix = activeClienteNome
+      ? `${Utils.truncate(nome, 22)} - ${Utils.truncate(activeClienteNome, 18)}`
+      : Utils.truncate(nome, 28);
+    const backLabel = activeClienteNome ? '<- Setores do cliente' : '<- Setores';
+    // Bug fix #103: "+ Novo equipamento" precisa carregar o contexto atual.
+    // Sem isso, user navega Cliente -> Setor -> + Novo equipamento e o form
+    // abre vazio, perdendo a hierarquia que ele acabou de percorrer.
+    // data-setor-id + data-cliente-id sao lidos pelo handler open-modal pra
+    // pre-preencher os dropdowns Setor e Cliente no modal-add-eq.
+    const novoEquipBtn =
+      activeSectorId !== '__sem_setor__'
+        ? `<button class="btn btn--primary btn--sm"
+              data-action="open-modal" data-id="modal-add-eq"
+              data-setor-id="${Utils.escapeAttr(activeSectorId)}"
+              ${activeClienteId ? `data-cliente-id="${Utils.escapeAttr(activeClienteId)}"` : ''}
+              data-source="setor_drill">+ Novo equipamento</button>`
+        : '';
     _setToolbar({
-      title: Utils.truncate(nome, 28),
-      extraBtn: `<button class="btn btn--outline btn--sm" data-action="back-to-setores">← Setores</button>`,
+      title: titlePrefix,
+      extraBtn: `${novoEquipBtn}<button class="btn btn--outline btn--sm" data-action="back-to-setores">${backLabel}</button>`,
+      hideDefaultCta: true,
     });
   } else {
     // Vista FREE/Plus: toolbar padrão + "+ Novo setor" em modo locked, pra
@@ -633,16 +961,8 @@ export async function renderEquip(filtro = '', options = {}) {
     });
   }
 
-  // Quando vier filtrado por cliente (via /clientes → "Ver equipamentos"),
-  // sobrescreve o titulo do toolbar pra mostrar quem estamos vendo + atalho
-  // de "Limpar filtro" (volta pra view sem filtro de cliente).
-  if (activeClienteId && activeClienteNome) {
-    _setToolbar({
-      title: `Equipamentos de ${activeClienteNome}`,
-      extraBtn: `<button class="btn btn--outline btn--sm" data-action="equip-clear-cliente-filter">x Limpar cliente</button>`,
-    });
-  }
-
+  // O filtro de cliente já foi tratado mais cedo via early-return — aqui
+  // segue o flow normal de drill-down em setor ou lista flat default.
   renderFlatList(filtro, renderOptionsWithClient, activeSectorId);
 }
 
@@ -753,6 +1073,55 @@ export function getEditingSetorId() {
   return _editingSetorId;
 }
 
+/**
+ * Move um conjunto de equipamentos pra um setor especifico (batch).
+ * Usado pelo banner quick-move no drill-down __sem_setor__ dentro do contexto
+ * cliente. Atualiza state.equipamentos e re-renderiza.
+ *
+ * Se clienteIdToLink for passado e o setor de destino for orphan (sem cliente),
+ * o setor TAMBEM é vinculado ao cliente — preenchendo o gap da hierarquia
+ * Cliente -> Setor -> Equipamento (assume que o user quer organizar tudo sob
+ * a mesma carteira).
+ *
+ * @param {string[]} equipIds
+ * @param {string} setorId
+ * @param {string} [clienteIdToLink] — se passado, vincula também o setor
+ *   orphan ao cliente. No-op se setor já tiver clienteId.
+ * @returns {{moved: number, linkedSetor: boolean}}
+ */
+export function moveEquipsToSetor(equipIds, setorId, clienteIdToLink = null) {
+  if (!Array.isArray(equipIds) || !equipIds.length || !setorId) {
+    return { moved: 0, linkedSetor: false };
+  }
+  const idsSet = new Set(equipIds);
+  let moved = 0;
+  let linkedSetor = false;
+
+  setState((prev) => {
+    // Se for vincular o setor orphan ao cliente, atualiza setores também.
+    let nextSetores = prev.setores;
+    if (clienteIdToLink) {
+      nextSetores = (prev.setores || []).map((s) => {
+        if (s.id === setorId && !s.clienteId) {
+          linkedSetor = true;
+          return { ...s, clienteId: clienteIdToLink };
+        }
+        return s;
+      });
+    }
+    const nextEquipamentos = (prev.equipamentos || []).map((e) => {
+      if (idsSet.has(e.id)) {
+        moved++;
+        return { ...e, setorId };
+      }
+      return e;
+    });
+    return { ...prev, setores: nextSetores, equipamentos: nextEquipamentos };
+  });
+
+  return { moved, linkedSetor };
+}
+
 /** Reseta todo o form do modal e volta pra modo "criar". */
 export function clearSetorEditingState() {
   _editingSetorId = null;
@@ -766,6 +1135,11 @@ export function clearSetorEditingState() {
   Utils.setVal('setor-responsavel', '');
   const hiddenInput = Utils.getEl('setor-cor');
   if (hiddenInput) hiddenInput.value = SETOR_PALETTE[0].hex;
+  // Reseta clienteId hidden + esconde o badge de contexto
+  const clienteHidden = Utils.getEl('setor-cliente-id');
+  if (clienteHidden) clienteHidden.value = '';
+  const clienteBadge = Utils.getEl('setor-cliente-badge');
+  if (clienteBadge) clienteBadge.hidden = true;
 
   // Reseta picker pra primeira cor
   const picker = Utils.getEl('setor-color-picker');
@@ -997,19 +1371,30 @@ export async function saveSetor() {
   const cor = Utils.getEl('setor-cor')?.value || SETOR_PALETTE[0].hex;
   const descricao = (Utils.getVal('setor-descricao') || '').trim().slice(0, SETOR_DESC_LIMIT);
   const responsavel = (Utils.getVal('setor-responsavel') || '').trim();
+  // clienteId armazenado em hidden input (preenchido quando o modal abre via
+  // contexto de cliente). Hierarquia Cliente -> Setor -> Equipamento: setores
+  // novos sempre tem cliente, mas mantemos null como valid value pra compat
+  // com setores legacy que ainda não foram vinculados.
+  const clienteIdRaw = Utils.getEl('setor-cliente-id')?.value || '';
+  const clienteId = clienteIdRaw ? String(clienteIdRaw) : null;
 
   if (isEditing) {
     const editingId = _editingSetorId;
     setState((prev) => ({
       ...prev,
       setores: (prev.setores || []).map((s) =>
-        s.id === editingId ? { ...s, nome, cor, descricao, responsavel } : s,
+        s.id === editingId
+          ? { ...s, nome, cor, descricao, responsavel, ...(clienteId ? { clienteId } : {}) }
+          : s,
       ),
     }));
   } else {
     setState((prev) => ({
       ...prev,
-      setores: [...(prev.setores || []), { id: Utils.uid(), nome, cor, descricao, responsavel }],
+      setores: [
+        ...(prev.setores || []),
+        { id: Utils.uid(), nome, cor, descricao, responsavel, clienteId },
+      ],
     }));
   }
 
@@ -1095,7 +1480,7 @@ const _EDIT_FOCUS_FIELD_MAP = {
   tipo: 'eq-tipo',
   fluido: 'eq-fluido',
   modelo: 'eq-modelo',
-  serie: 'eq-numero-serie',
+  serie: 'eq-número-serie',
   capacidade: 'eq-capacidade-btu',
   tensao: 'eq-tensao',
   frequencia: 'eq-frequencia',
@@ -1163,6 +1548,10 @@ export async function openEditEquip(id, opts = {}) {
   Utils.setVal('eq-tag', eq.tag || '');
   Utils.setVal('eq-tipo', eq.tipo || 'Split Hi-Wall');
   Utils.setVal('eq-fluido', eq.fluido || 'R-410A');
+  // Componente (so faz sentido se tipo for de climatização). Sync logo apos
+  // pra mostrar/esconder o wrapper. setVal é no-op se o wrapper estiver oculto.
+  syncComponenteVisibility();
+  if (eq.componente) Utils.setVal('eq-componente', eq.componente);
   Utils.setVal('eq-modelo', eq.modelo || '');
   Utils.setVal('eq-criticidade', eq.criticidade || 'media');
   Utils.setVal('eq-prioridade', eq.prioridadeOperacional || 'normal');
@@ -1470,6 +1859,9 @@ export async function saveEquip() {
               tipo,
               modelo: payloadValidation.value.modelo,
               fluido: Utils.getVal('eq-fluido'),
+              componente: TIPOS_COM_COMPONENTE.has(tipo)
+                ? Utils.getVal('eq-componente') || null
+                : null,
               criticidade,
               prioridadeOperacional,
               periodicidadePreventivaDias,
@@ -1496,6 +1888,7 @@ export async function saveEquip() {
           tipo,
           modelo: payloadValidation.value.modelo,
           fluido: Utils.getVal('eq-fluido'),
+          componente: TIPOS_COM_COMPONENTE.has(tipo) ? Utils.getVal('eq-componente') || null : null,
           criticidade,
           prioridadeOperacional,
           periodicidadePreventivaDias,
@@ -1527,6 +1920,8 @@ export async function saveEquip() {
   Utils.clearVals(...DADOS_PLACA_INPUT_IDS);
   Utils.setVal('eq-tipo', 'Split Hi-Wall');
   Utils.setVal('eq-fluido', 'R-410A');
+  Utils.setVal('eq-componente', '');
+  syncComponenteVisibility();
   Utils.setVal('eq-criticidade', 'media');
   Utils.setVal('eq-prioridade', 'normal');
   Utils.setVal('eq-frequencia', '60');
@@ -2130,7 +2525,7 @@ export async function deleteEquip(id) {
 }
 
 export function populateEquipSelects() {
-  const { equipamentos, tecnicos } = getState();
+  const { equipamentos, técnicos } = getState();
   const selectConfigs = [
     { id: 'r-equip', placeholder: 'Selecione o equipamento...' },
     { id: 'hist-equip', placeholder: 'Todos os equipamentos' },
@@ -2143,6 +2538,7 @@ export function populateEquipSelects() {
 
     el.textContent = '';
     const defaultOption = document.createElement('option');
+    defaultOption.value = '';
     defaultOption.value = '';
     defaultOption.textContent = placeholder;
     el.appendChild(defaultOption);
@@ -2158,9 +2554,9 @@ export function populateEquipSelects() {
   const tecDatalist = Utils.getEl('tec-datalist');
   if (tecDatalist) {
     tecDatalist.textContent = '';
-    (tecnicos || []).forEach((tecnico) => {
+    (técnicos || []).forEach((técnico) => {
       const option = document.createElement('option');
-      option.value = String(tecnico || '');
+      option.value = String(técnico || '');
       tecDatalist.appendChild(option);
     });
   }

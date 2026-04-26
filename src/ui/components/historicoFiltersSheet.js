@@ -118,9 +118,9 @@ function buildOverlayHtml({ setores, equipamentos, tipoOptions, initial }) {
           </select>
         </div>
         <div class="hist-filters-sheet__field">
-          <span class="hist-filters-sheet__label">Tipo de servico</span>
+          <span class="hist-filters-sheet__label">Tipo de serviço</span>
           <div class="hist-filters-sheet__tipo-grid"
-            role="group" aria-label="Filtrar por tipo de servico"
+            role="group" aria-label="Filtrar por tipo de serviço"
             data-current="${safeTipo}">
             <button type="button" class="hist-filters-sheet__tipo-chip${initial.tipo ? '' : ' is-active'}"
               data-tipo-id="" aria-pressed="${initial.tipo ? 'false' : 'true'}">Todos</button>

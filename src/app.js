@@ -43,6 +43,12 @@ const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
   }
 }
 
+// Fase 2 — Assinatura digital de orçamento.
+// Se a URL tem ?orc-sign=TOKEN, intercepta ANTES de qualquer auth/landing/SW
+// e monta a página standalone de assinatura. O cliente do técnico não precisa
+// (e nem pode) ter conta — usa RPCs públicas no Supabase com token UUID.
+const _orcSignToken = new URLSearchParams(window.location.search).get('orc-sign');
+
 async function bootstrap() {
   try {
     // Se o SW foi registrado em index.html antes do bootstrap, liga o fluxo
@@ -245,4 +251,20 @@ window.onunhandledrejection = (event) => {
   });
 };
 
-bootstrap();
+// Roteamento de boot: assinatura digital de orçamento OU bootstrap padrão.
+// O fluxo de assinatura é totalmente standalone — substitui o body inteiro,
+// sem auth/sidebar/SW.
+if (_orcSignToken) {
+  import('./ui/components/orcamentoSignaturePage.js')
+    .then(({ OrcamentoSignaturePage }) => OrcamentoSignaturePage.mount(_orcSignToken))
+    .catch((error) => {
+      document.body.innerHTML =
+        '<div style="padding:40px;text-align:center;font-family:sans-serif;color:#02131f;">' +
+        '<h2>Erro ao carregar página de assinatura</h2>' +
+        '<p style="color:#647585;">Tente recarregar a página. Se o problema persistir, contate o técnico.</p>' +
+        '</div>';
+      console.error('[orc-sign] mount failed', error);
+    });
+} else {
+  bootstrap();
+}

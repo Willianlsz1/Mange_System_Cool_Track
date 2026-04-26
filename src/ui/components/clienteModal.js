@@ -20,6 +20,7 @@ import {
   maskCnpjOrCpfInput,
 } from '../../core/clientes.js';
 import { attachDialogA11y, CustomConfirm } from '../../core/modal.js';
+import { bindSmartContactMaskInput } from '../../core/phoneMask.js';
 
 const OVERLAY_ID = 'cliente-modal-overlay';
 let _a11yCleanup = null;
@@ -35,6 +36,7 @@ function captureFormSnapshot(overlay) {
     endereco: get('cli-endereco'),
     contato: get('cli-contato'),
     urlChamados: get('cli-url-chamados'),
+    finalidade: get('cli-finalidade'),
     observacoes: get('cli-observacoes'),
   };
 }
@@ -150,6 +152,27 @@ function buildOverlayHtml(cliente) {
               na capa do PMOC. Exigido pela NBR 13971.
             </div>
           </div>
+
+          <!-- V2 (#116): finalidade do ambiente — usado em
+               "Informações do Sistema" do PMOC formal. Dropdown com
+               categorias da NBR 13971 (Anexo A — classificacao de
+               ambientes coletivos). -->
+          <div class="cliente-modal__field">
+            <label class="cliente-modal__label" for="cli-finalidade">Finalidade do ambiente</label>
+            <select id="cli-finalidade" class="form-control cliente-modal__input">
+              <option value="">Selecione...</option>
+              <option value="Hospitalar"${c.finalidade === 'Hospitalar' ? ' selected' : ''}>Hospitalar / Saúde</option>
+              <option value="Comercial"${c.finalidade === 'Comercial' ? ' selected' : ''}>Comercial / Escritório</option>
+              <option value="Industrial"${c.finalidade === 'Industrial' ? ' selected' : ''}>Industrial</option>
+              <option value="Educacional"${c.finalidade === 'Educacional' ? ' selected' : ''}>Educacional / Escola</option>
+              <option value="Residencial coletivo"${c.finalidade === 'Residencial coletivo' ? ' selected' : ''}>Residencial coletivo</option>
+              <option value="Hotelaria"${c.finalidade === 'Hotelaria' ? ' selected' : ''}>Hotelaria</option>
+              <option value="Outro"${c.finalidade === 'Outro' ? ' selected' : ''}>Outro</option>
+            </select>
+            <div class="cliente-modal__hint">
+              Aparece em "Informações do Sistema" no PMOC formal.
+            </div>
+          </div>
         </section>
 
         <section class="cliente-modal__section">
@@ -196,26 +219,26 @@ function bindCnpjValidation(overlay) {
     input.classList.add('cliente-modal__input--warn');
   };
 
-  // Mascara em tempo real: a cada digitacao reformata pra X.X.X-X (CPF) ate 11
-  // digitos OU XX.X.X/X-X (CNPJ) de 12-14. Cap automatico em 14 digitos.
+  // Mascara em tempo real: a cada digitacao reformata pra X.X.X-X (CPF) até 11
+  // digitos OU XX.X.X/X-X (CNPJ) de 12-14. Cap automático em 14 digitos.
   // Cursor vai pro final apos reformat — pattern simples e funcional pro 99%
-  // dos casos onde usuario digita lineamente.
+  // dos casos onde usuário digita lineamente.
   input.addEventListener('input', () => {
     const masked = maskCnpjOrCpfInput(input.value);
     if (masked !== input.value) {
       input.value = masked;
-      // Posiciona cursor no fim — usuario tipico digita linearmente.
+      // Posiciona cursor no fim — usuário tipico digita linearmente.
       try {
         input.setSelectionRange(masked.length, masked.length);
       } catch (_e) {
-        /* alguns input types nao suportam setSelectionRange — ignora */
+        /* alguns input types não suportam setSelectionRange — ignora */
       }
     }
     validate();
   });
   input.addEventListener('blur', () => {
     validate();
-    // Auto-format final ao sair se valido (mantido como salvaguarda).
+    // Auto-format final ao sair se válido (mantido como salvaguarda).
     const result = validateCnpjOrCpf(input.value);
     if (result.ok && input.value.trim()) {
       input.value = formatCnpjOrCpf(input.value);
@@ -305,6 +328,10 @@ async function open(cliente, opts = {}) {
   _a11yCleanup = attachDialogA11y(overlay, { onDismiss: () => requestClose() });
 
   bindCnpjValidation(overlay);
+
+  // Smart mask: aplica formato (XX) XXXXX-XXXX só se o usuário digitar
+  // dígitos. Se digitar email/texto, deixa em paz (campo é dual-purpose).
+  bindSmartContactMaskInput(overlay.querySelector('#cli-contato'));
 
   overlay.querySelector('#cli-save')?.addEventListener('click', () => {
     handleSave(overlay, cliente, opts.onSaved, hardClose);

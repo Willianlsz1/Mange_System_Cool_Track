@@ -174,7 +174,7 @@ function computeKPIs(registros) {
     }
   }
 
-  // Próxima manutenção: menor `proxima` a partir de hoje; se tudo venceu, pega o mais recente passado
+  // Próxima manutenção: menor `próxima` a partir de hoje; se tudo venceu, pega o mais recente passado
   const allDues = registros
     .map((r) => r.proxima)
     .filter(Boolean)
@@ -384,27 +384,39 @@ function renderHero({ kpis, periodoTxt, equipTxt, viewMode, narrative, emittedAt
         </div>
         <div class="rel-kpi__label">Registros</div>
       </div>
-      <div class="rel-kpi" aria-label="${custoAriaLabel}"${custoTitleAttr}>
+      ${
+        hasCusto
+          ? `<div class="rel-kpi" aria-label="${custoAriaLabel}"${custoTitleAttr}>
         <div class="rel-kpi__row">
           <span class="rel-kpi__icon rel-kpi__icon--cyan">${icon('dollarSign')}</span>
-          <span class="rel-kpi__value${hasCusto ? '' : ' rel-kpi__value--muted'}">${custoValue}</span>
+          <span class="rel-kpi__value">${custoValue}</span>
         </div>
         <div class="rel-kpi__label">Custo total</div>
-      </div>
-      <div class="rel-kpi" ${tipoTitle}>
+      </div>`
+          : ''
+      }
+      ${
+        kpis.mostCommonType
+          ? `<div class="rel-kpi" ${tipoTitle}>
         <div class="rel-kpi__row">
           <span class="rel-kpi__icon rel-kpi__icon--cyan">${icon('shieldCheck')}</span>
           <span class="rel-kpi__value rel-kpi__value--compact">${Utils.escapeHtml(tipoValue)}</span>
         </div>
         <div class="rel-kpi__label">Tipo mais comum</div>
-      </div>
-      <div class="rel-kpi" aria-label="Próximo vencimento: ${Utils.escapeAttr(dueValue)}">
+      </div>`
+          : ''
+      }
+      ${
+        kpis.nextDue
+          ? `<div class="rel-kpi" aria-label="Próximo vencimento: ${Utils.escapeAttr(dueValue)}">
         <div class="rel-kpi__row">
           <span class="rel-kpi__icon rel-kpi__icon--${dueState === 'red' ? 'red' : dueState === 'gold' ? 'gold' : 'cyan'}">${icon('calendarClock')}</span>
           <span class="rel-kpi__value rel-kpi__value--${dueState}">${Utils.escapeHtml(dueValue)}</span>
         </div>
         <div class="rel-kpi__label">Próx. vencimento</div>
-      </div>
+      </div>`
+          : ''
+      }
     </div>
   `;
 }
@@ -427,7 +439,7 @@ function renderProximasAcoes(items) {
     .join('');
 
   return `
-    <section class="rel-proximas" aria-labelledby="rel-proximas-title">
+    <section class="rel-próximas" aria-labelledby="rel-próximas-title">
       <header class="rel-proximas__head">
         <span class="rel-proximas__icon" aria-hidden="true">${icon('calendarClock', 14)}</span>
         <h3 id="rel-proximas-title" class="rel-proximas__title">Próximas ações recomendadas</h3>

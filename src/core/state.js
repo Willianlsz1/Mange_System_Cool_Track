@@ -14,6 +14,9 @@ const INITIAL_STATE = {
   // via core/clientes.js#loadClientes — não persiste em localStorage porque
   // clientes vivem só no Supabase (sem queue offline na fase 2).
   clientes: [],
+  // V3 Instalação (abr/2026): orçamentos de instalação. Mesmo padrão dos
+  // clientes — hidratado on-demand via core/orcamentos.js#loadOrcamentos.
+  orcamentos: [],
 };
 
 const listeners = new Set();
@@ -41,6 +44,7 @@ export function getState() {
     tecnicos: [...(state.tecnicos || [])],
     setores: [...(state.setores || [])],
     clientes: [...(state.clientes || [])],
+    orcamentos: [...(state.orcamentos || [])],
   };
 }
 

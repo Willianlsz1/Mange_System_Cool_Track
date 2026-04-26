@@ -90,11 +90,38 @@ export function bindClienteHandlers() {
   }
 
   // Abre modal de cadastro/edição. data-mode="create" → novo. Sem mode → edita data-id.
+  // data-after-save="select-in-eq-modal" → apos salvar, popula o select de
+  // cliente do modal-add-eq e seleciona o cliente recem-criado (fluxo inline
+  // a partir do dropdown de Cliente no modal de equipamento).
   on('open-cliente-modal', (el) => {
     const mode = el?.dataset?.mode;
     const id = el?.dataset?.id;
+    const afterSave = el?.dataset?.afterSave;
+
+    const handleSavedForEqModal = async (cliente) => {
+      // Re-popula o select #eq-cliente com a lista atualizada
+      const { populateClienteSelect } = await import('../../views/clientes.js');
+      await populateClienteSelect();
+      // Seleciona o novo cliente
+      const select = document.getElementById('eq-cliente');
+      if (select && cliente?.id) {
+        select.value = String(cliente.id);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      // Sincroniza o label visivel do trigger
+      const { syncSelectedLabels } = await import('../../components/eqContextPicker.js');
+      syncSelectedLabels?.();
+    };
+
     if (mode === 'create' || !id) {
-      ClienteModal.openCreate({ onSaved: () => renderClientes() });
+      const onSaved =
+        afterSave === 'select-in-eq-modal'
+          ? (cliente) => {
+              renderClientes();
+              handleSavedForEqModal(cliente);
+            }
+          : () => renderClientes();
+      ClienteModal.openCreate({ onSaved });
       return;
     }
     openClienteModalForId(id);

@@ -218,55 +218,95 @@ export function renderShellModals() {
             </div>
           </div>
 
+          <!--
+            CONTEXTO V2 (abr/2026): redesign inspirado em SaaS modern picker.
+            Estrutura: header com pill OPCIONAL + helper + grid 2-col com
+            triggers card-style (Setor / Cliente). Selects nativos ficam
+            ESCONDIDOS mas preservam state pra saveEquip ler. Custom dropdowns
+            (eqContextPicker.js) anexam ao body com search/recents/criar
+            inline, mantendo a integridade do flow original.
+          -->
           <div class="eq-context-group" id="eq-context-group" style="display:none">
-            <div class="eq-form-section-head">
-              <span class="eq-form-section-head__label">Contexto</span>
-              <span class="eq-form-section-head__meta">— opcional, melhora organização</span>
+            <div class="eq-context-group__head">
+              <span class="eq-context-group__label">CONTEXTO</span>
+              <span class="eq-context-group__opt">OPCIONAL</span>
+              <span class="eq-context-group__hint">Ajuda a organizar seus equipamentos</span>
             </div>
-            <div class="eq-context-group__card">
-              <label class="eq-context-row eq-context-row--setor" id="eq-setor-wrapper" for="eq-setor" style="display:none">
-                <span class="eq-context-row__icon" aria-hidden="true">
-                  <span class="eq-context-row__dot"></span>
-                </span>
-                <span class="eq-context-row__body">
-                  <span class="eq-context-row__title">
-                    Setor <span class="pro-badge pro-badge--inline">PRO</span>
+
+            <div class="eq-context-group__grid">
+              <!-- Setor (Pro) -->
+              <div class="eq-context-card" id="eq-setor-wrapper" style="display:none">
+                <button type="button" class="eq-context-card__trigger"
+                  id="eq-setor-trigger" data-eq-context="setor"
+                  aria-haspopup="listbox" aria-expanded="false">
+                  <span class="eq-context-card__icon eq-context-card__icon--setor" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="4" y="3" width="16" height="18" rx="1.5"/>
+                      <path d="M9 8h.01M15 8h.01M9 12h.01M15 12h.01M9 16h.01M15 16h.01"/>
+                    </svg>
                   </span>
-                  <span class="eq-context-row__sub" id="eq-setor-sub">Sem setor atribuído</span>
-                </span>
-                <select id="eq-setor" class="eq-context-row__select" aria-label="Setor">
+                  <span class="eq-context-card__body">
+                    <span class="eq-context-card__label">
+                      Setor
+                      <span class="pro-badge pro-badge--inline">PRO</span>
+                    </span>
+                    <span class="eq-context-card__value" id="eq-setor-value">Sem setor</span>
+                  </span>
+                  <svg class="eq-context-card__chev" width="14" height="14" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                <!-- Hidden native select (mantem state pra saveEquip ler) -->
+                <select id="eq-setor" class="eq-context-card__hidden-select" aria-hidden="true" tabindex="-1">
                   <option value="">Sem setor</option>
                 </select>
-                <svg class="eq-context-row__chev" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </label>
+              </div>
 
               <!--
                 PMOC Fase 2: vínculo equipamento ↔ cliente. Só aparece quando
                 o user já tem ao menos 1 cliente cadastrado (populateClienteSelect
-                em views/clientes.js controla a visibilidade). Vínculo é opcional;
-                deixa "Sem cliente" pra equipamentos próprios ou demos.
+                em views/clientes.js controla a visibilidade). Vínculo é opcional.
               -->
-              <label class="eq-context-row eq-context-row--cliente" id="eq-cliente-wrapper" for="eq-cliente" style="display:none">
-                <span class="eq-context-row__icon" aria-hidden="true">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
-                    <circle cx="10" cy="7" r="4"/>
+              <div class="eq-context-card" id="eq-cliente-wrapper" style="display:none">
+                <button type="button" class="eq-context-card__trigger"
+                  id="eq-cliente-trigger" data-eq-context="cliente"
+                  aria-haspopup="listbox" aria-expanded="false">
+                  <span class="eq-context-card__icon eq-context-card__icon--cliente" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/>
+                      <circle cx="10" cy="7" r="4"/>
+                    </svg>
+                  </span>
+                  <span class="eq-context-card__body">
+                    <span class="eq-context-card__label">Cliente</span>
+                    <span class="eq-context-card__value" id="eq-cliente-value">Sem cliente</span>
+                  </span>
+                  <svg class="eq-context-card__chev" width="14" height="14" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
                   </svg>
-                </span>
-                <span class="eq-context-row__body">
-                  <span class="eq-context-row__title">Cliente</span>
-                  <span class="eq-context-row__sub" id="eq-cliente-sub">Sem cliente vinculado</span>
-                </span>
-                <select id="eq-cliente" class="eq-context-row__select" aria-label="Cliente">
+                </button>
+                <button type="button" class="eq-context-card__create-link"
+                  data-action="open-cliente-modal" data-mode="create"
+                  data-after-save="select-in-eq-modal">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Criar novo cliente
+                </button>
+                <!-- Hidden native select (mantem state pra saveEquip ler) -->
+                <select id="eq-cliente" class="eq-context-card__hidden-select" aria-hidden="true" tabindex="-1">
                   <option value="">Sem cliente</option>
                 </select>
-                <svg class="eq-context-row__chev" width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M3 5l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-              </label>
+              </div>
+            </div>
 
               <!--
                 V4: O bloco de fotos foi MOVIDO pra fora do modal de cadastro.
@@ -277,7 +317,6 @@ export function renderShellModals() {
                 identificação principal. O fluxo novo: cria o equipamento
                 → abre o detail → usa o avatar pra adicionar fotos.
               -->
-            </div>
           </div>
 
           <!--
@@ -337,6 +376,22 @@ export function renderShellModals() {
                   <option>Outro</option>
                 </optgroup>
               </select>
+            </div>
+            <!-- Componente: aparece so pra tipos de climatização (Split, VRF,
+                 Fan Coil, Self Contained, etc). Bind no JS via change do
+                 #eq-tipo. Default oculto. Wrapper id pra controle de display. -->
+            <div class="form-group" id="eq-componente-wrapper" style="display:none">
+              <label class="form-label" for="eq-componente">Componente</label>
+              <select id="eq-componente" class="form-control">
+                <option value="">Selecione...</option>
+                <option value="evaporadora">Evaporadora (interna)</option>
+                <option value="condensadora">Condensadora (externa)</option>
+                <option value="unidade_unica">Unidade única (single)</option>
+              </select>
+              <p class="form-help" style="font-size:11px;color:var(--text-3,#6a8ba8);margin:4px 2px 0">
+                Indica se é a parte interna (evap), externa (cond) ou um
+                equipamento único (window/portatil).
+              </p>
             </div>
             <div class="form-group">
               <label class="form-label" for="eq-fluido">Fluido refrigerante</label>
@@ -642,7 +697,7 @@ export function renderShellModals() {
     </div>
   </div>
 
-  <!-- MODAL: Confirmacao (estilo v6 — alert-triangle em circulo + texto centralizado) -->
+  <!-- MODAL: Confirmação (estilo v6 — alert-triangle em circulo + texto centralizado) -->
   <div class="modal-overlay" id="modal-confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
     aria-describedby="confirm-msg">
     <div class="modal modal--sm modal--confirm-v6">
@@ -689,10 +744,10 @@ export function renderShellModals() {
              em runtime quando o blob URL fica disponivel. -->
         <object id="pdf-preview-frame" type="application/pdf" data=""
           aria-label="Pré-visualização do relatório PDF">
-          <!-- Fallback nativo do <object>: aparece SO quando o browser nao
+          <!-- Fallback nativo do <object>: aparece SO quando o browser não
                consegue renderizar o tipo. Mais confiavel que timeout JS. -->
           <div class="pdf-preview__fallback">
-            <p>Seu navegador nao consegue exibir PDFs aqui.</p>
+            <p>Seu navegador não consegue exibir PDFs aqui.</p>
             <a id="pdf-preview-fallback-link" href="#" target="_blank" rel="noopener"
               class="btn btn--outline btn--sm">Abrir em nova aba</a>
           </div>
@@ -734,6 +789,33 @@ export function renderShellModals() {
       </header>
 
       <div class="setor-modal__body">
+        <!-- Cliente: select editavel. Pre-selecionado quando vier do contexto
+             /clientes -> "Ver equipamentos" -> "+ Novo setor", mas o usuário
+             pode trocar pra outro cliente ou deixar sem (compat com setores
+             legacy). Hidden input mantido pra retro-compat com saveSetor que
+             le de '#setor-cliente-id'; um change listener sincroniza com o
+             select abaixo. -->
+        <input type="hidden" id="setor-cliente-id" value="" />
+        <div class="setor-modal__field setor-modal__field--cliente" id="setor-cliente-field">
+          <div class="setor-modal__field-head">
+            <label for="setor-cliente-select" class="setor-modal__label">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+              </svg>
+              Cliente
+              <span class="setor-modal__label-hint">(opcional)</span>
+            </label>
+          </div>
+          <select id="setor-cliente-select" class="setor-modal__input setor-modal__input--select"
+            aria-label="Cliente vinculado ao setor">
+            <option value="">— Sem cliente vinculado —</option>
+          </select>
+          <p class="setor-modal__field-help" id="setor-cliente-help">
+            Vincule o setor a um cliente para organizar por carteira (ex: matriz, filial).
+          </p>
+        </div>
         <!-- NOME -->
         <div class="setor-modal__field">
           <div class="setor-modal__field-head">

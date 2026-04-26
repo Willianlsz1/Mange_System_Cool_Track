@@ -7,6 +7,9 @@ import { renderRelatorio, populateRelatorioSelects } from '../views/relatorio.js
 import { initRegistro, loadRegistroForEdit } from '../views/registro.js';
 import { renderPricing } from '../views/pricing.js';
 import { renderClientes, setClientesSearch } from '../views/clientes.js';
+import { ClientesPaywallModal } from '../components/clientesPaywallModal.js';
+import { getCachedPlan } from '../../core/plans/planCache.js';
+import { PLAN_CODE_PRO } from '../../core/plans/subscriptionPlans.js';
 import { renderConta } from '../views/conta.js';
 import { renderPrivacidade } from '../views/privacidade.js';
 
@@ -26,6 +29,11 @@ export function registerAppRoutes() {
     populateEquipSelects();
     initRegistro(params);
     if (params.editRegistroId) loadRegistroForEdit(params.editRegistroId);
+    // UX V2 audit fix: equipamento picker com search + group por setor.
+    // Lazy import (carrega so quando entra em /registro).
+    import('../components/registroEquipPicker.js').then((m) => {
+      m.initRegistroEquipPicker?.();
+    });
     updateHeader();
   });
 
@@ -63,6 +71,23 @@ export function registerAppRoutes() {
   });
 
   registerRoute('clientes', () => {
+    // Pro-gate: Free/Plus veem paywall em vez de view. Cache eh sync; refresh
+    // assincrono nao eh necessario aqui porque o paywall eh apenas teaser
+    // (real billing check acontece no momento do upgrade no Stripe).
+    const planCode = getCachedPlan() || 'free';
+    if (planCode !== PLAN_CODE_PRO) {
+      ClientesPaywallModal.open();
+      // Volta para a tela anterior (ou inicio se nao houver historico)
+      // pra evitar que a URL fique em /clientes com paywall sobreposto.
+      // Usa back() pra preservar o flow natural do user.
+      if (window.history?.length > 1) {
+        window.history.back();
+      } else {
+        // No initial load, vai pra /inicio
+        import('../../core/router.js').then((m) => m.goTo('inicio'));
+      }
+      return;
+    }
     renderClientes();
     updateHeader();
     const search = document.getElementById('clientes-busca');
@@ -82,5 +107,13 @@ export function registerAppRoutes() {
   registerRoute('privacidade', () => {
     renderPrivacidade();
     updateHeader();
+  });
+
+  // V3 Instalação (abr/2026): orçamentos disponiveis em todos os planos
+  // (Free com limite de 1/mês como porta de entrada).
+  registerRoute('orcamentos', async () => {
+    updateHeader();
+    const { loadAndRenderOrcamentos } = await import('../views/orcamentos.js');
+    await loadAndRenderOrcamentos();
   });
 }

@@ -41,6 +41,7 @@ function normalizeClienteRow(row) {
     endereco: row.endereco ? String(row.endereco).trim() : '',
     contato: row.contato ? String(row.contato).trim() : '',
     urlChamados: row.url_chamados ? String(row.url_chamados).trim() : '',
+    finalidade: row.finalidade ? String(row.finalidade).trim() : '',
     observacoes: row.observacoes ? String(row.observacoes).trim() : '',
     createdAt: row.created_at || null,
     updatedAt: row.updated_at || null,
@@ -63,6 +64,7 @@ function denormalizeCliente(cliente, userId) {
     endereco: cliente.endereco?.trim() || null,
     contato: cliente.contato?.trim() || null,
     url_chamados: cliente.urlChamados?.trim() || null,
+    finalidade: cliente.finalidade?.trim() || null,
     observacoes: cliente.observacoes?.trim() || null,
   };
 }
@@ -302,7 +304,7 @@ export function formatCnpjOrCpf(raw) {
  *   12–14        ->  XX.XXX.XXX/XXXX-X / -XX (formato CNPJ — re-segmenta)
  *
  * No 12o digito o formato troca de CPF -> CNPJ — comportamento esperado pra
- * usuario que digita CNPJ (passa pelo "CPF look" no meio do caminho).
+ * usuário que digita CNPJ (passa pelo "CPF look" no meio do caminho).
  */
 export function maskCnpjOrCpfInput(raw) {
   const digits = String(raw || '')
@@ -323,6 +325,6 @@ export function maskCnpjOrCpfInput(raw) {
   out += '.' + digits.slice(2, 5);
   out += '.' + digits.slice(5, 8);
   out += '/' + digits.slice(8, 12);
-  if (len > 12) out += '-' + digits.slice(12, 14);
+  if (len === 14) out += '-' + digits.slice(12, 14);
   return out;
 }

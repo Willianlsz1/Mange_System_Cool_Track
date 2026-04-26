@@ -176,7 +176,7 @@ function _renderHeroPlan({ planCode, planData, billingProfile }) {
     : isPaid
       ? ''
       : `
-        <button type="button" class="conta-hero__upgrade-cta" data-action="conta-upgrade">
+        <button type="button" class="conta-hero__upgrade-cta" data-conta-action="upgrade">
           <span aria-hidden="true">${ICON_CROWN}</span>
           <span>Conhecer planos pagos</span>
         </button>`;
@@ -261,7 +261,7 @@ function _renderIdentity({ name, email, role }) {
           <span>${email || ''}</span>
         </div>
       </div>
-      <button type="button" class="conta-identity__pub" data-action="conta-public-profile" aria-label="Ver perfil público">
+      <button type="button" class="conta-identity__pub" data-conta-action="public-profile" aria-label="Ver perfil público">
         <span>Ver perfil público</span>
         <span aria-hidden="true">${ICON_EXTERNAL}</span>
       </button>
@@ -389,7 +389,7 @@ function _renderLgpdFooter() {
           Utilizamos criptografia e seguimos a LGPD para proteger suas informações.
         </p>
       </div>
-      <button type="button" class="conta-lgpd__cta" data-action="conta-open-privacy">
+      <button type="button" class="conta-lgpd__cta" data-conta-action="open-privacy">
         Saiba mais
         <span aria-hidden="true">${ICON_CHEV}</span>
       </button>
@@ -422,28 +422,28 @@ function _bindOnce() {
   const view = document.getElementById(VIEW_ID);
   if (!view) return;
   view.addEventListener('click', async (event) => {
-    const target = event.target.closest?.('[data-action]');
+    const target = event.target.closest?.('[data-conta-action]');
     if (!target || !view.contains(target)) return;
-    const action = target.getAttribute('data-action');
+    const action = target.getAttribute('data-conta-action');
     switch (action) {
-      case 'conta-edit-profile':
-      case 'conta-public-profile':
+      case 'edit-profile':
+      case 'public-profile':
         ProfileModal.open();
         break;
-      case 'conta-manage-plan':
-      case 'conta-upgrade':
+      case 'manage-plan':
+      case 'upgrade':
         goTo('pricing');
         break;
-      case 'conta-export-data':
+      case 'export-data':
         await _handleExport(target);
         break;
-      case 'conta-signout':
+      case 'signout':
         Auth.signOut();
         break;
-      case 'conta-delete-account':
+      case 'delete-account':
         _openDeleteDialog();
         break;
-      case 'conta-open-privacy':
+      case 'open-privacy':
         goTo('privacidade');
         break;
       default:
@@ -486,7 +486,7 @@ function _openDeleteDialog() {
   dialog.dataset.blockingLayer = 'conta-delete';
 
   dialog.innerHTML = `
-    <div class="conta-delete-dialog__backdrop" data-action="conta-close-delete" aria-hidden="true"></div>
+    <div class="conta-delete-dialog__backdrop" data-conta-action="close-delete" aria-hidden="true"></div>
     <div class="conta-delete-dialog__card" role="document">
       <h2 class="conta-delete-dialog__title" id="conta-delete-title">
         Excluir conta permanentemente?
@@ -506,7 +506,7 @@ function _openDeleteDialog() {
         placeholder="${DELETE_CONFIRM_PHRASE}" />
       <div class="conta-delete-dialog__actions">
         <button type="button" class="conta-delete-dialog__cancel"
-          data-action="conta-close-delete">Cancelar</button>
+          data-conta-action="close-delete">Cancelar</button>
         <button type="button" class="conta-delete-dialog__confirm"
           id="conta-delete-confirm" disabled>Excluir minha conta</button>
       </div>
@@ -523,7 +523,7 @@ function _openDeleteDialog() {
   const closeDialog = () => dialog.remove();
 
   dialog.addEventListener('click', (event) => {
-    if (event.target.closest?.('[data-action="conta-close-delete"]')) {
+    if (event.target.closest?.('[data-conta-action="close-delete"]')) {
       event.preventDefault();
       event.stopPropagation();
       closeDialog();

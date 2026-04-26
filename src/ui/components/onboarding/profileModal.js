@@ -2,6 +2,7 @@ import { Utils } from '../../../core/utils.js';
 import { Toast } from '../../../core/toast.js';
 import { Profile } from '../../../features/profile.js';
 import { attachDialogA11y, CustomConfirm } from '../../../core/modal.js';
+import { bindPhoneMaskInput } from '../../../core/phoneMask.js';
 
 // Handle do cleanup do focus trap / Escape para o overlay atual.
 let _a11yCleanup = null;
@@ -30,12 +31,8 @@ function getInitials(name) {
     .toUpperCase();
 }
 
-function formatPhone(raw) {
-  const d = raw.replace(/\D/g, '');
-  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  return raw;
-}
+// formatPhone foi removido: máscara agora é aplicada via bindPhoneMaskInput
+// (src/core/phoneMask.js) — formato progressivo enquanto digita.
 
 // Ícones SVG stroke — casam com o design do accountModal (Inter 1.6–1.8 weight).
 const ICON_CLOSE = `
@@ -122,6 +119,10 @@ function captureFormSnapshot(overlay) {
     cnpj: get('prof-cnpj'),
     inscricao_estadual: get('prof-ie'),
     inscricao_municipal: get('prof-im'),
+    // V2 (#115): campos PMOC obrigatorios pra geracao do termo de RT formal
+    responsavel_tecnico: get('prof-rt'),
+    art_rrt: get('prof-art-rrt'),
+    cidade: get('prof-cidade'),
   };
 }
 
@@ -134,7 +135,10 @@ function isDirty(initial, current) {
     initial.razao_social !== current.razao_social ||
     initial.cnpj !== current.cnpj ||
     initial.inscricao_estadual !== current.inscricao_estadual ||
-    initial.inscricao_municipal !== current.inscricao_municipal
+    initial.inscricao_municipal !== current.inscricao_municipal ||
+    initial.responsavel_tecnico !== current.responsavel_tecnico ||
+    initial.art_rrt !== current.art_rrt ||
+    initial.cidade !== current.cidade
   );
 }
 
@@ -156,13 +160,13 @@ export const ProfileModal = {
     overlay.innerHTML = `
       <div class="modal profile-modal">
 
-        <!-- V10: hero removido inteiramente — usuario reportou que o hero
-             (avatar + close) era redundante porque o footer ja tem botoes
-             "Cancelar" e "Salvar perfil" + ESC tambem fecha. Mantemos apenas
+        <!-- V10: hero removido inteiramente — usuário reportou que o hero
+             (avatar + close) era redundante porque o footer já tem botoes
+             "Cancelar" e "Salvar perfil" + ESC também fecha. Mantemos apenas
              o h2 sr-only pra screen readers e preservar aria-labelledby. -->
         <h2 class="profile-modal__title--sr-only" id="profile-title">Meu Perfil</h2>
 
-        <!-- Body V6: cards de secao com icone + header + hints sob labels.
+        <!-- Body V6: cards de seção com icone + header + hints sob labels.
              Hierarquia visual: hero -> 3 cards (Identificacao / Empresa /
              Dados legais) -> footer com seguranca e Salvar. -->
         <div class="profile-modal__body">
@@ -300,7 +304,7 @@ export const ProfileModal = {
               </div>
             </div>
 
-            <!-- Inscricao municipal pode ficar abaixo (linha unica) -->
+            <!-- Inscricao municipal pode ficar abaixo (linha única) -->
             <div class="profile-modal__field">
               <label class="profile-modal__label" for="prof-im">Inscrição municipal</label>
               <span class="profile-modal__field-hint">Número conforme prefeitura</span>
@@ -310,10 +314,41 @@ export const ProfileModal = {
                 autocomplete="off" />
             </div>
 
+            <!-- V2 (#115): campos especificos PMOC. Aparecem agrupados com hint
+                 explicando o uso (ART/RRT eh obrigatoria pra PMOC formal). -->
+            <div class="profile-modal__row profile-modal__row--two">
+              <div class="profile-modal__field">
+                <label class="profile-modal__label" for="prof-rt">Responsável Técnico</label>
+                <span class="profile-modal__field-hint">Se diferente de você (ex.: empresa terceirizou)</span>
+                <input id="prof-rt" class="form-control profile-modal__input" type="text"
+                  value="${Utils.escapeAttr(profile.responsavel_tecnico || '')}"
+                  placeholder="Nome completo do RT"
+                  autocomplete="off" />
+              </div>
+
+              <div class="profile-modal__field">
+                <label class="profile-modal__label" for="prof-art-rrt">ART / RRT nº</label>
+                <span class="profile-modal__field-hint">Anotação de Responsabilidade Técnica</span>
+                <input id="prof-art-rrt" class="form-control profile-modal__input" type="text"
+                  value="${Utils.escapeAttr(profile.art_rrt || '')}"
+                  placeholder="Ex: MG2026000000000"
+                  autocomplete="off" />
+              </div>
+            </div>
+
+            <div class="profile-modal__field">
+              <label class="profile-modal__label" for="prof-cidade">Cidade</label>
+              <span class="profile-modal__field-hint">Aparece no termo do PMOC: "Cidade, data."</span>
+              <input id="prof-cidade" class="form-control profile-modal__input" type="text"
+                value="${Utils.escapeAttr(profile.cidade || '')}"
+                placeholder="Ex: Belo Horizonte/MG"
+                autocomplete="address-level2" />
+            </div>
+
             <!-- Info banner explicando o opcional -->
             <div class="profile-modal__info-banner" role="note">
               <span class="profile-modal__info-banner-icon" aria-hidden="true">${ICON_INFO}</span>
-              <span>Essas informações são opcionais, mas recomendadas para relatórios formais e notas técnicas.</span>
+              <span>Essas informações são opcionais, mas obrigatórias para gerar PMOC formal completo.</span>
             </div>
           </div>
 
@@ -352,7 +387,7 @@ export const ProfileModal = {
 
     // Auto-update avatar preview ao digitar o nome.
     // V10: avatarEl pode ser null (avatar foi removido do hero). Guard com
-    // optional chaining + early return pra nao quebrar.
+    // optional chaining + early return pra não quebrar.
     nomeInput?.addEventListener('input', () => {
       if (!avatarEl) return;
       const v = nomeInput.value.trim();
@@ -363,10 +398,8 @@ export const ProfileModal = {
       avatarEl.style.borderColor = c + '40';
     });
 
-    // Formata telefone ao sair do campo.
-    telInput?.addEventListener('blur', () => {
-      if (telInput.value) telInput.value = formatPhone(telInput.value);
-    });
+    // Máscara de telefone (XX) XXXXX-XXXX progressiva enquanto digita.
+    bindPhoneMaskInput(telInput);
 
     // Snapshot dos valores carregados. É usado pelo dirty-check quando o
     // usuário tenta fechar via Cancel/X/Escape/backdrop — evita o bug
@@ -383,25 +416,23 @@ export const ProfileModal = {
 
     // Fechamento gateado: se tiver alterações pendentes, pergunta antes de
     // descartar. Volta `true` se fechou (após confirmação ou sem dirty),
-    // `false` se o usuário cancelou o descarte e queremos manter o modal
-    // aberto — usado pelo attachDialogA11y pra bloquear o dismiss Escape.
+    // `false` se o usuário cancelou o modal.
     const requestClose = async () => {
+      const initial = initialSnapshot;
       const current = captureFormSnapshot(overlay);
-      if (!isDirty(initialSnapshot, current)) {
-        hardClose();
-        return true;
+      if (isDirty(initial, current)) {
+        const ok = await CustomConfirm.show(
+          'Descartar alterações?',
+          'As alterações no perfil ainda não foram salvas. As alterações serão perdidas se continuar.',
+          {
+            confirmLabel: 'Descartar',
+            cancelLabel: 'Continuar editando',
+            tone: 'danger',
+            focus: 'cancel',
+          },
+        );
+        if (!ok) return false;
       }
-      const discard = await CustomConfirm.show(
-        'Descartar alterações?',
-        'Você tem alterações no perfil que ainda não foram salvas. Se fechar agora, elas serão perdidas.',
-        {
-          confirmLabel: 'Descartar',
-          cancelLabel: 'Continuar editando',
-          tone: 'danger',
-          focus: 'cancel',
-        },
-      );
-      if (!discard) return false;
       hardClose();
       return true;
     };
@@ -411,7 +442,6 @@ export const ProfileModal = {
     });
     overlay.querySelector('#prof-cancel')?.addEventListener('click', () => requestClose());
     overlay.querySelector('#prof-close')?.addEventListener('click', () => requestClose());
-
     _a11yCleanup = attachDialogA11y(overlay, { onDismiss: () => requestClose() });
 
     overlay.querySelector('#prof-save')?.addEventListener('click', () => {
@@ -421,22 +451,19 @@ export const ProfileModal = {
         nomeInput?.focus();
         return;
       }
-      Profile.save({
-        nome,
-        crea: overlay.querySelector('#prof-crea')?.value.trim(),
-        empresa: overlay.querySelector('#prof-empresa')?.value.trim(),
-        telefone: overlay.querySelector('#prof-telefone')?.value.trim(),
-      });
+      // V2 fix (#115): usa captureFormSnapshot() pra puxar TODOS os campos
+      // (incluindo PMOC: razao_social, cnpj, IE, IM, RT, ART/RRT, cidade).
+      // Antes salvava só 4 campos e os outros se perdiam ao fechar o modal.
+      const payload = captureFormSnapshot(overlay);
+      payload.nome = nome;
+      Profile.save(payload);
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('cooltrack:profile-updated'));
       }
-      // Salvou → não há o que descartar, fecha direto.
       hardClose();
       Toast.success('Perfil salvo com sucesso.');
     });
 
-    // attachDialogA11y foca o primeiro elemento focável (.profile-modal__close)
-    // no próximo frame — sobrescrevemos aqui para priorizar o input principal.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => nomeInput?.focus());
     });

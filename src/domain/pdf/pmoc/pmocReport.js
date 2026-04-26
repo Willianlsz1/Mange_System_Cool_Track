@@ -22,7 +22,9 @@ import { jsPDF } from 'jspdf';
 import { drawPmocCover } from './sections/cover.js';
 import { drawPmocRegistry } from './sections/registry.js';
 import { drawPmocSchedule } from './sections/schedule.js';
+import { drawPmocPlano } from './sections/plano.js';
 import { drawPmocTermo } from './sections/termo.js';
+import { drawPmocAnexos } from './sections/anexos.js';
 import { stampPmocFooter } from './primitives.js';
 import { PMOC_MARGINS } from './constants.js';
 
@@ -112,17 +114,24 @@ export async function generatePmocPdf({
     profile,
   };
 
-  // 1) Capa institucional
+  // 1) Capa institucional + Resumo Executivo (4 cards) + Cliente + Prestador
   drawPmocCover(doc, pageWidth, pageHeight, PMOC_MARGINS, ctx);
 
-  // 2) Cadastro técnico (cria nova página dentro do draw)
+  // 2) Cadastro técnico + Informações do Sistema + Observações (nova página)
   drawPmocRegistry(doc, pageWidth, pageHeight, PMOC_MARGINS, ctx);
 
   // 3) Cronograma anual (nova página)
   drawPmocSchedule(doc, pageWidth, pageHeight, PMOC_MARGINS, ctx);
 
-  // 4) Termo de RT (nova página)
+  // 4) Plano de Manutenção (mensal/trimestral/semestral/anual) — V2
+  // Continua na mesma página do cronograma quando ha espaço, senão quebra.
+  drawPmocPlano(doc, pageWidth, pageHeight, PMOC_MARGINS, ctx);
+
+  // 5) Termo de RT (nova página)
   drawPmocTermo(doc, pageWidth, pageHeight, PMOC_MARGINS, ctx);
+
+  // 6) Anexos e Evidências — V2 (continua na pagina do termo se couber)
+  drawPmocAnexos(doc, pageWidth, pageHeight, PMOC_MARGINS, ctx);
 
   // Footer global em todas as páginas (paginação + número PMOC + ano)
   stampPmocFooter(doc, pageWidth, pageHeight, PMOC_MARGINS.left, PMOC_MARGINS.right, {

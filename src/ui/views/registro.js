@@ -21,6 +21,7 @@ import { validateRegistroPayload } from '../../core/inputValidation.js';
 import { isCachedPlanPlusOrHigher } from '../../core/plans/planCache.js';
 import { PostSaveRegistroToast } from '../components/postSaveRegistroToast.js';
 import { exportPdfFlow, shareWhatsAppFlow } from '../controller/handlers/reportExportHandlers.js';
+import { bindSmartContactMaskInput } from '../../core/phoneMask.js';
 import {
   getChecklistTemplate,
   buildEmptyChecklist,
@@ -152,9 +153,9 @@ function resetEditingState() {
   clearRouteGuard();
 }
 
-// Guard de saida em modo edicao. Bloqueia navegacao pra outra rota e mostra
-// modal pedindo confirmacao. Se usuario "Descartar", faz reset COMPLETO do
-// form (clearRegistro) — incluindo label do botao "Finalizar servico" — e
+// Guard de saida em modo edição. Bloqueia navegacao pra outra rota e mostra
+// modal pedindo confirmação. Se usuário "Descartar", faz reset COMPLETO do
+// form (clearRegistro) — incluindo label do botao "Finalizar serviço" — e
 // libera a navegacao. Se "Continuar editando", cancela.
 async function _confirmLeaveEditingGuard(_nextRoute, _nextParams) {
   const ok = await CustomConfirm.show(
@@ -168,7 +169,7 @@ async function _confirmLeaveEditingGuard(_nextRoute, _nextParams) {
   );
   if (ok) {
     // Reset completo: limpa campos do form, foto, checklist, label do botao
-    // ("Salvar alteracoes" -> "Finalizar servico"), classes, EDITING_KEY,
+    // ("Salvar alteracoes" -> "Finalizar serviço"), classes, EDITING_KEY,
     // dataset e o proprio guard (resetEditingState e chamado dentro).
     clearRegistro();
   }
@@ -203,7 +204,7 @@ const _fields = [
       return true;
     },
   },
-  { id: 'r-tecnico', validate: (v) => v.trim() !== '' },
+  { id: 'r-técnico', validate: (v) => v.trim() !== '' },
   { id: 'r-obs', validate: (v) => v.trim().length >= 10 },
 ];
 
@@ -619,6 +620,10 @@ export function initRegistro(params = {}) {
         tipoCustomInput.addEventListener('input', _updateProgressBar);
       }
 
+      // Smart mask no campo Telefone/contato do cliente — formata (XX) XXXXX-XXXX
+      // se o usuário digitar dígitos. Se digitar email/texto livre, deixa em paz.
+      bindSmartContactMaskInput(Utils.getEl('r-cliente-contato'));
+
       formView.dataset.bound = '1';
     }
     // Garante o estado correto na entrada da view (inclusive vindo de edit).
@@ -626,8 +631,9 @@ export function initRegistro(params = {}) {
     _updateProgressBar();
     _renderHeroSub();
 
-    // Data padrão
+    // Data padrão "Hoje agora" — UX V2 audit fix
     if (!Utils.getVal('r-data')) Utils.setVal('r-data', Utils.nowDatetime());
+    _bindDatetimeUX();
 
     // H1: técnico padrão
     const rTecnico = Utils.getEl('r-tecnico');
@@ -636,9 +642,117 @@ export function initRegistro(params = {}) {
       if (def) rTecnico.value = def;
     }
 
+    // ─── Datetime UX V2 (audit fix) ──────────────────────────────────────
+    // Default eh "Hoje agora" (label do botao + value oculto). Click em
+    // "Mudar" abre o datetime-local nativo (showPicker) e tira o estado now.
+    function _bindDatetimeUX() {
+      const wrap = document.getElementById('registro-datetime-wrap');
+      if (!wrap || wrap.dataset.bound === '1') return;
+      wrap.dataset.bound = '1';
+
+      const input = document.getElementById('r-data');
+      const nowBtn = document.getElementById('r-data-now-btn');
+      const editBtn = document.getElementById('r-data-edit-btn');
+      const nowLabel = document.getElementById('r-data-now-label');
+
+      function refreshLabel() {
+        if (!input || !nowLabel) return;
+        const val = input.value;
+        if (!val) {
+          nowLabel.textContent = 'Hoje agora';
+          nowBtn?.setAttribute('aria-pressed', 'true');
+          return;
+        }
+        // Se a data eh dentro de 1min do agora, eh "Hoje agora"
+        const ts = new Date(val).getTime();
+        if (Math.abs(Date.now() - ts) < 60_000) {
+          nowLabel.textContent = 'Hoje agora';
+          nowBtn?.setAttribute('aria-pressed', 'true');
+        } else {
+          // Mostra "DD/MM HH:MM"
+          const d = new Date(val);
+          const dd = String(d.getDate()).padStart(2, '0');
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const hh = String(d.getHours()).padStart(2, '0');
+          const min = String(d.getMinutes()).padStart(2, '0');
+          nowLabel.textContent = `${dd}/${mm} ${hh}:${min}`;
+          nowBtn?.setAttribute('aria-pressed', 'false');
+        }
+      }
+
+      nowBtn?.addEventListener('click', () => {
+        // Reseta pra agora
+        Utils.setVal('r-data', Utils.nowDatetime());
+        refreshLabel();
+        _updateProgressBar();
+      });
+
+      editBtn?.addEventListener('click', () => {
+        // Abre o picker nativo. Browsers modernos suportam showPicker(); fallback
+        // pra focus que muitos browsers tambem abrem.
+        try {
+          if (typeof input.showPicker === 'function') {
+            input.showPicker();
+          } else {
+            input.focus();
+          }
+        } catch (_e) {
+          input.focus();
+        }
+      });
+
+      input?.addEventListener('change', () => {
+        refreshLabel();
+        _updateProgressBar();
+      });
+
+      refreshLabel();
+    }
+
     // Pré-preenchimento vindo de fluxo (dashboard/equipamento/alerta)
     if (!params.editRegistroId) resetEditingState();
     if (params.equipId) Utils.setVal('r-equip', params.equipId);
+
+    // Bug fix #99: pre-fill cliente quando o registro vem de contexto de
+    // cliente. Cobre 3 caminhos:
+    //   1. params.clienteId direto (CTA "Registrar serviço" em /clientes)
+    //   2. params.equipId — buscamos o equipamento pra ler o clienteId dele
+    //   3. cliente vinculado via setor (equip.setorId -> setor.clienteId)
+    // Idempotente: nao sobrescreve campos ja digitados pelo usuario (ex.:
+    // edit mode, ou se _loadLastClient ja preencheu antes).
+    {
+      let resolvedClienteId = params.clienteId || null;
+      const stateNow = getState();
+
+      // Caminho 2: equipId -> equip.clienteId direto
+      if (!resolvedClienteId && params.equipId) {
+        const eq = (stateNow.equipamentos || []).find((e) => e.id === params.equipId);
+        if (eq?.clienteId) resolvedClienteId = eq.clienteId;
+        // Caminho 3: equip.setorId -> setor.clienteId
+        else if (eq?.setorId) {
+          const setor = (stateNow.setores || []).find((s) => s.id === eq.setorId);
+          if (setor?.clienteId) resolvedClienteId = setor.clienteId;
+        }
+      }
+
+      if (resolvedClienteId) {
+        const cliente = (stateNow.clientes || []).find((c) => c.id === resolvedClienteId);
+        if (cliente) {
+          // Sanity: so preenche se o campo correspondente estiver vazio.
+          // Permite o user editar manualmente sem perder a edicao quando a
+          // funcao roda de novo (ex.: re-render na mesma view).
+          const setIfEmpty = (id, val) => {
+            if (!val) return;
+            const cur = Utils.getVal(id);
+            if (!cur) Utils.setVal(id, val);
+          };
+          setIfEmpty('r-cliente-nome', cliente.nome || cliente.razao_social || '');
+          setIfEmpty('r-cliente-documento', cliente.cnpj || cliente.cpf || cliente.documento || '');
+          setIfEmpty('r-local-atendimento', cliente.endereco || cliente.local || '');
+          setIfEmpty('r-cliente-contato', cliente.contato || cliente.telefone || '');
+        }
+      }
+    }
 
     const rPrioridade = Utils.getEl('r-prioridade');
     if (rPrioridade && !rPrioridade.value) rPrioridade.value = 'media';
@@ -724,23 +838,22 @@ export function applyQuickTemplate(templateId, triggerEl = null) {
   const template = QUICK_TEMPLATE_MAP[templateId];
   if (!template) return;
 
+  // ─── Pre-fill agressivo (UX V2 audit) ──────────────────────────────────
+  // Antes preenchia tipo, obs, prioridade, data. Agora tambem preenche
+  // status=ok (assume que ficou operando), e foca o proximo campo vazio.
   Utils.setVal('r-tipo', template.tipo);
-  // Utils.setVal muda o .value sem disparar 'change' — então o listener que
-  // toggla o campo "Qual serviço?" não rodaria sozinho. Chamada explícita aqui
-  // pra garantir que o wrap volte a ficar oculto ao sair de "Outro" via chip.
   _syncTipoCustomVisibility();
   if (!Utils.getVal('r-obs').trim()) Utils.setVal('r-obs', template.descricao);
   Utils.setVal('r-prioridade', template.prioridade);
   Utils.setVal('r-data', Utils.nowDatetime());
+  // Default status "Operando normalmente" — 80% dos casos preventivos
+  if (!Utils.getVal('r-status')) Utils.setVal('r-status', 'ok');
   if (!Utils.getVal('r-tecnico')) {
     const def = Profile.getDefaultTecnico();
     if (def) Utils.setVal('r-tecnico', def);
   }
 
-  // Feedback visual: marca o chip clicado como ativo e os demais como inativos.
-  // O botão fica selecionado até o usuário trocar de template ou limpar o form.
-  // Usa o próprio triggerEl quando vindo do handler, ou busca pelo data-template
-  // como fallback (por exemplo, se algum fluxo programático chamar isso direto).
+  // Marca chip ativo
   const quickRoot = document.querySelector('.registro-quick');
   if (quickRoot) {
     const chips = quickRoot.querySelectorAll('[data-action="quick-service-template"]');
@@ -756,10 +869,31 @@ export function applyQuickTemplate(templateId, triggerEl = null) {
   }
 
   _updateProgressBar();
-  Toast.success('Ação rápida aplicada. Revise e toque em salvar.');
+
+  // ─── Smart focus + feedback contextual ────────────────────────────────
+  // Identifica o proximo required vazio e foca nele. Toast diz exatamente
+  // o que falta — em vez do generico "revise e salve".
+  const requiredOrder = [
+    { id: 'r-equip', label: 'equipamento' },
+    { id: 'r-tecnico', label: 'tecnico' },
+  ];
+  const nextEmpty = requiredOrder.find((f) => !Utils.getVal(f.id));
+  if (nextEmpty) {
+    const el = Utils.getEl(nextEmpty.id);
+    if (el) {
+      el.focus();
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    Toast.success(`Modelo aplicado. Falta so o ${nextEmpty.label} pra finalizar.`);
+  } else {
+    // Tudo pronto pra salvar — foca no botao primario
+    const saveBtn = document.querySelector('[data-action="save-registro"]');
+    if (saveBtn) saveBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    Toast.success('Modelo aplicado. Toque em Salvar serviço pra finalizar.');
+  }
 }
 
-export async function saveRegistro() {
+export async function saveRegistro({ andShare = false } = {}) {
   const prioridade = Utils.getVal('r-prioridade') || 'media';
   const { equipamentos } = getState();
 
@@ -775,7 +909,7 @@ export async function saveRegistro() {
       return false;
     }
     if (custom.length > TIPO_CUSTOM_MAX) {
-      Toast.warning(`A descrição do serviço passa do limite de ${TIPO_CUSTOM_MAX} caracteres.`);
+      Toast.warning(`A descricao do serviço passa do limite de ${TIPO_CUSTOM_MAX} caracteres.`);
       Utils.getEl('r-tipo-custom')?.focus();
       return false;
     }
@@ -811,10 +945,10 @@ export async function saveRegistro() {
     equipId,
     data,
     tipo,
-    tecnico,
+    técnico,
     obs,
     pecas,
-    proxima,
+    próxima,
     status,
     custoPecas,
     custoMaoObra,
@@ -825,7 +959,7 @@ export async function saveRegistro() {
   } = payloadValidation.value;
 
   const descricaoFinal =
-    obs && obs.length >= 10 ? obs : `Servico de ${tipo.toLowerCase()} registrado em modo rapido.`;
+    obs && obs.length >= 10 ? obs : `Serviço de ${tipo.toLowerCase()} registrado em modo rapido.`;
 
   const validation = validateOperationalPayload({ data, status });
   if (!validation.valid) {
@@ -856,7 +990,22 @@ export async function saveRegistro() {
     }
   }
 
-  Profile.saveLastTecnico(tecnico);
+  Profile.saveLastTecnico(técnico);
+
+  // UX V2 audit fix #81: auto-default tecnico no Profile apos primeiro
+  // registro. Se o user nao tem nome no perfil ainda (ex.: pulou
+  // onboarding), assumimos o nome do tecnico do registro recem-salvo como
+  // o nome dele. Salva apenas o campo .nome — outros campos (empresa,
+  // CNPJ) ficam pra ele preencher em /conta. Idempotente: nao sobrescreve
+  // perfil ja preenchido.
+  try {
+    const currentProfile = Profile.get() || {};
+    if (!currentProfile.nome && técnico) {
+      Profile.save({ ...currentProfile, nome: técnico });
+    }
+  } catch (_err) {
+    /* storage off — nao bloqueia o save do registro */
+  }
 
   // Modo edição — atualiza registro existente
   const editingId = sessionStorage.getItem(EDITING_KEY);
@@ -871,11 +1020,11 @@ export async function saveRegistro() {
               data,
               tipo,
               obs: descricaoFinal,
-              tecnico,
+              técnico,
               prioridade,
               status,
               pecas,
-              proxima,
+              próxima,
               custoPecas,
               custoMaoObra,
               clienteNome,
@@ -1006,10 +1155,10 @@ export async function saveRegistro() {
   setState((prev) => {
     const currentTecs = prev.tecnicos || [];
     const updatedTecs =
-      tecnico && !currentTecs.includes(tecnico) ? [...currentTecs, tecnico] : currentTecs;
+      técnico && !currentTecs.includes(técnico) ? [...currentTecs, técnico] : currentTecs;
     return {
       ...prev,
-      tecnicos: updatedTecs,
+      técnicos: updatedTecs,
       registros: [
         ...prev.registros,
         {
@@ -1020,9 +1169,9 @@ export async function saveRegistro() {
           obs: descricaoFinal,
           status,
           pecas,
-          proxima,
+          próxima,
           fotos: fotosRegistro,
-          tecnico,
+          técnico,
           prioridade,
           custoPecas,
           custoMaoObra,
@@ -1056,10 +1205,28 @@ export async function saveRegistro() {
   _saveLastClient({ clienteNome, clienteDocumento, localAtendimento, clienteContato });
   clearRegistro();
 
-  // Feedback pós-save: toast rico com CTAs pra fechar o ciclo "salvou →
-  // manda pro cliente". Substitui o Toast.success genérico + o hint viral
-  // que dispara a cada 3 registros (agora redundante — todo save já oferece
-  // o caminho). Os CTAs executam ações diretas (PDF/WhatsApp) mantendo as
+  // UX V2 audit fix #80: "Salvar e enviar pro cliente" — quando o user
+  // dispara o botao primário verde, pulamos o toast com escolhas e ja
+  // disparamos o share do WhatsApp diretamente. 4 cliques → 1.
+  if (andShare && equipId) {
+    Toast.success('Serviço salvo. Abrindo WhatsApp...');
+    try {
+      const filters = { equipId, registroId: novoId };
+      const ok = await shareWhatsAppFlow({ filters });
+      // Se share falhou/cancelado, cai pro fallback indo pra /relatorio.
+      // Sem mostrar toast extra — shareWhatsAppFlow ja exibe feedback.
+      if (!ok) {
+        goTo('relatorio', { equipId, intent: 'whatsapp', registroId: novoId });
+      }
+    } catch (_error) {
+      // Erro inesperado — leva pro relatorio com intent pra user retentar.
+      goTo('relatorio', { equipId, intent: 'whatsapp', registroId: novoId });
+    }
+    return true;
+  }
+
+  // Feedback pós-save padrão (botao "Só salvar" / fluxo legado): toast rico
+  // com CTAs PDF/WhatsApp. Os CTAs executam ações diretas mantendo as
   // mesmas regras de quota/validação do fluxo de relatório.
   const eqForToast = equipamentos.find((e) => e.id === equipId) || null;
   const toastShown = PostSaveRegistroToast.show({
@@ -1094,8 +1261,8 @@ export function clearRegistro(preserveEquip = false) {
     'r-tipo-custom',
     'r-pecas',
     'r-obs',
-    'r-proxima',
-    'r-tecnico',
+    'r-próxima',
+    'r-técnico',
     'r-custo-pecas',
     'r-custo-mao-obra',
     'r-prioridade',
@@ -1154,8 +1321,8 @@ export function clearRegistro(preserveEquip = false) {
     // Preserva o SVG do ícone (o redesign v6 colocou svg + span no botão).
     // Alterar textContent aqui mataria o ícone — por isso só mexemos no span.
     const saveLabel = saveBtn.querySelector('span');
-    if (saveLabel) saveLabel.textContent = 'Finalizar serviço';
-    else saveBtn.textContent = 'Finalizar serviço';
+    if (saveLabel) saveLabel.textContent = 'Salvar serviço';
+    else saveBtn.textContent = 'Salvar serviço';
     saveBtn.classList.remove('btn--editing');
   }
 
@@ -1195,12 +1362,7 @@ export function loadRegistroForEdit(id) {
   _syncTipoCustomVisibility();
 
   Utils.setVal('r-obs', r.obs);
-  Utils.setVal('r-tecnico', r.tecnico);
-  Utils.setVal('r-prioridade', r.prioridade || 'media');
-  Utils.setVal('r-pecas', r.pecas || '');
-  Utils.setVal('r-custo-pecas', String(r.custoPecas || ''));
-  Utils.setVal('r-custo-mao-obra', String(r.custoMaoObra || ''));
-  Utils.setVal('r-proxima', r.proxima || '');
+  Utils.setVal('r-tecnico', r.tecnico || '');
   Utils.setVal('r-status', r.status);
   Utils.setVal('r-cliente-nome', r.clienteNome || '');
   Utils.setVal('r-cliente-documento', r.clienteDocumento || '');
@@ -1232,7 +1394,7 @@ export function loadRegistroForEdit(id) {
   if (title) title.textContent = 'Editar serviço';
 }
 
-// Garante que estado de edicao nao persista entre sessoes do app.
+// Garante que estado de edição não persista entre sessoes do app.
 // pagehide cobre tanto fechamento de aba quanto navegacao pra outro
 // site (mais robusto que beforeunload em mobile / Safari).
 if (typeof window !== 'undefined') {

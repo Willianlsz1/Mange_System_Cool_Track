@@ -27,26 +27,42 @@ function drawSignaturePageHeader(doc, pageWidth, margin, context = {}) {
   });
 }
 
-function drawServiceFields(doc, margin, y, registro, equipamento, statusInfo, profile) {
+function drawServiceFields(doc, margin, y, registro, equipamento, statusInfo, profile, pageWidth) {
+  // V3 refator: campos em grid 2 colunas (em vez de lista vertical de 6 linhas).
+  // Mais profissional, menos vertical waste, e sobra espaço pra assinatura.
   const campos = [
     ['Equipamento', sanitizePublicText(equipamento?.nome)],
-    ['Localização', sanitizePublicText(equipamento?.local)],
     ['Tipo de serviço', sanitizePublicText(registro.tipo)],
+    ['Localização', sanitizePublicText(equipamento?.local)],
     ['Data / Hora', Utils.formatDatetime(registro.data)],
     ['Técnico responsável', sanitizePublicText(registro.tecnico || profile?.nome)],
-    ['Situação após o serviço', statusInfo.label],
+    ['Situação após o serviço', statusInfo.label, statusInfo.color],
   ];
 
+  // Grid 2 colunas: indice par esquerda, impar direita
+  const colW = (pageWidth - margin * 2 - 4) / 2;
+  const rowH = 11;
   let cursorY = y;
-  campos.forEach(([label, value]) => {
-    txt(doc, label, margin, cursorY, { size: 7.5, color: C.text3 });
-    txt(doc, value, margin + 55, cursorY, {
-      size: 9,
-      color: label === 'Situação após o serviço' ? statusInfo.color : C.text,
-      style: label === 'Situação após o serviço' ? 'bold' : 'normal',
+
+  campos.forEach(([label, value, valueColor], i) => {
+    const isRight = i % 2 === 1;
+    const colX = isRight ? margin + colW + 4 : margin;
+    const isStatus = label === 'Situação após o serviço';
+    txt(doc, label.toUpperCase(), colX, cursorY, {
+      size: 6.5,
+      style: 'bold',
+      color: C.text3,
     });
-    cursorY += 8;
+    txt(doc, value, colX, cursorY + 5, {
+      size: 9.5,
+      color: valueColor || C.text,
+      style: isStatus ? 'bold' : 'normal',
+    });
+    if (isRight) cursorY += rowH;
   });
+
+  // Caso ímpar (Situação fica sozinha no fim), bumpa cursor
+  if (campos.length % 2 === 1) cursorY += rowH;
 
   return cursorY;
 }
@@ -139,78 +155,122 @@ export function drawSignaturePages(
     drawSignaturePageHeader(doc, pageWidth, margin, context);
 
     let y = 22;
-    txt(doc, 'CONFIRMAÇÃO DE SERVIÇO REALIZADO', margin, y, {
+    // V3 refator: hero com OS + cliente em destaque pra parecer recibo
+    // formal, nao só "comprovante de servico".
+    txt(doc, 'COMPROVANTE DE SERVIÇO', margin, y, {
       size: T.h1.size,
       style: T.h1.style,
       color: C.text,
     });
-    y += 8;
-    accentLine(doc, margin, y - 2, pageWidth - margin, C.border);
-
-    y = drawServiceFields(doc, margin, y, registro, equipamento, statusInfo, profile);
+    if (context.osNumber) {
+      txt(doc, `OS ${context.osNumber}`, pageWidth - margin, y, {
+        size: 9,
+        style: 'bold',
+        color: C.primary,
+        align: 'right',
+      });
+    }
     y += 4;
+    accentLine(doc, margin, y, pageWidth - margin, C.borderStrong);
+    y += 7;
 
-    txt(doc, 'Descrição do serviço realizado', margin, y, {
-      size: 7.5,
+    y = drawServiceFields(doc, margin, y, registro, equipamento, statusInfo, profile, pageWidth);
+    y += 6;
+
+    // Descrição em box destacado pra separar visualmente dos campos
+    const obsLines = doc.splitTextToSize(
+      sanitizeObservation(registro.obs),
+      pageWidth - margin * 2 - 8,
+    );
+    const descBoxH = 8 + obsLines.length * 4.5 + 4;
+    doc.setDrawColor(...C.border);
+    doc.setLineWidth(0.3);
+    doc.setFillColor(...C.bg2);
+    doc.rect(margin, y, pageWidth - margin * 2, descBoxH, 'FD');
+    fillRectAccent(doc, margin, y, 2.5, descBoxH);
+    txt(doc, 'DESCRIÇÃO DO SERVIÇO REALIZADO', margin + 6, y + 5, {
+      size: 6.5,
       style: 'bold',
       color: C.text3,
     });
-    y += 5;
-
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...C.text2);
-    const obsLines = doc.splitTextToSize(sanitizeObservation(registro.obs), pageWidth - margin * 2);
-    doc.text(obsLines, margin, y);
-    y += obsLines.length * 4.5 + 10;
+    doc.text(obsLines, margin + 6, y + 10);
+    y += descBoxH + 8;
 
     y = ensureSignatureBlockPage(doc, pageWidth, pageHeight, margin, y, context);
 
-    // Cláusula de responsabilidade (dá peso legal ao documento)
-    txt(
-      doc,
+    // Cláusula de responsabilidade — fica acima da caixa de assinatura,
+    // alinhada e em italico pra ler como "termo aceito ao assinar".
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...C.text3);
+    const clauseLines = doc.splitTextToSize(
       'Declaro que os serviços descritos neste relatório foram executados a contento, nas datas e condições registradas.',
-      margin,
-      y,
-      { size: 7.5, color: C.text3 },
+      pageWidth - margin * 2,
     );
-    y += 8;
+    doc.text(clauseLines, margin, y);
+    y += clauseLines.length * 4 + 4;
 
+    // Caixa de assinatura V3 — maior (55mm), borda mais marcada, label "X" no
+    // canto inferior esquerdo (convenção de assinatura), e linha guia no meio
+    // ao inves de embaixo. Cliente assina por cima da linha.
     const signatureWidth = pageWidth - margin * 2;
-    const signatureHeight = 45;
+    const signatureHeight = 55;
 
-    // Fundo branco com borda sutil (antes era azul claro — atrapalhava print)
     doc.setDrawColor(...C.borderStrong);
-    doc.setLineWidth(0.3);
+    doc.setLineWidth(0.4);
     doc.setFillColor(...C.surface);
     doc.rect(margin, y, signatureWidth, signatureHeight, 'FD');
+
+    // "X" indicador no canto esquerdo (convenção legal)
+    txt(doc, '×', margin + 6, y + signatureHeight / 2 + 2, {
+      size: 14,
+      color: C.text3,
+    });
+
+    // Linha de assinatura no meio vertical
+    accentLine(doc, margin + 12, y + signatureHeight / 2 + 4, margin + signatureWidth - 8, C.text3);
+
     drawSignatureImage(doc, registro, signaturePayload, margin, y, signatureWidth, signatureHeight);
 
-    // Linha sobre a qual a assinatura aparenta estar apoiada
-    accentLine(
-      doc,
-      margin + 8,
-      y + signatureHeight - 6,
-      margin + signatureWidth - 8,
-      C.borderStrong,
-    );
-    txt(doc, 'Assinatura do cliente', margin + signatureWidth / 2, y + signatureHeight + 4, {
+    // Label centralizado embaixo da caixa
+    txt(doc, 'ASSINATURA DO CLIENTE', margin + signatureWidth / 2, y + signatureHeight + 5, {
       size: 7,
+      style: 'bold',
       color: C.text3,
       align: 'center',
     });
 
-    y += signatureHeight + 10;
-    txt(doc, `Nome: ${clienteNome}`, margin, y, {
-      size: 9,
-      style: 'bold',
-      color: C.text,
-    });
-    y += 5;
+    y += signatureHeight + 12;
+
+    // Bloco identificacao cliente — em grid 2 colunas pra parecer recibo
+    const colW = (signatureWidth - 4) / 2;
+    txt(doc, 'NOME COMPLETO', margin, y, { size: 6.5, style: 'bold', color: C.text3 });
+    txt(doc, clienteNome, margin, y + 5, { size: 9.5, style: 'bold', color: C.text });
+
     if (clienteDoc) {
-      txt(doc, `Documento: ${clienteDoc}`, margin, y, { size: 8, color: C.text2 });
-      y += 5;
+      txt(doc, 'DOCUMENTO', margin + colW + 4, y, {
+        size: 6.5,
+        style: 'bold',
+        color: C.text3,
+      });
+      txt(doc, clienteDoc, margin + colW + 4, y + 5, { size: 9, color: C.text });
     }
-    txt(doc, `Data/Hora: ${signatureDate}`, margin, y, { size: 8, color: C.text2 });
+    y += 12;
+
+    txt(doc, 'DATA / HORA DA ASSINATURA', margin, y, {
+      size: 6.5,
+      style: 'bold',
+      color: C.text3,
+    });
+    txt(doc, signatureDate, margin, y + 5, { size: 9, color: C.text });
   });
+}
+
+// Helper local pra acentar caixa com barra lateral primary
+function fillRectAccent(doc, x, y, w, h) {
+  doc.setFillColor(...C.primary);
+  doc.rect(x, y, w, h, 'F');
 }

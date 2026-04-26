@@ -133,12 +133,12 @@ async function ensureReportBudget({ attemptedEvent, blockedEvent }) {
 }
 
 /**
- * Mostra modal de confirmacao antes de compartilhar via WhatsApp.
- * Dispara apenas quando o plano tem quota finita (Free=5/mes, Plus=60/mes) —
- * Pro (Infinity) pula o prompt. PDF nao usa este helper porque e ilimitado
+ * Mostra modal de confirmação antes de compartilhar via WhatsApp.
+ * Dispara apenas quando o plano tem quota finita (Free=5/mês, Plus=60/mês) —
+ * Pro (Infinity) pula o prompt. PDF não usa este helper porque e ilimitado
  * em todos os planos com quota mensal (so Pro tem a marca d'agua removida).
  *
- * @returns {Promise<boolean>} true se usuario confirmou; false se cancelou
+ * @returns {Promise<boolean>} true se usuário confirmou; false se cancelou
  */
 /**
  * Confirmação antes de gerar PDF — mesmo com quota infinita (Free/Plus/Pro)
@@ -180,18 +180,18 @@ function showPdfPreview({
     const actionBtn = document.getElementById('pdf-preview-action-btn');
 
     if (!modal || !frame || !actionBtn) {
-      console.warn('[PDF Preview] Modal nao encontrado no DOM.');
+      console.warn('[PDF Preview] Modal não encontrado no DOM.');
       resolve('confirm');
       return;
     }
 
     const url = URL.createObjectURL(blob);
-    // <object> usa data=, nao src=. O fallback nativo do <object> aparece
-    // sozinho se o browser nao souber renderizar application/pdf.
+    // <object> usa data=, não src=. O fallback nativo do <object> aparece
+    // sozinho se o browser não souber renderizar application/pdf.
     frame.setAttribute('data', url);
     if (fallbackLink) {
       // Sem download attribute — queremos que o link ABRA em nova aba pra
-      // visualizacao, nao force download. O usuario pode baixar pelo botao
+      // visualizacao, não force download. O usuário pode baixar pelo botao
       // primario do modal.
       fallbackLink.href = url;
       fallbackLink.removeAttribute('download');
@@ -230,7 +230,7 @@ function showPdfPreview({
         cleanup('confirm');
         return;
       }
-      // Click no overlay (fora do .modal) tambem cancela.
+      // Click no overlay (fora do .modal) também cancela.
       if (e.target === modal) cleanup('cancel');
     }
 
@@ -266,7 +266,7 @@ function triggerBlobDownload(blob, fileName) {
 }
 
 async function confirmWhatsAppConsumption({ used, limit }) {
-  if (!Number.isFinite(limit)) return true; // Pro: sem confirmacao
+  if (!Number.isFinite(limit)) return true; // Pro: sem confirmação
   const remaining = Math.max(0, limit - used);
   return CustomConfirm.show(
     'Compartilhar via WhatsApp?',
@@ -289,11 +289,26 @@ function bindPdfExport() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,
-        message: 'Nao foi possivel gerar o PDF agora.',
+        message: 'Não foi possivel gerar o PDF agora.',
         context: { action: 'controller.export-pdf' },
       });
     }
   });
+}
+
+/**
+ * Preview do PDF agora eh OPT-IN: por default, click no "Baixar PDF" gera
+ * e baixa direto (1 click). Power user pode ligar via localStorage:
+ *   localStorage.setItem('cooltrack-pdf-preview', 'true');
+ * Ai o preview reaparece como antes. Configuracoes UI futura pode expor
+ * essa flag formalmente.
+ */
+function _isPreviewEnabled() {
+  try {
+    return localStorage.getItem('cooltrack-pdf-preview') === 'true';
+  } catch (_e) {
+    return false;
+  }
 }
 
 async function executePdfExport(filters) {
@@ -305,15 +320,8 @@ async function executePdfExport(filters) {
 
   const { planCode, pdfLimit } = budget;
 
-  // Confirmação inicial — protege contra cliques acidentais.
-  const confirmed = await confirmPdfExport();
-  if (!confirmed) {
-    trackEvent('pdf_export_cancelled', { plan: planCode, stage: 'confirm' });
-    return false;
-  }
-
-  // Gera o PDF como Blob (sem disparar download). O download só rola se o
-  // usuário aprovar o preview. Fluxo: gerar -> preview -> download + commit.
+  // SEM confirmacao inicial — clicar no botao Baixar PDF JA significa intencao.
+  // Se preview opt-in estiver ligado, mostra preview antes do download.
   const { PDFGenerator } = await import('../../../domain/pdf.js');
   const result = await PDFGenerator.generateMaintenanceReport(
     { ...filters, asBlob: true },
@@ -324,19 +332,21 @@ async function executePdfExport(filters) {
     return false;
   }
 
-  // Mostra preview e aguarda decisão (confirm/cancel).
-  const decision = await showPdfPreview({
-    blob: result.blob,
-    fileName: result.fileName,
-    primaryLabel: 'Baixar PDF',
-    subtitle: 'Confira antes de baixar',
-  });
-  if (decision !== 'confirm') {
-    trackEvent('pdf_export_cancelled', { plan: planCode, stage: 'preview' });
-    return false;
+  // Preview opt-in (default OFF): se ligado, mostra preview antes de baixar.
+  if (_isPreviewEnabled()) {
+    const decision = await showPdfPreview({
+      blob: result.blob,
+      fileName: result.fileName,
+      primaryLabel: 'Baixar PDF',
+      subtitle: 'Confira antes de baixar',
+    });
+    if (decision !== 'confirm') {
+      trackEvent('pdf_export_cancelled', { plan: planCode, stage: 'preview' });
+      return false;
+    }
   }
 
-  // Confirmado — dispara o download e commita o uso.
+  // Dispara o download e commita o uso.
   triggerBlobDownload(result.blob, result.fileName);
   const newUsedCount = await budget.commit();
 
@@ -371,7 +381,7 @@ function bindWhatsAppExport() {
     } catch (error) {
       handleError(error, {
         code: ErrorCodes.NETWORK_ERROR,
-        message: 'Nao foi possivel preparar o envio para o WhatsApp.',
+        message: 'Não foi possivel preparar o envio para o WhatsApp.',
         context: { action: 'controller.whatsapp-export' },
       });
     }
@@ -403,16 +413,16 @@ async function executeWhatsAppShare(filters) {
     trackEvent('whatsapp_share_blocked', { reason: 'limit_reached', plan: planCode });
     const upgradeMessage =
       planCode === 'plus'
-        ? `Voce atingiu ${whatsappLimit} compartilhamentos este mes no Plus. O Pro tem envios ilimitados.`
-        : `Voce atingiu ${whatsappLimit} compartilhamentos este mes. Faca upgrade para Plus ou Pro.`;
+        ? `Você atingiu ${whatsappLimit} compartilhamentos este mês no Plus. O Pro tem envios ilimitados.`
+        : `Você atingiu ${whatsappLimit} compartilhamentos este mês. Faça upgrade para Plus ou Pro.`;
     Toast.warning(upgradeMessage);
     goTo('pricing');
     return false;
   }
 
-  // Sem modal de confirmacao inicial — preview do PDF antes do share funciona
-  // como confirmacao visual. Para Free/Plus, info de quota aparece no subtitle
-  // do preview ("Restam X compartilhamentos este mes").
+  // Sem modal de confirmação inicial — preview do PDF antes do share funciona
+  // como confirmação visual. Para Free/Plus, info de quota aparece no subtitle
+  // do preview ("Restam X compartilhamentos este mês").
 
   // Gera o PDF como Blob (sem disparar download) e deixa o shareReport
   // decidir o canal: Web Share API (mobile) ou upload+wa.me (desktop/fallback).
@@ -432,22 +442,22 @@ async function executeWhatsAppShare(filters) {
   // houver registros; fallback pra mensagem padrão do shareReport senão.
   const prefixText = WhatsAppExport.generateText(filters) || null;
 
-  // Preview antes de enviar — usuário confirma o conteúdo do PDF antes do
-  // share sheet abrir. Cancela tudo se descartar.
-  // Subtitle inclui info de quota quando aplicavel — usuario ve restante antes
-  // de confirmar o envio.
-  const wasSubtitle = Number.isFinite(whatsappLimit)
-    ? `Restam ${Math.max(0, whatsappLimit - whatsappUsed)} de ${whatsappLimit} compartilhamentos este mes · confira antes de enviar`
-    : 'Confira antes de compartilhar';
-  const previewDecision = await showPdfPreview({
-    blob: pdfResult.blob,
-    fileName: pdfResult.fileName,
-    primaryLabel: 'Enviar via WhatsApp',
-    subtitle: wasSubtitle,
-  });
-  if (previewDecision !== 'confirm') {
-    trackEvent('whatsapp_share_cancelled', { plan: planCode, stage: 'preview' });
-    return false;
+  // Preview opt-in (mesma flag do PDF). Default OFF: gera + abre share sheet
+  // direto. Power user pode ligar via localStorage 'cooltrack-pdf-preview=true'.
+  if (_isPreviewEnabled()) {
+    const wasSubtitle = Number.isFinite(whatsappLimit)
+      ? `Restam ${Math.max(0, whatsappLimit - whatsappUsed)} de ${whatsappLimit} envios este mês · confira antes de enviar`
+      : 'Confira antes de compartilhar';
+    const previewDecision = await showPdfPreview({
+      blob: pdfResult.blob,
+      fileName: pdfResult.fileName,
+      primaryLabel: 'Enviar via WhatsApp',
+      subtitle: wasSubtitle,
+    });
+    if (previewDecision !== 'confirm') {
+      trackEvent('whatsapp_share_cancelled', { plan: planCode, stage: 'preview' });
+      return false;
+    }
   }
 
   Toast.info?.('Preparando compartilhamento...');
@@ -562,6 +572,19 @@ function bindPmocFormal() {
 
       const user = await Auth.getUser();
       const profile = Profile.get();
+
+      // Bug fix: state.clientes só é populado quando user visita /clientes
+      // ou abre o modal de equipamento. Se ele abre PMOC direto do header
+      // sem nunca ter ido em /clientes, o dropdown vem vazio. Garante o
+      // load aqui antes de ler o state. Silencia erros (offline / Free
+      // sem feature) — nesses casos o dropdown fica genérico mesmo.
+      try {
+        const { loadClientes } = await import('../../../core/clientes.js');
+        await loadClientes();
+      } catch (_) {
+        /* offline ok — usa o que tiver no cache de state */
+      }
+
       const { clientes = [], equipamentos = [], registros = [] } = getState();
 
       // PMOC Fase 6: smart preselect do cliente

@@ -10,6 +10,7 @@ import { bindRegistroHandlers } from './controller/handlers/registroHandlers.js'
 import { bindProfileAccountHandlers } from './controller/handlers/profileAccountHandlers.js';
 import { bindReportExportHandlers } from './controller/handlers/reportExportHandlers.js';
 import { bindClienteHandlers } from './controller/handlers/clienteHandlers.js';
+import { bindOrcamentoHandlers } from './controller/handlers/orcamentoHandlers.js';
 import { initControllerHelpers } from './controller/helpers/themeInitHelpers.js';
 import { registerBlockingLayer } from '../core/router.js';
 import { SignatureModal } from './components/signature/signature-modal.js';
@@ -51,6 +52,7 @@ export function initController() {
   bindProfileAccountHandlers();
   bindReportExportHandlers();
   bindClienteHandlers();
+  bindOrcamentoHandlers();
 
   registerSignatureBlockingLayers();
 
@@ -60,7 +62,7 @@ export function initController() {
   // Chamado em bootstrap apos profile carregar do localStorage.
   updateShellSidebar();
   // Re-popula quando profile e salvo (modal de perfil dispatch este evento).
-  if (typeof document !== 'undefined') {
-    document.addEventListener('profile-saved', () => updateShellSidebar());
+  if (typeof window !== 'undefined') {
+    window.addEventListener('cooltrack:profile-updated', () => updateShellSidebar());
   }
 }

@@ -23,6 +23,16 @@ export const PMOC_COLORS = {
   text3: [120, 120, 120],
   black: [0, 0, 0],
   white: [255, 255, 255],
+  // V2 (abr/2026): adicionado azul navy como accent INSTITUCIONAL pra alinhar
+  // com referencia de design (ver PR PMOC visual upgrade). Uso restrito a:
+  //   - numero das secoes (1., 2., 3., ...)
+  //   - badges de identificacao (DOCUMENTO Nº box)
+  //   - barras laterais de cards (resumo executivo)
+  //   - header de tabelas formais
+  // Mantemos o resto monocromatico — navy eh accent, nao cor primaria.
+  navy: [30, 58, 95], // titulos numerados + barras laterais
+  navySoft: [219, 234, 254], // backgrounds de cards/badges
+  navyBorder: [191, 219, 254], // bordas de cards azuis
   // Tons usados em badges de status no cronograma — mantidos em escala
   // de cinza pra preservar a identidade monocromática.
   ok: [40, 40, 40], // realizado/conforme = preto sólido

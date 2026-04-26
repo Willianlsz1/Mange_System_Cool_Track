@@ -21,14 +21,60 @@ import { toggleTheme } from '../helpers/themeInitHelpers.js';
 
 let isHelpOpen = false;
 
-function setHelpMenuState(open) {
+// Memoria do parent original do menu (.header-settings) pra restaurar quando
+// fechar. Evita perder a posicao DOM-padrao quando reabrir do header (mobile).
+let _menuOriginalParent = null;
+
+function setHelpMenuState(open, anchorEl = null) {
   const menu = document.getElementById('header-help-menu');
-  const trigger = document.getElementById('header-help-btn');
-  if (!menu || !trigger) return;
+  const headerTrigger = document.getElementById('header-help-btn');
+  const sidenavTrigger = document.getElementById('sidenav-settings');
+  if (!menu) return;
   isHelpOpen = Boolean(open);
-  menu.hidden = !isHelpOpen;
-  trigger.setAttribute('aria-expanded', String(isHelpOpen));
-  trigger.classList.toggle('is-active', isHelpOpen);
+
+  // Atualiza aria-expanded em ambos os triggers
+  if (headerTrigger) {
+    headerTrigger.setAttribute('aria-expanded', String(isHelpOpen));
+    headerTrigger.classList.toggle('is-active', isHelpOpen);
+  }
+  if (sidenavTrigger) {
+    sidenavTrigger.setAttribute('aria-expanded', String(isHelpOpen));
+    sidenavTrigger.classList.toggle('is-active', isHelpOpen);
+  }
+
+  if (!isHelpOpen) {
+    menu.hidden = true;
+    menu.style.cssText = '';
+    // Restaura ao parent original (caso tivermos movido pra body)
+    if (_menuOriginalParent && menu.parentElement === document.body) {
+      _menuOriginalParent.appendChild(menu);
+    }
+    return;
+  }
+
+  // Aberto via sidebar Configurações: move o menu pra ser filho direto do
+  // body com position fixed perto do anchor. Isso evita problemas de
+  // containing block / overflow / display:contents do parent original.
+  if (anchorEl) {
+    if (!_menuOriginalParent) _menuOriginalParent = menu.parentElement;
+    if (menu.parentElement !== document.body) {
+      document.body.appendChild(menu);
+    }
+    const rect = anchorEl.getBoundingClientRect();
+    const menuWidth = 210;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - menuWidth - 8));
+    const bottom = Math.max(8, window.innerHeight - rect.top + 8);
+    menu.style.cssText = `position: fixed !important; left: ${left}px !important; bottom: ${bottom}px !important; right: auto !important; top: auto !important; z-index: 9999 !important; display: grid !important;`;
+    menu.hidden = false;
+  } else {
+    // Aberto via header (mobile): restaura ao parent original e usa o
+    // positioning padrao do CSS.
+    if (_menuOriginalParent && menu.parentElement === document.body) {
+      _menuOriginalParent.appendChild(menu);
+    }
+    menu.style.cssText = '';
+    menu.hidden = false;
+  }
 }
 
 export function bindNavigationHandlers() {
@@ -38,7 +84,7 @@ export function bindNavigationHandlers() {
       // Considera clique "dentro" quando mira o trigger, o menu em si,
       // ou qualquer wrapper legado/novo (.header-help / .header-settings)
       const insideHelp = event.target.closest(
-        '#header-help-btn, #header-help-menu, .header-help, .header-settings',
+        '#header-help-btn, #header-help-menu, .header-help, .header-settings, #sidenav-settings, .app-sidebar__settings',
       );
       if (!insideHelp && isHelpOpen) setHelpMenuState(false);
     });
@@ -53,11 +99,50 @@ export function bindNavigationHandlers() {
     // Ao abrir o modal de equipamento via "+ Novo", garante que não estamos em modo edição
     if (id === 'modal-add-eq') {
       clearEquipEditingState();
+      // Sync visibilidade do select de componente (evap/cond) baseado no
+      // tipo atual. Também bind one-time do change listener no tipo pra
+      // re-sync quando user trocar.
+      import('../../views/equipamentos.js').then((m) => {
+        m.syncComponenteVisibility?.();
+        const tipoEl = document.getElementById('eq-tipo');
+        if (tipoEl && !tipoEl.dataset.componenteBound) {
+          tipoEl.dataset.componenteBound = '1';
+          tipoEl.addEventListener('change', () => m.syncComponenteVisibility?.());
+        }
+      });
+      // Inicializa os custom dropdowns de Setor + Cliente (V2 redesign).
+      // Idempotente: bind global so na primeira chamada; sync labels sempre.
+      import('../../components/eqContextPicker.js').then((m) => {
+        m.initEqContextPickers?.();
+      });
       // PMOC Fase 2: popula select de clientes (lazy hydrate). Fire-and-forget;
       // se falhar, o wrapper fica hidden (default) e o campo simplesmente
       // não aparece — não quebra o cadastro.
       import('../../views/clientes.js')
         .then((m) => m.populateClienteSelect?.())
+        .then(() => {
+          // Bug fix #103: pre-preenche Setor + Cliente quando o "+ Novo
+          // equipamento" foi clicado dentro do drill-down de um setor.
+          // Lê data-setor-id e data-cliente-id do botao trigger.
+          const setorId = el.dataset.setorId || '';
+          const clienteId = el.dataset.clienteId || '';
+          if (setorId) {
+            const setorSelect = document.getElementById('eq-setor');
+            if (setorSelect) {
+              setorSelect.value = setorId;
+              // Dispara change pra que o eqContextPicker sincronize o label
+              // do dropdown custom (que mostra o nome do setor selecionado).
+              setorSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          }
+          if (clienteId) {
+            const clienteSelect = document.getElementById('eq-cliente');
+            if (clienteSelect) {
+              clienteSelect.value = clienteId;
+              clienteSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+          }
+        })
         .catch(() => {
           /* no-op: campo cliente é opcional */
         });
@@ -133,8 +218,11 @@ export function bindNavigationHandlers() {
     // vazar pending photos pra próxima abertura).
     if (id === 'modal-eq-photos') clearEquipPhotosEditingState();
   });
-  on('toggle-help-menu', () => {
-    setHelpMenuState(!isHelpOpen);
+  on('toggle-help-menu', (el) => {
+    // Se o trigger é o botao Configurações do sidebar, passa ele como anchor
+    // pra o menu ser reposicionado pra cima dele em vez do gear do header.
+    const anchor = el?.id === 'sidenav-settings' ? el : null;
+    setHelpMenuState(!isHelpOpen, anchor);
   });
   on('help-open-tutorial', () => {
     setHelpMenuState(false);
@@ -174,8 +262,48 @@ export function bindNavigationHandlers() {
     goTo('alertas');
   });
 
+  // V2 (#127): atalho do menu mobile (engrenagem) — bottom nav já tem 5
+  // slots, então Orçamentos vive no header help menu como item mobile-only.
+  on('go-orcamentos', () => {
+    goTo('orcamentos');
+  });
+
   on('go-equipamentos-preventiva-7d', () => {
     goTo('equipamentos', { statusFilter: 'preventiva-7d' });
+  });
+
+  // Continue draft card no painel: navega pra /registro com o id pra recuperar
+  on('continue-draft', (el) => {
+    const id = el?.dataset?.id;
+    if (id) {
+      goTo('registro', { editRegistroId: id });
+    } else {
+      goTo('registro');
+    }
+  });
+
+  // Descarta o rascunho via clique no X do continue card
+  on('discard-draft', async () => {
+    try {
+      sessionStorage.removeItem('cooltrack-editing-id');
+    } catch (_e) {
+      /* sessionStorage indisponivel */
+    }
+    Toast.success('Rascunho descartado.');
+    // Re-renderiza o dashboard pra remover o card
+    const { renderDashboard } = await import('../../views/dashboard.js');
+    renderDashboard?.();
+  });
+
+  // Click num card de alerta de cliente em /alertas → navega pra grade de
+  // setores do cliente (mesmo flow do "Ver equipamentos" no card do cliente).
+  on('go-cliente-equipamentos', (el) => {
+    const clienteId = el?.dataset?.id;
+    const clienteNome = el?.dataset?.clienteNome || '';
+    if (!clienteId) return;
+    goTo('equipamentos', {
+      equipCtx: { clienteId, clienteNome },
+    });
   });
 
   // O handler 'print' foi movido para reportExportHandlers.js.

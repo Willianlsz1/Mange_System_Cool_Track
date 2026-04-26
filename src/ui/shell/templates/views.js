@@ -293,24 +293,21 @@ export function renderShellViews() {
               <symbol id="ri-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></symbol>
             </defs>
           </svg>
-          <div class="section-title section-title--registro" hidden>O que foi feito hoje?</div>
+          <div class="section-title section-title--registro" hidden>Registrar serviço</div>
           <div class="card card--registro">
             <div id="storage-indicator" class="storage-indicator" role="status" aria-live="polite" hidden></div>
 
-            <!-- ============== HERO (status + progresso) ============== -->
-            <section class="registro-hero" id="registro-hero" data-state="empty" aria-labelledby="registro-hero-title">
-              <span class="registro-hero__orb registro-hero__orb--tl" aria-hidden="true"></span>
-              <span class="registro-hero__orb registro-hero__orb--br" aria-hidden="true"></span>
-
+            <!-- HERO V2 (UX audit): compactado pra 1 linha — pill com label
+                 dinamico ("Novo registro" / "Editando registro") + meter
+                 visual de progresso (5 segments) + contador X/5. Sem orbs,
+                 sem titulo decorativo, sem chips redundantes. Reduz altura
+                 vertical em ~120px no mobile. -->
+            <section class="registro-hero registro-hero--compact" id="registro-hero" data-state="empty" aria-labelledby="registro-hero-pill-text">
               <span class="registro-hero__pill">
                 <svg aria-hidden="true"><use href="#ri-clipboard"/></svg>
                 <span id="registro-hero-pill-text">Novo registro</span>
               </span>
-
-              <h1 id="registro-hero-title" class="registro-hero__title">O que foi feito hoje?</h1>
-              <p class="registro-hero__sub" id="registro-hero-sub"></p>
-
-              <div class="registro-hero__progress" aria-label="Progresso dos campos obrigatórios">
+              <div class="registro-hero__progress" aria-label="Progresso dos campos obrigatorios">
                 <div class="registro-hero__meter" id="registro-hero-meter" role="progressbar" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0">
                   <span class="registro-hero__seg"></span>
                   <span class="registro-hero__seg"></span>
@@ -318,16 +315,38 @@ export function renderShellViews() {
                   <span class="registro-hero__seg"></span>
                   <span class="registro-hero__seg"></span>
                 </div>
-                <div class="registro-hero__count">
-                  <b id="form-progress-count">0</b>/5
-                </div>
+                <div class="registro-hero__count"><b id="form-progress-count">0</b>/5</div>
               </div>
-
-              <div class="registro-hero__chips">
-                <span class="registro-hero__chip"><svg aria-hidden="true"><use href="#ri-check-circle"/></svg> Offline-first</span>
-                <span class="registro-hero__chip"><svg aria-hidden="true"><use href="#ri-check-circle"/></svg> PDF em 1 toque</span>
-              </div>
+              <!-- Sub mantido pra exibir status dinamico (ex: "Equipamento selecionado") -->
+              <p class="registro-hero__sub" id="registro-hero-sub" hidden></p>
             </section>
+
+            <!-- UX V2 audit fix #82: foto promovida a açao rapida acima do form.
+                 Tecnico em campo costuma fotografar PRIMEIRO (etiqueta, antes/
+                 depois) e preencher dados depois. Atalho rapido que abre a
+                 camera direto (capture="environment"); preview aparece embaixo
+                 no <details class="registro-details"> normal. Usa o MESMO
+                 input-fotos-camera que ja existe (sem duplicar state). -->
+            <div class="registro-kicker">Comece pela foto</div>
+            <label class="registro-photo-quick" for="input-fotos-camera">
+              <span class="registro-photo-quick__icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/>
+                  <circle cx="12" cy="13" r="3"/>
+                </svg>
+              </span>
+              <span class="registro-photo-quick__body">
+                <span class="registro-photo-quick__title">Tirar foto da etiqueta agora</span>
+                <span class="registro-photo-quick__hint">abre a camera direto · até 5 fotos por serviço</span>
+              </span>
+              <span class="registro-photo-quick__chevron" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 18l6-6-6-6"/>
+                </svg>
+              </span>
+            </label>
 
             <!-- ============== Ações rápidas ============== -->
             <div class="registro-kicker">Ações rápidas</div>
@@ -368,9 +387,31 @@ export function renderShellViews() {
               </div>
               <p class="registro-bloco__hint">Preencha os 5 campos para liberar o PDF do cliente.</p>
 
-              <div class="registro-field registro-field--select">
-                <label class="registro-field__label" for="r-equip">Em qual equipamento?<span class="req">*</span></label>
-                <select id="r-equip" class="registro-field__select" required aria-required="true">
+              <!-- Equipamento: trigger card + custom picker com SEARCH (UX V2 audit fix).
+                   Resolve o gargalo de tecnico com 50+ equips rolando lista nativa.
+                   Hidden &lt;select&gt; preserva state pra saveRegistro ler como antes. -->
+              <div class="registro-field registro-field--equip-picker">
+                <label class="registro-field__label" for="r-equip-trigger">Em qual equipamento?<span class="req">*</span></label>
+                <button type="button" class="registro-equip-trigger" id="r-equip-trigger"
+                  data-r-action="open-equip-picker" aria-haspopup="dialog" aria-expanded="false">
+                  <span class="registro-equip-trigger__icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m14.6 6.3 3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 0 3 3l6.91-6.91a6 6 0 0 0 7.94-7.94l-3.77 3.77-3-3Z"/>
+                    </svg>
+                  </span>
+                  <span class="registro-equip-trigger__body">
+                    <span class="registro-equip-trigger__name" id="r-equip-name">Selecione o equipamento...</span>
+                    <span class="registro-equip-trigger__meta" id="r-equip-meta" hidden></span>
+                  </span>
+                  <svg class="registro-equip-trigger__chev" width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                <select id="r-equip" class="registro-field__select registro-field__select--hidden"
+                  required aria-required="true" aria-hidden="true" tabindex="-1">
                   <option value="">Selecione o equipamento...</option>
                 </select>
               </div>
@@ -378,9 +419,28 @@ export function renderShellViews() {
               <div class="registro-field__row">
                 <div class="registro-field">
                   <label class="registro-field__label" for="r-data">Quando foi?<span class="req">*</span></label>
-                  <div class="registro-field__with-icon">
-                    <svg aria-hidden="true"><use href="#ri-calendar"/></svg>
-                    <input id="r-data" class="registro-field__input" type="datetime-local" required aria-required="true" />
+                  <!-- UX V2: default "Hoje agora" + chip pra abrir o picker.
+                       Reduz friccao em ~90% dos casos onde o tecnico registra
+                       no momento que terminou o servico. JS popula r-data com
+                       new Date().toISOString().slice(0,16) no init. -->
+                  <div class="registro-field__datetime" id="registro-datetime-wrap">
+                    <button type="button" class="registro-field__datetime-now"
+                      id="r-data-now-btn" aria-pressed="true"
+                      title="Usa a data e hora deste momento">
+                      <svg aria-hidden="true"><use href="#ri-calendar"/></svg>
+                      <span id="r-data-now-label">Hoje agora</span>
+                    </button>
+                    <button type="button" class="registro-field__datetime-edit"
+                      id="r-data-edit-btn" title="Mudar data e hora">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M14 4l6 6-11 11H3v-6L14 4z"/>
+                      </svg>
+                      <span>Mudar</span>
+                    </button>
+                    <input id="r-data" class="registro-field__input registro-field__input--datetime-hidden"
+                      type="datetime-local" required aria-required="true"
+                      aria-label="Data e hora do servico" />
                   </div>
                 </div>
                 <div class="registro-field registro-field--select">
@@ -426,7 +486,7 @@ export function renderShellViews() {
                 <label class="registro-field__label" for="r-tecnico">Quem fez?<span class="req">*</span></label>
                 <div class="registro-field__with-icon">
                   <svg aria-hidden="true"><use href="#ri-user"/></svg>
-                  <input id="r-tecnico" class="registro-field__input" list="lista-tecnicos" type="text"
+                  <input id="r-tecnico" class="registro-field__input" list="lista-técnicos" type="text"
                     placeholder="Seu nome ou o nome do técnico..." autocomplete="off" required aria-required="true" />
                   <datalist id="lista-tecnicos"></datalist>
                 </div>
@@ -618,19 +678,10 @@ export function renderShellViews() {
               </div>
             </details>
 
-            <!-- ============== Rodapé de ação ============== -->
-            <div class="registro-actions" id="tour-signature-anchor">
-              <button class="btn btn--ghost registro-actions__ghost" data-action="clear-registro"
-                title="Limpa todos os campos">
-                <svg aria-hidden="true"><use href="#ri-rewind"/></svg>
-                <span>Recomeçar</span>
-              </button>
-              <button class="btn btn--primary registro-actions__primary" data-action="save-registro">
-                <svg aria-hidden="true"><use href="#ri-save"/></svg>
-                <span>Salvar e gerar PDF</span>
-              </button>
-            </div>
-            <p class="registro-field__help" style="margin:8px 0 0">Ao salvar, o PDF ficará pronto para envio.</p>
+            <!-- UX V2 audit fix #90: assinatura do cliente movida pra ANTES
+                 do rodape de acao. Antes ficava DEPOIS do botao Salvar — usuario
+                 ja achava que tinha terminado. Agora ele ve "Assinatura: Incluso"
+                 antes de tocar em Salvar e enviar. -->
             <div class="registro-sig-hint" id="registro-signature-hint" hidden>
               <span class="registro-sig-hint__ic" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -651,6 +702,34 @@ export function renderShellViews() {
                 </p>
               </div>
             </div>
+
+            <!-- ============== Rodapé de ação V2 (UX audit #80) ============== -->
+            <!-- Hierarquia: 1 botao primario verde "Salvar e enviar pro cliente"
+                 que faz save + abre WhatsApp em 1 clique. Save-only fica como
+                 acao secundaria (link inline). Recomeçar é ghost. -->
+            <div class="registro-actions registro-actions--v2" id="tour-signature-anchor">
+              <button class="btn btn--ghost registro-actions__ghost" data-action="clear-registro"
+                title="Limpa todos os campos">
+                <svg aria-hidden="true"><use href="#ri-rewind"/></svg>
+                <span>Recomeçar</span>
+              </button>
+              <div class="registro-actions__main">
+                <button class="btn btn--primary btn--whats registro-actions__primary"
+                  data-action="save-and-share-registro"
+                  title="Salva o serviço e ja abre o WhatsApp pro cliente">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.768.967-.94 1.164-.173.198-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.002-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                  </svg>
+                  <span>Salvar e enviar pro cliente</span>
+                </button>
+                <button class="btn btn--ghost registro-actions__save-only" data-action="save-registro"
+                  title="Só salva (sem enviar)">
+                  <svg aria-hidden="true"><use href="#ri-save"/></svg>
+                  <span>Só salvar</span>
+                </button>
+              </div>
+            </div>
+            <p class="registro-field__help" style="margin:8px 0 0">Ao tocar em <strong>Salvar e enviar</strong>, o PDF é gerado e o WhatsApp abre direto pro cliente.</p>
           </div>
         </div>
 
@@ -682,7 +761,7 @@ export function renderShellViews() {
               <span class="hist-count" id="hist-count" aria-live="polite"></span>
               <div class="hist-sticky-header__spacer"></div>
 <!-- Botão "Relatório" removido — o toggle [Lista | Relatório] no topo
-                   da view ja faz a navegação pra view de Relatório, então o botão
+                   da view já faz a navegação pra view de Relatório, então o botão
                    no header virou redundante. -->
             </div>
             <div class="hist-sticky-header__row">
@@ -773,86 +852,75 @@ export function renderShellViews() {
             </button>
           </div>
           <!--
-            Toolbar unificada (refactor): um único botão primário "Compartilhar
-            relatório" abre dropdown com TODAS as opções de export. Antes tinha
-            WhatsApp standalone (verde) + Exportar PDF (cyan) + chevron — visual
-            confuso, especialmente em mobile onde os botões empilhavam mal.
-            Agora: 1 botão, 1 menu, hierarquia clara.
+            Toolbar V2 (audit UX): WhatsApp como acao PRIMARIA (botao verde
+            grande, ponto que tecnico em campo precisa). PDF secundario
+            (outline cyan). Acoes raras (PMOC, Sobre) ficam dentro do "+ mais"
+            kebab no canto. Reduz cliques pra acao mais comum de 5 -> 2.
           -->
           <div class="rel-toolbar">
-            <div class="rel-toolbar__actions">
-              <div class="rel-toolbar__primary-group rel-export-dd" id="rel-export-dd">
-                <button class="rel-toolbar__btn rel-toolbar__btn--primary rel-export-dd__main"
+            <div class="rel-toolbar__actions rel-toolbar__actions--v2">
+              <button class="rel-toolbar__btn rel-toolbar__btn--whatsapp"
+                id="btn-whatsapp" data-action="whatsapp-export" type="button"
+                title="Gera o PDF e abre o compartilhamento via WhatsApp">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
+                </svg>
+                <span>Enviar pro cliente</span>
+              </button>
+              <button class="rel-toolbar__btn rel-toolbar__btn--pdf"
+                id="btn-export-pdf" data-action="export-pdf" type="button"
+                title="Gera e baixa o PDF do relatório">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/>
+                </svg>
+                <span>Baixar PDF</span>
+              </button>
+              <div class="rel-toolbar__more rel-export-dd" id="rel-export-dd">
+                <button class="rel-toolbar__btn rel-toolbar__btn--icon rel-export-dd__main"
                   id="btn-export-dd-toggle" data-action="toggle-export-dd" type="button"
                   aria-haspopup="menu" aria-expanded="false" aria-controls="rel-export-dd-menu"
-                  title="Compartilhar este relatório">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                  </svg>
-                  <span>Compartilhar</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <polyline points="6 9 12 15 18 9"/>
+                  aria-label="Mais opções" title="Mais opções">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/>
                   </svg>
                 </button>
                 <div class="rel-export-dd__menu" id="rel-export-dd-menu" role="menu" hidden>
-                  <!-- Acao primaria: gerar PDF (com preview antes do download) -->
-                  <button type="button" class="rel-export-dd__item" role="menuitem"
-                    id="btn-export-pdf" data-action="export-pdf"
-                    title="Gera o PDF do relatorio com pre-visualizacao antes de baixar.">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/>
-                    </svg>
-                    <div class="rel-export-dd__item-text">
-                      <strong>Baixar PDF</strong>
-                      <span>relatório técnico — capa + serviços do filtro</span>
-                    </div>
-                  </button>
-                  <!-- Acao secundaria: enviar via WhatsApp (preview tambem) -->
-                  <button type="button" class="rel-export-dd__item" role="menuitem"
-                    id="btn-whatsapp" data-action="whatsapp-export"
-                    title="Compartilha o PDF via WhatsApp (consome quota mensal).">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
-                    </svg>
-                    <div class="rel-export-dd__item-text">
-                      <strong>Enviar via WhatsApp</strong>
-                      <span>compartilha o PDF direto no app</span>
-                    </div>
-                  </button>
-                  <!-- PMOC formal (gated por Pro) -->
-                  <button type="button" class="rel-export-dd__item rel-export-dd__item--pmoc"
+                  <button type="button" class="rel-export-dd__item rel-export-dd__item--pmoc rel-export-dd__item--featured"
                     role="menuitem" data-action="open-pmoc-modal" data-tier="unknown"
                     title="Documento PMOC formal anual conforme NBR 13971 — Pro.">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <span class="rel-export-dd__item-icon" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                       <polyline points="14 2 14 8 20 8"/>
                       <line x1="9" y1="15" x2="15" y2="15"/>
                       <line x1="9" y1="11" x2="15" y2="11"/>
                     </svg>
+                    </span>
                     <div class="rel-export-dd__item-text">
-                      <strong>PMOC formal <span class="pro-badge pro-badge--inline" aria-hidden="true">PRO</span></strong>
-                      <span>anual, NBR 13971, com termo de RT</span>
+                      <strong>Gerar PMOC formal <span class="pro-badge pro-badge--inline" aria-hidden="true">PRO</span></strong>
+                      <span>Documento anual conforme NBR 13971 — capa institucional, cronograma 12 meses e termo de RT</span>
                     </div>
+                    <span class="rel-export-dd__item-arrow" aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 6l6 6-6 6"/>
+                      </svg>
+                    </span>
                   </button>
-                  <!-- Item informativo, sem acao destrutiva -->
                   <button type="button" class="rel-export-dd__item rel-export-dd__item--meta"
-                    role="menuitem" data-action="open-pmoc-info"
-                    title="Saiba quando usar cada um.">
+                    role="menuitem" data-action="open-pmoc-info" title="Saiba quando usar cada um.">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  
                       stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/>
                     </svg>
                     <span>Sobre o PMOC</span>
                   </button>
                 </div>
-                <div id="pdf-quota-slot" class="rel-toolbar__quota-slot"></div>
               </div>
+              <div id="pdf-quota-slot" class="rel-toolbar__quota-slot"></div>
             </div>
           </div>
 
@@ -893,5 +961,8 @@ export function renderShellViews() {
 
         <!-- PRIVACIDADE (Politica LGPD) -->
         <div class="view" id="view-privacidade"></div>
+
+        <!-- V3: ORÇAMENTOS DE INSTALAÇÃO -->
+        <div class="view" id="view-orcamentos"></div>
 `;
 }

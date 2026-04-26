@@ -8,7 +8,7 @@
  * - "Plano gratuito para sempre" (Free e gratis pra sempre, sem trial 14d)
  * - Sem e-mail como canal de envio (so WhatsApp/Web Share)
  * - Sem "Servidor no Brasil" (Supabase/Stripe/CF fora, ver privacidade.html)
- * - Tipos de manutencao = opcoes reais do select em registro.js
+ * - Tipos de manutenção = opções reais do select em registro.js
  */
 
 export function buildLandingHtml() {
@@ -33,19 +33,19 @@ export function buildLandingHtml() {
       title: 'Cadastre o equipamento',
       text: 'Tire foto da placa. A IA preenche os dados.',
       image: '/brand/passo-1-cadastro.png',
-      alt: 'Tela de cadastro de equipamento com opcao de usar foto da etiqueta (IA)',
+      alt: 'Tela de cadastro de equipamento com opção de usar foto da etiqueta (IA)',
     },
     {
       title: 'Registre o serviço',
       text: 'Escolha o tipo de serviço e registre em segundos.',
       image: '/brand/passo-2-registro.png',
-      alt: 'Tela de novo registro de manutencao com acoes rapidas',
+      alt: 'Tela de novo registro de manutenção com ações rapidas',
     },
     {
       title: 'Envie o relatório',
       text: 'Gere o PDF e envie no WhatsApp — um toque.',
       image: '/brand/passo-3-pdf.png',
-      alt: 'PDF do relatorio de manutencao gerado pelo CoolTrack PRO',
+      alt: 'PDF do relatório de manutenção gerado pelo CoolTrack PRO',
     },
   ];
 
@@ -141,7 +141,7 @@ export function buildLandingHtml() {
           <span class="lp-brand__mark" aria-hidden="true"><span></span></span>
           <span class="lp-brand__text"><span class="lp-brand__name">CoolTrack</span><span class="lp-brand__tag">PRO</span></span>
         </a>
-        <nav class="lp-nav" aria-label="Secoes da landing">
+        <nav class="lp-nav" aria-label="Seções da landing">
           <a href="#lp-problem-title">Problema</a>
           <a href="#lp-how-title">Como funciona</a>
           <a href="#lp-proof-title">Relatório</a>
@@ -305,7 +305,7 @@ export function buildLandingHtml() {
         <section class="lp-final" aria-labelledby="lp-final-title">
           <div class="lp-container">
             <div class="lp-final__card">
-              <p class="lp-section-label">Proximo atendimento</p>
+              <p class="lp-section-label">Próximo atendimento</p>
               <h2 id="lp-final-title">Use no seu próximo atendimento</h2>
               <p>Em menos de 10 minutos você já testa no campo e vê a diferença</p>
               <button class="lp-btn lp-btn--primary" type="button" data-action="start-trial" data-source="final">Testar no próximo serviço ${ICON_ARROW}</button>
@@ -345,7 +345,7 @@ export function buildLandingHtml() {
         </div>
       </footer>
 
-      <div class="lp-sticky" aria-label="Acao principal mobile">
+      <div class="lp-sticky" aria-label="Ação principal mobile">
         <button class="lp-btn lp-btn--primary" type="button" data-action="start-trial" data-source="sticky">Testar no próximo serviço</button>
       </div>
     </div>
