@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 describe('shell bootstrap', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    localStorage.clear();
   });
 
   it('mounts the global header outside #app and keeps bootstrap idempotent', async () => {
