@@ -12,16 +12,23 @@
 //   1. Deletes manuais em tabelas core (equipamentos/registros/tecnicos/setores)
 //      porque seus FKs podem ter sido criados fora das migrations versionadas
 //      sem CASCADE. Idempotente — running 2x não erra.
-//   2. Storage cleanup: remove todos os objetos em {userId}/** do bucket
-//      compartilhado (registro-fotos), que inclui fotos de equipamentos,
-//      fotos de registros e assinaturas.
+//   2. Storage cleanup: remove todos os objetos em {userId}/** dos buckets
+//      de arquivos do app:
+//        - registro-fotos (fotos de equipamentos/registros + assinaturas)
+//        - relatorios (PDFs exportados para compartilhamento)
 //   3. admin.deleteUser cascateia o resto: profiles, usage_monthly,
 //      push_subscriptions, ai_usage_cost (todas têm ON DELETE CASCADE).
 //      Tabelas com SET NULL (feedback, analytics_events) ficam anonimizadas.
 import { getCorsHeaders } from '../_shared/cors.ts';
 import { verifyUserToken } from '../_shared/auth.ts';
 
-const DEFAULT_BUCKET = 'registro-fotos';
+const STORAGE_LIST_PAGE_SIZE = 1000;
+const STORAGE_REMOVE_CHUNK_SIZE = 100;
+const DEFAULT_PHOTOS_BUCKET = Deno.env.get('SUPABASE_PHOTOS_BUCKET')?.trim() || 'registro-fotos';
+const DEFAULT_REPORTS_BUCKET = Deno.env.get('SUPABASE_REPORTS_BUCKET')?.trim() || 'relatorios';
+const STORAGE_BUCKETS = [
+  ...new Set([DEFAULT_PHOTOS_BUCKET, DEFAULT_REPORTS_BUCKET].filter(Boolean)),
+];
 
 function jsonResponse(req: Request, payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -36,33 +43,77 @@ function getRequiredEnv(name: string) {
   return value.trim();
 }
 
+function splitIntoChunks<T>(values: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < values.length; i += chunkSize) {
+    chunks.push(values.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+function isStorageFolderEntry(entry: Record<string, unknown>): boolean {
+  // Supabase Storage retorna `id` para objetos e null para "pastas virtuais".
+  return entry?.id == null;
+}
+
 /**
  * Lista recursivamente todos os objetos em {userId}/ e retorna array de paths.
- * Supabase Storage `list` retorna 1 nível só + tem limite default de 100.
- * Navega subpastas conhecidas do schema do bucket: registros/, equipamentos/.
+ * Faz paginação por offset (limit=1000) em cada prefixo para evitar truncamento
+ * silencioso em contas com grande volume de arquivos.
  */
-async function listUserStoragePaths(supabaseAdmin, userId: string): Promise<string[]> {
+async function listUserStoragePaths(
+  supabaseAdmin,
+  userId: string,
+  bucketName: string,
+): Promise<string[]> {
   const paths: string[] = [];
-  const bucket = supabaseAdmin.storage.from(DEFAULT_BUCKET);
+  const bucket = supabaseAdmin.storage.from(bucketName);
+  const pendingPrefixes = [String(userId)];
 
-  const scopes = ['registros', 'equipamentos'];
-  for (const scope of scopes) {
-    const scopePrefix = `${userId}/${scope}`;
-    const { data: records, error: listErr } = await bucket.list(scopePrefix, { limit: 1000 });
-    if (listErr || !records) continue;
+  while (pendingPrefixes.length > 0) {
+    const prefix = pendingPrefixes.pop();
+    if (!prefix) continue;
 
-    for (const record of records) {
-      if (!record?.name) continue;
-      const recordPrefix = `${scopePrefix}/${record.name}`;
-      const { data: files } = await bucket.list(recordPrefix, { limit: 1000 });
-      if (!files) continue;
-      for (const f of files) {
-        if (f?.name) paths.push(`${recordPrefix}/${f.name}`);
+    let offset = 0;
+    while (true) {
+      const { data, error: listErr } = await bucket.list(prefix, {
+        limit: STORAGE_LIST_PAGE_SIZE,
+        offset,
+      });
+      if (listErr) {
+        throw new Error(`[storage_list_failed] ${bucketName}/${prefix}: ${listErr.message}`);
       }
+
+      const items = Array.isArray(data) ? data : [];
+      if (!items.length) break;
+
+      for (const item of items) {
+        if (!item?.name) continue;
+        const nextPath = `${prefix}/${item.name}`;
+        if (isStorageFolderEntry(item)) {
+          pendingPrefixes.push(nextPath);
+        } else {
+          paths.push(nextPath);
+        }
+      }
+
+      if (items.length < STORAGE_LIST_PAGE_SIZE) break;
+      offset += STORAGE_LIST_PAGE_SIZE;
     }
   }
 
   return paths;
+}
+
+async function removeStoragePaths(supabaseAdmin, bucketName: string, paths: string[]) {
+  if (!paths.length) return;
+  const chunks = splitIntoChunks(paths, STORAGE_REMOVE_CHUNK_SIZE);
+  for (const chunk of chunks) {
+    const { error } = await supabaseAdmin.storage.from(bucketName).remove(chunk);
+    if (error) {
+      throw new Error(`[storage_remove_failed] ${bucketName}: ${error.message}`);
+    }
+  }
 }
 
 Deno.serve(async (req) => {
@@ -119,21 +170,29 @@ Deno.serve(async (req) => {
 
     // ── 4. Storage cleanup ───────────────────────────────────────────────────
     try {
-      const paths = await listUserStoragePaths(supabaseAdmin, userId);
-      if (paths.length > 0) {
-        const { error: removeErr } = await supabaseAdmin.storage.from(DEFAULT_BUCKET).remove(paths);
-        if (removeErr) {
-          console.warn('[delete-user-account] storage cleanup parcial:', removeErr.message);
-          steps.storage = { ok: false, error: removeErr.message, count: paths.length };
-        } else {
-          steps.storage = { ok: true, count: paths.length };
-        }
-      } else {
-        steps.storage = { ok: true, count: 0 };
+      let totalRemoved = 0;
+      for (const bucketName of STORAGE_BUCKETS) {
+        console.log('[delete-user-account] storage cleanup start', { userId, bucketName });
+        const paths = await listUserStoragePaths(supabaseAdmin, userId, bucketName);
+        await removeStoragePaths(supabaseAdmin, bucketName, paths);
+        steps[`storage:${bucketName}`] = { ok: true, count: paths.length };
+        totalRemoved += paths.length;
+        console.log('[delete-user-account] storage cleanup done', {
+          userId,
+          bucketName,
+          removed: paths.length,
+        });
       }
+      steps.storage = { ok: true, count: totalRemoved };
     } catch (storageErr) {
-      console.warn('[delete-user-account] storage list/remove falhou:', storageErr);
-      steps.storage = { ok: false, error: String(storageErr) };
+      const message = storageErr instanceof Error ? storageErr.message : String(storageErr);
+      console.error('[delete-user-account] storage cleanup falhou:', message);
+      steps.storage = { ok: false, error: message };
+      return jsonResponse(
+        req,
+        { code: 'STORAGE_CLEANUP_FAILED', message: 'Falha ao remover arquivos do usuário.', steps },
+        500,
+      );
     }
 
     // ── 5. admin.deleteUser — cascateia tabelas com ON DELETE CASCADE ────────

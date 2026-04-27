@@ -31,11 +31,12 @@ const PLAN_TO_ENV: Record<string, string> = {
   plus_annual: 'STRIPE_PRICE_PLUS_ANNUAL',
 };
 
-const DEFAULT_PLAN = 'pro';
-
-function normalizeRequestedPlan(raw: unknown): string {
-  const lower = String(raw || '').toLowerCase();
-  return Object.prototype.hasOwnProperty.call(PLAN_TO_ENV, lower) ? lower : DEFAULT_PLAN;
+function normalizeRequestedPlan(raw: unknown): string | null {
+  const lower = String(raw || '')
+    .toLowerCase()
+    .trim();
+  if (!lower) return null;
+  return Object.prototype.hasOwnProperty.call(PLAN_TO_ENV, lower) ? lower : null;
 }
 
 /**
@@ -100,6 +101,16 @@ Deno.serve(async (req) => {
     const stripe = new Stripe(stripeSecretKey);
     const body = await req.json().catch(() => ({}));
     const requestedPlan = normalizeRequestedPlan(body?.plan);
+    if (!requestedPlan) {
+      return jsonResponse(
+        req,
+        {
+          code: 'INVALID_PLAN',
+          message: 'Plano inválido. Use um plano suportado.',
+        },
+        400,
+      );
+    }
 
     const { priceId, resolvedPlan } = resolvePriceId(requestedPlan);
 

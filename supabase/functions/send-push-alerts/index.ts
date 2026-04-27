@@ -13,63 +13,135 @@ const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 // e itera push_subscriptions inteira. Fail-closed: se a env não estiver
 // setada, todas as chamadas levam 403.
 const CRON_SECRET = Deno.env.get('CRON_SECRET') ?? '';
+// Hardening opcional: assinatura HMAC do scheduler.
+// Se setado, exige:
+//   x-cron-ts: unix epoch seconds
+//   x-cron-signature: hex(HMAC_SHA256(CRON_SIGNING_SECRET, `${ts}.${CRON_SECRET}`))
+// Mantém retrocompat: sem env setada, segue no modo legado (apenas x-cron-secret).
+const CRON_SIGNING_SECRET = Deno.env.get('CRON_SIGNING_SECRET') ?? '';
+const MAX_CLOCK_SKEW_SECONDS = 300;
 
 webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC, VAPID_PRIVATE);
+
+function timingSafeEqual(a: string, b: string): boolean {
+  const ta = new TextEncoder().encode(a);
+  const tb = new TextEncoder().encode(b);
+  if (ta.length !== tb.length) return false;
+  let out = 0;
+  for (let i = 0; i < ta.length; i += 1) out |= ta[i] ^ tb[i];
+  return out === 0;
+}
+
+async function hmacHex(secret: string, payload: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function isAuthorizedCronRequest(req: Request): Promise<boolean> {
+  const providedSecret = req.headers.get('x-cron-secret') ?? '';
+  if (!CRON_SECRET || !timingSafeEqual(providedSecret, CRON_SECRET)) {
+    return false;
+  }
+
+  if (!CRON_SIGNING_SECRET) return true;
+
+  const tsRaw = req.headers.get('x-cron-ts') ?? '';
+  const providedSig = (req.headers.get('x-cron-signature') ?? '').toLowerCase();
+  const ts = Number.parseInt(tsRaw, 10);
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isFinite(ts) || Math.abs(now - ts) > MAX_CLOCK_SKEW_SECONDS) return false;
+  if (!providedSig) return false;
+
+  const expected = await hmacHex(CRON_SIGNING_SECRET, `${ts}.${CRON_SECRET}`);
+  return timingSafeEqual(providedSig, expected);
+}
 
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
   // Auth: header secreto do scheduler. Não tem JWT de usuário (cron-only).
-  const provided = req.headers.get('x-cron-secret') ?? '';
-  if (!CRON_SECRET || provided !== CRON_SECRET) {
+  if (!(await isAuthorizedCronRequest(req))) {
     return new Response('Forbidden', { status: 403, headers: corsHeaders });
   }
 
   try {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const today = new Date();
-
     // Busca todas as subscriptions ativas
     const { data: subs } = await db.from('push_subscriptions').select('user_id, subscription');
     if (!subs?.length) return new Response(JSON.stringify({ sent: 0 }), { headers: corsHeaders });
 
+    const userIds = [...new Set(subs.map((s) => s.user_id).filter(Boolean))];
+    if (!userIds.length) return new Response(JSON.stringify({ sent: 0 }), { headers: corsHeaders });
+
+    // Reduz N+1: carrega dados em lote e faz fan-out em memória por user.
+    const { data: equipamentos = [] } = await db
+      .from('equipamentos')
+      .select('user_id, id, nome, status')
+      .in('user_id', userIds);
+
+    const { data: registros = [] } = await db
+      .from('registros')
+      .select('user_id, equip_id, data, proxima')
+      .in('user_id', userIds)
+      .not('proxima', 'is', null)
+      .order('data', { ascending: false });
+
+    const equipamentosByUser = new Map<string, Array<Record<string, unknown>>>();
+    const latestRegByUserEquip = new Map<string, Map<string, Record<string, unknown>>>();
+
+    for (const eq of equipamentos) {
+      const uid = String(eq.user_id || '');
+      if (!uid) continue;
+      const list = equipamentosByUser.get(uid) || [];
+      list.push(eq);
+      equipamentosByUser.set(uid, list);
+    }
+
+    for (const reg of registros) {
+      const uid = String(reg.user_id || '');
+      const equipId = String(reg.equip_id || '');
+      if (!uid || !equipId) continue;
+      const userRegs = latestRegByUserEquip.get(uid) || new Map();
+      // registros já vêm em ordem desc; primeiro encontrado por equip é o mais recente.
+      if (!userRegs.has(equipId)) userRegs.set(equipId, reg);
+      latestRegByUserEquip.set(uid, userRegs);
+    }
+
     let sent = 0;
     for (const sub of subs) {
-      // Busca equipamentos do usuário com problemas
-      const { data: equips } = await db
-        .from('equipamentos')
-        .select('id, nome, status, periodicidade_preventiva_dias')
-        .eq('user_id', sub.user_id)
-        .in('status', ['warn', 'danger']);
-
-      // Busca também equipamentos com preventiva vencida
-      const { data: registros } = await db
-        .from('registros')
-        .select('equip_id, data, proxima')
-        .eq('user_id', sub.user_id)
-        .order('data', { ascending: false });
+      const userId = String(sub.user_id || '');
+      const equips = (equipamentosByUser.get(userId) || []) as Array<{
+        id: string;
+        nome: string;
+        status: string;
+      }>;
+      const regs = latestRegByUserEquip.get(userId) || new Map();
+      const equipsById = new Map(equips.map((e) => [e.id, e]));
 
       const alerts: string[] = [];
 
-      for (const eq of equips ?? []) {
+      for (const eq of equips) {
         if (eq.status === 'danger') alerts.push(`⚠️ ${eq.nome}: requer intervenção`);
         else if (eq.status === 'warn') alerts.push(`🔔 ${eq.nome}: atenção necessária`);
       }
 
       // Verifica preventivas vencidas
-      const seenEquips = new Set();
-      for (const reg of registros ?? []) {
-        if (seenEquips.has(reg.equip_id)) continue;
-        seenEquips.add(reg.equip_id);
-        if (reg.proxima) {
-          const prox = new Date(reg.proxima);
-          const diff = Math.floor((prox.getTime() - today.getTime()) / 86400000);
-          if (diff <= 0) {
-            const eq = (equips ?? []).find((e) => e.id === reg.equip_id);
-            const name = eq?.nome ?? 'Equipamento';
-            alerts.push(`📅 ${name}: preventiva vencida`);
-          }
+      for (const reg of regs.values()) {
+        const prox = new Date(String(reg.proxima || ''));
+        const diff = Math.floor((prox.getTime() - today.getTime()) / 86400000);
+        if (Number.isFinite(diff) && diff <= 0) {
+          const eq = equipsById.get(String(reg.equip_id || ''));
+          const name = eq?.nome ?? 'Equipamento';
+          alerts.push(`📅 ${name}: preventiva vencida`);
         }
       }
 
@@ -88,10 +160,25 @@ Deno.serve(async (req) => {
         await webpush.sendNotification(JSON.parse(sub.subscription), payload);
         sent++;
       } catch (pushErr) {
-        console.error(`[Push] Falha para user ${sub.user_id}:`, pushErr);
+        console.error('[Push] Falha ao enviar notificação:', pushErr);
         // Remove subscription inválida (expirada)
         if ((pushErr as { statusCode?: number }).statusCode === 410) {
-          await db.from('push_subscriptions').delete().eq('user_id', sub.user_id);
+          let endpoint = '';
+          try {
+            const parsed =
+              typeof sub.subscription === 'string'
+                ? JSON.parse(sub.subscription)
+                : sub.subscription;
+            endpoint = String(parsed?.endpoint || '');
+          } catch {
+            endpoint = '';
+          }
+          if (!endpoint) continue;
+          await db
+            .from('push_subscriptions')
+            .delete()
+            .eq('user_id', sub.user_id)
+            .eq('subscription->>endpoint', endpoint);
         }
       }
     }
