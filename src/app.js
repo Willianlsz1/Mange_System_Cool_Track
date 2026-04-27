@@ -42,6 +42,121 @@ import { initStaleBundleRecovery } from './core/recoverFromStaleBundle.js';
 initStaleBundleRecovery();
 
 const POST_AUTH_REDIRECT_KEY = 'cooltrack-post-auth-redirect';
+let _appInitialized = false;
+let _authChangeBound = false;
+
+function _emitAuthChanged(user) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent('cooltrack:auth-changed', {
+      detail: { userId: user?.id || null },
+    }),
+  );
+}
+
+function _setAuthLoading(isLoading) {
+  const mount = document.getElementById('app');
+  if (!mount) return;
+  if (isLoading) {
+    mount.dataset.authLoading = '1';
+    if (!mount.hasChildNodes()) {
+      mount.innerHTML =
+        '<div class="app-loading" style="padding:24px;text-align:center">Carregando sessão...</div>';
+    }
+    return;
+  }
+  delete mount.dataset.authLoading;
+}
+
+async function _enterAuthenticatedApp(user) {
+  if (!user || _appInitialized) return;
+  _appInitialized = true;
+
+  // Escopo de storage por usuário — chaves subsequentes vão pra
+  // `ct:<userId>:<key>`.
+  setCurrentUser(user.id);
+  _emitAuthChanged(user);
+
+  // Migração incremental (idempotente).
+  migrateLegacyKey('cooltrack-last-tecnico');
+
+  // Inline do LandingPage.clear() pra evitar baixar o chunk da landing quando
+  // o usuário já tá logado.
+  document.getElementById('app')?.classList.remove('landing-active');
+  initAppShell();
+
+  const cloudState = await Storage.loadFromSupabase();
+  if (cloudState) {
+    setState(() => cloudState, { persist: false, emit: false });
+  } else {
+    setState(() => ({ equipamentos: [], registros: [], tecnicos: [], setores: [] }), {
+      persist: false,
+      emit: false,
+    });
+  }
+
+  // Monta o painel dev: ativa se is_dev === true no Supabase OU se a flag
+  // local 'cooltrack-dev-mode' estiver definida (ativada via console do browser).
+  // Em produção (import.meta.env.DEV === false), Vite faz tree-shake do bloco
+  // inteiro — o chunk de devPlanToggle nem é emitido no bundle.
+  if (import.meta.env.DEV) {
+    const localDevMode = localStorage.getItem('cooltrack-dev-mode') === 'true';
+    const mountDevToggle = async () => {
+      const { DevPlanToggle } = await import('./ui/components/devPlanToggle.js');
+      DevPlanToggle.mount();
+    };
+    if (localDevMode) {
+      await mountDevToggle();
+      setCachedPlan(DevPlanOverride.get() || 'pro');
+    } else {
+      try {
+        const { profile } = await fetchMyProfileBilling();
+        setCachedPlan(getEffectivePlan(profile));
+        if (profile?.is_dev === true) {
+          await mountDevToggle();
+        }
+      } catch {
+        // ignora — não bloqueia o boot se o perfil falhar
+      }
+    }
+  } else {
+    // Prod: só consulta o plano real (sem nenhum caminho pra dev override).
+    try {
+      const { profile } = await fetchMyProfileBilling();
+      setCachedPlan(getEffectivePlan(profile));
+    } catch {
+      // ignora — não bloqueia o boot se o perfil falhar
+    }
+  }
+
+  Modal.init();
+  bindEvents();
+  initController();
+  initHistory();
+  goTo('inicio', {}, { replaceHistory: true });
+
+  const pendingRedirectRaw = localStorage.getItem(POST_AUTH_REDIRECT_KEY);
+  if (pendingRedirectRaw) {
+    localStorage.removeItem(POST_AUTH_REDIRECT_KEY);
+    try {
+      const pendingRedirect = JSON.parse(pendingRedirectRaw);
+      if (pendingRedirect?.route) {
+        goTo(pendingRedirect.route, pendingRedirect.params || {});
+      }
+    } catch (_error) {
+      // ignore malformed redirect payload
+    }
+  }
+
+  OnboardingChecklist.init(user?.id || null);
+  PushOptInCard.init(user?.id || null);
+
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && user?.id) {
+    setupPushNotifications(user.id).catch((err) => {
+      console.warn('[boot] setupPushNotifications falhou:', err);
+    });
+  }
+}
 
 {
   const p = new URLSearchParams(window.location.search);
@@ -58,6 +173,7 @@ const _orcSignToken = new URLSearchParams(window.location.search).get('orc-sign'
 
 async function bootstrap() {
   try {
+    _setAuthLoading(true);
     // Se o SW foi registrado em index.html antes do bootstrap, liga o fluxo
     // de update (banner "Nova versão disponível"). Em dev ou sem SW não há
     // registration e esta chamada é no-op.
@@ -123,120 +239,40 @@ async function bootstrap() {
 
     await Auth.tryHandlePasswordRecovery(() => PasswordRecoveryModal.openPasswordRecoveryModal());
 
-    const user = await Auth.getUser();
+    if (!_authChangeBound) {
+      _authChangeBound = true;
+      Auth.onAuthChange((nextUser) => {
+        setCurrentUser(nextUser?.id || 'anon');
+        _emitAuthChanged(nextUser);
+        if (nextUser?.id && !_appInitialized) {
+          _enterAuthenticatedApp(nextUser).catch((error) => {
+            handleError(error, {
+              code: ErrorCodes.NETWORK_ERROR,
+              message: 'Não foi possível finalizar o login.',
+              context: { action: 'bootstrap.authChange' },
+            });
+          });
+        }
+      });
+    }
+
+    const user = await Auth.getSessionUser();
     Auth.finalizeOAuthRedirect(user);
 
     // Escopo de storage por usuário — chaves subsequentes vão pra
     // `ct:<userId>:<key>`. Sem usuário, cai em `ct:anon:*`.
     setCurrentUser(user?.id || 'anon');
 
-    // Migração incremental (idempotente). Só migramos `cooltrack-last-tecnico`
-    // aqui — FTX e Tour já têm escopamento próprio por usuário e fazem self-
-    // migration dentro dos próprios módulos. Mexer neles do bootstrap
-    // quebraria a lookup chain deles (pattern `ct-<feat>-done:<uid>` vs
-    // `ct:<uid>:<key>` do userStorage).
-    if (user?.id) {
-      migrateLegacyKey('cooltrack-last-tecnico');
-    }
-
     if (!user) {
       // Sem usuário autenticado → landing page.
       // Code-split: carrega landingPage (JS + CSS ~48KB) só pra quem não tá logado.
       const { LandingPage } = await import('./ui/components/landingPage.js');
       LandingPage.render({ onLogin: () => AuthScreen.show() });
+      _setAuthLoading(false);
       return;
     }
-
-    Auth.onAuthChange((nextUser) => {
-      setCurrentUser(nextUser?.id || 'anon');
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('cooltrack:auth-changed', {
-            detail: { userId: nextUser?.id || null },
-          }),
-        );
-      }
-    });
-
-    // Inline do LandingPage.clear() pra evitar baixar o chunk da landing quando
-    // o usuário já tá logado.
-    document.getElementById('app')?.classList.remove('landing-active');
-    initAppShell();
-
-    const cloudState = await Storage.loadFromSupabase();
-    if (cloudState) {
-      setState(() => cloudState, { persist: false, emit: false });
-    } else {
-      setState(() => ({ equipamentos: [], registros: [], tecnicos: [], setores: [] }), {
-        persist: false,
-        emit: false,
-      });
-    }
-
-    // Monta o painel dev: ativa se is_dev === true no Supabase OU se a flag
-    // local 'cooltrack-dev-mode' estiver definida (ativada via console do browser).
-    // Em produção (import.meta.env.DEV === false), Vite faz tree-shake do bloco
-    // inteiro — o chunk de devPlanToggle nem é emitido no bundle.
-    if (import.meta.env.DEV) {
-      const localDevMode = localStorage.getItem('cooltrack-dev-mode') === 'true';
-      const mountDevToggle = async () => {
-        const { DevPlanToggle } = await import('./ui/components/devPlanToggle.js');
-        DevPlanToggle.mount();
-      };
-      if (localDevMode) {
-        await mountDevToggle();
-        setCachedPlan(DevPlanOverride.get() || 'pro');
-      } else {
-        try {
-          const { profile } = await fetchMyProfileBilling();
-          setCachedPlan(getEffectivePlan(profile));
-          if (profile?.is_dev === true) {
-            await mountDevToggle();
-          }
-        } catch {
-          // ignora — não bloqueia o boot se o perfil falhar
-        }
-      }
-    } else {
-      // Prod: só consulta o plano real (sem nenhum caminho pra dev override).
-      try {
-        const { profile } = await fetchMyProfileBilling();
-        setCachedPlan(getEffectivePlan(profile));
-      } catch {
-        // ignora — não bloqueia o boot se o perfil falhar
-      }
-    }
-
-    Modal.init();
-    bindEvents();
-    initController();
-    initHistory();
-    goTo('inicio', {}, { replaceHistory: true });
-
-    const pendingRedirectRaw = localStorage.getItem(POST_AUTH_REDIRECT_KEY);
-    if (pendingRedirectRaw) {
-      localStorage.removeItem(POST_AUTH_REDIRECT_KEY);
-      try {
-        const pendingRedirect = JSON.parse(pendingRedirectRaw);
-        if (pendingRedirect?.route) {
-          goTo(pendingRedirect.route, pendingRedirect.params || {});
-        }
-      } catch (_error) {
-        // ignore malformed redirect payload
-      }
-    }
-
-    OnboardingChecklist.init(user?.id || null);
-    PushOptInCard.init(user?.id || null);
-
-    // Push: se o user já concedeu permissão antes, re-registra a subscription
-    // no boot. Idempotente — se já existe, atualiza updated_at no Supabase.
-    // Silencioso: erro não bloqueia o boot.
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && user?.id) {
-      setupPushNotifications(user.id).catch((err) => {
-        console.warn('[boot] setupPushNotifications falhou:', err);
-      });
-    }
+    await _enterAuthenticatedApp(user);
+    _setAuthLoading(false);
 
     // FirstTimeExperience (overlay 2-passos focado em equipamento) e Tour
     // (slide-modal walkthrough) ficam DESATIVADOS pra novos usuários — o
@@ -252,6 +288,7 @@ async function bootstrap() {
     // });
     // Tour.initIfFirstVisit({ userId: user?.id || null });
   } catch (error) {
+    _setAuthLoading(false);
     handleError(error, {
       code: ErrorCodes.NETWORK_ERROR,
       message: 'Falha ao iniciar o aplicativo. Recarregue a página.',
