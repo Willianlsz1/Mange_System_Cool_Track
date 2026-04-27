@@ -114,8 +114,17 @@ function closeTopBlockingLayer() {
     candidates.push({
       element: topOverlay,
       close: () => {
+        const dismissRoute = topOverlay?.dataset?.dismissRoute;
+        const dismissFromRoute = topOverlay?.dataset?.dismissFromRoute;
         if (topOverlay?.id) Modal.close(topOverlay.id);
         else topOverlay.classList.remove('is-open');
+        if (
+          dismissRoute &&
+          _routes.has(dismissRoute) &&
+          (!dismissFromRoute || dismissFromRoute === _current)
+        ) {
+          goTo(dismissRoute, {}, { fromHistory: true, replaceHistory: true });
+        }
       },
     });
   }
