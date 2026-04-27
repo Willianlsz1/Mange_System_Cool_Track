@@ -63,4 +63,30 @@ describe('shell bootstrap', () => {
     headerRectSpy.mockRestore();
     navRectSpy.mockRestore();
   });
+
+  it('oculta Clientes no mobile para plano Free no modo Empresa e mantém atalhos secundários', async () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    localStorage.setItem('cooltrack_nav_mode', 'empresa');
+    localStorage.setItem('cooltrack-cached-plan', 'free');
+
+    const { initAppShell } = await import('../ui/shell.js');
+    initAppShell();
+
+    expect(document.getElementById('nav-clientes')?.hidden).toBe(true);
+    expect(document.getElementById('nav-inicio')?.hidden).toBe(false);
+    expect(document.getElementById('nav-registro')?.hidden).toBe(false);
+    expect(document.getElementById('header-help-go-clientes')?.hidden).toBe(false);
+  });
+
+  it('mantém Clientes no mobile para plano Pro no modo Empresa', async () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    localStorage.setItem('cooltrack_nav_mode', 'empresa');
+    localStorage.setItem('cooltrack-cached-plan', 'pro');
+
+    const { initAppShell } = await import('../ui/shell.js');
+    initAppShell();
+
+    expect(document.getElementById('nav-clientes')?.hidden).toBe(false);
+    expect(document.getElementById('header-help-go-clientes')?.hidden).toBe(true);
+  });
 });
