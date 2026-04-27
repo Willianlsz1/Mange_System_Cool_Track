@@ -46,6 +46,19 @@ export function renderShellNav() {
           </span>
           Serviços
         </button>
+        <button class="nav-btn" id="nav-relatorio" data-nav="relatorio" aria-label="Relatório">
+          <span class="nav-btn__icon" aria-hidden="true">
+            <svg class="nav-btn__svg nav-btn__svg--outline" width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M3 3v18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7 14l4-4 4 4 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg class="nav-btn__svg nav-btn__svg--filled" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 3.5a1 1 0 0 1 2 0V18h14.5a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1V3.5Z"/>
+              <path d="M18.7 8.3a1 1 0 0 1 0 1.4l-4 4a1 1 0 0 1-1.4 0L11 11.4l-3.3 3.3a1 1 0 1 1-1.4-1.4l4-4a1 1 0 0 1 1.4 0l2.3 2.3 3.3-3.3a1 1 0 0 1 1.4 0Z"/>
+            </svg>
+          </span>
+          Relatório
+        </button>
 <!--
           Botao "Clientes" no bottom nav (mobile). Antes era "Alertas" — mas
           o sino no top header já cobre alertas, entao reaproveitamos o slot
