@@ -23,7 +23,7 @@ describe('shell bootstrap', () => {
     expect(document.body.querySelectorAll('.app-header')).toHaveLength(1);
     expect(document.getElementById('header-help-btn')).not.toBeNull();
     expect(document.getElementById('tour-help-btn')).toBeNull();
-    expect(document.body.querySelectorAll('.app-nav .nav-btn')).toHaveLength(5);
+    expect(document.body.querySelectorAll('.app-nav .nav-btn')).toHaveLength(6);
     expect(
       document.getElementById('nav-registro')?.querySelector('.nav-btn__icon svg'),
     ).not.toBeNull();
