@@ -6,6 +6,11 @@ import { renderShellModals } from './shell/templates/modals.js';
 import { Profile } from '../features/profile.js';
 import { PLAN_CODE_PLUS, PLAN_CODE_PRO, PLAN_CODE_FREE } from '../core/plans/subscriptionPlans.js';
 import { getCachedPlan } from '../core/plans/planCache.js';
+import {
+  ensureNavigationModePreference,
+  getNavigationLayout,
+  getNavigationMode,
+} from './shell/navigationMode.js';
 
 const HEADER_TOTAL_HEIGHT_VAR = '--app-header-total-height';
 const HEADER_HEIGHT_ALIAS_VAR = '--app-header-height';
@@ -68,6 +73,61 @@ function _formatRenewBR(dateStr) {
   return `${dd}/${mm}/${yyyy}`;
 }
 
+function _setElementVisible(el, visible) {
+  if (!el) return;
+  el.hidden = !visible;
+  if (visible) el.removeAttribute('aria-hidden');
+  else el.setAttribute('aria-hidden', 'true');
+}
+
+function _applyNavigationMode() {
+  if (typeof document === 'undefined') return;
+  const mode = getNavigationMode();
+  const layout = getNavigationLayout(mode);
+  const mobilePrimary = new Set(layout.mobilePrimary || []);
+  const sidebarPrimary = new Set(layout.sidebarPrimary || []);
+  const mobileSecondary = new Set(layout.mobileSecondary || []);
+  const sidebarSecondary = new Set(layout.sidebarSecondary || []);
+
+  const mobileAll = ['inicio', 'clientes', 'equipamentos', 'registro', 'historico', 'relatorio'];
+  mobileAll.forEach((route) => {
+    const el = document.getElementById(`nav-${route}`);
+    _setElementVisible(el, mobilePrimary.has(route));
+  });
+
+  const sidebarAll = [
+    'inicio',
+    'clientes',
+    'equipamentos',
+    'registro',
+    'historico',
+    'relatorio',
+    'orcamentos',
+    'alertas',
+  ];
+  sidebarAll.forEach((route) => {
+    const el = document.getElementById(`sidenav-${route}`);
+    if (!el) return;
+    const visible =
+      sidebarPrimary.has(route) ||
+      sidebarSecondary.has(route) ||
+      route === 'orcamentos' ||
+      route === 'alertas';
+    _setElementVisible(el, visible);
+    el.classList.toggle('app-sidebar__nav-item--secondary', sidebarSecondary.has(route));
+  });
+
+  // Atalhos secundários em mobile (menu de configurações).
+  _setElementVisible(
+    document.getElementById('header-help-go-clientes'),
+    mobileSecondary.has('clientes'),
+  );
+  _setElementVisible(
+    document.getElementById('header-help-go-registro'),
+    mobileSecondary.has('registro'),
+  );
+}
+
 export function updateShellSidebar() {
   if (typeof document === 'undefined') return;
 
@@ -125,6 +185,7 @@ export function updateShellSidebar() {
   if (clientesItem) {
     clientesItem.classList.toggle('app-sidebar__nav-item--locked', !isPro);
   }
+  _applyNavigationMode();
 }
 
 export const APP_SHELL_HEADER_HTML = renderShellHeader();
@@ -218,6 +279,15 @@ export function initAppShell() {
 
   if (!mount.querySelector('#main-content')) {
     mount.innerHTML = APP_SHELL_CONTENT_HTML;
+  }
+
+  ensureNavigationModePreference();
+  _applyNavigationMode();
+  if (!document.body.dataset.navigationModeBound) {
+    document.body.dataset.navigationModeBound = '1';
+    document.addEventListener('cooltrack:navigation-mode-changed', () => {
+      _applyNavigationMode();
+    });
   }
 
   bindShellMetrics();

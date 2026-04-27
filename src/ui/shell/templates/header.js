@@ -93,6 +93,24 @@ export function renderShellHeader() {
               <button type="button" class="header-help-menu__item is-mobile-only" data-action="go-orcamentos">
                 📋 Orçamentos
               </button>
+              <button
+                type="button"
+                class="header-help-menu__item is-mobile-only"
+                id="header-help-go-clientes"
+                data-nav="clientes"
+                hidden
+              >
+                👥 Clientes
+              </button>
+              <button
+                type="button"
+                class="header-help-menu__item is-mobile-only"
+                id="header-help-go-registro"
+                data-nav="registro"
+                hidden
+              >
+                ➕ Registrar serviço
+              </button>
               <div class="header-help-menu__sep is-mobile-only" aria-hidden="true"></div>
               <button type="button" class="header-help-menu__item" data-action="help-open-tutorial">
                 Ver tutorial

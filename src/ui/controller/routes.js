@@ -79,15 +79,6 @@ export function registerAppRoutes() {
     const planCode = getCachedPlan() || 'free';
     if (planCode !== PLAN_CODE_PRO) {
       ClientesPaywallModal.open();
-      // Volta para a tela anterior (ou inicio se nao houver historico)
-      // pra evitar que a URL fique em /clientes com paywall sobreposto.
-      // Usa back() pra preservar o flow natural do user.
-      if (window.history?.length > 1) {
-        window.history.back();
-      } else {
-        // No initial load, vai pra /inicio
-        import('../../core/router.js').then((m) => m.goTo('inicio'));
-      }
       return;
     }
     renderClientes();
