@@ -121,6 +121,7 @@ cp .env.example .env
 ### Opcionais
 
 - `VITE_SUPABASE_PHOTOS_BUCKET` (padrão: `registro-fotos`).
+- `VITE_SUPABASE_REPORTS_BUCKET` (padrão: `relatorios`).
 - `VITE_SUPABASE_PHOTO_URL_TTL` em segundos (padrão em código: `86400`).
 
 ### Segurança (obrigatório ler)
