@@ -10,6 +10,7 @@ import {
   ensureNavigationModePreference,
   getNavigationLayout,
   getNavigationMode,
+  NAV_MODE_EMPRESA,
 } from './shell/navigationMode.js';
 
 const HEADER_TOTAL_HEIGHT_VAR = '--app-header-total-height';
@@ -84,10 +85,23 @@ function _applyNavigationMode() {
   if (typeof document === 'undefined') return;
   const mode = getNavigationMode();
   const layout = getNavigationLayout(mode);
+  const planCode = getCachedPlan() || PLAN_CODE_FREE;
+  const isPro = planCode === PLAN_CODE_PRO;
   const mobilePrimary = new Set(layout.mobilePrimary || []);
   const sidebarPrimary = new Set(layout.sidebarPrimary || []);
   const mobileSecondary = new Set(layout.mobileSecondary || []);
   const sidebarSecondary = new Set(layout.sidebarSecondary || []);
+
+  // UX: Free/Plus não exibem Clientes como item principal no mobile.
+  // Em modo Empresa, mantém descoberta de Clientes apenas em área secundária.
+  if (!isPro) {
+    mobilePrimary.delete('clientes');
+    mobilePrimary.add('inicio');
+    mobilePrimary.add('registro');
+    sidebarPrimary.delete('clientes');
+    sidebarSecondary.add('clientes');
+    if (mode === NAV_MODE_EMPRESA) mobileSecondary.add('clientes');
+  }
 
   const mobileAll = ['inicio', 'clientes', 'equipamentos', 'registro', 'historico', 'relatorio'];
   mobileAll.forEach((route) => {
