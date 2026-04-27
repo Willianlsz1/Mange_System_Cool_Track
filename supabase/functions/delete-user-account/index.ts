@@ -169,6 +169,7 @@ Deno.serve(async (req) => {
     }
 
     // ── 4. Storage cleanup ───────────────────────────────────────────────────
+    let storageCleanupError: string | null = null;
     try {
       let totalRemoved = 0;
       for (const bucketName of STORAGE_BUCKETS) {
@@ -188,11 +189,7 @@ Deno.serve(async (req) => {
       const message = storageErr instanceof Error ? storageErr.message : String(storageErr);
       console.error('[delete-user-account] storage cleanup falhou:', message);
       steps.storage = { ok: false, error: message };
-      return jsonResponse(
-        req,
-        { code: 'STORAGE_CLEANUP_FAILED', message: 'Falha ao remover arquivos do usuário.', steps },
-        500,
-      );
+      storageCleanupError = message;
     }
 
     // ── 5. admin.deleteUser — cascateia tabelas com ON DELETE CASCADE ────────
@@ -209,6 +206,21 @@ Deno.serve(async (req) => {
     steps.auth = { ok: true };
 
     console.log('[delete-user-account] concluído', { userId, steps });
+
+    if (storageCleanupError) {
+      return jsonResponse(
+        req,
+        {
+          ok: true,
+          userId,
+          code: 'STORAGE_CLEANUP_DEFERRED',
+          message:
+            'Conta excluída com sucesso, mas houve falha na remoção de alguns arquivos. Faça a limpeza pendente via rotina administrativa.',
+          steps,
+        },
+        200,
+      );
+    }
 
     return jsonResponse(req, { ok: true, userId, steps }, 200);
   } catch (error) {
