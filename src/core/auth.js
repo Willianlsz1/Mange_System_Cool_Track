@@ -129,6 +129,18 @@ export const Auth = {
     }
   },
 
+  async getSessionUser() {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user) return session.user;
+    } catch (_error) {
+      // fallback abaixo
+    }
+    return this.getUser();
+  },
+
   async signUp(email, password, nome) {
     try {
       // Passa o nome via raw_user_meta_data; o trigger on_auth_user_created
