@@ -36,6 +36,8 @@ export const ClientesPaywallModal = {
     const overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
     overlay.className = 'modal-overlay is-open';
+    overlay.dataset.dismissRoute = 'inicio';
+    overlay.dataset.dismissFromRoute = 'clientes';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
     overlay.setAttribute('aria-labelledby', 'clientes-lock-title');
