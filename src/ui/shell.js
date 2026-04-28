@@ -1,5 +1,5 @@
 import { renderShellHeader } from './shell/templates/header.js';
-import { renderShellNav } from './shell/templates/nav.js';
+import { renderShellNav, shouldShowClientesInMobileNav } from './shell/templates/nav.js';
 import { renderShellSidebar } from './shell/templates/sidebar.js';
 import { renderShellViews } from './shell/templates/views.js';
 import { renderShellModals } from './shell/templates/modals.js';
@@ -10,6 +10,7 @@ import {
   ensureNavigationModePreference,
   getNavigationLayout,
   getNavigationMode,
+  NAV_MODE_EMPRESA,
 } from './shell/navigationMode.js';
 
 const HEADER_TOTAL_HEIGHT_VAR = '--app-header-total-height';
@@ -21,7 +22,7 @@ let shellMetricsFrame = 0;
 let observedShellNodes = [];
 let shellMetricsListenersBound = false;
 
-function renderShellMainLayout() {
+function renderShellMainLayout(planCode = getCachedPlan() || PLAN_CODE_FREE) {
   return String.raw`
     <!-- app-content vira grid 2-col em desktop (>=1024px) com sidebar a esquerda.
          Em mobile/tablet, sidebar esta hidden via CSS e bottom nav reaparece. -->
@@ -29,7 +30,7 @@ function renderShellMainLayout() {
 
 ${renderShellSidebar()}
 
-${renderShellNav()}
+${renderShellNav(planCode)}
 
       <!-- MAIN -->
       <main id="main-content" tabindex="-1">
@@ -39,6 +40,32 @@ ${renderShellViews()}
       </main>
     </div>
 `;
+}
+
+function _getCurrentPlanCode() {
+  return getCachedPlan() || PLAN_CODE_FREE;
+}
+
+function _rerenderMobileNav(planCode = _getCurrentPlanCode()) {
+  if (typeof document === 'undefined') return;
+  const currentNav = document.querySelector('.app-nav');
+  if (!currentNav) return;
+  const showClientes = shouldShowClientesInMobileNav(planCode);
+  const hasClientes = Boolean(currentNav.querySelector('#nav-clientes'));
+  if (showClientes === hasClientes) return;
+
+  const activeRoute = currentNav.querySelector('.nav-btn.is-active')?.dataset.nav || null;
+  const host = document.createElement('div');
+  host.innerHTML = renderShellNav(planCode);
+  const nextNav = host.querySelector('.app-nav');
+  if (!nextNav) return;
+
+  if (activeRoute) {
+    const nextActive = nextNav.querySelector(`[data-nav="${activeRoute}"]`);
+    if (nextActive) nextActive.classList.add('is-active');
+  }
+
+  currentNav.replaceWith(nextNav);
 }
 
 /**
@@ -84,10 +111,23 @@ function _applyNavigationMode() {
   if (typeof document === 'undefined') return;
   const mode = getNavigationMode();
   const layout = getNavigationLayout(mode);
+  const planCode = getCachedPlan() || PLAN_CODE_FREE;
+  const isPro = planCode === PLAN_CODE_PRO;
   const mobilePrimary = new Set(layout.mobilePrimary || []);
   const sidebarPrimary = new Set(layout.sidebarPrimary || []);
   const mobileSecondary = new Set(layout.mobileSecondary || []);
   const sidebarSecondary = new Set(layout.sidebarSecondary || []);
+
+  // UX: Free/Plus não exibem Clientes como item principal no mobile.
+  // Em modo Empresa, mantém descoberta de Clientes apenas em área secundária.
+  if (!isPro) {
+    mobilePrimary.delete('clientes');
+    mobilePrimary.add('inicio');
+    mobilePrimary.add('registro');
+    sidebarPrimary.delete('clientes');
+    sidebarSecondary.add('clientes');
+    if (mode === NAV_MODE_EMPRESA) mobileSecondary.add('clientes');
+  }
 
   const mobileAll = ['inicio', 'clientes', 'equipamentos', 'registro', 'historico', 'relatorio'];
   mobileAll.forEach((route) => {
@@ -185,11 +225,15 @@ export function updateShellSidebar() {
   if (clientesItem) {
     clientesItem.classList.toggle('app-sidebar__nav-item--locked', !isPro);
   }
+  _rerenderMobileNav(planCode);
   _applyNavigationMode();
 }
 
 export const APP_SHELL_HEADER_HTML = renderShellHeader();
-export const APP_SHELL_CONTENT_HTML = [renderShellMainLayout(), renderShellModals()].join('\n\n');
+export const APP_SHELL_CONTENT_HTML = [
+  renderShellMainLayout(_getCurrentPlanCode()),
+  renderShellModals(),
+].join('\n\n');
 export const APP_SHELL_HTML = [APP_SHELL_HEADER_HTML, APP_SHELL_CONTENT_HTML].join('\n\n');
 
 function getHeaderElement() {
@@ -278,15 +322,27 @@ export function initAppShell() {
   }
 
   if (!mount.querySelector('#main-content')) {
-    mount.innerHTML = APP_SHELL_CONTENT_HTML;
+    mount.innerHTML = [renderShellMainLayout(_getCurrentPlanCode()), renderShellModals()].join(
+      '\n\n',
+    );
   }
 
+  _rerenderMobileNav(_getCurrentPlanCode());
   ensureNavigationModePreference();
   _applyNavigationMode();
   if (!document.body.dataset.navigationModeBound) {
     document.body.dataset.navigationModeBound = '1';
     document.addEventListener('cooltrack:navigation-mode-changed', () => {
       _applyNavigationMode();
+    });
+  }
+
+  if (!document.body.dataset.planChangeBound) {
+    document.body.dataset.planChangeBound = '1';
+    window.addEventListener('cooltrack:plan-changed', () => {
+      _rerenderMobileNav(_getCurrentPlanCode());
+      _applyNavigationMode();
+      bindShellMetrics();
     });
   }
 

@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 describe('shell bootstrap', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    localStorage.clear();
   });
 
   it('mounts the global header outside #app and keeps bootstrap idempotent', async () => {
@@ -23,7 +24,16 @@ describe('shell bootstrap', () => {
     expect(document.body.querySelectorAll('.app-header')).toHaveLength(1);
     expect(document.getElementById('header-help-btn')).not.toBeNull();
     expect(document.getElementById('tour-help-btn')).toBeNull();
-    expect(document.body.querySelectorAll('.app-nav .nav-btn')).toHaveLength(6);
+    expect(document.body.querySelectorAll('.app-nav .nav-btn')).toHaveLength(5);
+    expect(document.getElementById('dash-hero-cta-label')?.textContent).toContain(
+      'Registrar serviço',
+    );
+    expect(document.getElementById('dash-hero-cta-secondary-label')?.textContent).toContain(
+      'Cadastrar equipamento',
+    );
+    expect(document.getElementById('dash-onboarding')).not.toBeNull();
+    expect(document.getElementById('dash-kpi-ativos')).not.toBeNull();
+    expect(document.getElementById('dash-recentes')).not.toBeNull();
     expect(
       document.getElementById('nav-registro')?.querySelector('.nav-btn__icon svg'),
     ).not.toBeNull();
@@ -62,5 +72,42 @@ describe('shell bootstrap', () => {
 
     headerRectSpy.mockRestore();
     navRectSpy.mockRestore();
+  });
+
+  it('não renderiza Clientes no mobile para plano Free no modo Empresa e mantém atalhos secundários', async () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    localStorage.setItem('cooltrack_nav_mode', 'empresa');
+    localStorage.setItem('cooltrack-cached-plan', 'free');
+
+    const { initAppShell } = await import('../ui/shell.js');
+    initAppShell();
+
+    expect(document.getElementById('nav-clientes')).toBeNull();
+    expect(document.getElementById('nav-inicio')?.hidden).toBe(false);
+    expect(document.getElementById('nav-registro')?.hidden).toBe(false);
+    expect(document.getElementById('header-help-go-clientes')?.hidden).toBe(false);
+  });
+
+  it('não renderiza Clientes no mobile para plano Plus', async () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    localStorage.setItem('cooltrack_nav_mode', 'empresa');
+    localStorage.setItem('cooltrack-cached-plan', 'plus');
+
+    const { initAppShell } = await import('../ui/shell.js');
+    initAppShell();
+
+    expect(document.getElementById('nav-clientes')).toBeNull();
+  });
+
+  it('mantém Clientes no mobile para plano Pro no modo Empresa', async () => {
+    document.body.innerHTML = '<div id="app"></div>';
+    localStorage.setItem('cooltrack_nav_mode', 'empresa');
+    localStorage.setItem('cooltrack-cached-plan', 'pro');
+
+    const { initAppShell } = await import('../ui/shell.js');
+    initAppShell();
+
+    expect(document.getElementById('nav-clientes')?.hidden).toBe(false);
+    expect(document.getElementById('header-help-go-clientes')?.hidden).toBe(true);
   });
 });
