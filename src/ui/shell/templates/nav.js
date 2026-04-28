@@ -1,4 +1,9 @@
-export function renderShellNav() {
+export function shouldShowClientesInMobileNav(planCode) {
+  return String(planCode || '').toLowerCase() === 'pro';
+}
+
+export function renderShellNav(planCode) {
+  const showClientes = shouldShowClientesInMobileNav(planCode);
   return String.raw`
 <!-- NAV -->
       <nav class="app-nav" aria-label="Navegação principal">
@@ -66,7 +71,9 @@ export function renderShellNav() {
           Pro-gate: não-Pro abre paywall via routes.js (não precisa CSS lock
           aqui pq mobile-first não tem espaco pra um pill PRO ao lado do label).
         -->
-        <button class="nav-btn" id="nav-clientes" data-nav="clientes" aria-label="Clientes">
+        ${
+          showClientes
+            ? `<button class="nav-btn" id="nav-clientes" data-nav="clientes" aria-label="Clientes">
           <span class="nav-btn__icon" aria-hidden="true">
             <svg class="nav-btn__svg nav-btn__svg--outline" width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -80,6 +87,9 @@ export function renderShellNav() {
           </span>
           Clientes
         </button>
+        `
+            : ''
+        }
       </nav>
 `;
 }
