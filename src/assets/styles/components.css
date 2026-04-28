@@ -19,6 +19,7 @@
 @import './components/_tour.css';
 @import './components/_push-optin.css';
 @import './components/_install-app.css';
+@import './components/_navigation-mode.css';
 
 /* ─── SECTION TITLE ─── */
 .section-title {

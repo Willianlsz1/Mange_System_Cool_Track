@@ -46,6 +46,19 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+function localDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function localDateOffset(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return localDateString(date);
+}
+
 describe('getHistInsights', () => {
   it('retorna zeros quando a lista está vazia', async () => {
     const { getHistInsights } = await import('../ui/views/historico.js');
@@ -189,9 +202,7 @@ describe('getProximaStatus', () => {
 
   it('marca como danger quando data está no passado', async () => {
     const { getProximaStatus } = await import('../ui/views/historico.js');
-    const hoje = new Date();
-    const ontem = new Date(hoje.getTime() - 86400000);
-    const iso = ontem.toISOString().slice(0, 10);
+    const iso = localDateOffset(-1);
     const result = getProximaStatus(iso);
     expect(result.tone).toBe('danger');
     expect(result.label).toMatch(/Vencida há 1 dia/);
@@ -200,16 +211,14 @@ describe('getProximaStatus', () => {
 
   it('usa plural quando passou mais de 1 dia', async () => {
     const { getProximaStatus } = await import('../ui/views/historico.js');
-    const hoje = new Date();
-    const semanaPassada = new Date(hoje.getTime() - 5 * 86400000);
-    const iso = semanaPassada.toISOString().slice(0, 10);
+    const iso = localDateOffset(-5);
     const result = getProximaStatus(iso);
     expect(result.label).toMatch(/Vencida há 5 dias/);
   });
 
   it('marca como warn "Vence hoje" quando data é hoje', async () => {
     const { getProximaStatus } = await import('../ui/views/historico.js');
-    const hoje = new Date().toISOString().slice(0, 10);
+    const hoje = localDateOffset(0);
     const result = getProximaStatus(hoje);
     expect(result.tone).toBe('warn');
     expect(result.label).toBe('Vence hoje');
@@ -218,9 +227,7 @@ describe('getProximaStatus', () => {
 
   it('marca como warn quando está a ≤7 dias no futuro', async () => {
     const { getProximaStatus } = await import('../ui/views/historico.js');
-    const hoje = new Date();
-    const emTresDias = new Date(hoje.getTime() + 3 * 86400000);
-    const iso = emTresDias.toISOString().slice(0, 10);
+    const iso = localDateOffset(3);
     const result = getProximaStatus(iso);
     expect(result.tone).toBe('warn');
     expect(result.label).toMatch(/Vence em 3 dias/);
@@ -228,9 +235,7 @@ describe('getProximaStatus', () => {
 
   it('marca como neutral quando está a >7 dias no futuro', async () => {
     const { getProximaStatus } = await import('../ui/views/historico.js');
-    const hoje = new Date();
-    const em30d = new Date(hoje.getTime() + 30 * 86400000);
-    const iso = em30d.toISOString().slice(0, 10);
+    const iso = localDateOffset(30);
     const result = getProximaStatus(iso);
     expect(result.tone).toBe('neutral');
     expect(result.label).toMatch(/Próxima em 30 dias/);

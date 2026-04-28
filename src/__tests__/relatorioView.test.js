@@ -33,6 +33,19 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+function localDateString(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function localDateOffset(days) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return localDateString(date);
+}
+
 describe('buildPeriodNarrative', () => {
   it('retorna null quando lista está vazia', async () => {
     const { buildPeriodNarrative } = await import('../ui/views/relatorio.js');
@@ -187,11 +200,7 @@ describe('shouldShowCorretivasBanner', () => {
 });
 
 describe('getProximasAcoes', () => {
-  const hoje = new Date();
-  const diasFuturo = (n) => {
-    const d = new Date(hoje.getTime() + n * 86400000);
-    return d.toISOString().slice(0, 10);
-  };
+  const diasFuturo = (n) => localDateOffset(n);
 
   it('retorna vazio para lista vazia', async () => {
     const { getProximasAcoes } = await import('../ui/views/relatorio.js');

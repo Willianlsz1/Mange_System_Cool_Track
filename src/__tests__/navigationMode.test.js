@@ -45,5 +45,54 @@ describe('navigationMode', () => {
     const mode = ensureNavigationModePreference();
     expect(mode).toBe(NAV_MODE_RAPIDO);
     expect(document.getElementById('navigation-mode-overlay')).toBeTruthy();
+    expect(document.body.textContent).toContain('Modo organiza a interface');
+    expect(document.body.textContent).toContain('Plano libera recursos');
+    expect(document.body.textContent).toMatch(/T.cnico aut.nomo/);
+    expect(document.body.textContent).toContain('Empresa');
+  });
+
+  it('bloqueia escolha de empresa para Free sem persistir modo empresa', () => {
+    localStorage.setItem('cooltrack-cached-plan', 'free');
+    ensureNavigationModePreference();
+
+    document.querySelector('[data-nav-mode="empresa"]')?.click();
+
+    expect(localStorage.getItem(NAV_MODE_KEY)).not.toBe(NAV_MODE_EMPRESA);
+    expect(document.getElementById('navigation-mode-overlay')).toBeTruthy();
+    expect(document.body.textContent).toContain('Clientes');
+    expect(document.body.textContent).toContain('Ver planos');
+    expect(document.body.textContent).toMatch(/Continuar como t.cnico/);
+  });
+
+  it('bloqueia escolha de empresa para Plus sem persistir modo empresa', () => {
+    localStorage.setItem('cooltrack-cached-plan', 'plus');
+    ensureNavigationModePreference();
+
+    document.querySelector('[data-nav-mode="empresa"]')?.click();
+
+    expect(localStorage.getItem(NAV_MODE_KEY)).not.toBe(NAV_MODE_EMPRESA);
+    expect(document.body.textContent).toContain('Clientes');
+  });
+
+  it('permite modo empresa para Pro sem mostrar paywall', () => {
+    localStorage.setItem('cooltrack-cached-plan', 'pro');
+    ensureNavigationModePreference();
+
+    document.querySelector('[data-nav-mode="empresa"]')?.click();
+
+    expect(localStorage.getItem(NAV_MODE_KEY)).toBe(NAV_MODE_EMPRESA);
+    expect(document.getElementById('navigation-mode-overlay')).toBeNull();
+    expect(document.body.textContent).not.toContain('Ver planos');
+  });
+
+  it('continua como tecnico quando Free cancela o fluxo empresa', () => {
+    localStorage.setItem('cooltrack-cached-plan', 'free');
+    ensureNavigationModePreference();
+    document.querySelector('[data-nav-mode="empresa"]')?.click();
+
+    document.querySelector('[data-nav-mode-action="continue-rapido"]')?.click();
+
+    expect(localStorage.getItem(NAV_MODE_KEY)).toBe(NAV_MODE_RAPIDO);
+    expect(document.getElementById('navigation-mode-overlay')).toBeNull();
   });
 });

@@ -1,0 +1,201 @@
+.nav-mode-overlay {
+  align-items: flex-end;
+  padding: 12px;
+}
+
+.nav-mode-dialog {
+  width: min(100%, 560px);
+  max-height: min(88vh, 720px);
+  padding: 0;
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
+}
+
+.nav-mode-dialog__header {
+  display: grid;
+  gap: 10px;
+  padding: 22px 18px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-mode-dialog__eyebrow {
+  width: fit-content;
+  padding: 4px 8px;
+  border: 1px solid rgba(232, 185, 74, 0.28);
+  border-radius: 999px;
+  background: rgba(232, 185, 74, 0.1);
+  color: var(--warning);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.nav-mode-dialog__icon {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(0, 200, 232, 0.22);
+  border-radius: 8px;
+  background: rgba(0, 200, 232, 0.1);
+  color: var(--primary);
+}
+
+.nav-mode-dialog__title {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.18;
+}
+
+.nav-mode-dialog__lead {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.nav-mode-dialog__body {
+  display: grid;
+  gap: 12px;
+  padding: 14px 18px 18px;
+}
+
+.nav-mode-card {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 12px;
+  width: 100%;
+  min-height: 112px;
+  padding: 14px;
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    transform 0.12s ease;
+}
+
+.nav-mode-card:hover,
+.nav-mode-card:focus-visible {
+  border-color: rgba(0, 200, 232, 0.45);
+  background: rgba(0, 200, 232, 0.06);
+}
+
+.nav-mode-card:active {
+  transform: translateY(1px);
+}
+
+.nav-mode-card--empresa {
+  border-color: rgba(232, 185, 74, 0.32);
+}
+
+.nav-mode-card__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(0, 200, 232, 0.1);
+  color: var(--primary);
+}
+
+.nav-mode-card--empresa .nav-mode-card__icon {
+  background: rgba(232, 185, 74, 0.12);
+  color: var(--warning);
+}
+
+.nav-mode-card__content {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.nav-mode-card__title {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.nav-mode-card__desc {
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.nav-mode-card__meta {
+  margin-top: 2px;
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.nav-mode-benefits {
+  display: grid;
+  gap: 10px;
+  padding: 14px 18px 4px;
+}
+
+.nav-mode-benefit {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.nav-mode-benefit__icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(95, 230, 179, 0.12);
+  color: var(--success);
+}
+
+.nav-mode-actions {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+@media (min-width: 720px) {
+  .nav-mode-overlay {
+    align-items: center;
+    padding: 24px;
+  }
+
+  .nav-mode-dialog {
+    border-radius: var(--radius);
+  }
+
+  .nav-mode-dialog__header {
+    padding: 28px 28px 18px;
+  }
+
+  .nav-mode-dialog__body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 18px 28px 28px;
+  }
+
+  .nav-mode-benefits {
+    padding: 18px 28px 8px;
+  }
+
+  .nav-mode-actions {
+    grid-template-columns: 1fr 1fr;
+    padding: 22px 28px 28px;
+  }
+}
