@@ -7,6 +7,7 @@ function createAuthSupabaseMock() {
   return {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u-1', email: 'a@b.com' } } }),
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
       signUp: vi.fn(),
       signInWithPassword: vi.fn(),
       signInWithOAuth: vi.fn().mockResolvedValue({ data: {}, error: null }),
@@ -66,6 +67,18 @@ describe('Auth integration wrapper', () => {
     const { Auth } = await loadAuthModule();
     const user = await Auth.getUser();
     expect(user).toMatchObject({ id: 'u-1', email: 'a@b.com' });
+  });
+
+  it('prefere usuário da sessão local para evitar race pós-login', async () => {
+    const { Auth, supabaseMock } = await loadAuthModule();
+    supabaseMock.auth.getSession.mockResolvedValue({
+      data: { session: { user: { id: 'u-local', email: 'local@mail.com' } } },
+    });
+
+    const user = await Auth.getSessionUser();
+
+    expect(user).toMatchObject({ id: 'u-local', email: 'local@mail.com' });
+    expect(supabaseMock.auth.getUser).not.toHaveBeenCalled();
   });
 
   it('handles signUp errors', async () => {

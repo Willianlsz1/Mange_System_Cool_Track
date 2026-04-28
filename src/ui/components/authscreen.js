@@ -25,7 +25,6 @@ function getDefaultIntentOptions() {
 function handleAuthSuccess(overlay, postAuthRedirect) {
   persistPostAuthRedirect(postAuthRedirect);
   overlay.remove();
-  window.location.reload();
 }
 
 /** Ativa o toggle de mostrar/esconder senha em todos os .auth-input-wrap dentro de um container */
@@ -984,7 +983,8 @@ export const AuthScreen = {
       }
       await runAsyncAction(e.currentTarget, { loadingLabel: 'Entrando...' }, async () => {
         try {
-          await Auth.signIn(email, password);
+          const user = await Auth.signIn(email, password);
+          if (!user) throw new Error('AUTH_SIGNIN_FAILED');
           trackEvent('auth_signin_success', { method: 'email' });
           handleAuthSuccess(overlay, postAuthRedirect);
         } catch (err) {
@@ -1014,7 +1014,8 @@ export const AuthScreen = {
       }
       await runAsyncAction(e.currentTarget, { loadingLabel: 'Criando...' }, async () => {
         try {
-          await Auth.signUp(email, password, { nome });
+          const user = await Auth.signUp(email, password, { nome });
+          if (!user) throw new Error('AUTH_SIGNUP_FAILED');
           trackEvent('auth_signup_success', { method: 'email' });
           handleAuthSuccess(overlay, postAuthRedirect);
         } catch (err) {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-async function loadAuthScreen() {
+async function loadAuthScreen(overrides = {}) {
   vi.resetModules();
 
   const Auth = {
@@ -21,7 +21,9 @@ async function loadAuthScreen() {
   vi.doMock('../ui/components/passwordRecoveryModal.js', () => ({ PasswordRecoveryModal }));
 
   const { AuthScreen } = await import('../ui/components/authscreen.js');
-  return { AuthScreen };
+  if (overrides.auth) Object.assign(Auth, overrides.auth);
+  if (overrides.toast) Object.assign(Toast, overrides.toast);
+  return { AuthScreen, Auth, Toast };
 }
 
 describe('AuthScreen V2Refined redesign', () => {
@@ -127,5 +129,32 @@ describe('AuthScreen V2Refined redesign', () => {
       // No emoji chars
       expect(/[\u{1F300}-\u{1FAFF}]/u.test(el.textContent)).toBe(false);
     });
+  });
+
+  it('não fecha overlay quando login por email falha', async () => {
+    const { AuthScreen, Auth } = await loadAuthScreen({
+      auth: { signIn: vi.fn().mockResolvedValue(null) },
+    });
+    AuthScreen.show();
+
+    document.getElementById('signin-email').value = 'a@b.com';
+    document.getElementById('signin-password').value = '12345678';
+    document.getElementById('btn-signin').click();
+    await Promise.resolve();
+
+    expect(Auth.signIn).toHaveBeenCalled();
+    expect(document.getElementById('auth-overlay')).toBeTruthy();
+  });
+
+  it('fecha overlay no login por email bem-sucedido sem forçar reload', async () => {
+    const { AuthScreen } = await loadAuthScreen();
+    AuthScreen.show();
+
+    document.getElementById('signin-email').value = 'a@b.com';
+    document.getElementById('signin-password').value = '12345678';
+    document.getElementById('btn-signin').click();
+    await Promise.resolve();
+
+    expect(document.getElementById('auth-overlay')).toBeNull();
   });
 });
