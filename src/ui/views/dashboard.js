@@ -51,16 +51,6 @@ import {
   RISK_CLASS_LABEL,
 } from '../../domain/constants/statuses.js';
 
-// Ícones SVG inline (stroke 1.6–2, currentColor) pro hero + pills
-const DASH_SVG = {
-  crown:
-    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l4 4 5-7 5 7 4-4-2 12H5L3 7z"/></svg>',
-  alert:
-    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L2 20h20L12 3z"/><path d="M12 10v4M12 17.5v.01"/></svg>',
-  check:
-    '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>',
-};
-
 // ═══════════════════════════════════════════════════════
 // Helpers de métricas (preservados)
 // ═══════════════════════════════════════════════════════
@@ -142,26 +132,10 @@ function _recencia(data) {
   return `há ${Math.floor(diff / 30)} meses`;
 }
 
-function _formatDateTimePill() {
-  const now = new Date();
-  const weekday = now.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '');
-  const dateStr = now
-    .toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-    .replace('.', '');
-  const time = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}, ${dateStr} · ${time}`;
-}
-
 function _planTier(planCode) {
   if (planCode === PLAN_CODE_PRO) return 'pro';
   if (planCode === PLAN_CODE_PLUS) return 'plus';
   return 'free';
-}
-
-function _planLabel(tier) {
-  if (tier === 'pro') return 'Plano Pro ativo';
-  if (tier === 'plus') return 'Plano Plus ativo';
-  return 'Plano Free';
 }
 
 function _planPillText(tier) {
@@ -475,20 +449,7 @@ function _equipCardMini(eq) {
 // ═══════════════════════════════════════════════════════
 // Hero Status Card
 // ═══════════════════════════════════════════════════════
-function _chipHtml(label) {
-  return `<span class="dash__chip"><span class="dash__chip-check" aria-hidden="true">${DASH_SVG.check}</span>${Utils.escapeHtml(label)}</span>`;
-}
-
-function _renderHero({
-  tier,
-  tone,
-  userName,
-  equipCount,
-  alertCount,
-  efficiency,
-  mesCount,
-  primaryAlert,
-}) {
+function _renderHero({ tier, tone, userName, equipCount, mesCount }) {
   const hero = document.getElementById('dash-hero');
   const dashRoot = document.getElementById('dash');
   if (!hero || !dashRoot) return;
@@ -496,12 +457,6 @@ function _renderHero({
   dashRoot.setAttribute('data-tier', tier);
   dashRoot.setAttribute('data-tone', tone);
   hero.setAttribute('data-tone', tone);
-
-  // Pill
-  const pillIcon = document.getElementById('dash-hero-pill-icon');
-  const pillText = document.getElementById('dash-hero-pill-text');
-  if (pillIcon) pillIcon.innerHTML = tone === 'alert' ? DASH_SVG.alert : DASH_SVG.crown;
-  if (pillText) pillText.textContent = tone === 'alert' ? 'AÇÃO NECESSÁRIA' : 'TUDO OPERANDO';
 
   // Greeting + datetime
   const greetingEl = document.getElementById('dash-hero-greeting');
@@ -514,42 +469,11 @@ function _renderHero({
     const name = (userName || '').trim() || 'Técnico';
     greetingEl.textContent = `Olá, ${name}`;
   }
-  const dtEl = document.getElementById('dash-hero-datetime');
-  if (dtEl) dtEl.textContent = _formatDateTimePill();
-
-  // Description
-  const descEl = document.getElementById('dash-hero-desc');
-  if (descEl) {
-    if (tone === 'alert' && primaryAlert) {
-      const title = Utils.escapeHtml(primaryAlert.title || 'Intervenção necessária');
-      const eqName = Utils.escapeHtml(primaryAlert.eq?.nome || 'equipamento');
-      const sub = Utils.escapeHtml(
-        Utils.truncate(primaryAlert.subtitle || 'Verifique o histórico recente.', 80),
-      );
-      descEl.innerHTML = `<strong class="dash__hero-desc-strong">${title}</strong> em <em>${eqName}</em>. ${sub}`;
-    } else if (equipCount === 0) {
-      descEl.textContent =
-        'Cadastre seu primeiro equipamento para começar a acompanhar a operação.';
-    } else {
-      const plural = equipCount === 1 ? 'equipamento' : 'equipamentos';
-      descEl.textContent = `Seu parque está saudável. ${equipCount} ${plural}, ${alertCount} alerta${alertCount === 1 ? '' : 's'} crítico${alertCount === 1 ? '' : 's'}.`;
-    }
-  }
-
-  // Chips (só no estado "ok")
-  const chipsEl = document.getElementById('dash-hero-chips');
-  if (chipsEl) {
-    if (tone === 'ok' && equipCount > 0) {
-      const efLabel = efficiency != null ? `Eficiência ${efficiency}%` : null;
-      const mesLabel =
-        mesCount > 0
-          ? `${mesCount} serviço${mesCount === 1 ? '' : 's'} este mês`
-          : 'Nenhum serviço este mês';
-      const planLabel = _planLabel(tier);
-      chipsEl.innerHTML = [efLabel, mesLabel, planLabel].filter(Boolean).map(_chipHtml).join('');
-    } else {
-      chipsEl.innerHTML = '';
-    }
+  const summaryEl = document.getElementById('dash-hero-summary');
+  if (summaryEl) {
+    const equipLabel = `${equipCount} equipamento${equipCount === 1 ? '' : 's'}`;
+    const mesLabel = `${mesCount} serviço${mesCount === 1 ? '' : 's'} no mês`;
+    summaryEl.textContent = `${equipLabel} • ${mesLabel}`;
   }
 
   // CTA primário + secundário.
@@ -560,59 +484,19 @@ function _renderHero({
   //                           secundário = "Registrar serviço" (muscle memory)
   const ctaBtn = document.getElementById('dash-hero-cta');
   const ctaLabel = document.getElementById('dash-hero-cta-label');
-  const ctaIcon = document.getElementById('dash-hero-cta-icon');
   const ctaSecondary = document.getElementById('dash-hero-cta-secondary');
   if (ctaBtn && ctaLabel) {
-    if (tone === 'alert' && primaryAlert) {
-      const actionMeta = _getAlertActionMeta(primaryAlert);
-      ctaBtn.setAttribute('data-action', actionMeta.action);
-      ctaBtn.setAttribute('data-id', actionMeta.id);
-      ctaBtn.removeAttribute('data-nav');
-      ctaLabel.textContent = actionMeta.label;
-      if (ctaIcon) ctaIcon.innerHTML = DASH_SVG.alert || '';
-      if (ctaSecondary) ctaSecondary.hidden = true;
-    } else if (equipCount === 0) {
-      ctaBtn.setAttribute('data-action', 'open-modal');
-      ctaBtn.setAttribute('data-id', 'modal-add-eq');
-      ctaBtn.removeAttribute('data-nav');
-      ctaLabel.textContent = 'Cadastrar equipamento';
-      if (ctaIcon) {
-        // Ícone de câmera pra indicar que o cadastro pode ser feito por foto
-        // (Free trial ou Plus+). Reforço visual do diferenciador já no primeiro
-        // contato do user com o app.
-        ctaIcon.innerHTML =
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.5" /></svg>';
-      }
-      if (ctaSecondary) ctaSecondary.hidden = true;
-    } else {
-      // UX V2 audit fix #86: Estado normal (tudo operando, com equipamentos):
-      // PROMOVE "Registrar serviço" como CTA primário — eh a açao DIARIA do
-      // tecnico em campo (10-30x por dia), nao "Cadastrar com foto" (setup
-      // ocasional). Secundario fica "Cadastrar com foto" pra IA continuar
-      // descobrivel sem competir com o muscle memory.
-      ctaBtn.setAttribute('data-action', '');
-      ctaBtn.removeAttribute('data-action');
-      ctaBtn.setAttribute('data-nav', 'registro');
-      ctaBtn.removeAttribute('data-id');
-      ctaLabel.textContent = 'Registrar serviço';
-      if (ctaIcon) {
-        // Icone de raio (energia/acao rapida) — combina com Atalho R
-        ctaIcon.innerHTML =
-          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" /></svg>';
-      }
-      if (ctaSecondary) {
-        ctaSecondary.hidden = false;
-        ctaSecondary.setAttribute('data-action', 'open-modal');
-        ctaSecondary.setAttribute('data-id', 'modal-add-eq');
-        ctaSecondary.removeAttribute('data-nav');
-        const secondaryLabel = document.getElementById('dash-hero-cta-secondary-label');
-        if (secondaryLabel) secondaryLabel.textContent = 'Cadastrar com foto';
-        const secondaryIcon = ctaSecondary.querySelector('.dash__hero-cta-icon');
-        if (secondaryIcon) {
-          secondaryIcon.innerHTML =
-            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.5" /></svg>';
-        }
-      }
+    ctaBtn.removeAttribute('data-action');
+    ctaBtn.removeAttribute('data-id');
+    ctaBtn.setAttribute('data-nav', 'registro');
+    ctaLabel.textContent = 'Registrar serviço';
+    if (ctaSecondary) {
+      ctaSecondary.hidden = false;
+      ctaSecondary.setAttribute('data-action', 'open-modal');
+      ctaSecondary.setAttribute('data-id', 'modal-add-eq');
+      ctaSecondary.removeAttribute('data-nav');
+      const secondaryLabel = document.getElementById('dash-hero-cta-secondary-label');
+      if (secondaryLabel) secondaryLabel.textContent = 'Cadastrar equipamento';
     }
   }
 }
@@ -703,51 +587,22 @@ function _renderKPIs({ equipamentos, registros, alerts }) {
 // Próxima Ação + Último Serviço
 // ═══════════════════════════════════════════════════════
 function _renderNextActionCard({ alerts, equipCount }) {
-  const cardEl = document.getElementById('dash-next-action-card');
   const titleEl = document.getElementById('dash-next-title');
-  const subEl = document.getElementById('dash-next-sub');
-  const ctaEl = document.getElementById('dash-next-cta');
-  const ctaLabelEl = document.getElementById('dash-next-cta-label');
-  if (!cardEl || !titleEl || !subEl || !ctaEl || !ctaLabelEl) return;
+  if (!titleEl) return;
 
   const primary = _getMostSevereAlert(alerts);
   if (primary) {
-    const actionMeta = _getAlertActionMeta(primary);
-    cardEl.setAttribute('data-tone', primary.severity === 'danger' ? 'danger' : 'warn');
-    titleEl.textContent = primary.title || 'Verificar equipamento';
-    subEl.textContent =
-      primary.subtitle || (primary.eq?.nome ? `em ${primary.eq.nome}` : 'Ação recomendada');
-    ctaEl.setAttribute('data-action', actionMeta.action);
-    ctaEl.setAttribute('data-id', actionMeta.id);
-    ctaEl.removeAttribute('data-nav');
-    ctaLabelEl.textContent = actionMeta.label;
+    titleEl.textContent = `Atenção: ${primary.title || 'Ação recomendada'}`;
     return;
   }
 
-  cardEl.setAttribute('data-tone', 'ok');
-  if (!equipCount) {
-    titleEl.textContent = 'Cadastre o primeiro equipamento';
-    subEl.textContent = 'Depois você poderá registrar manutenções e acompanhar alertas.';
-    ctaEl.setAttribute('data-action', 'open-modal');
-    ctaEl.setAttribute('data-id', 'modal-add-eq');
-    ctaEl.removeAttribute('data-nav');
-    ctaLabelEl.textContent = 'Cadastrar';
-  } else {
-    titleEl.textContent = 'Nenhuma ação urgente';
-    subEl.textContent = 'Todas as rotinas dentro do prazo.';
-    ctaEl.setAttribute('data-nav', 'histórico');
-    ctaEl.removeAttribute('data-action');
-    ctaEl.removeAttribute('data-id');
-    ctaLabelEl.textContent = 'Ver histórico';
-  }
+  titleEl.textContent = equipCount ? 'Nenhuma ação urgente' : 'Cadastre seu primeiro equipamento';
 }
 
 function _renderLastServiceCard({ registros }) {
   const card = document.getElementById('dash-last-service');
   const titleEl = document.getElementById('dash-last-title');
-  const subEl = document.getElementById('dash-last-sub');
-  const descEl = document.getElementById('dash-last-desc');
-  if (!card || !titleEl || !subEl || !descEl) return;
+  if (!card || !titleEl) return;
 
   if (!registros.length) {
     card.hidden = true;
@@ -757,9 +612,9 @@ function _renderLastServiceCard({ registros }) {
   const last = [...registros].sort((a, b) => b.data.localeCompare(a.data))[0];
   const eq = findEquip(last.equipId);
   card.hidden = false;
-  titleEl.textContent = last.tipo || 'Serviço';
-  subEl.textContent = [eq?.nome || '—', _recencia(last.data)].filter(Boolean).join(' · ');
-  descEl.textContent = last.obs ? Utils.truncate(last.obs, 92) : '';
+  titleEl.textContent = [last.tipo || 'Serviço', eq?.nome || '—', _recencia(last.data)]
+    .filter(Boolean)
+    .join(' • ');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -942,6 +797,7 @@ function _loadCharts() {
 function _refreshCharts() {
   const viewInicio = document.getElementById('view-inicio');
   if (!viewInicio?.classList.contains('active')) return;
+  if (!document.getElementById('chart-status-pie')) return;
   const { registros, equipamentos } = getState();
   const hash = `${equipamentos.length}:${registros.length}:${equipamentos.map((e) => e.status).join('')}`;
   if (hash === _lastChartHash) return;
@@ -1251,11 +1107,10 @@ export async function renderDashboard() {
     }
 
     // KPIs (retorna eficiência e mesCount pro hero)
-    const { efficiency, mesCount } = _renderKPIs({ equipamentos, registros, alerts });
+    const { mesCount } = _renderKPIs({ equipamentos, registros, alerts });
 
     // Tone do hero
     const hasCritical = alerts.some((a) => a.severity === 'danger');
-    const primaryAlert = _getMostSevereAlert(alerts);
     const tone = hasCritical ? 'alert' : 'ok';
 
     // Nome do usuário — cascata priorizando o que o próprio usuário digitou
@@ -1281,10 +1136,7 @@ export async function renderDashboard() {
       tone,
       userName,
       equipCount: equipamentos.length,
-      alertCount: alerts.length,
-      efficiency,
       mesCount,
-      primaryAlert,
     });
 
     _populateHeaderIdentity({ tier, userName });
