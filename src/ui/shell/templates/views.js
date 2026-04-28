@@ -23,13 +23,117 @@ export function renderShellViews() {
             <div id="dash-onboarding"></div>
             <div id="dash-overflow-banner"></div>
 
-            <section class="dash__quick-status" aria-live="polite">
-              <p class="dash__quick-status-text" id="dash-next-title">Nenhuma ação urgente</p>
+            <section class="dash__kpi-grid" aria-label="Indicadores principais">
+              <article class="dash__kpi">
+                <div class="dash__kpi-label">Ativos</div>
+                <div class="dash__kpi-value" id="dash-kpi-ativos">—</div>
+                <div class="dash__kpi-sub" id="dash-kpi-ativos-sub">—</div>
+              </article>
+              <article class="dash__kpi">
+                <div class="dash__kpi-label">Eficiência</div>
+                <div class="dash__kpi-value" id="dash-kpi-ef">—</div>
+                <div class="dash__kpi-spark" id="dash-kpi-ef-spark" aria-hidden="true"></div>
+                <div class="dash__kpi-sub" id="dash-kpi-ef-sub">—</div>
+              </article>
+              <article class="dash__kpi">
+                <div class="dash__kpi-label">Anomalias</div>
+                <div class="dash__kpi-value" id="dash-kpi-anom">0</div>
+                <div class="dash__kpi-sub" id="dash-kpi-anom-sub">sem alerta</div>
+              </article>
+              <article class="dash__kpi">
+                <div class="dash__kpi-label">Serviços / mês</div>
+                <div class="dash__kpi-value" id="dash-kpi-mes">—</div>
+                <div class="dash__kpi-spark" id="dash-kpi-mes-spark" aria-hidden="true"></div>
+                <div class="dash__kpi-sub" id="dash-kpi-mes-sub">—</div>
+              </article>
             </section>
 
-            <section class="dash__last-compact" id="dash-last-service" hidden>
-              <span class="dash__last-compact-label">Último serviço</span>
-              <span class="dash__last-compact-value" id="dash-last-title">—</span>
+            <section class="dash__pair">
+              <article class="dash__card dash__card--next-action" id="dash-next-action-card" data-tone="ok">
+                <div class="dash__card-label">Próxima ação</div>
+                <div class="dash__card-title" id="dash-next-title">Nenhuma ação urgente</div>
+                <div class="dash__card-sub" id="dash-next-sub">—</div>
+                <button class="dash__card-cta" id="dash-next-cta" type="button" data-nav="historico" data-action="" data-id="">
+                  <span class="dash__card-cta-label" id="dash-next-cta-label">Ver histórico</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                </button>
+              </article>
+              <article class="dash__card dash__card--last-service" id="dash-last-service" hidden>
+                <div class="dash__card-icon" aria-hidden="true">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.8 2.8-2.8-2.8 2.8-2.8z" /></svg>
+                </div>
+                <div class="dash__card-body">
+                  <div class="dash__card-label">Último serviço</div>
+                  <div class="dash__card-title" id="dash-last-title">—</div>
+                  <div class="dash__card-sub" id="dash-last-sub">—</div>
+                  <div class="dash__card-desc" id="dash-last-desc"></div>
+                </div>
+              </article>
+            </section>
+
+            <section class="dash__section" id="dash-critical-section" hidden>
+              <header class="dash__section-header">
+                <span class="dash__section-label">A FAZER AGORA</span>
+                <span class="dash__section-count" id="dash-critical-now-count">0</span>
+              </header>
+              <div id="dash-critical-now"></div>
+            </section>
+
+            <section class="dash__section" id="dash-alerts-section" hidden>
+              <header class="dash__section-header">
+                <span class="dash__section-label">Alertas ativos</span>
+              </header>
+              <div id="dash-alertas-mini"></div>
+              <div id="dash-upgrade-inline-hint"></div>
+            </section>
+
+            <section class="dash__section" id="dash-criticos-section" hidden>
+              <header class="dash__section-header">
+                <span class="dash__section-label">Equipamentos com ocorrência</span>
+              </header>
+              <div id="dash-criticos"></div>
+            </section>
+
+            <section class="dash__section" id="dash-recentes-section" hidden>
+              <header class="dash__section-header">
+                <span class="dash__section-label">Últimos serviços</span>
+              </header>
+              <div id="dash-recentes"></div>
+            </section>
+
+            <section class="dash__analise" aria-label="Análise do parque">
+              <header class="dash__section-header">
+                <span class="dash__section-label">Análise do parque</span>
+              </header>
+              <div class="dash__accordion">
+                <details class="dash__accordion-item">
+                  <summary class="dash__accordion-summary">
+                    <span class="dash__accordion-title">Status do parque</span>
+                    <span class="dash__accordion-chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="dash__accordion-body">
+                    <canvas id="chart-status-pie"></canvas>
+                  </div>
+                </details>
+                <details class="dash__accordion-item">
+                  <summary class="dash__accordion-summary">
+                    <span class="dash__accordion-title">Serviços por período</span>
+                    <span class="dash__accordion-chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="dash__accordion-body">
+                    <canvas id="chart-trend-line"></canvas>
+                  </div>
+                </details>
+                <details class="dash__accordion-item">
+                  <summary class="dash__accordion-summary">
+                    <span class="dash__accordion-title">Tipos de serviço</span>
+                    <span class="dash__accordion-chev" aria-hidden="true"></span>
+                  </summary>
+                  <div class="dash__accordion-body">
+                    <canvas id="chart-tipos-doughnut"></canvas>
+                  </div>
+                </details>
+              </div>
             </section>
           </section>
         </div>

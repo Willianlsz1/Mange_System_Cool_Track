@@ -25,6 +25,15 @@ describe('shell bootstrap', () => {
     expect(document.getElementById('header-help-btn')).not.toBeNull();
     expect(document.getElementById('tour-help-btn')).toBeNull();
     expect(document.body.querySelectorAll('.app-nav .nav-btn')).toHaveLength(5);
+    expect(document.getElementById('dash-hero-cta-label')?.textContent).toContain(
+      'Registrar serviço',
+    );
+    expect(document.getElementById('dash-hero-cta-secondary-label')?.textContent).toContain(
+      'Cadastrar equipamento',
+    );
+    expect(document.getElementById('dash-onboarding')).not.toBeNull();
+    expect(document.getElementById('dash-kpi-ativos')).not.toBeNull();
+    expect(document.getElementById('dash-recentes')).not.toBeNull();
     expect(
       document.getElementById('nav-registro')?.querySelector('.nav-btn__icon svg'),
     ).not.toBeNull();
